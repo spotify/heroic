@@ -24,8 +24,10 @@ package com.spotify.heroic.cluster;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.common.UsableGroupManager;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.DeleteSeries;
@@ -47,14 +49,12 @@ import eu.toolchain.async.AsyncFuture;
 import java.util.List;
 import java.util.Optional;
 
-public interface ClusterNode {
+public interface ClusterNode extends UsableGroupManager<ClusterNode.Group> {
     NodeMetadata metadata();
 
     AsyncFuture<NodeMetadata> fetchMetadata();
 
     AsyncFuture<Void> close();
-
-    Group useGroup(String group);
 
     interface Group {
         ClusterNode node();
@@ -85,7 +85,7 @@ public interface ClusterNode {
         );
 
         AsyncFuture<TagValuesSuggest> tagValuesSuggest(
-            RangeFilter filter, List<String> exclude, int groupLimit
+            RangeFilter filter, List<String> exclude, OptionalLimit groupLimit
         );
 
         AsyncFuture<TagValueSuggest> tagValueSuggest(RangeFilter filter, Optional<String> key);

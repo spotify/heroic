@@ -23,6 +23,7 @@ package com.spotify.heroic.elasticsearch;
 
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.async.AsyncObserver;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
@@ -70,7 +71,7 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
     protected abstract Series toSeries(SearchHit hit);
 
     protected AsyncFuture<FindSeries> scrollOverSeries(
-        final Connection c, final SearchRequestBuilder request, final long limit
+        final Connection c, final SearchRequestBuilder request, final OptionalLimit limit
     ) {
         return bind(request.execute()).lazyTransform((initial) -> {
             if (initial.getScrollId() == null) {
@@ -88,7 +89,7 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
 
     @RequiredArgsConstructor
     class ScrollTransform implements LazyTransform<SearchResponse, FindSeries> {
-        private final long limit;
+        private final OptionalLimit limit;
         private final Supplier<AsyncFuture<SearchResponse>> scroller;
 
         int size = 0;
@@ -100,7 +101,7 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
             final SearchHit[] hits = response.getHits().getHits();
 
             for (final SearchHit hit : hits) {
-                if (size >= limit) {
+                if (limit.isGreaterOrEqual(size)) {
                     break;
                 }
 
@@ -111,7 +112,7 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
                 size += 1;
             }
 
-            if (hits.length == 0 || size >= limit) {
+            if (hits.length == 0 || limit.isGreaterOrEqual(size)) {
                 return async.resolved(new FindSeries(series, size, duplicates));
             }
 
@@ -136,7 +137,7 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
 
         return observer -> {
             final AtomicLong index = new AtomicLong();
-            final long limit = filter.getLimit();
+            final OptionalLimit limit = filter.getLimit();
             final SearchRequestBuilder request;
 
             try {
@@ -176,7 +177,7 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
                 }
 
                 private void handleNext(final String scrollId) throws Exception {
-                    if (index.get() >= limit) {
+                    if (limit.isGreater(index.get())) {
                         o.end();
                         return;
                     }
@@ -196,7 +197,7 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
                             for (final SearchHit hit : hits) {
                                 final long i = index.getAndIncrement();
 
-                                if (i >= limit) {
+                                if (limit.isGreater(i)) {
                                     break;
                                 }
 

@@ -21,7 +21,8 @@
 
 package com.spotify.heroic.suggest;
 
-import com.spotify.heroic.common.GroupManager;
+import com.spotify.heroic.common.MemberManager;
+import com.spotify.heroic.common.UsableGroupManager;
 
 /**
  * Interface for handling tag suggestions.
@@ -30,5 +31,6 @@ import com.spotify.heroic.common.GroupManager;
  * clean separation of concerns, and deployments where suggestions _may_ be broken independently of
  * metadata.
  */
-public interface SuggestManager extends GroupManager<SuggestBackend, SuggestBackend> {
+public interface SuggestManager
+    extends MemberManager<SuggestBackend>, UsableGroupManager<SuggestBackend> {
 }

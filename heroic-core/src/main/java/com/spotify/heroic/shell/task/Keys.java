@@ -49,6 +49,7 @@ import org.kohsuke.args4j.Option;
 import javax.inject.Inject;
 import javax.inject.Named;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 @TaskUsage("List available metric keys for all backends")
@@ -81,11 +82,9 @@ public class Keys implements ShellTask {
 
         final QueryOptions.Builder options = QueryOptions.builder().tracing(params.tracing);
 
-        if (params.fetchSize != null) {
-            options.fetchSize(params.fetchSize);
-        }
+        params.fetchSize.ifPresent(options::fetchSize);
 
-        final MetricBackendGroup group = metrics.useGroup(params.group);
+        final MetricBackendGroup group = metrics.useOptionalGroup(params.group);
 
         final ResolvableFuture<Void> future = async.future();
 
@@ -140,7 +139,7 @@ public class Keys implements ShellTask {
     private static class Parameters extends Tasks.KeyspaceBase {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")
-        private String group = null;
+        private Optional<String> group = Optional.empty();
 
         @Option(name = "--tracing",
             usage = "Trace the queries for more debugging when things go wrong")
@@ -154,7 +153,7 @@ public class Keys implements ShellTask {
         private int keysPageSize = 10;
 
         @Option(name = "--fetch-size", usage = "Use the given fetch size")
-        private Integer fetchSize = null;
+        private Optional<Integer> fetchSize = Optional.empty();
 
         @Override
         public List<String> getQuery() {

@@ -24,6 +24,6 @@ public class SelectedGroupTest {
         final SelectedGroup<Grouped> g = new SelectedGroup<>(ImmutableList.of(a, b));
 
         Assert.assertEquals(ImmutableSortedSet.of("bar", "baz", "foo"),
-            ImmutableSortedSet.copyOf(g.groups()));
+            ImmutableSortedSet.copyOf(g.getGroups()));
     }
 }

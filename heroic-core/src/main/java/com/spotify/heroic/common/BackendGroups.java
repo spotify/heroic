@@ -22,7 +22,7 @@
 package com.spotify.heroic.common;
 
 import com.google.common.collect.ImmutableList;
-import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -39,8 +40,8 @@ import java.util.Set;
  * @param <T>
  * @author udoprog
  */
-@Data
-public class BackendGroups<T extends Initializing & Grouped> {
+@RequiredArgsConstructor
+public class BackendGroups<T extends Grouped> implements UsableGroupManager<SelectedGroup<T>> {
     private final List<T> allMembers;
     private final Map<String, List<T>> groups;
     private final List<T> defaults;
@@ -52,26 +53,20 @@ public class BackendGroups<T extends Initializing & Grouped> {
     /**
      * Use default groups and guarantee that at least one is available.
      */
-    public SelectedGroup<T> useDefault() {
-        return selected(defaults());
+    @Override
+    public SelectedGroup<T> useDefaultGroup() {
+        return selected(defaults);
     }
 
-    /**
-     * Use the given group and guarantee that at least one is available.
-     */
-    public SelectedGroup<T> use(final String group) {
-        return selected(group != null ? find(group) : defaults());
+    @Override
+    public SelectedGroup<T> useGroup(final String group) {
+        Objects.requireNonNull(group, "group must not be null");
+        return selected(find(group));
     }
 
-    /**
-     * Use the given groups and guarantee that at least one is available.
-     */
-    public SelectedGroup<T> use(final Set<String> groups) {
-        return selected(groups != null ? find(groups) : defaults());
-    }
-
-    public List<T> defaults() {
-        return defaults;
+    @Override
+    public SelectedGroup<T> useOptionalGroup(final Optional<String> group) {
+        return group.map(this::useGroup).orElseGet(this::useDefaultGroup);
     }
 
     public List<GroupMember<T>> all() {
@@ -87,32 +82,7 @@ public class BackendGroups<T extends Initializing & Grouped> {
         return ImmutableList.copyOf(result);
     }
 
-    public T findOne(String group) {
-        final List<T> results = group != null ? find(group) : defaults();
-
-        if (results.isEmpty()) {
-            throw new IllegalArgumentException(
-                "Could not find one member of group '" + group + "'");
-        }
-
-        return results.iterator().next();
-    }
-
-    private List<T> find(Set<String> groups) {
-        final List<T> result = new ArrayList<>();
-
-        for (final String group : groups) {
-            result.addAll(find(group));
-        }
-
-        return ImmutableList.copyOf(result);
-    }
-
     private List<T> find(String group) {
-        if (group == null) {
-            throw new IllegalArgumentException("group");
-        }
-
         final List<T> result = groups.get(group);
 
         if (result == null || result.isEmpty()) {
@@ -123,7 +93,7 @@ public class BackendGroups<T extends Initializing & Grouped> {
     }
 
     private SelectedGroup<T> selected(final List<T> backends) {
-        return new SelectedGroup<T>(backends);
+        return new SelectedGroup<>(backends);
     }
 
     private static <T extends Grouped> Map<String, List<T>> buildBackends(Collection<T> backends) {

@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.shell.task;
 
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.FilterFactory;
@@ -42,6 +43,7 @@ import org.kohsuke.args4j.Option;
 import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @TaskUsage("Count how much metadata matches a given query")
 @TaskName("metadata-count")
@@ -66,24 +68,26 @@ public class MetadataCount implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        // final Filter filter = Tasks.setupFilter(filters, parser, params);
         final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
 
-        return metadata.useGroup(params.group).countSeries(filter).directTransform(result -> {
-            io.out().println(String.format("Found %d serie(s)", result.getCount()));
-            return null;
-        });
+        return metadata
+            .useOptionalGroup(params.group)
+            .countSeries(filter)
+            .directTransform(result -> {
+                io.out().println(String.format("Found %d serie(s)", result.getCount()));
+                return null;
+            });
     }
 
     @ToString
     private static class Parameters extends Tasks.QueryParamsBase {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")
-        private String group;
+        private Optional<String> group = Optional.empty();
 
         @Option(name = "--limit", usage = "Limit the number of deletes (default: alot)")
         @Getter
-        private int limit = Integer.MAX_VALUE;
+        private OptionalLimit limit = OptionalLimit.empty();
 
         @Argument
         @Getter
@@ -95,7 +99,7 @@ public class MetadataCount implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         MetadataCount task();
     }
 }

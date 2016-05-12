@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.shell.task;
 
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.FilterFactory;
@@ -74,7 +75,7 @@ public class SuggestKey implements ShellTask {
         final MatchOptions fuzzyOptions = MatchOptions.builder().build();
 
         return suggest
-            .useGroup(params.group)
+            .useOptionalGroup(params.group)
             .keySuggest(filter, fuzzyOptions, Optional.ofNullable(params.key))
             .directTransform(result -> {
                 int i = 0;
@@ -91,7 +92,7 @@ public class SuggestKey implements ShellTask {
     private static class Parameters extends Tasks.QueryParamsBase {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")
-        private String group;
+        private Optional<String> group = Optional.empty();
 
         @Option(name = "-k", aliases = {"--key"}, usage = "Provide key context for suggestion")
         private String key = null;
@@ -99,7 +100,7 @@ public class SuggestKey implements ShellTask {
         @Option(name = "--limit", aliases = {"--limit"},
             usage = "Limit the number of printed entries")
         @Getter
-        private int limit = 10;
+        private OptionalLimit limit = OptionalLimit.empty();
 
         @Argument
         @Getter
@@ -111,7 +112,7 @@ public class SuggestKey implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         SuggestKey task();
     }
 }

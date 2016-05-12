@@ -22,13 +22,14 @@
 package com.spotify.heroic.shell;
 
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.OptionalLimit;
 
 import java.util.List;
 
 public interface TaskQueryParameters {
-    public List<String> getQuery();
+    List<String> getQuery();
 
-    public DateRange getRange();
+    DateRange getRange();
 
-    public int getLimit();
+    OptionalLimit getLimit();
 }

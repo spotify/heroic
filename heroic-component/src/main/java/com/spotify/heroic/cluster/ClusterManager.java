@@ -22,6 +22,7 @@
 package com.spotify.heroic.cluster;
 
 import com.spotify.heroic.common.Initializing;
+import com.spotify.heroic.common.UsableGroupManager;
 import eu.toolchain.async.AsyncFuture;
 import lombok.Data;
 
@@ -41,7 +42,7 @@ import java.util.Set;
  *
  * @author udoprog
  */
-public interface ClusterManager extends Initializing {
+public interface ClusterManager extends UsableGroupManager<ClusterNodeGroup>, Initializing {
     @Data
     class Statistics {
         private final int onlineNodes;
@@ -68,10 +69,6 @@ public interface ClusterManager extends Initializing {
     AsyncFuture<Void> refresh();
 
     Statistics getStatistics();
-
-    ClusterNodeGroup useDefaultGroup();
-
-    ClusterNodeGroup useGroup(String group);
 
     /**
      * Future that will be resolved, after the cluster manager has been fully initialized.

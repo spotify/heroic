@@ -60,10 +60,8 @@ import static java.util.Optional.ofNullable;
 
 @RequiredArgsConstructor
 public class MetricManagerModule {
-    public static final boolean DEFAULT_UPDATE_METADATA = false;
     public static final int DEFAULT_GROUP_LIMIT = 500;
-    public static final int DEFAULT_SERIES_LIMIT = 10000;
-    public static final long DEFAULT_FLUSHING_INTERVAL = 1000;
+    public static final long DEFAULT_SERIES_LIMIT = 10000;
     public static final long DEFAULT_AGGREGATION_LIMIT = 10000;
     public static final long DEFAULT_DATA_LIMIT = 30000000;
     public static final int DEFAULT_FETCH_PARALLELISM = 100;
@@ -79,7 +77,7 @@ public class MetricManagerModule {
     /**
      * Limit in the number of series we may fetch from the metadata backend.
      */
-    private final int seriesLimit;
+    private final long seriesLimit;
 
     /**
      * Limit in how many datapoints a single aggregation is allowed to output.
@@ -130,7 +128,7 @@ public class MetricManagerModule {
         private final List<MetricModule> backends;
         private final Optional<List<String>> defaultBackends;
         private final int groupLimit;
-        private final int seriesLimit;
+        private final long seriesLimit;
         private final long aggregationLimit;
         private final long dataLimit;
         private final int fetchParallelism;
@@ -217,7 +215,7 @@ public class MetricManagerModule {
         private Optional<List<MetricModule>> backends = empty();
         private Optional<List<String>> defaultBackends = empty();
         private Optional<Integer> groupLimit = empty();
-        private Optional<Integer> seriesLimit = empty();
+        private Optional<Long> seriesLimit = empty();
         private Optional<Long> aggregationLimit = empty();
         private Optional<Long> dataLimit = empty();
         private Optional<Integer> fetchParallelism = empty();
@@ -227,7 +225,7 @@ public class MetricManagerModule {
             @JsonProperty("backends") List<MetricModule> backends,
             @JsonProperty("defaultBackends") List<String> defaultBackends,
             @JsonProperty("groupLimit") Integer groupLimit,
-            @JsonProperty("seriesLimit") Integer seriesLimit,
+            @JsonProperty("seriesLimit") Long seriesLimit,
             @JsonProperty("aggregationLimit") Long aggregationLimit,
             @JsonProperty("dataLimit") Long dataLimit,
             @JsonProperty("fetchParallelism") Integer fetchParallelism
@@ -251,12 +249,12 @@ public class MetricManagerModule {
             return this;
         }
 
-        public Builder groupLimit(Integer groupLimit) {
+        public Builder groupLimit(int groupLimit) {
             this.groupLimit = of(groupLimit);
             return this;
         }
 
-        public Builder seriesLimit(Integer seriesLimit) {
+        public Builder seriesLimit(long seriesLimit) {
             this.seriesLimit = of(seriesLimit);
             return this;
         }

@@ -50,6 +50,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 @TaskUsage("Fetch a range of data points")
@@ -78,17 +79,11 @@ public class Fetch implements ShellTask {
         final Parameters params = (Parameters) base;
         final long now = System.currentTimeMillis();
 
-        final Series series;
+        final Series series = Tasks.parseSeries(mapper, params.series);
 
-        if (params.series == null) {
-            series = Series.empty();
-        } else {
-            series = mapper.readValue(params.series, Series.class);
-        }
-
-        final long start = params.start == null ? now : Tasks.parseInstant(params.start, now);
+        final long start = params.start.map(t -> Tasks.parseInstant(t, now)).orElse(now);
         final long end =
-            params.end == null ? defaultEnd(start) : Tasks.parseInstant(params.end, now);
+            params.end.map(t -> Tasks.parseInstant(t, now)).orElseGet(() -> defaultEnd(start));
 
         final DateRange range = new DateRange(start, end);
         final int limit = Math.max(1, params.limit);
@@ -96,7 +91,7 @@ public class Fetch implements ShellTask {
         final DateFormat flip = new SimpleDateFormat("yyyy-MM-dd HH:mm");
         final DateFormat point = new SimpleDateFormat("HH:mm:ss.SSS");
 
-        final MetricBackendGroup readGroup = metrics.useGroup(params.group);
+        final MetricBackendGroup readGroup = metrics.useOptionalGroup(params.group);
         final MetricType source = MetricType.fromIdentifier(params.source).orElse(MetricType.POINT);
 
         final QueryOptions options = QueryOptions.builder().tracing(params.tracing).build();
@@ -169,17 +164,17 @@ public class Fetch implements ShellTask {
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-s", aliases = {"--series"}, usage = "Series to fetch", metaVar = "<json>")
-        private String series;
+        private Optional<String> series = Optional.empty();
 
         @Option(name = "--source", aliases = {"--source"}, usage = "Source to fetch",
             metaVar = "<events|points>")
         private String source = MetricType.POINT.identifier();
 
         @Option(name = "--start", usage = "Start date", metaVar = "<datetime>")
-        private String start;
+        private Optional<String> start = Optional.empty();
 
         @Option(name = "--end", usage = "End date", metaVar = "<datetime>")
-        private String end;
+        private Optional<String> end = Optional.empty();
 
         @Option(name = "--limit", usage = "Maximum number of datapoints to fetch",
             metaVar = "<int>")
@@ -187,7 +182,7 @@ public class Fetch implements ShellTask {
 
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")
-        private String group = null;
+        private Optional<String> group = Optional.empty();
 
         @Option(name = "--tracing", usage = "Enable extensive tracing")
         private boolean tracing = false;
@@ -198,7 +193,7 @@ public class Fetch implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         Fetch task();
     }
 }

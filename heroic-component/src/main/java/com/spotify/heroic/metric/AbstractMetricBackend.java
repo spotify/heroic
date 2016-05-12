@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.async.AsyncObserver;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.Statistics;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -99,7 +100,7 @@ public abstract class AbstractMetricBackend implements MetricBackend {
             partial = filter.withStart(BackendKeyFilter.gt(key));
         }
 
-        partial = partial.withLimit(pageSize);
+        partial = partial.withLimit(OptionalLimit.of((long) pageSize));
 
         final AsyncObservable<BackendKeySet> observable = streamKeys(partial, options);
 

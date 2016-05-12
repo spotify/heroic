@@ -87,27 +87,21 @@ public class CountSeries {
     public static Transform<Throwable, ? extends CountSeries> nodeError(
         final NodeRegistryEntry node
     ) {
-        return new Transform<Throwable, CountSeries>() {
-            @Override
-            public CountSeries transform(Throwable e) throws Exception {
-                final NodeMetadata m = node.getMetadata();
-                final ClusterNode c = node.getClusterNode();
-                return new CountSeries(ImmutableList.<RequestError>of(
-                    NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)), 0, false);
-            }
+        return e -> {
+            final NodeMetadata m = node.getMetadata();
+            final ClusterNode c = node.getClusterNode();
+            return new CountSeries(ImmutableList.<RequestError>of(
+                NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)), 0, false);
         };
     }
 
     public static Transform<Throwable, ? extends CountSeries> nodeError(
         final ClusterNode.Group group
     ) {
-        return new Transform<Throwable, CountSeries>() {
-            @Override
-            public CountSeries transform(Throwable e) throws Exception {
-                final List<RequestError> errors =
-                    ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
-                return new CountSeries(errors, 0, false);
-            }
+        return e -> {
+            final List<RequestError> errors1 =
+                ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
+            return new CountSeries(errors1, 0, false);
         };
     }
 }

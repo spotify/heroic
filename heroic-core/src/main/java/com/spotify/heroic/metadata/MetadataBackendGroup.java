@@ -121,7 +121,7 @@ public class MetadataBackendGroup implements MetadataBackend {
 
     @Override
     public Groups getGroups() {
-        return backends.groups();
+        return backends.getGroups();
     }
 
     @Override

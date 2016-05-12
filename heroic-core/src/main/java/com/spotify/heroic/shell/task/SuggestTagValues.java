@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.shell.task;
 
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.FilterFactory;
@@ -93,12 +94,12 @@ public class SuggestTagValues implements ShellTask {
         private List<String> exclude = new ArrayList<>();
 
         @Option(name = "--group-limit", usage = "Maximum cardinality to pull")
-        private int groupLimit = 100;
+        private OptionalLimit groupLimit = OptionalLimit.empty();
 
         @Option(name = "--limit", aliases = {"--limit"},
             usage = "Limit the number of printed entries")
         @Getter
-        private int limit = 10;
+        private OptionalLimit limit = OptionalLimit.empty();
 
         @Argument
         @Getter
@@ -110,7 +111,7 @@ public class SuggestTagValues implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         SuggestTagValues task();
     }
 }

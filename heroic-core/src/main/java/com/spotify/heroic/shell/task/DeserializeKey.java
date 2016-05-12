@@ -31,20 +31,24 @@ import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import dagger.Component;
+import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.ToString;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 
 import javax.inject.Inject;
+import java.util.Optional;
 
 @TaskUsage("Deserialize the given backend key")
 @TaskName("deserialize-key")
 public class DeserializeKey implements ShellTask {
+    private final AsyncFramework async;
     private final MetricManager metrics;
 
     @Inject
-    public DeserializeKey(MetricManager metrics) {
+    public DeserializeKey(AsyncFramework async, MetricManager metrics) {
+        this.async = async;
         this.metrics = metrics;
     }
 
@@ -57,27 +61,29 @@ public class DeserializeKey implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        return metrics
-            .useGroup(params.group)
-            .deserializeKeyFromHex(params.key)
-            .directTransform(result -> {
-                int i = 0;
+        return params.key.<AsyncFuture<Void>>map(k -> {
+            return metrics
+                .useOptionalGroup(params.group)
+                .deserializeKeyFromHex(k)
+                .directTransform(result -> {
+                    int i = 0;
 
-                for (final BackendKey key : result) {
-                    io.out().println(String.format("%d: %s", i++, key));
-                }
+                    for (final BackendKey key : result) {
+                        io.out().println(String.format("%d: %s", i++, key));
+                    }
 
-                return null;
-            });
+                    return null;
+                });
+        }).orElseGet(async::resolved);
     }
 
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "--group", usage = "Backend group to use", metaVar = "<group>")
-        private String group = null;
+        private Optional<String> group = Optional.empty();
 
         @Argument(metaVar = "<hex>", usage = "Key to deserialize (in hex)")
-        private String key;
+        private Optional<String> key = Optional.empty();
     }
 
     public static DeserializeKey setup(final CoreComponent core) {
@@ -85,7 +91,7 @@ public class DeserializeKey implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         DeserializeKey task();
     }
 }

@@ -22,11 +22,18 @@
 package com.spotify.heroic.common;
 
 import java.util.List;
+import java.util.Optional;
 
-public interface GroupManager<T extends Grouped, G extends T> extends UsableGroupManager<G> {
+public interface MemberManager<T extends Grouped> {
     List<T> allMembers();
 
-    List<T> use(String group);
+    List<T> useMembers(String group);
 
-    List<GroupMember<T>> getBackends();
+    List<T> useDefaultMembers();
+
+    List<GroupMember<T>> getMembers();
+
+    default List<T> useOptionalMembers(Optional<String> group) {
+        return group.map(this::useMembers).orElseGet(this::useDefaultMembers);
+    }
 }

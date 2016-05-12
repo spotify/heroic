@@ -50,6 +50,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -75,18 +76,18 @@ public class QueryResource {
     @POST
     @Path("metrics/stream")
     public List<StreamId> metricsStream(
-        @QueryParam("backend") String backendGroup, QueryMetrics query
+        @QueryParam("backend") String group, QueryMetrics query
     ) {
         final Query request = setupQuery(query).build();
 
         final Collection<? extends QueryManager.Group> groups =
-            this.query.useGroupPerNode(backendGroup);
+            this.query.useGroupPerNode(Optional.ofNullable(group));
         final List<StreamId> ids = new ArrayList<>();
 
-        for (QueryManager.Group group : groups) {
+        for (QueryManager.Group g : groups) {
             final UUID id = UUID.randomUUID();
-            streamQueries.put(id, new StreamQuery(group, request));
-            ids.add(new StreamId(group.first().node().metadata().getTags(), id));
+            streamQueries.put(id, new StreamQuery(g, request));
+            ids.add(new StreamId(g.first().node().metadata().getTags(), id));
         }
 
         return ids;
@@ -124,7 +125,7 @@ public class QueryResource {
     ) {
         final Query q = this.query.newQueryFromString(query).build();
 
-        final QueryManager.Group g = this.query.useGroup(group);
+        final QueryManager.Group g = this.query.useOptionalGroup(Optional.ofNullable(group));
         final AsyncFuture<QueryResult> callback = g.query(q);
 
         bindMetricsResponse(response, callback);
@@ -139,7 +140,7 @@ public class QueryResource {
     ) {
         final Query q = setupQuery(query).build();
 
-        final QueryManager.Group g = this.query.useGroup(group);
+        final QueryManager.Group g = this.query.useOptionalGroup(Optional.ofNullable(group));
         final AsyncFuture<QueryResult> callback = g.query(q);
 
         bindMetricsResponse(response, callback);
@@ -148,16 +149,16 @@ public class QueryResource {
     @POST
     @Path("batch")
     public void metrics(
-        @Suspended final AsyncResponse response, @QueryParam("backend") String backendGroup,
+        @Suspended final AsyncResponse response, @QueryParam("backend") String group,
         final QueryBatch query
     ) {
-        final QueryManager.Group group = this.query.useGroup(backendGroup);
+        final QueryManager.Group g = this.query.useOptionalGroup(Optional.ofNullable(group));
 
         final List<AsyncFuture<Pair<String, QueryResult>>> futures = new ArrayList<>();
 
         for (final Map.Entry<String, QueryMetrics> e : query.getQueries().entrySet()) {
             final Query q = setupQuery(e.getValue()).rangeIfAbsent(query.getRange()).build();
-            futures.add(group.query(q).directTransform(r -> Pair.of(e.getKey(), r)));
+            futures.add(g.query(q).directTransform(r -> Pair.of(e.getKey(), r)));
         }
 
         final AsyncFuture<QueryBatchResponse> future =

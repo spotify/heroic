@@ -25,6 +25,7 @@ import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.JavaxRestFramework;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
@@ -69,8 +70,8 @@ public class MetadataResource {
     @Path("tags")
     public void tags(@Suspended final AsyncResponse response, final MetadataQueryBody request)
         throws ExecutionException {
-        final RangeFilter filter =
-            toRangeFilter(request::getFilter, request::getRange, request::getLimit);
+        final RangeFilter filter = toRangeFilter(request::getFilter, request::getRange,
+            () -> OptionalLimit.of(request.getLimit()));
         httpAsync.bind(response, cache.findTags(null, filter));
     }
 
@@ -78,8 +79,8 @@ public class MetadataResource {
     @Path("keys")
     public void keys(@Suspended final AsyncResponse response, final MetadataQueryBody request)
         throws ExecutionException {
-        final RangeFilter filter =
-            toRangeFilter(request::getFilter, request::getRange, request::getLimit);
+        final RangeFilter filter = toRangeFilter(request::getFilter, request::getRange,
+            () -> OptionalLimit.of(request.getLimit()));
         httpAsync.bind(response, cache.findKeys(null, filter));
     }
 
@@ -95,8 +96,8 @@ public class MetadataResource {
     public void getTimeSeries(
         @Suspended final AsyncResponse response, final MetadataQueryBody request
     ) {
-        final RangeFilter filter =
-            toRangeFilter(request::getFilter, request::getRange, request::getLimit);
+        final RangeFilter filter = toRangeFilter(request::getFilter, request::getRange,
+            () -> OptionalLimit.of(request.getLimit()));
         httpAsync.bind(response, cluster.useDefaultGroup().findSeries(filter));
     }
 
@@ -121,8 +122,8 @@ public class MetadataResource {
     public void tagkeyCount(
         @Suspended final AsyncResponse response, final MetadataTagKeySuggest request
     ) {
-        final RangeFilter filter =
-            toRangeFilter(request::getFilter, request::getRange, request::getLimit);
+        final RangeFilter filter = toRangeFilter(request::getFilter, request::getRange,
+            () -> OptionalLimit.of(request.getLimit()));
         httpAsync.bind(response, cluster.useDefaultGroup().tagKeyCount(filter));
     }
 
@@ -131,8 +132,8 @@ public class MetadataResource {
     public void keySuggest(
         @Suspended final AsyncResponse response, final MetadataKeySuggest request
     ) {
-        final RangeFilter filter =
-            toRangeFilter(request::getFilter, request::getRange, request::getLimit);
+        final RangeFilter filter = toRangeFilter(request::getFilter, request::getRange,
+            () -> OptionalLimit.of(request.getLimit()));
         httpAsync.bind(response,
             cluster.useDefaultGroup().keySuggest(filter, request.getMatch(), request.getKey()));
     }
@@ -142,8 +143,8 @@ public class MetadataResource {
     public void tagSuggest(
         @Suspended final AsyncResponse response, final MetadataTagSuggest request
     ) {
-        final RangeFilter filter =
-            toRangeFilter(request::getFilter, request::getRange, request::getLimit);
+        final RangeFilter filter = toRangeFilter(request::getFilter, request::getRange,
+            () -> OptionalLimit.of(request.getLimit()));
         httpAsync.bind(response, cluster
             .useDefaultGroup()
             .tagSuggest(filter, request.getMatch(), request.getKey(), request.getValue()));
@@ -154,8 +155,8 @@ public class MetadataResource {
     public void tagValueSuggest(
         @Suspended final AsyncResponse response, final MetadataTagValueSuggest request
     ) {
-        final RangeFilter filter =
-            toRangeFilter(request::getFilter, request::getRange, request::getLimit);
+        final RangeFilter filter = toRangeFilter(request::getFilter, request::getRange,
+            () -> OptionalLimit.of(request.getLimit()));
         httpAsync.bind(response,
             cluster.useDefaultGroup().tagValueSuggest(filter, request.getKey()));
     }
@@ -165,23 +166,25 @@ public class MetadataResource {
     public void tagValuesSuggest(
         @Suspended final AsyncResponse response, final MetadataTagValuesSuggest request
     ) {
-        final RangeFilter filter =
-            toRangeFilter(request::getFilter, request::getRange, request::getLimit);
+        final RangeFilter filter = toRangeFilter(request::getFilter, request::getRange,
+            () -> OptionalLimit.of(request.getLimit()));
+
         httpAsync.bind(response, cluster
             .useDefaultGroup()
-            .tagValuesSuggest(filter, request.getExclude(), request.getGroupLimit()));
+            .tagValuesSuggest(filter, request.getExclude(),
+                OptionalLimit.of(request.getGroupLimit())));
     }
 
     private RangeFilter toRangeFilter(
         final Supplier<Optional<Filter>> optionalFilter,
         final Supplier<Optional<QueryDateRange>> optionalRange
     ) {
-        return toRangeFilter(optionalFilter, optionalRange, () -> Integer.MAX_VALUE);
+        return toRangeFilter(optionalFilter, optionalRange, OptionalLimit::empty);
     }
 
     private RangeFilter toRangeFilter(
         final Supplier<Optional<Filter>> optionalFilter,
-        final Supplier<Optional<QueryDateRange>> optionalRange, final Supplier<Integer> limit
+        final Supplier<Optional<QueryDateRange>> optionalRange, final Supplier<OptionalLimit> limit
     ) {
         final long now = System.currentTimeMillis();
         final Filter filter = optionalFilter.get().orElseGet(filters::t);

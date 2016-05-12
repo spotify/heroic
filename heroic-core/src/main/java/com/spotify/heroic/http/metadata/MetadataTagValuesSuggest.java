@@ -36,9 +36,9 @@ import java.util.Optional;
 @Data
 @RequiredArgsConstructor(access = AccessLevel.NONE)
 public class MetadataTagValuesSuggest {
-    private static final int DEFAULT_LIMIT = 10;
+    private static final long DEFAULT_LIMIT = 10;
     private static final List<String> DEFAULT_EXCLUDE = ImmutableList.of();
-    private static final int DEFAULT_GROUP_LIMIT = 10;
+    private static final long DEFAULT_GROUP_LIMIT = 10;
 
     /**
      * Filter the suggestions being returned.
@@ -48,7 +48,7 @@ public class MetadataTagValuesSuggest {
     /**
      * Limit the number of suggestions being returned.
      */
-    private final int limit;
+    private final long limit;
 
     /**
      * Query for tags within the given range.
@@ -63,15 +63,15 @@ public class MetadataTagValuesSuggest {
     /**
      * Limit the number of values a single suggestion group may contain.
      */
-    private final int groupLimit;
+    private final long groupLimit;
 
     @JsonCreator
     public MetadataTagValuesSuggest(
         @JsonProperty("filter") Optional<Filter> filter,
         @JsonProperty("range") Optional<QueryDateRange> range,
-        @JsonProperty("limit") Optional<Integer> limit,
+        @JsonProperty("limit") Optional<Long> limit,
         @JsonProperty("exclude") Optional<List<String>> exclude,
-        @JsonProperty("groupLimimt") Optional<Integer> groupLimit
+        @JsonProperty("groupLimimt") Optional<Long> groupLimit
     ) {
         this.filter = filter;
         this.range = range;

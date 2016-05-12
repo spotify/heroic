@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.shell.task;
 
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.FilterFactory;
@@ -70,8 +71,8 @@ public class SuggestTagValue implements ShellTask {
         final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
 
         return suggest
-            .useGroup(params.group)
-            .tagValueSuggest(filter, Optional.ofNullable(params.key))
+            .useOptionalGroup(params.group)
+            .tagValueSuggest(filter, params.key)
             .directTransform(result -> {
                 int i = 0;
 
@@ -87,15 +88,15 @@ public class SuggestTagValue implements ShellTask {
     private static class Parameters extends Tasks.QueryParamsBase {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")
-        private String group;
+        private Optional<String> group = Optional.empty();
 
         @Option(name = "-k", aliases = {"--key"}, usage = "Provide key context for suggestion")
-        private String key = null;
+        private Optional<String> key = Optional.empty();
 
         @Option(name = "--limit", aliases = {"--limit"},
             usage = "Limit the number of printed entries")
         @Getter
-        private int limit = 10;
+        private OptionalLimit limit = OptionalLimit.empty();
 
         @Argument
         @Getter
@@ -107,7 +108,7 @@ public class SuggestTagValue implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         SuggestTagValue task();
     }
 }

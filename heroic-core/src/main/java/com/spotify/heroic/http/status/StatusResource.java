@@ -92,9 +92,9 @@ public class StatusResource {
     }
 
     private StatusResponse.Backend buildBackendStatus() {
-        final int available = metric.getBackends().size();
+        final int available = metric.getMembers().size();
         int ready =
-            (int) metric.getBackends().stream().filter(b -> b.getMember().isReady()).count();
+            (int) metric.getMembers().stream().filter(b -> b.getMember().isReady()).count();
         return new StatusResponse.Backend(available == ready, available, ready);
     }
 
@@ -129,8 +129,8 @@ public class StatusResource {
     }
 
     private StatusResponse.MetadataBackend buildMetadataBackendStatus() {
-        final int available = metadata.getBackends().size();
-        int ready = (int) metadata.getBackends().stream().map(b -> b.getMember().isReady()).count();
+        final int available = metadata.getMembers().size();
+        int ready = (int) metadata.getMembers().stream().map(b -> b.getMember().isReady()).count();
         return new StatusResponse.MetadataBackend(available == ready, available, ready);
     }
 }

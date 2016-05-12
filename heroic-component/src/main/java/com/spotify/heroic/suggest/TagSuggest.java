@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.cluster.NodeMetadata;
 import com.spotify.heroic.cluster.NodeRegistryEntry;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.metric.NodeError;
 import com.spotify.heroic.metric.RequestError;
 import eu.toolchain.async.Collector;
@@ -36,7 +37,6 @@ import lombok.EqualsAndHashCode;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -65,52 +65,46 @@ public class TagSuggest {
         this(EMPTY_ERRORS, suggestions);
     }
 
-    public static Collector<TagSuggest, TagSuggest> reduce(final int limit) {
-        return new Collector<TagSuggest, TagSuggest>() {
-            @Override
-            public TagSuggest collect(Collection<TagSuggest> groups) throws Exception {
-                final List<RequestError> errors = new ArrayList<>();
-                final HashMap<Pair<String, String>, Suggestion> suggestions = new HashMap<>();
+    public static Collector<TagSuggest, TagSuggest> reduce(final OptionalLimit limit) {
+        return groups -> {
+            final List<RequestError> errors1 = new ArrayList<>();
+            final HashMap<Pair<String, String>, Suggestion> suggestions1 = new HashMap<>();
 
-                for (final TagSuggest g : groups) {
-                    errors.addAll(g.errors);
+            for (final TagSuggest g : groups) {
+                errors1.addAll(g.errors);
 
-                    for (final Suggestion s : g.suggestions) {
-                        final Pair<String, String> key = Pair.of(s.key, s.value);
+                for (final Suggestion s : g.suggestions) {
+                    final Pair<String, String> key = Pair.of(s.key, s.value);
 
-                        final Suggestion replaced = suggestions.put(key, s);
+                    final Suggestion replaced = suggestions1.put(key, s);
 
-                        if (replaced == null) {
-                            continue;
-                        }
+                    if (replaced == null) {
+                        continue;
+                    }
 
-                        // prefer higher score if available.
-                        if (s.score < replaced.score) {
-                            suggestions.put(key, replaced);
-                        }
+                    // prefer higher score if available.
+                    if (s.score < replaced.score) {
+                        suggestions1.put(key, replaced);
                     }
                 }
-
-                final List<Suggestion> results = new ArrayList<>(suggestions.values());
-                Collections.sort(results, Suggestion.COMPARATOR);
-
-                return new TagSuggest(errors, results.subList(0, Math.min(results.size(), limit)));
             }
+
+            final List<Suggestion> results = new ArrayList<>(suggestions1.values());
+            Collections.sort(results, Suggestion.COMPARATOR);
+
+            return new TagSuggest(errors1, limit.limitList(results));
         };
     }
 
     public static Transform<Throwable, ? extends TagSuggest> nodeError(
         final NodeRegistryEntry node
     ) {
-        return new Transform<Throwable, TagSuggest>() {
-            @Override
-            public TagSuggest transform(Throwable e) throws Exception {
-                final NodeMetadata m = node.getMetadata();
-                final ClusterNode c = node.getClusterNode();
-                return new TagSuggest(ImmutableList.<RequestError>of(
-                    NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
-                    EMPTY_SUGGESTIONS);
-            }
+        return e -> {
+            final NodeMetadata m = node.getMetadata();
+            final ClusterNode c = node.getClusterNode();
+            return new TagSuggest(ImmutableList.<RequestError>of(
+                NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
+                EMPTY_SUGGESTIONS);
         };
     }
 

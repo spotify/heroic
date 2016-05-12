@@ -24,6 +24,7 @@ package com.spotify.heroic.cluster;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
@@ -93,13 +94,13 @@ public class LocalClusterNode implements ClusterNode {
     }
 
     @Override
-    public Group useGroup(String group) {
+    public Group useOptionalGroup(final Optional<String> group) {
         return new TracingClusterNodeGroup(LocalClusterNode.class, new LocalGroup(group));
     }
 
     @RequiredArgsConstructor
     private final class LocalGroup implements ClusterNode.Group {
-        private final String group;
+        private final Optional<String> group;
 
         @Override
         public ClusterNode node() {
@@ -160,7 +161,7 @@ public class LocalClusterNode implements ClusterNode {
 
         @Override
         public AsyncFuture<TagValuesSuggest> tagValuesSuggest(
-            RangeFilter filter, List<String> exclude, int groupLimit
+            RangeFilter filter, List<String> exclude, OptionalLimit groupLimit
         ) {
             return suggest().tagValuesSuggest(filter, exclude, groupLimit);
         }
@@ -183,15 +184,15 @@ public class LocalClusterNode implements ClusterNode {
         }
 
         private SuggestBackend suggest() {
-            return suggest.useGroup(group);
+            return suggest.useOptionalGroup(group);
         }
 
         private MetadataBackend metadata() {
-            return metadata.useGroup(group);
+            return metadata.useOptionalGroup(group);
         }
 
         private MetricBackendGroup metrics() {
-            return metrics.useGroup(group);
+            return metrics.useOptionalGroup(group);
         }
     }
 }

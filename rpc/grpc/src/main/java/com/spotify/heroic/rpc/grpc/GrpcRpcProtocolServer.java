@@ -25,13 +25,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.cluster.NodeMetadata;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
+import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
+import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricManager;
-import com.spotify.heroic.rpc.grpc.GrpcRpcProtocol.RpcKeySuggest;
-import com.spotify.heroic.rpc.grpc.GrpcRpcProtocol.RpcSuggestTagValue;
-import com.spotify.heroic.rpc.grpc.GrpcRpcProtocol.RpcSuggestTagValues;
-import com.spotify.heroic.rpc.grpc.GrpcRpcProtocol.RpcTagSuggest;
-import com.spotify.heroic.rpc.grpc.GrpcRpcProtocol.RpcWriteSeries;
+import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestManager;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -102,76 +100,45 @@ public class GrpcRpcProtocolServer implements LifeCycles {
 
         container.register(GrpcRpcProtocol.METADATA, empty -> async.resolved(localMetadata));
 
-        container.register(GrpcRpcProtocol.METRICS_QUERY, grouped -> {
-            final GrpcRpcProtocol.RpcFullQuery q = grouped.getQuery();
-
-            return metrics
-                .useGroup(grouped.getGroup().orElse(null))
-                .query(q.getSource(), q.getFilter(), q.getRange(), q.getAggregation(),
-                    q.getOptions());
-        });
+        container.register(GrpcRpcProtocol.METRICS_QUERY, g -> g.apply(metrics,
+            (m, q) -> m.query(q.getSource(), q.getFilter(), q.getRange(), q.getAggregation(),
+                q.getOptions())));
 
         container.register(GrpcRpcProtocol.METRICS_WRITE,
-            grouped -> metrics.useGroup(grouped.getGroup().orElse(null)).write(grouped.getQuery()));
+            g -> g.apply(metrics, MetricBackend::write));
 
-        container.register(GrpcRpcProtocol.METADATA_FIND_TAGS, grouped -> metadata
-            .useGroup(grouped.getGroup().orElse(null))
-            .findTags(grouped.getQuery()));
+        container.register(GrpcRpcProtocol.METADATA_FIND_TAGS,
+            g -> g.apply(metadata, MetadataBackend::findTags));
 
-        container.register(GrpcRpcProtocol.METADATA_FIND_KEYS, grouped -> metadata
-            .useGroup(grouped.getGroup().orElse(null))
-            .findKeys(grouped.getQuery()));
+        container.register(GrpcRpcProtocol.METADATA_FIND_KEYS,
+            g -> g.apply(metadata, MetadataBackend::findKeys));
 
-        container.register(GrpcRpcProtocol.METADATA_FIND_SERIES, grouped -> metadata
-            .useGroup(grouped.getGroup().orElse(null))
-            .findSeries(grouped.getQuery()));
+        container.register(GrpcRpcProtocol.METADATA_FIND_SERIES,
+            g -> g.apply(metadata, MetadataBackend::findSeries));
 
-        container.register(GrpcRpcProtocol.METADATA_COUNT_SERIES, grouped -> metadata
-            .useGroup(grouped.getGroup().orElse(null))
-            .countSeries(grouped.getQuery()));
+        container.register(GrpcRpcProtocol.METADATA_COUNT_SERIES,
+            g -> g.apply(metadata, MetadataBackend::countSeries));
 
-        container.register(GrpcRpcProtocol.METADATA_WRITE, grouped -> {
-            final RpcWriteSeries query = grouped.getQuery();
-            return metadata
-                .useGroup(grouped.getGroup().orElse(null))
-                .write(query.getSeries(), query.getRange());
-        });
+        container.register(GrpcRpcProtocol.METADATA_WRITE,
+            g -> g.apply(metadata, (m, q) -> m.write(q.getSeries(), q.getRange())));
 
-        container.register(GrpcRpcProtocol.SUGGEST_TAG_KEY_COUNT, grouped -> suggest
-            .useGroup(grouped.getGroup().orElse(null))
-            .tagKeyCount(grouped.getQuery()));
+        container.register(GrpcRpcProtocol.METADATA_DELETE_SERIES,
+            g -> g.apply(metadata, MetadataBackend::deleteSeries));
 
-        container.register(GrpcRpcProtocol.METADATA_DELETE_SERIES, grouped -> metadata
-            .useGroup(grouped.getGroup().orElse(null))
-            .deleteSeries(grouped.getQuery()));
+        container.register(GrpcRpcProtocol.SUGGEST_TAG_KEY_COUNT,
+            g -> g.apply(suggest, SuggestBackend::tagKeyCount));
 
-        container.register(GrpcRpcProtocol.SUGGEST_TAG, grouped -> {
-            final RpcTagSuggest query = grouped.getQuery();
-            return suggest
-                .useGroup(grouped.getGroup().orElse(null))
-                .tagSuggest(query.getFilter(), query.getMatch(), query.getKey(), query.getValue());
-        });
+        container.register(GrpcRpcProtocol.SUGGEST_TAG, g -> g.apply(suggest,
+            (m, q) -> m.tagSuggest(q.getFilter(), q.getMatch(), q.getKey(), q.getValue())));
 
-        container.register(GrpcRpcProtocol.SUGGEST_KEY, grouped -> {
-            final RpcKeySuggest query = grouped.getQuery();
-            return suggest
-                .useGroup(grouped.getGroup().orElse(null))
-                .keySuggest(query.getFilter(), query.getMatch(), query.getKey());
-        });
+        container.register(GrpcRpcProtocol.SUGGEST_KEY,
+            g -> g.apply(suggest, (m, q) -> m.keySuggest(q.getFilter(), q.getMatch(), q.getKey())));
 
-        container.register(GrpcRpcProtocol.SUGGEST_TAG_VALUES, grouped -> {
-            final RpcSuggestTagValues query = grouped.getQuery();
-            return suggest
-                .useGroup(grouped.getGroup().orElse(null))
-                .tagValuesSuggest(query.getFilter(), query.getExclude(), query.getGroupLimit());
-        });
+        container.register(GrpcRpcProtocol.SUGGEST_TAG_VALUES, g -> g.apply(suggest,
+            (m, q) -> m.tagValuesSuggest(q.getFilter(), q.getExclude(), q.getGroupLimit())));
 
-        container.register(GrpcRpcProtocol.SUGGEST_TAG_VALUE, grouped -> {
-            final RpcSuggestTagValue query = grouped.getQuery();
-            return suggest
-                .useGroup(grouped.getGroup().orElse(null))
-                .tagValueSuggest(query.getFilter(), query.getKey());
-        });
+        container.register(GrpcRpcProtocol.SUGGEST_TAG_VALUE,
+            g -> g.apply(suggest, (m, q) -> m.tagValueSuggest(q.getFilter(), q.getKey())));
 
         return container;
     }

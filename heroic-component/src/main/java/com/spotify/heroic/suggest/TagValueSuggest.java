@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.cluster.NodeMetadata;
 import com.spotify.heroic.cluster.NodeRegistryEntry;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.metric.NodeError;
 import com.spotify.heroic.metric.RequestError;
 import eu.toolchain.async.Collector;
@@ -35,7 +36,6 @@ import eu.toolchain.async.Transform;
 import lombok.Data;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -63,54 +63,45 @@ public class TagValueSuggest {
         this(EMPTY_ERRORS, values, limited);
     }
 
-    public static Collector<TagValueSuggest, TagValueSuggest> reduce(final int limit) {
-        return new Collector<TagValueSuggest, TagValueSuggest>() {
-            @Override
-            public TagValueSuggest collect(Collection<TagValueSuggest> groups) throws Exception {
-                final List<RequestError> errors = new ArrayList<>();
-                final SortedSet<String> values = new TreeSet<>();
+    public static Collector<TagValueSuggest, TagValueSuggest> reduce(final OptionalLimit limit) {
+        return groups -> {
+            final List<RequestError> errors1 = new ArrayList<>();
+            final SortedSet<String> values1 = new TreeSet<>();
 
-                boolean limited = false;
+            boolean limited1 = false;
 
-                for (final TagValueSuggest g : groups) {
-                    errors.addAll(g.errors);
-                    values.addAll(g.values);
-                    limited = limited || g.limited;
-                }
-
-                limited = limited || values.size() >= limit;
-                return new TagValueSuggest(errors,
-                    ImmutableList.copyOf(values).subList(0, Math.min(values.size(), limit)),
-                    limited);
+            for (final TagValueSuggest g : groups) {
+                errors1.addAll(g.errors);
+                values1.addAll(g.values);
+                limited1 = limited1 || g.limited;
             }
+
+            limited1 = limited1 || limit.isGreaterOrEqual(values1.size());
+
+            return new TagValueSuggest(errors1, limit.limitList(ImmutableList.copyOf(values1)),
+                limited1);
         };
     }
 
     public static Transform<Throwable, ? extends TagValueSuggest> nodeError(
         final NodeRegistryEntry node
     ) {
-        return new Transform<Throwable, TagValueSuggest>() {
-            @Override
-            public TagValueSuggest transform(Throwable e) throws Exception {
-                final NodeMetadata m = node.getMetadata();
-                final ClusterNode c = node.getClusterNode();
-                return new TagValueSuggest(ImmutableList.<RequestError>of(
-                    NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)), EMPTY_VALUES,
-                    false);
-            }
+        return e -> {
+            final NodeMetadata m = node.getMetadata();
+            final ClusterNode c = node.getClusterNode();
+            return new TagValueSuggest(ImmutableList.<RequestError>of(
+                NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)), EMPTY_VALUES,
+                false);
         };
     }
 
     public static Transform<Throwable, ? extends TagValueSuggest> nodeError(
         final ClusterNode.Group group
     ) {
-        return new Transform<Throwable, TagValueSuggest>() {
-            @Override
-            public TagValueSuggest transform(Throwable e) throws Exception {
-                final List<RequestError> errors =
-                    ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
-                return new TagValueSuggest(errors, EMPTY_VALUES, false);
-            }
+        return e -> {
+            final List<RequestError> errors1 =
+                ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
+            return new TagValueSuggest(errors1, EMPTY_VALUES, false);
         };
     }
 }

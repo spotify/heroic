@@ -22,7 +22,6 @@
 package com.spotify.heroic.shell.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.dagger.CoreComponent;
@@ -35,6 +34,7 @@ import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
+import com.spotify.heroic.shell.Tasks;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -44,20 +44,16 @@ import org.kohsuke.args4j.Option;
 
 import javax.inject.Inject;
 import javax.inject.Named;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicLong;
 
 @TaskUsage("Count data for a given set of keys")
 @TaskName("count-data")
 public class CountData implements ShellTask {
-    private static final Charset UTF8 = Charsets.UTF_8;
-
     private final MetricManager metrics;
     private final ObjectMapper mapper;
     private final AsyncFramework async;
@@ -80,23 +76,16 @@ public class CountData implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, final TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        final MetricBackendGroup group = metrics.useGroup(params.group);
+        final MetricBackendGroup group = metrics.useOptionalGroup(params.group);
 
         final QueryOptions options = QueryOptions.builder().tracing(params.tracing).build();
 
         final ImmutableList.Builder<BackendKey> keys = ImmutableList.builder();
 
-        if (params.file != null) {
-            try (final BufferedReader reader = new BufferedReader(
-                new InputStreamReader(io.newInputStream(params.file), UTF8))) {
-                String line;
-
-                while ((line = reader.readLine()) != null) {
-                    keys.add(
-                        mapper.readValue(line.trim(), BackendKeyArgument.class).toBackendKey());
-                }
-            }
-        }
+        Tasks
+            .parseJsonLines(mapper, params.file, io, BackendKeyArgument.class)
+            .map(BackendKeyArgument::toBackendKey)
+            .forEach(keys::add);
 
         for (final String k : params.keys) {
             keys.add(mapper.readValue(k, BackendKeyArgument.class).toBackendKey());
@@ -169,14 +158,14 @@ public class CountData implements ShellTask {
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-f", aliases = {"--file"}, usage = "File to read keys from",
             metaVar = "<file>")
-        private Path file;
+        private Optional<Path> file = Optional.empty();
 
         @Option(name = "-k", aliases = {"--key"}, usage = "Key to delete", metaVar = "<json>")
         private List<String> keys = new ArrayList<>();
 
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")
-        private String group = null;
+        private Optional<String> group = Optional.empty();
 
         @Option(name = "--tracing", usage = "Enable extensive tracing")
         private boolean tracing = false;
@@ -191,7 +180,7 @@ public class CountData implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         CountData task();
     }
 }

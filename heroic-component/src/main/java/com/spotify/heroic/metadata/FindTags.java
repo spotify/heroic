@@ -110,28 +110,21 @@ public class FindTags {
     }
 
     public static Transform<Throwable, ? extends FindTags> nodeError(final NodeRegistryEntry node) {
-        return new Transform<Throwable, FindTags>() {
-            @Override
-            public FindTags transform(Throwable e) throws Exception {
-                final NodeMetadata m = node.getMetadata();
-                final ClusterNode c = node.getClusterNode();
-                return new FindTags(ImmutableList.<RequestError>of(
-                    NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)), EMPTY_TAGS,
-                    0);
-            }
+        return e -> {
+            final NodeMetadata m = node.getMetadata();
+            final ClusterNode c = node.getClusterNode();
+            return new FindTags(ImmutableList.<RequestError>of(
+                NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)), EMPTY_TAGS, 0);
         };
     }
 
     public static Transform<Throwable, ? extends FindTags> nodeError(
         final ClusterNode.Group group
     ) {
-        return new Transform<Throwable, FindTags>() {
-            @Override
-            public FindTags transform(Throwable e) throws Exception {
-                final List<RequestError> errors =
-                    ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
-                return new FindTags(errors, EMPTY_TAGS, 0);
-            }
+        return e -> {
+            final List<RequestError> errors1 =
+                ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
+            return new FindTags(errors1, EMPTY_TAGS, 0);
         };
     }
 }

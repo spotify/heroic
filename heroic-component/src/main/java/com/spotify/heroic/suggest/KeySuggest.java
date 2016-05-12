@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.cluster.NodeMetadata;
 import com.spotify.heroic.cluster.NodeRegistryEntry;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.metric.NodeError;
 import com.spotify.heroic.metric.RequestError;
 import eu.toolchain.async.Collector;
@@ -34,7 +35,6 @@ import eu.toolchain.async.Transform;
 import lombok.Data;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -64,50 +64,44 @@ public class KeySuggest {
         this(EMPTY_ERRORS, suggestions);
     }
 
-    public static Collector<KeySuggest, KeySuggest> reduce(final int limit) {
-        return new Collector<KeySuggest, KeySuggest>() {
-            @Override
-            public KeySuggest collect(Collection<KeySuggest> results) throws Exception {
-                final List<RequestError> errors = new ArrayList<>();
-                final Map<String, Suggestion> suggestions = new HashMap<>();
+    public static Collector<KeySuggest, KeySuggest> reduce(final OptionalLimit limit) {
+        return results -> {
+            final List<RequestError> errors1 = new ArrayList<>();
+            final Map<String, Suggestion> suggestions1 = new HashMap<>();
 
-                for (final KeySuggest r : results) {
-                    errors.addAll(r.errors);
+            for (final KeySuggest r : results) {
+                errors1.addAll(r.errors);
 
-                    for (final Suggestion s : r.suggestions) {
-                        Suggestion alt = suggestions.get(s.key);
+                for (final Suggestion s : r.suggestions) {
+                    Suggestion alt = suggestions1.get(s.key);
 
-                        if (alt == null) {
-                            suggestions.put(s.key, s);
-                            continue;
-                        }
+                    if (alt == null) {
+                        suggestions1.put(s.key, s);
+                        continue;
+                    }
 
-                        if (alt.score < s.score) {
-                            suggestions.put(s.key, s);
-                        }
+                    if (alt.score < s.score) {
+                        suggestions1.put(s.key, s);
                     }
                 }
-
-                final List<Suggestion> list = new ArrayList<>(suggestions.values());
-                Collections.sort(list, Suggestion.COMPARATOR);
-
-                return new KeySuggest(errors, list.subList(0, Math.min(list.size(), limit)));
             }
+
+            final List<Suggestion> list = new ArrayList<>(suggestions1.values());
+            Collections.sort(list, Suggestion.COMPARATOR);
+
+            return new KeySuggest(errors1, limit.limitList(list));
         };
     }
 
     public static Transform<Throwable, ? extends KeySuggest> nodeError(
         final NodeRegistryEntry node
     ) {
-        return new Transform<Throwable, KeySuggest>() {
-            @Override
-            public KeySuggest transform(Throwable e) throws Exception {
-                final NodeMetadata m = node.getMetadata();
-                final ClusterNode c = node.getClusterNode();
-                return new KeySuggest(ImmutableList.<RequestError>of(
-                    NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
-                    EMPTY_SUGGESTIONS);
-            }
+        return e -> {
+            final NodeMetadata m = node.getMetadata();
+            final ClusterNode c = node.getClusterNode();
+            return new KeySuggest(ImmutableList.<RequestError>of(
+                NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
+                EMPTY_SUGGESTIONS);
         };
     }
 

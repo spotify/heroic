@@ -27,6 +27,7 @@ import com.google.common.hash.HashCode;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Groups;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
@@ -187,7 +188,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
     @Override
     public AsyncFuture<TagValuesSuggest> tagValuesSuggest(
-        final RangeFilter filter, final List<String> exclude, final int groupLimit
+        final RangeFilter filter, final List<String> exclude, final OptionalLimit groupLimit
     ) {
         return connection.doto((final Connection c) -> {
             final BoolFilterBuilder bool = boolFilter();
@@ -209,16 +210,20 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 .setQuery(query)
                 .setTimeout(TIMEOUT);
 
+            final OptionalLimit limit = filter.getLimit();
+
             {
-                final TermsBuilder terms = AggregationBuilders
-                    .terms("keys")
-                    .field(TAG_SKEY_RAW)
-                    .size(filter.getLimit() + 1);
+                final TermsBuilder terms = AggregationBuilders.terms("keys").field(TAG_SKEY_RAW);
+
+                limit.asInteger().ifPresent(l -> terms.size(l + 1));
+
                 request.addAggregation(terms);
                 // make value bucket one entry larger than necessary to figure out when limiting
                 // is applied.
                 final TermsBuilder cardinality =
-                    AggregationBuilders.terms("values").field(TAG_SVAL_RAW).size(groupLimit + 1);
+                    AggregationBuilders.terms("values").field(TAG_SVAL_RAW);
+
+                groupLimit.asInteger().ifPresent(l -> cardinality.size(l + 1));
                 terms.subAggregation(cardinality);
             }
 
@@ -229,8 +234,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
                 final List<Bucket> buckets = terms.getBuckets();
 
-                for (final Terms.Bucket bucket : buckets.subList(0,
-                    Math.min(buckets.size(), filter.getLimit()))) {
+                for (final Terms.Bucket bucket : limit.limitList(buckets)) {
                     final Terms valueTerms = bucket.getAggregations().get("values");
 
                     final List<Bucket> valueBuckets = valueTerms.getBuckets();
@@ -241,18 +245,15 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                         result.add(valueBucket.getKey());
                     }
 
-                    final boolean limited = valueBuckets.size() > groupLimit;
-
-                    final ImmutableList<String> values = ImmutableList
-                        .copyOf(result)
-                        .subList(0, Math.min(result.size(), groupLimit));
+                    final List<String> values = groupLimit.limitList(ImmutableList.copyOf(result));
+                    final boolean limited = groupLimit.isGreater(valueBuckets.size());
 
                     suggestions.add(
                         new TagValuesSuggest.Suggestion(bucket.getKey(), values, limited));
                 }
 
                 return new TagValuesSuggest(new ArrayList<>(suggestions),
-                    buckets.size() > filter.getLimit());
+                    limit.isGreater(buckets.size()));
             });
         });
     }
@@ -281,12 +282,13 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 .setSearchType(SearchType.COUNT)
                 .setQuery(query);
 
+            final OptionalLimit limit = filter.getLimit();
+
             {
-                final TermsBuilder terms = AggregationBuilders
-                    .terms("values")
-                    .field(TAG_SVAL_RAW)
-                    .size(filter.getLimit() + 1)
-                    .order(Order.term(true));
+                final TermsBuilder terms =
+                    AggregationBuilders.terms("values").field(TAG_SVAL_RAW).order(Order.term(true));
+
+                limit.asInteger().ifPresent(l -> terms.size(l + 1));
                 request.addAggregation(terms);
             }
 
@@ -297,14 +299,12 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
                 final List<Bucket> buckets = terms.getBuckets();
 
-                for (final Terms.Bucket bucket : buckets.subList(0,
-                    Math.min(buckets.size(), filter.getLimit()))) {
+                for (final Terms.Bucket bucket : limit.limitList(buckets)) {
                     suggestions.add(bucket.getKey());
                 }
 
-                boolean limited = buckets.size() > filter.getLimit();
-
-                return new TagValueSuggest(new ArrayList<>(suggestions), limited);
+                return new TagValueSuggest(new ArrayList<>(suggestions),
+                    limit.isGreater(buckets.size()));
             });
         });
     }
@@ -319,13 +319,13 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 .setSearchType(SearchType.COUNT)
                 .setQuery(root);
 
-            final int limit = filter.getLimit();
+            final OptionalLimit limit = filter.getLimit();
 
             {
-                final TermsBuilder terms = AggregationBuilders
-                    .terms("keys")
-                    .field(TAG_SKEY_RAW)
-                    .size(limit + 1);
+                final TermsBuilder terms = AggregationBuilders.terms("keys").field(TAG_SKEY_RAW);
+
+                limit.asInteger().ifPresent(l -> terms.size(l + 1));
+
                 request.addAggregation(terms);
                 final CardinalityBuilder cardinality =
                     AggregationBuilders.cardinality("cardinality").field(TAG_SVAL_RAW);
@@ -339,15 +339,14 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
                 final List<Bucket> buckets = terms.getBuckets();
 
-                for (final Terms.Bucket bucket : buckets.subList(0,
-                    Math.min(buckets.size(), limit))) {
+                for (final Terms.Bucket bucket : limit.limitList(buckets)) {
                     final Cardinality cardinality = bucket.getAggregations().get("cardinality");
                     suggestions.add(
                         new TagKeyCount.Suggestion(bucket.getKey(), cardinality.getValue()));
                 }
 
                 return new TagKeyCount(new ArrayList<>(suggestions),
-                    terms.getBuckets().size() < limit);
+                    limit.isGreater(buckets.size()));
             });
         });
     }
@@ -400,11 +399,10 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                     .setSize(1)
                     .setFetchSource(TAG_SUGGEST_SOURCES, new String[0]);
 
-                final TermsBuilder terms = AggregationBuilders
-                    .terms("terms")
-                    .field(TAG_KV)
-                    .size(filter.getLimit())
-                    .subAggregation(hits);
+                final TermsBuilder terms =
+                    AggregationBuilders.terms("terms").field(TAG_KV).subAggregation(hits);
+
+                filter.getLimit().asInteger().ifPresent(terms::size);
 
                 request.addAggregation(terms);
             }
@@ -473,12 +471,10 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                     .setSize(1)
                     .setFetchSource(KEY_SUGGEST_SOURCES, new String[0]);
 
-                final TermsBuilder terms = AggregationBuilders
-                    .terms("terms")
-                    .field(KEY)
-                    .size(filter.getLimit())
-                    .subAggregation(hits);
+                final TermsBuilder terms =
+                    AggregationBuilders.terms("terms").field(KEY).subAggregation(hits);
 
+                filter.getLimit().asInteger().ifPresent(terms::size);
                 request.addAggregation(terms);
             }
 

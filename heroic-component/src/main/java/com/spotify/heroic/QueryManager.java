@@ -22,20 +22,17 @@
 package com.spotify.heroic;
 
 import com.spotify.heroic.cluster.ClusterNode;
+import com.spotify.heroic.common.UsableGroupManager;
 import com.spotify.heroic.metric.QueryResult;
 import eu.toolchain.async.AsyncFuture;
 
 import java.util.Collection;
 import java.util.Optional;
 
-public interface QueryManager {
-    Group useGroup(String group);
+public interface QueryManager extends UsableGroupManager<QueryManager.Group> {
+    Collection<? extends QueryManager.Group> useGroupPerNode(Optional<String> group);
 
-    Collection<? extends Group> useGroupPerNode(String group);
-
-    Group useDefaultGroup();
-
-    Collection<? extends Group> useDefaultGroupPerNode();
+    Collection<? extends QueryManager.Group> useDefaultGroupPerNode();
 
     QueryBuilder newQuery();
 
@@ -47,7 +44,7 @@ public interface QueryManager {
 
     AsyncFuture<Void> initialized();
 
-    public interface Group extends Iterable<ClusterNode.Group> {
+    interface Group extends Iterable<ClusterNode.Group> {
         AsyncFuture<QueryResult> query(Query query);
 
         ClusterNode.Group first();

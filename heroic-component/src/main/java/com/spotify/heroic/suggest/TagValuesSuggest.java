@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.cluster.NodeMetadata;
 import com.spotify.heroic.cluster.NodeRegistryEntry;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.metric.NodeError;
 import com.spotify.heroic.metric.RequestError;
 import eu.toolchain.async.Collector;
@@ -34,7 +35,6 @@ import eu.toolchain.async.Transform;
 import lombok.Data;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -68,63 +68,54 @@ public class TagValuesSuggest {
     }
 
     public static Collector<TagValuesSuggest, TagValuesSuggest> reduce(
-        final int limit, final int groupLimit
+        final OptionalLimit limit, final OptionalLimit groupLimit
     ) {
-        return new Collector<TagValuesSuggest, TagValuesSuggest>() {
-            @Override
-            public TagValuesSuggest collect(Collection<TagValuesSuggest> groups) throws Exception {
-                final Map<String, MidFlight> midflights = new HashMap<>();
-                boolean limited = false;
+        return groups -> {
+            final Map<String, MidFlight> midflights = new HashMap<>();
+            boolean limited1 = false;
 
-                for (final TagValuesSuggest g : groups) {
-                    for (final Suggestion s : g.suggestions) {
-                        MidFlight m = midflights.get(s.key);
+            for (final TagValuesSuggest g : groups) {
+                for (final Suggestion s : g.suggestions) {
+                    MidFlight m = midflights.get(s.key);
 
-                        if (m == null) {
-                            m = new MidFlight();
-                            midflights.put(s.key, m);
-                        }
-
-                        m.values.addAll(s.values);
-                        m.limited = m.limited || s.limited;
+                    if (m == null) {
+                        m = new MidFlight();
+                        midflights.put(s.key, m);
                     }
 
-                    limited = limited || g.limited;
+                    m.values.addAll(s.values);
+                    m.limited = m.limited || s.limited;
                 }
 
-                final ArrayList<Suggestion> suggestions = new ArrayList<>(midflights.size());
-
-                for (final Map.Entry<String, MidFlight> e : midflights.entrySet()) {
-                    final String key = e.getKey();
-                    final MidFlight m = e.getValue();
-
-                    final ImmutableList<String> values = ImmutableList.copyOf(m.values);
-                    final boolean sLimited = m.limited || values.size() >= groupLimit;
-
-                    suggestions.add(
-                        new Suggestion(key, values.subList(0, Math.min(values.size(), groupLimit)),
-                            sLimited));
-                }
-
-                limited = limited || suggestions.size() >= limit;
-                return new TagValuesSuggest(
-                    suggestions.subList(0, Math.min(suggestions.size(), limit)), limited);
+                limited1 = limited1 || g.limited;
             }
+
+            final ArrayList<Suggestion> suggestions1 = new ArrayList<>(midflights.size());
+
+            for (final Map.Entry<String, MidFlight> e : midflights.entrySet()) {
+                final String key = e.getKey();
+                final MidFlight m = e.getValue();
+
+                final ImmutableList<String> values = ImmutableList.copyOf(m.values);
+                final boolean sLimited = m.limited || groupLimit.isGreater(values.size());
+
+                suggestions1.add(new Suggestion(key, groupLimit.limitList(values), sLimited));
+            }
+
+            return new TagValuesSuggest(limit.limitList(suggestions1),
+                limited1 || limit.isGreater(suggestions1.size()));
         };
     }
 
     public static Transform<Throwable, ? extends TagValuesSuggest> nodeError(
         final NodeRegistryEntry node
     ) {
-        return new Transform<Throwable, TagValuesSuggest>() {
-            @Override
-            public TagValuesSuggest transform(Throwable e) throws Exception {
-                final NodeMetadata m = node.getMetadata();
-                final ClusterNode c = node.getClusterNode();
-                return new TagValuesSuggest(ImmutableList.<RequestError>of(
-                    NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
-                    EMPTY_SUGGESTIONS, false);
-            }
+        return e -> {
+            final NodeMetadata m = node.getMetadata();
+            final ClusterNode c = node.getClusterNode();
+            return new TagValuesSuggest(ImmutableList.<RequestError>of(
+                NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
+                EMPTY_SUGGESTIONS, false);
         };
     }
 
@@ -183,13 +174,10 @@ public class TagValuesSuggest {
     public static Transform<Throwable, ? extends TagValuesSuggest> nodeError(
         final ClusterNode.Group group
     ) {
-        return new Transform<Throwable, TagValuesSuggest>() {
-            @Override
-            public TagValuesSuggest transform(Throwable e) throws Exception {
-                final List<RequestError> errors =
-                    ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
-                return new TagValuesSuggest(errors, EMPTY_SUGGESTIONS, false);
-            }
+        return e -> {
+            final List<RequestError> errors1 =
+                ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
+            return new TagValuesSuggest(errors1, EMPTY_SUGGESTIONS, false);
         };
     }
 }

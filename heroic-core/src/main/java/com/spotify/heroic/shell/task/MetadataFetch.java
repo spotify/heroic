@@ -22,6 +22,7 @@
 package com.spotify.heroic.shell.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.CoreComponent;
@@ -45,6 +46,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @TaskUsage("Fetch series matching the given query")
 @TaskName("metadata-fetch")
@@ -76,31 +78,38 @@ public class MetadataFetch implements ShellTask {
 
         final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
 
-        return metadata.useGroup(params.group).findSeries(filter).directTransform(result -> {
-            int i = 0;
+        return metadata
+            .useOptionalGroup(params.group)
+            .findSeries(filter)
+            .directTransform(result -> {
+                int i = 0;
 
-            for (final Series series : result.getSeries()) {
-                io.out().println(String.format("%s: %s", i++, mapper.writeValueAsString(series)));
+                final OptionalLimit limit = filter.getLimit();
 
-                if (i >= params.limit) {
-                    break;
+                for (final Series series : result.getSeries()) {
+                    io
+                        .out()
+                        .println(String.format("%s: %s", i++, mapper.writeValueAsString(series)));
+
+                    if (limit.isGreaterOrEqual(i)) {
+                        break;
+                    }
                 }
-            }
 
-            return null;
-        });
+                return null;
+            });
     }
 
     @ToString
     private static class Parameters extends Tasks.QueryParamsBase {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")
-        private String group;
+        private Optional<String> group = Optional.empty();
 
         @Option(name = "--limit", aliases = {"--limit"},
             usage = "Limit the number of printed entries")
         @Getter
-        private int limit = 10;
+        private OptionalLimit limit = OptionalLimit.empty();
 
         @Argument
         @Getter
@@ -112,7 +121,7 @@ public class MetadataFetch implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         MetadataFetch task();
     }
 }

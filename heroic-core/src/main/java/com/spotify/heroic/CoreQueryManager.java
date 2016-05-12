@@ -86,24 +86,19 @@ public class CoreQueryManager implements QueryManager {
     }
 
     @Override
-    public Group useGroup(String group) {
-        return new Group(cluster.useGroup(group));
+    public QueryManager.Group useOptionalGroup(final Optional<String> group) {
+        return new Group(cluster.useOptionalGroup(group));
     }
 
     @Override
-    public Collection<Group> useGroupPerNode(String group) {
+    public Collection<Group> useGroupPerNode(final Optional<String> group) {
         final List<Group> result = new ArrayList<>();
 
-        for (ClusterNode.Group g : cluster.useGroup(group)) {
+        for (ClusterNode.Group g : cluster.useOptionalGroup(group)) {
             result.add(new Group(ImmutableList.of(g)));
         }
 
         return result;
-    }
-
-    @Override
-    public Group useDefaultGroup() {
-        return new Group(cluster.useDefaultGroup());
     }
 
     @Override
@@ -273,34 +268,33 @@ public class CoreQueryManager implements QueryManager {
     }
 
     /**
-     * Given a range and a cadence, return a range that might be shifted in case the end period
-     * is too close or after 'now'. This is useful to avoid querying non-complete buckets.
+     * Given a range and a cadence, return a range that might be shifted in case the end period is
+     * too close or after 'now'. This is useful to avoid querying non-complete buckets.
      *
      * @param rawRange Original range.
      * @return A possibly shifted range.
-     *
      */
-     DateRange buildShiftedRange(DateRange rawRange, long cadence, long now) {
-         if (rawRange.getStart() > now) {
-             throw new IllegalArgumentException("start is greater than now");
-         }
+    DateRange buildShiftedRange(DateRange rawRange, long cadence, long now) {
+        if (rawRange.getStart() > now) {
+            throw new IllegalArgumentException("start is greater than now");
+        }
 
-         final DateRange rounded = rawRange.rounded(cadence);
+        final DateRange rounded = rawRange.rounded(cadence);
 
-         final long nowDelta = now - rounded.getEnd();
+        final long nowDelta = now - rounded.getEnd();
 
-         if (nowDelta > SHIFT_TOLERANCE) {
-             return rounded;
-         }
+        if (nowDelta > SHIFT_TOLERANCE) {
+            return rounded;
+        }
 
-         final long diff = Math.abs(Math.min(nowDelta, 0)) + SHIFT_TOLERANCE;
+        final long diff = Math.abs(Math.min(nowDelta, 0)) + SHIFT_TOLERANCE;
 
-         return rounded.shift(-toleranceShiftPeriod(diff, cadence));
-     }
+        return rounded.shift(-toleranceShiftPeriod(diff, cadence));
+    }
 
     /**
-     * Calculate a tolerance shift period that corresponds to the given difference that needs
-     * to be applied to the range to honor the tolerance shift period.
+     * Calculate a tolerance shift period that corresponds to the given difference that needs to be
+     * applied to the range to honor the tolerance shift period.
      *
      * @param diff The time difference to apply.
      * @param cadence The cadence period.

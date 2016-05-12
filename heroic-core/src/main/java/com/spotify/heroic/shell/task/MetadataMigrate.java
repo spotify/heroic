@@ -22,6 +22,7 @@
 package com.spotify.heroic.shell.task;
 
 import com.spotify.heroic.async.AsyncObserver;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.CoreComponent;
@@ -47,6 +48,7 @@ import org.kohsuke.args4j.Option;
 import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @TaskUsage("Fetch series matching the given query")
@@ -81,8 +83,8 @@ public class MetadataMigrate implements ShellTask {
 
         final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
 
-        final MetadataBackend group = metadata.useGroup(params.group);
-        final MetadataBackend target = metadata.useGroup(params.target);
+        final MetadataBackend group = metadata.useOptionalGroup(params.group);
+        final MetadataBackend target = metadata.useOptionalGroup(params.target);
 
         io.out().println("Migrating:");
         io.out().println("  from: " + group);
@@ -133,11 +135,11 @@ public class MetadataMigrate implements ShellTask {
     private static class Parameters extends Tasks.QueryParamsBase {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to migrate from",
             metaVar = "<metadata-group>", required = true)
-        private String group;
+        private Optional<String> group = Optional.empty();
 
         @Option(name = "-t", aliases = {"--target"}, usage = "Backend group to migrate to",
             metaVar = "<metadata-group>", required = true)
-        private String target;
+        private Optional<String> target = Optional.empty();
 
         @Option(name = "--ok", usage = "Verify the migration")
         private boolean ok = false;
@@ -145,11 +147,11 @@ public class MetadataMigrate implements ShellTask {
         @Option(name = "--limit", aliases = {"--limit"},
             usage = "Limit the number of printed entries")
         @Getter
-        private int limit = 10;
+        private OptionalLimit limit = OptionalLimit.empty();
 
         @Argument
         @Getter
-        private List<String> query = new ArrayList<String>();
+        private List<String> query = new ArrayList<>();
     }
 
     public static MetadataMigrate setup(final CoreComponent core) {
@@ -157,7 +159,7 @@ public class MetadataMigrate implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         MetadataMigrate task();
     }
 }

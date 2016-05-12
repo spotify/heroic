@@ -37,6 +37,7 @@ import com.spotify.heroic.common.BackendGroups;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.GroupMember;
 import com.spotify.heroic.common.Groups;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.SelectedGroup;
 import com.spotify.heroic.common.Series;
@@ -61,6 +62,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -99,7 +101,7 @@ public class LocalMetricManager implements MetricManager {
     };
 
     private final int groupLimit;
-    private final int seriesLimit;
+    private final long seriesLimit;
     private final long aggregationLimit;
     private final long dataLimit;
     private final int fetchParallelism;
@@ -118,7 +120,7 @@ public class LocalMetricManager implements MetricManager {
      * @param fetchParallelism How many fetches that are allowed to be performed in parallel.
      */
     public LocalMetricManager(
-        final int groupLimit, final int seriesLimit, final long aggregationLimit,
+        final int groupLimit, final long seriesLimit, final long aggregationLimit,
         final long dataLimit, final int fetchParallelism, final AsyncFramework async,
         final BackendGroups<MetricBackend> backends, final MetadataManager metadata,
         final MetricBackendGroupReporter reporter
@@ -140,28 +142,23 @@ public class LocalMetricManager implements MetricManager {
     }
 
     @Override
-    public List<MetricBackend> use(String group) {
-        return backends.use(group).getMembers();
+    public List<MetricBackend> useMembers(String group) {
+        return backends.useGroup(group).getMembers();
     }
 
     @Override
-    public List<GroupMember<MetricBackend>> getBackends() {
+    public List<MetricBackend> useDefaultMembers() {
+        return backends.useDefaultGroup().getMembers();
+    }
+
+    @Override
+    public List<GroupMember<MetricBackend>> getMembers() {
         return backends.all();
     }
 
     @Override
-    public MetricBackendGroup useDefaultGroup() {
-        return new Group(backends.useDefault(), metadata.useDefaultGroup());
-    }
-
-    @Override
-    public MetricBackendGroup useGroup(final String group) {
-        return new Group(backends.use(group), metadata.useDefaultGroup());
-    }
-
-    @Override
-    public MetricBackendGroup useGroups(Set<String> groups) {
-        return new Group(backends.use(groups), metadata.useGroups(groups));
+    public MetricBackendGroup useOptionalGroup(final Optional<String> group) {
+        return new Group(backends.useOptionalGroup(group), metadata.useDefaultGroup());
     }
 
     @ToString
@@ -177,7 +174,7 @@ public class LocalMetricManager implements MetricManager {
 
         @Override
         public Groups getGroups() {
-            return backends.groups();
+            return backends.getGroups();
         }
 
         @Override
@@ -200,7 +197,8 @@ public class LocalMetricManager implements MetricManager {
             /* groupLoadLimit + 1, so that we return one too many results when more than
              * groupLoadLimit series are available. This will cause the query engine to reject the
              * request because of too large group. */
-            final RangeFilter rangeFilter = new RangeFilter(filter, range, seriesLimit + 1);
+            final RangeFilter rangeFilter =
+                new RangeFilter(filter, range, OptionalLimit.of(seriesLimit + 1));
 
             final LazyTransform<FindSeries, ResultGroups> transform = (final FindSeries result) -> {
                 /* if empty, there are not time series on this shard */

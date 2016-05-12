@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.cluster.NodeMetadata;
 import com.spotify.heroic.cluster.NodeRegistryEntry;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.metric.NodeError;
 import com.spotify.heroic.metric.RequestError;
 import eu.toolchain.async.Collector;
@@ -35,7 +36,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -67,52 +67,45 @@ public class TagKeyCount {
         this(EMPTY_ERRORS, suggestions, limited);
     }
 
-    public static Collector<TagKeyCount, TagKeyCount> reduce(final int limit) {
-        return new Collector<TagKeyCount, TagKeyCount>() {
-            @Override
-            public TagKeyCount collect(Collection<TagKeyCount> groups) throws Exception {
-                final List<RequestError> errors = new ArrayList<>();
-                final HashMap<String, Suggestion> suggestions = new HashMap<>();
-                boolean limited = false;
+    public static Collector<TagKeyCount, TagKeyCount> reduce(final OptionalLimit limit) {
+        return groups -> {
+            final List<RequestError> errors1 = new ArrayList<>();
+            final HashMap<String, Suggestion> suggestions1 = new HashMap<>();
+            boolean limited1 = false;
 
-                for (final TagKeyCount g : groups) {
-                    errors.addAll(g.errors);
+            for (final TagKeyCount g : groups) {
+                errors1.addAll(g.errors);
 
-                    for (final Suggestion s : g.suggestions) {
-                        final Suggestion replaced = suggestions.put(s.key, s);
+                for (final Suggestion s : g.suggestions) {
+                    final Suggestion replaced = suggestions1.put(s.key, s);
 
-                        if (replaced == null) {
-                            continue;
-                        }
-
-                        suggestions.put(s.key, new Suggestion(s.key, s.count + replaced.count));
+                    if (replaced == null) {
+                        continue;
                     }
 
-                    limited = limited || g.limited;
+                    suggestions1.put(s.key, new Suggestion(s.key, s.count + replaced.count));
                 }
 
-                final List<Suggestion> list = new ArrayList<>(suggestions.values());
-                Collections.sort(list, Suggestion.COMPARATOR);
-
-                limited = limited || list.size() >= limit;
-                return new TagKeyCount(errors, list.subList(0, Math.min(list.size(), limit)),
-                    limited);
+                limited1 = limited1 || g.limited;
             }
+
+            final List<Suggestion> list = new ArrayList<>(suggestions1.values());
+            Collections.sort(list, Suggestion.COMPARATOR);
+
+            return new TagKeyCount(errors1, limit.limitList(list),
+                limited1 || limit.isGreater(list.size()));
         };
     }
 
     public static Transform<Throwable, ? extends TagKeyCount> nodeError(
         final NodeRegistryEntry node
     ) {
-        return new Transform<Throwable, TagKeyCount>() {
-            @Override
-            public TagKeyCount transform(Throwable e) throws Exception {
-                final NodeMetadata m = node.getMetadata();
-                final ClusterNode c = node.getClusterNode();
-                return new TagKeyCount(ImmutableList.<RequestError>of(
-                    NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
-                    EMPTY_SUGGESTIONS, false);
-            }
+        return e -> {
+            final NodeMetadata m = node.getMetadata();
+            final ClusterNode c = node.getClusterNode();
+            return new TagKeyCount(ImmutableList.<RequestError>of(
+                NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
+                EMPTY_SUGGESTIONS, false);
         };
     }
 

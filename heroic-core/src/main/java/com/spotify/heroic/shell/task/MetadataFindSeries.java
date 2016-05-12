@@ -22,6 +22,7 @@
 package com.spotify.heroic.shell.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.CoreComponent;
@@ -49,6 +50,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 @TaskUsage("Find series using the given filters")
@@ -84,7 +86,7 @@ public class MetadataFindSeries implements ShellTask {
 
         final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
 
-        final MetadataBackend group = metadata.useGroup(params.group);
+        final MetadataBackend group = metadata.useOptionalGroup(params.group);
 
         final Consumer<Series> printer;
 
@@ -123,16 +125,16 @@ public class MetadataFindSeries implements ShellTask {
     private static class Parameters extends Tasks.QueryParamsBase {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")
-        private String group;
+        private Optional<String> group = Optional.empty();
 
         @Option(name = "--limit", aliases = {"--limit"},
             usage = "Limit the number of printed entries")
         @Getter
-        private int limit = 10;
+        private OptionalLimit limit = OptionalLimit.empty();
 
         @Argument
         @Getter
-        private List<String> query = new ArrayList<String>();
+        private List<String> query = new ArrayList<>();
 
         @Option(name = "--analytics", usage = "Format the output according to the analytics schema")
         private boolean analytics = false;

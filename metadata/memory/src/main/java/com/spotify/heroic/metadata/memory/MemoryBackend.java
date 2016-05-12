@@ -27,7 +27,6 @@ import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.DeleteSeries;
 import com.spotify.heroic.metadata.FindKeys;
@@ -95,7 +94,7 @@ public class MemoryBackend implements MetadataBackend {
     public AsyncFuture<FindTags> findTags(RangeFilter filter) {
         final Map<String, Set<String>> tags = new HashMap<>();
 
-        filter(filter.getFilter()).forEach(s -> {
+        lookup(filter).forEach(s -> {
             for (final Map.Entry<String, String> e : s.getTags().entrySet()) {
                 Set<String> values = tags.get(e.getKey());
 
@@ -115,40 +114,41 @@ public class MemoryBackend implements MetadataBackend {
 
     @Override
     public AsyncFuture<FindSeries> findSeries(RangeFilter filter) {
-        final Set<Series> s = ImmutableSet.copyOf(filter(filter.getFilter()).iterator());
+        final Set<Series> s = ImmutableSet.copyOf(lookup(filter).iterator());
         return async.resolved(new FindSeries(s, s.size(), 0));
     }
 
     @Override
     public AsyncFuture<CountSeries> countSeries(RangeFilter filter) {
-        final long count = filter(filter.getFilter()).count();
-        return async.resolved(new CountSeries(ImmutableList.of(), count, false));
+        return async.resolved(
+            new CountSeries(ImmutableList.of(), lookupFilter(filter).count(), false));
     }
 
     @Override
     public AsyncFuture<DeleteSeries> deleteSeries(RangeFilter filter) {
-        final int deletes =
-            (int) filter(filter.getFilter()).map(storage::remove).filter(b -> b).count();
+        final int deletes = (int) lookup(filter).map(storage::remove).filter(b -> b).count();
         return async.resolved(new DeleteSeries(deletes, 0));
     }
 
     @Override
     public AsyncFuture<FindKeys> findKeys(RangeFilter filter) {
-        final Set<String> keys =
-            ImmutableSet.copyOf(filter(filter.getFilter()).map(Series::getKey).iterator());
+        final Set<String> keys = ImmutableSet.copyOf(lookup(filter).map(Series::getKey).iterator());
         return async.resolved(new FindKeys(keys, keys.size(), 0));
     }
 
     @Override
     public AsyncObservable<List<Series>> entries(RangeFilter filter) {
-        return observer -> {
-            observer
-                .observe(ImmutableList.copyOf(filter(filter.getFilter()).iterator()))
-                .onFinished(observer::end);
-        };
+        return observer -> observer
+            .observe(ImmutableList.copyOf(lookup(filter).iterator()))
+            .onFinished(observer::end);
     }
 
-    private Stream<Series> filter(final Filter filter) {
-        return storage.stream().filter(filter::apply);
+    private Stream<Series> lookupFilter(final RangeFilter filter) {
+        return storage.stream().filter(filter.getFilter()::apply);
+    }
+
+    private Stream<Series> lookup(final RangeFilter filter) {
+        final Stream<Series> series = lookupFilter(filter);
+        return filter.getLimit().asLong().map(series::limit).orElse(series);
     }
 }

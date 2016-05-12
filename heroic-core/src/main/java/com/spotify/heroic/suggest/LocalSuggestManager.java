@@ -29,7 +29,7 @@ import eu.toolchain.async.AsyncFramework;
 import javax.inject.Inject;
 import javax.inject.Named;
 import java.util.List;
-import java.util.Set;
+import java.util.Optional;
 
 @SuggestScope
 public class LocalSuggestManager implements SuggestManager {
@@ -53,27 +53,22 @@ public class LocalSuggestManager implements SuggestManager {
     }
 
     @Override
-    public List<SuggestBackend> use(String group) {
-        return backends.use(group).getMembers();
+    public List<SuggestBackend> useMembers(String group) {
+        return backends.useGroup(group).getMembers();
     }
 
     @Override
-    public List<GroupMember<SuggestBackend>> getBackends() {
+    public List<SuggestBackend> useDefaultMembers() {
+        return backends.useDefaultGroup().getMembers();
+    }
+
+    @Override
+    public List<GroupMember<SuggestBackend>> getMembers() {
         return backends.all();
     }
 
     @Override
-    public SuggestBackend useDefaultGroup() {
-        return new SuggestBackendGroup(async, backends.useDefault(), reporter);
-    }
-
-    @Override
-    public SuggestBackend useGroup(String group) {
-        return new SuggestBackendGroup(async, backends.use(group), reporter);
-    }
-
-    @Override
-    public SuggestBackend useGroups(Set<String> groups) {
-        return new SuggestBackendGroup(async, backends.use(groups), reporter);
+    public SuggestBackend useOptionalGroup(final Optional<String> group) {
+        return new SuggestBackendGroup(async, backends.useOptionalGroup(group), reporter);
     }
 }

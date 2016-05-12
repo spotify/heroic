@@ -24,6 +24,7 @@ package com.spotify.heroic.suggest;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Initializing;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
@@ -41,7 +42,7 @@ public interface SuggestBackend extends Grouped, Initializing {
      * available).
      */
     AsyncFuture<TagValuesSuggest> tagValuesSuggest(
-        RangeFilter filter, List<String> exclude, int groupLimit
+        RangeFilter filter, List<String> exclude, OptionalLimit groupLimit
     );
 
     /**

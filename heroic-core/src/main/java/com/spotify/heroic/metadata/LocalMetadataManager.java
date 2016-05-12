@@ -29,7 +29,7 @@ import eu.toolchain.async.AsyncFramework;
 import javax.inject.Inject;
 import javax.inject.Named;
 import java.util.List;
-import java.util.Set;
+import java.util.Optional;
 
 @MetadataScope
 public class LocalMetadataManager implements MetadataManager {
@@ -49,32 +49,27 @@ public class LocalMetadataManager implements MetadataManager {
     }
 
     @Override
+    public List<MetadataBackend> useMembers(final String group) {
+        return backends.useGroup(group).getMembers();
+    }
+
+    @Override
+    public List<MetadataBackend> useDefaultMembers() {
+        return backends.useDefaultGroup().getMembers();
+    }
+
+    @Override
     public List<MetadataBackend> allMembers() {
         return backends.allMembers();
     }
 
     @Override
-    public List<MetadataBackend> use(String group) {
-        return backends.use(group).getMembers();
-    }
-
-    @Override
-    public List<GroupMember<MetadataBackend>> getBackends() {
+    public List<GroupMember<MetadataBackend>> getMembers() {
         return backends.all();
     }
 
     @Override
-    public MetadataBackend useDefaultGroup() {
-        return new MetadataBackendGroup(backends.useDefault(), async, reporter);
-    }
-
-    @Override
-    public MetadataBackend useGroup(String group) {
-        return new MetadataBackendGroup(backends.use(group), async, reporter);
-    }
-
-    @Override
-    public MetadataBackend useGroups(Set<String> groups) {
-        return new MetadataBackendGroup(backends.use(groups), async, reporter);
+    public MetadataBackend useOptionalGroup(Optional<String> group) {
+        return new MetadataBackendGroup(backends.useOptionalGroup(group), async, reporter);
     }
 }

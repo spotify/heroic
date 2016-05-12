@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.HashCode;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.elasticsearch.AbstractElasticsearchMetadataBackend;
@@ -112,7 +113,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
     implements MetadataBackend, LifeCycles {
     // private static final TimeValue TIMEOUT = TimeValue.timeValueMillis(10000);
     private static final TimeValue SCROLL_TIME = TimeValue.timeValueMillis(5000);
-    private static final int MAX_SIZE = 1000;
+    private static final int SCROLL_SIZE = 1000;
 
     public static final String TEMPLATE_NAME = "heroic";
 
@@ -176,261 +177,244 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
 
     @Override
     public AsyncFuture<FindTags> findTags(final RangeFilter filter) {
-        return doto(new ManagedAction<Connection, FindTags>() {
-            @Override
-            public AsyncFuture<FindTags> action(final Connection c) throws Exception {
-                final Callable<SearchRequestBuilder> setup = new Callable<SearchRequestBuilder>() {
-                    @Override
-                    public SearchRequestBuilder call() throws Exception {
-                        return c.search(filter.getRange(), ElasticsearchUtils.TYPE_METADATA);
-                    }
-                };
+        return doto(c -> {
+            final Callable<SearchRequestBuilder> setup = new Callable<SearchRequestBuilder>() {
+                @Override
+                public SearchRequestBuilder call() throws Exception {
+                    return c.search(filter.getRange(), ElasticsearchUtils.TYPE_METADATA);
+                }
+            };
 
-                return findTagKeys(filter)
-                    .lazyTransform(new FindTagsTransformer(filter.getFilter(), setup, CTX))
-                    .onDone(reporter.reportFindTags());
-            }
+            return findTagKeys(filter)
+                .lazyTransform(new FindTagsTransformer(filter.getFilter(), setup, CTX))
+                .onDone(reporter.reportFindTags());
         });
     }
 
     @Override
     public AsyncFuture<WriteResult> write(final Series series, final DateRange range) {
-        return doto(new ManagedAction<Connection, WriteResult>() {
-            @Override
-            public AsyncFuture<WriteResult> action(final Connection c) throws Exception {
-                final String id = Integer.toHexString(series.hashCode());
+        return doto(c -> {
+            final String id = Integer.toHexString(series.hashCode());
 
-                final String[] indices;
+            final String[] indices;
 
-                try {
-                    indices = c.writeIndices(range);
-                } catch (NoIndexSelectedException e) {
-                    return async.failed(e);
-                }
-
-                final List<AsyncFuture<WriteResult>> futures = new ArrayList<>();
-
-                for (final String index : indices) {
-                    if (!writeCache.acquire(Pair.of(index, series.getHashCode()))) {
-                        reporter.reportWriteDroppedByRateLimit();
-                        continue;
-                    }
-
-                    final XContentBuilder source = XContentFactory.jsonBuilder();
-
-                    source.startObject();
-                    ElasticsearchUtils.buildMetadataDoc(source, series);
-                    source.endObject();
-
-                    final IndexRequestBuilder request = c
-                        .index(index, ElasticsearchUtils.TYPE_METADATA)
-                        .setId(id)
-                        .setSource(source)
-                        .setOpType(OpType.CREATE);
-
-                    final Stopwatch watch = Stopwatch.createStarted();
-
-                    futures.add(bind(request.execute()).directTransform(result -> {
-                        return WriteResult.of(watch.elapsed(TimeUnit.NANOSECONDS));
-                    }));
-                }
-
-                return async.collect(futures, WriteResult.merger());
+            try {
+                indices = c.writeIndices(range);
+            } catch (NoIndexSelectedException e) {
+                return async.failed(e);
             }
+
+            final List<AsyncFuture<WriteResult>> futures = new ArrayList<>();
+
+            for (final String index : indices) {
+                if (!writeCache.acquire(Pair.of(index, series.getHashCode()))) {
+                    reporter.reportWriteDroppedByRateLimit();
+                    continue;
+                }
+
+                final XContentBuilder source = XContentFactory.jsonBuilder();
+
+                source.startObject();
+                ElasticsearchUtils.buildMetadataDoc(source, series);
+                source.endObject();
+
+                final IndexRequestBuilder request = c
+                    .index(index, ElasticsearchUtils.TYPE_METADATA)
+                    .setId(id)
+                    .setSource(source)
+                    .setOpType(OpType.CREATE);
+
+                final Stopwatch watch = Stopwatch.createStarted();
+
+                futures.add(bind(request.execute()).directTransform(result -> {
+                    return WriteResult.of(watch.elapsed(TimeUnit.NANOSECONDS));
+                }));
+            }
+
+            return async.collect(futures, WriteResult.merger());
         });
     }
 
     @Override
     public AsyncFuture<CountSeries> countSeries(final RangeFilter filter) {
-        return doto(new ManagedAction<Connection, CountSeries>() {
-            @Override
-            public AsyncFuture<CountSeries> action(final Connection c) throws Exception {
-                if (filter.getLimit() <= 0) {
-                    return async.resolved(CountSeries.EMPTY);
-                }
+        return doto(c -> {
+            final OptionalLimit limit = filter.getLimit();
 
-                final FilterBuilder f = CTX.filter(filter.getFilter());
-
-                if (f == null) {
-                    return async.resolved(CountSeries.EMPTY);
-                }
-
-                final CountRequestBuilder request;
-
-                try {
-                    request = c
-                        .count(filter.getRange(), ElasticsearchUtils.TYPE_METADATA)
-                        .setTerminateAfter(filter.getLimit());
-                } catch (NoIndexSelectedException e) {
-                    return async.failed(e);
-                }
-
-                request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
-
-                return bind(request.execute()).directTransform(
-                    response -> new CountSeries(response.getCount(), false));
+            if (limit.isZero()) {
+                return async.resolved(CountSeries.EMPTY);
             }
+
+            final FilterBuilder f = CTX.filter(filter.getFilter());
+
+            if (f == null) {
+                return async.resolved(CountSeries.EMPTY);
+            }
+
+            final CountRequestBuilder request;
+
+            try {
+                request = c.count(filter.getRange(), ElasticsearchUtils.TYPE_METADATA);
+                limit.asInteger().ifPresent(request::setTerminateAfter);
+            } catch (NoIndexSelectedException e) {
+                return async.failed(e);
+            }
+
+            request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+
+            return bind(request.execute()).directTransform(
+                response -> new CountSeries(response.getCount(), false));
         });
     }
 
     @Override
     public AsyncFuture<FindSeries> findSeries(final RangeFilter filter) {
-        return doto(new ManagedAction<Connection, FindSeries>() {
-            @Override
-            public AsyncFuture<FindSeries> action(final Connection c) throws Exception {
-                if (filter.getLimit() <= 0) {
-                    return async.resolved(FindSeries.EMPTY);
-                }
+        return doto(c -> {
+            final OptionalLimit limit = filter.getLimit();
 
-                final FilterBuilder f = CTX.filter(filter.getFilter());
-
-                if (f == null) {
-                    return async.resolved(FindSeries.EMPTY);
-                }
-
-                final SearchRequestBuilder request;
-
-                try {
-                    request = c
-                        .search(filter.getRange(), ElasticsearchUtils.TYPE_METADATA)
-                        .setSize(Math.min(MAX_SIZE, filter.getLimit()))
-                        .setScroll(SCROLL_TIME)
-                        .setSearchType(SearchType.SCAN);
-                } catch (NoIndexSelectedException e) {
-                    return async.failed(e);
-                }
-
-                request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
-
-                return scrollOverSeries(c, request, filter.getLimit()).onDone(
-                    reporter.reportFindTimeSeries());
+            if (limit.isZero()) {
+                return async.resolved(FindSeries.EMPTY);
             }
+
+            final FilterBuilder f = CTX.filter(filter.getFilter());
+
+            if (f == null) {
+                return async.resolved(FindSeries.EMPTY);
+            }
+
+            final SearchRequestBuilder request;
+
+            try {
+                request = c
+                    .search(filter.getRange(), ElasticsearchUtils.TYPE_METADATA)
+                    .setScroll(SCROLL_TIME)
+                    .setSearchType(SearchType.SCAN);
+
+                request.setSize(limit.asMaxInteger(SCROLL_SIZE));
+            } catch (NoIndexSelectedException e) {
+                return async.failed(e);
+            }
+
+            request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+
+            return scrollOverSeries(c, request, filter.getLimit()).onDone(
+                reporter.reportFindTimeSeries());
         });
     }
 
     @Override
     public AsyncFuture<DeleteSeries> deleteSeries(final RangeFilter filter) {
-        return doto(new ManagedAction<Connection, DeleteSeries>() {
-            @Override
-            public AsyncFuture<DeleteSeries> action(final Connection c) throws Exception {
-                final FilterBuilder f = CTX.filter(filter.getFilter());
+        return doto(c -> {
+            final FilterBuilder f = CTX.filter(filter.getFilter());
 
-                if (f == null) {
-                    return async.resolved(DeleteSeries.EMPTY);
-                }
-
-                final DeleteByQueryRequestBuilder request;
-
-                try {
-                    request = c.deleteByQuery(filter.getRange(), ElasticsearchUtils.TYPE_METADATA);
-                } catch (NoIndexSelectedException e) {
-                    return async.failed(e);
-                }
-
-                request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
-
-                return bind(request.execute()).directTransform(response -> new DeleteSeries(0, 0));
+            if (f == null) {
+                return async.resolved(DeleteSeries.EMPTY);
             }
+
+            final DeleteByQueryRequestBuilder request;
+
+            try {
+                request = c.deleteByQuery(filter.getRange(), ElasticsearchUtils.TYPE_METADATA);
+            } catch (NoIndexSelectedException e) {
+                return async.failed(e);
+            }
+
+            request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+
+            return bind(request.execute()).directTransform(response -> new DeleteSeries(0, 0));
         });
     }
 
     private AsyncFuture<FindTagKeys> findTagKeys(final RangeFilter filter) {
-        return doto(new ManagedAction<Connection, FindTagKeys>() {
-            @Override
-            public AsyncFuture<FindTagKeys> action(final Connection c) throws Exception {
-                final FilterBuilder f = CTX.filter(filter.getFilter());
+        return doto(c -> {
+            final FilterBuilder f = CTX.filter(filter.getFilter());
 
-                if (f == null) {
-                    return async.resolved(FindTagKeys.EMPTY);
-                }
+            if (f == null) {
+                return async.resolved(FindTagKeys.EMPTY);
+            }
 
-                final SearchRequestBuilder request;
+            final SearchRequestBuilder request;
 
-                try {
-                    request = c
-                        .search(filter.getRange(), ElasticsearchUtils.TYPE_METADATA)
-                        .setSearchType("count");
-                } catch (NoIndexSelectedException e) {
-                    return async.failed(e);
-                }
+            try {
+                request = c
+                    .search(filter.getRange(), ElasticsearchUtils.TYPE_METADATA)
+                    .setSearchType("count");
+            } catch (NoIndexSelectedException e) {
+                return async.failed(e);
+            }
 
-                request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+            request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+
+            {
+                final AggregationBuilder<?> terms =
+                    AggregationBuilders.terms("terms").field(CTX.tagsKey()).size(0);
+                final AggregationBuilder<?> nested =
+                    AggregationBuilders.nested("nested").path(CTX.tags()).subAggregation(terms);
+                request.addAggregation(nested);
+            }
+
+            return bind(request.execute()).directTransform(response -> {
+                final Terms terms;
 
                 {
-                    final AggregationBuilder<?> terms =
-                        AggregationBuilders.terms("terms").field(CTX.tagsKey()).size(0);
-                    final AggregationBuilder<?> nested =
-                        AggregationBuilders.nested("nested").path(CTX.tags()).subAggregation(terms);
-                    request.addAggregation(nested);
+                    final Aggregations aggregations = response.getAggregations();
+                    final Nested attributes = (Nested) aggregations.get("nested");
+                    terms = (Terms) attributes.getAggregations().get("terms");
                 }
 
-                return bind(request.execute()).directTransform(response -> {
-                    final Terms terms;
+                final Set<String> keys = new HashSet<String>();
 
-                    {
-                        final Aggregations aggregations = response.getAggregations();
-                        final Nested attributes = (Nested) aggregations.get("nested");
-                        terms = (Terms) attributes.getAggregations().get("terms");
-                    }
+                for (final Terms.Bucket bucket : terms.getBuckets()) {
+                    keys.add(bucket.getKey());
+                }
 
-                    final Set<String> keys = new HashSet<String>();
-
-                    for (final Terms.Bucket bucket : terms.getBuckets()) {
-                        keys.add(bucket.getKey());
-                    }
-
-                    return new FindTagKeys(keys, keys.size());
-                }).onDone(reporter.reportFindTagKeys());
-            }
+                return new FindTagKeys(keys, keys.size());
+            }).onDone(reporter.reportFindTagKeys());
         });
     }
 
     @Override
     public AsyncFuture<FindKeys> findKeys(final RangeFilter filter) {
-        return doto(new ManagedAction<Connection, FindKeys>() {
-            @Override
-            public AsyncFuture<FindKeys> action(final Connection c) throws Exception {
-                final FilterBuilder f = CTX.filter(filter.getFilter());
+        return doto(c -> {
+            final FilterBuilder f = CTX.filter(filter.getFilter());
 
-                if (f == null) {
-                    return async.resolved(FindKeys.EMPTY);
-                }
-
-                final SearchRequestBuilder request;
-
-                try {
-                    request = c
-                        .search(filter.getRange(), ElasticsearchUtils.TYPE_METADATA)
-                        .setSearchType("count");
-                } catch (NoIndexSelectedException e) {
-                    return async.failed(e);
-                }
-
-                request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
-
-                {
-                    final AggregationBuilder<?> terms =
-                        AggregationBuilders.terms("terms").field(CTX.seriesKey()).size(0);
-                    request.addAggregation(terms);
-                }
-
-                return bind(request.execute()).directTransform(response -> {
-                    final Terms terms = (Terms) response.getAggregations().get("terms");
-
-                    final Set<String> keys = new HashSet<String>();
-
-                    int size = terms.getBuckets().size();
-                    int duplicates = 0;
-
-                    for (final Terms.Bucket bucket : terms.getBuckets()) {
-                        if (keys.add(bucket.getKey())) {
-                            duplicates += 1;
-                        }
-                    }
-
-                    return new FindKeys(keys, size, duplicates);
-                }).onDone(reporter.reportFindKeys());
+            if (f == null) {
+                return async.resolved(FindKeys.EMPTY);
             }
+
+            final SearchRequestBuilder request;
+
+            try {
+                request = c
+                    .search(filter.getRange(), ElasticsearchUtils.TYPE_METADATA)
+                    .setSearchType("count");
+            } catch (NoIndexSelectedException e) {
+                return async.failed(e);
+            }
+
+            request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+
+            {
+                final AggregationBuilder<?> terms =
+                    AggregationBuilders.terms("terms").field(CTX.seriesKey()).size(0);
+                request.addAggregation(terms);
+            }
+
+            return bind(request.execute()).directTransform(response -> {
+                final Terms terms = (Terms) response.getAggregations().get("terms");
+
+                final Set<String> keys = new HashSet<String>();
+
+                int size = terms.getBuckets().size();
+                int duplicates = 0;
+
+                for (final Terms.Bucket bucket : terms.getBuckets()) {
+                    if (keys.add(bucket.getKey())) {
+                        duplicates += 1;
+                    }
+                }
+
+                return new FindKeys(keys, size, duplicates);
+            }).onDone(reporter.reportFindKeys());
         });
     }
 

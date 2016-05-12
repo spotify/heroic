@@ -23,10 +23,10 @@ package com.spotify.heroic.shell.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.Filter;
@@ -102,7 +102,7 @@ public class SuggestPerformance implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        final SuggestBackend s = suggest.useGroup(params.group);
+        final SuggestBackend s = suggest.useOptionalGroup(params.group);
 
         final ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
 
@@ -264,7 +264,7 @@ public class SuggestPerformance implements ShellTask {
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")
-        private String group;
+        private Optional<String> group = Optional.empty();
 
         @Option(name = "-f", usage = "File to load tests from", metaVar = "<yaml>")
         @Getter
@@ -272,7 +272,7 @@ public class SuggestPerformance implements ShellTask {
 
         @Option(name = "-l", usage = "Limit the number of results", metaVar = "<int>")
         @Getter
-        private int limit = 10;
+        private OptionalLimit limit = OptionalLimit.empty();
     }
 
     @Data
@@ -342,6 +342,7 @@ public class SuggestPerformance implements ShellTask {
         private final Suggestion input;
         private final Set<Suggestion> expect;
 
+        @JsonCreator
         public TestSuggestion(
             @JsonProperty("input") Suggestion input, @JsonProperty("expect") Set<Suggestion> expect
         ) {
@@ -355,14 +356,6 @@ public class SuggestPerformance implements ShellTask {
     public static class Suggestion {
         private final Optional<String> key;
         private final Optional<String> value;
-
-        @JsonCreator
-        public Suggestion(JsonNode node) {
-            final String text = node.asText();
-            final String[] split = text.split(":", 2);
-            this.key = Optional.of(split[0]);
-            this.value = split.length > 1 ? Optional.of(split[1]) : Optional.empty();
-        }
     }
 
     public static SuggestPerformance setup(final CoreComponent core) {
@@ -370,7 +363,7 @@ public class SuggestPerformance implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         SuggestPerformance task();
     }
 }

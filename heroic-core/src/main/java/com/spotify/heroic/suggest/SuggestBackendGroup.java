@@ -24,6 +24,7 @@ package com.spotify.heroic.suggest;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.SelectedGroup;
 import com.spotify.heroic.common.Series;
@@ -52,7 +53,7 @@ public class SuggestBackendGroup implements SuggestBackend {
 
     @Override
     public AsyncFuture<TagValuesSuggest> tagValuesSuggest(
-        final RangeFilter filter, final List<String> exclude, final int groupLimit
+        final RangeFilter filter, final List<String> exclude, final OptionalLimit groupLimit
     ) {
         return async
             .collect(run(b -> b.tagValuesSuggest(filter, exclude, groupLimit)),
@@ -116,7 +117,7 @@ public class SuggestBackendGroup implements SuggestBackend {
 
     @Override
     public Groups getGroups() {
-        return backends.groups();
+        return backends.getGroups();
     }
 
     @Override

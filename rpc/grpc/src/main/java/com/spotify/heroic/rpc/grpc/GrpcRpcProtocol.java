@@ -33,8 +33,11 @@ import com.spotify.heroic.cluster.NodeMetadata;
 import com.spotify.heroic.cluster.RpcProtocol;
 import com.spotify.heroic.cluster.TracingClusterNodeGroup;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Grouped;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.common.UsableGroupManager;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.DeleteSeries;
@@ -77,6 +80,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static io.grpc.MethodDescriptor.generateFullMethodName;
@@ -183,9 +187,8 @@ public class GrpcRpcProtocol implements RpcProtocol {
         }
 
         @Override
-        public ClusterNode.Group useGroup(String group) {
-            return new TracingClusterNodeGroup(uri.toString(),
-                new Group(Optional.ofNullable(group)));
+        public ClusterNode.Group useOptionalGroup(Optional<String> group) {
+            return new TracingClusterNodeGroup(uri.toString(), new Group(group));
         }
 
         @Override
@@ -267,7 +270,7 @@ public class GrpcRpcProtocol implements RpcProtocol {
 
             @Override
             public AsyncFuture<TagValuesSuggest> tagValuesSuggest(
-                RangeFilter filter, List<String> exclude, int groupLimit
+                RangeFilter filter, List<String> exclude, OptionalLimit groupLimit
             ) {
                 return request(SUGGEST_TAG_VALUES,
                     new RpcSuggestTagValues(filter, exclude, groupLimit));
@@ -300,6 +303,13 @@ public class GrpcRpcProtocol implements RpcProtocol {
         ) {
             this.group = group;
             this.query = checkNotNull(query, "query");
+        }
+
+        public <G extends Grouped, R> R apply(
+            UsableGroupManager<G> manager, BiFunction<G, T, R> function
+        ) {
+            return function.apply(group.map(manager::useGroup).orElseGet(manager::useDefaultGroup),
+                query);
         }
     }
 
@@ -336,12 +346,12 @@ public class GrpcRpcProtocol implements RpcProtocol {
     public static class RpcSuggestTagValues {
         private final RangeFilter filter;
         private final List<String> exclude;
-        private final int groupLimit;
+        private final OptionalLimit groupLimit;
 
         public RpcSuggestTagValues(
             @JsonProperty("filter") final RangeFilter filter,
             @JsonProperty("exclude") final List<String> exclude,
-            @JsonProperty("groupLimit") final Integer groupLimit
+            @JsonProperty("groupLimit") final OptionalLimit groupLimit
         ) {
             this.filter = filter;
             this.exclude = checkNotNull(exclude, "exclude");

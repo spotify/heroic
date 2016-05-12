@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.shell.task;
 
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.FilterFactory;
@@ -43,6 +44,7 @@ import org.kohsuke.args4j.Option;
 import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @TaskUsage("Get approximate cardinality counts for each tag key")
 @TaskName("suggest-tag-key-count")
@@ -69,34 +71,37 @@ public class SuggestTagKeyCount implements ShellTask {
 
         final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
 
-        return suggest.useGroup(params.group).tagKeyCount(filter).directTransform(result -> {
-            int i = 0;
+        return suggest
+            .useOptionalGroup(params.group)
+            .tagKeyCount(filter)
+            .directTransform(result -> {
+                int i = 0;
 
-            for (final TagKeyCount.Suggestion value : result.getSuggestions()) {
-                io.out().println(String.format("%s: %s", i++, value));
-            }
+                for (final TagKeyCount.Suggestion value : result.getSuggestions()) {
+                    io.out().println(String.format("%s: %s", i++, value));
+                }
 
-            return null;
-        });
+                return null;
+            });
     }
 
     @ToString
     private static class Parameters extends Tasks.QueryParamsBase {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")
-        private String group;
+        private Optional<String> group = Optional.empty();
 
         @Option(name = "-k", aliases = {"--key"}, usage = "Provide key context for suggestion")
-        private String key = null;
+        private Optional<String> key = Optional.empty();
 
         @Option(name = "--limit", aliases = {"--limit"},
             usage = "Limit the number of printed entries")
         @Getter
-        private int limit = 10;
+        private OptionalLimit limit = OptionalLimit.empty();
 
         @Argument
         @Getter
-        private List<String> query = new ArrayList<String>();
+        private List<String> query = new ArrayList<>();
     }
 
     public static SuggestTagKeyCount setup(final CoreComponent core) {
@@ -104,7 +109,7 @@ public class SuggestTagKeyCount implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         SuggestTagKeyCount task();
     }
 }

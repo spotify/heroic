@@ -49,6 +49,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -303,16 +304,11 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
     }
 
     @Override
-    public ClusterNodeGroup useDefaultGroup() {
-        return useGroup(null);
-    }
-
-    @Override
-    public ClusterNodeGroup useGroup(String group) {
+    public ClusterNodeGroup useOptionalGroup(Optional<String> group) {
         final List<ClusterNode.Group> groups = new ArrayList<>();
 
         for (final NodeRegistryEntry e : findAllShards(null)) {
-            groups.add(e.getClusterNode().useGroup(group));
+            groups.add(e.getClusterNode().useOptionalGroup(group));
         }
 
         return new CoreClusterNodeGroup(async, groups);

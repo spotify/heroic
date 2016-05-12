@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.HashCode;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
@@ -148,199 +149,183 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
     @Override
     public AsyncFuture<FindTags> findTags(final RangeFilter filter) {
-        return doto(new ManagedAction<Connection, FindTags>() {
-            @Override
-            public AsyncFuture<FindTags> action(final Connection c) throws Exception {
-                return async.resolved(FindTags.EMPTY).onDone(reporter.reportFindTags());
-            }
-        });
+        return doto(c -> async.resolved(FindTags.EMPTY).onDone(reporter.reportFindTags()));
     }
 
     @Override
     public AsyncFuture<WriteResult> write(final Series series, final DateRange range) {
-        return doto(new ManagedAction<Connection, WriteResult>() {
-            @Override
-            public AsyncFuture<WriteResult> action(final Connection c) throws Exception {
-                final String id = series.hash();
+        return doto(c -> {
+            final String id = series.hash();
 
-                final String[] indices;
+            final String[] indices;
 
-                try {
-                    indices = c.writeIndices(range);
-                } catch (NoIndexSelectedException e) {
-                    return async.failed(e);
-                }
-
-                final List<AsyncFuture<WriteResult>> writes = new ArrayList<>();
-
-                for (final String index : indices) {
-                    if (!writeCache.acquire(Pair.of(index, series.getHashCode()))) {
-                        reporter.reportWriteDroppedByRateLimit();
-                        continue;
-                    }
-
-                    final XContentBuilder source = XContentFactory.jsonBuilder();
-
-                    source.startObject();
-                    buildContext(source, series);
-                    source.endObject();
-
-                    final IndexRequestBuilder request = c
-                        .index(index, TYPE_METADATA)
-                        .setId(id)
-                        .setSource(source)
-                        .setOpType(OpType.CREATE);
-
-                    final long start = System.nanoTime();
-                    AsyncFuture<WriteResult> result = bind(request.execute()).directTransform(
-                        response -> WriteResult.of(System.nanoTime() - start));
-
-                    writes.add(result);
-                }
-
-                return async.collect(writes, WriteResult.merger());
+            try {
+                indices = c.writeIndices(range);
+            } catch (NoIndexSelectedException e) {
+                return async.failed(e);
             }
+
+            final List<AsyncFuture<WriteResult>> writes = new ArrayList<>();
+
+            for (final String index : indices) {
+                if (!writeCache.acquire(Pair.of(index, series.getHashCode()))) {
+                    reporter.reportWriteDroppedByRateLimit();
+                    continue;
+                }
+
+                final XContentBuilder source = XContentFactory.jsonBuilder();
+
+                source.startObject();
+                buildContext(source, series);
+                source.endObject();
+
+                final IndexRequestBuilder request = c
+                    .index(index, TYPE_METADATA)
+                    .setId(id)
+                    .setSource(source)
+                    .setOpType(OpType.CREATE);
+
+                final long start = System.nanoTime();
+                AsyncFuture<WriteResult> result = bind(request.execute()).directTransform(
+                    response -> WriteResult.of(System.nanoTime() - start));
+
+                writes.add(result);
+            }
+
+            return async.collect(writes, WriteResult.merger());
         });
     }
 
     @Override
     public AsyncFuture<CountSeries> countSeries(final RangeFilter filter) {
-        return doto(new ManagedAction<Connection, CountSeries>() {
-            @Override
-            public AsyncFuture<CountSeries> action(final Connection c) throws Exception {
-                if (filter.getLimit() <= 0) {
-                    return async.resolved(CountSeries.EMPTY);
-                }
+        return doto(c -> {
+            final OptionalLimit limit = filter.getLimit();
 
-                final FilterBuilder f = filter(filter.getFilter());
-
-                if (f == null) {
-                    return async.resolved(CountSeries.EMPTY);
-                }
-
-                final CountRequestBuilder request;
-
-                try {
-                    request = c
-                        .count(filter.getRange(), TYPE_METADATA)
-                        .setTerminateAfter(filter.getLimit());
-                } catch (NoIndexSelectedException e) {
-                    return async.failed(e);
-                }
-
-                request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
-
-                return bind(request.execute()).directTransform(
-                    response -> new CountSeries(response.getCount(), false));
+            if (limit.isZero()) {
+                return async.resolved(CountSeries.EMPTY);
             }
+
+            final FilterBuilder f = filter(filter.getFilter());
+
+            if (f == null) {
+                return async.resolved(CountSeries.EMPTY);
+            }
+
+            final CountRequestBuilder request;
+
+            try {
+                request = c.count(filter.getRange(), TYPE_METADATA);
+                limit.asInteger().ifPresent(request::setTerminateAfter);
+            } catch (NoIndexSelectedException e) {
+                return async.failed(e);
+            }
+
+            request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+
+            return bind(request.execute()).directTransform(
+                response -> new CountSeries(response.getCount(), false));
         });
     }
 
     @Override
     public AsyncFuture<FindSeries> findSeries(final RangeFilter filter) {
-        return doto(new ManagedAction<Connection, FindSeries>() {
-            @Override
-            public AsyncFuture<FindSeries> action(final Connection c) throws Exception {
-                if (filter.getLimit() <= 0) {
-                    return async.resolved(FindSeries.EMPTY);
-                }
+        return doto(c -> {
+            final OptionalLimit limit = filter.getLimit();
 
-                final FilterBuilder f = filter(filter.getFilter());
-
-                if (f == null) {
-                    return async.resolved(FindSeries.EMPTY);
-                }
-
-                final SearchRequestBuilder request;
-
-                try {
-                    request = c
-                        .search(filter.getRange(), TYPE_METADATA)
-                        .setSize(Math.min(filter.getLimit(), SCROLL_SIZE))
-                        .setScroll(SCROLL_TIME)
-                        .setSearchType(SearchType.SCAN);
-                } catch (NoIndexSelectedException e) {
-                    return async.failed(e);
-                }
-
-                request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
-
-                return scrollOverSeries(c, request, filter.getLimit()).onDone(
-                    reporter.reportFindTimeSeries());
+            if (limit.isZero()) {
+                return async.resolved(FindSeries.EMPTY);
             }
+
+            final FilterBuilder f = filter(filter.getFilter());
+
+            if (f == null) {
+                return async.resolved(FindSeries.EMPTY);
+            }
+
+            final SearchRequestBuilder request;
+
+            try {
+                request = c
+                    .search(filter.getRange(), TYPE_METADATA)
+                    .setScroll(SCROLL_TIME)
+                    .setSearchType(SearchType.SCAN);
+
+                request.setSize(limit.asMaxInteger(SCROLL_SIZE));
+            } catch (NoIndexSelectedException e) {
+                return async.failed(e);
+            }
+
+            request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+
+            return scrollOverSeries(c, request, filter.getLimit()).onDone(
+                reporter.reportFindTimeSeries());
         });
     }
 
     @Override
     public AsyncFuture<DeleteSeries> deleteSeries(final RangeFilter filter) {
-        return doto(new ManagedAction<Connection, DeleteSeries>() {
-            @Override
-            public AsyncFuture<DeleteSeries> action(final Connection c) throws Exception {
-                final FilterBuilder f = filter(filter.getFilter());
+        return doto(c -> {
+            final FilterBuilder f = filter(filter.getFilter());
 
-                if (f == null) {
-                    return async.resolved(DeleteSeries.EMPTY);
-                }
-
-                final DeleteByQueryRequestBuilder request;
-
-                try {
-                    request = c.deleteByQuery(filter.getRange(), TYPE_METADATA);
-                } catch (NoIndexSelectedException e) {
-                    return async.failed(e);
-                }
-
-                request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
-
-                return bind(request.execute()).directTransform(response -> new DeleteSeries(0, 0));
+            if (f == null) {
+                return async.resolved(DeleteSeries.EMPTY);
             }
+
+            final DeleteByQueryRequestBuilder request;
+
+            try {
+                request = c.deleteByQuery(filter.getRange(), TYPE_METADATA);
+            } catch (NoIndexSelectedException e) {
+                return async.failed(e);
+            }
+
+            request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+
+            return bind(request.execute()).directTransform(response -> new DeleteSeries(0, 0));
         });
     }
 
     @Override
     public AsyncFuture<FindKeys> findKeys(final RangeFilter filter) {
-        return doto(new ManagedAction<Connection, FindKeys>() {
-            @Override
-            public AsyncFuture<FindKeys> action(final Connection c) throws Exception {
-                final FilterBuilder f = filter(filter.getFilter());
+        return doto(c -> {
+            final FilterBuilder f = filter(filter.getFilter());
 
-                if (f == null) {
-                    return async.resolved(FindKeys.EMPTY);
-                }
-
-                final SearchRequestBuilder request;
-
-                try {
-                    request = c.search(filter.getRange(), TYPE_METADATA).setSearchType("count");
-                } catch (NoIndexSelectedException e) {
-                    return async.failed(e);
-                }
-
-                request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
-
-                {
-                    final AggregationBuilder<?> terms =
-                        AggregationBuilders.terms("terms").field(KEY).size(0);
-                    request.addAggregation(terms);
-                }
-
-                return bind(request.execute()).directTransform(response -> {
-                    final Terms terms = (Terms) response.getAggregations().get("terms");
-
-                    final Set<String> keys = new HashSet<String>();
-
-                    int size = terms.getBuckets().size();
-                    int duplicates = 0;
-
-                    for (final Terms.Bucket bucket : terms.getBuckets()) {
-                        if (keys.add(bucket.getKey())) {
-                            duplicates += 1;
-                        }
-                    }
-
-                    return new FindKeys(keys, size, duplicates);
-                }).onDone(reporter.reportFindKeys());
+            if (f == null) {
+                return async.resolved(FindKeys.EMPTY);
             }
+
+            final SearchRequestBuilder request;
+
+            try {
+                request = c.search(filter.getRange(), TYPE_METADATA).setSearchType("count");
+            } catch (NoIndexSelectedException e) {
+                return async.failed(e);
+            }
+
+            request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+
+            {
+                final AggregationBuilder<?> terms =
+                    AggregationBuilders.terms("terms").field(KEY).size(0);
+                request.addAggregation(terms);
+            }
+
+            return bind(request.execute()).directTransform(response -> {
+                final Terms terms = (Terms) response.getAggregations().get("terms");
+
+                final Set<String> keys = new HashSet<String>();
+
+                int size = terms.getBuckets().size();
+                int duplicates = 0;
+
+                for (final Terms.Bucket bucket : terms.getBuckets()) {
+                    if (keys.add(bucket.getKey())) {
+                        duplicates += 1;
+                    }
+                }
+
+                return new FindKeys(keys, size, duplicates);
+            }).onDone(reporter.reportFindKeys());
         });
     }
 

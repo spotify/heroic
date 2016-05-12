@@ -21,37 +21,42 @@
 
 package com.spotify.heroic.common;
 
-import java.util.Set;
+import java.util.Optional;
 
 /**
  * Container for a set of Grouped objects.
- * <p>
- * These grouped objects can be combined to form a uniform group of the same type (e.g. through
- * {@link #useGroups(java.util.Set)}.
  *
  * @param <G> The type of the grouped objects.
  */
-public interface UsableGroupManager<G extends Grouped> {
+public interface UsableGroupManager<G> {
     /**
      * Use the default group.
      *
      * @return The default group.
      */
-    G useDefaultGroup();
+    default G useDefaultGroup() {
+        return useOptionalGroup(Optional.empty());
+    }
 
     /**
      * Use the given group.
      *
-     * @param group The name of the group to use.
+     * @param group The name of the group to use. Must not be <code>null</code>.
      * @return The group corresponding to the name.
      */
-    G useGroup(final String group);
+    default G useGroup(final String group) {
+        // TODO: get rid of all null usages
+        return useOptionalGroup(Optional.ofNullable(group));
+    }
 
     /**
-     * Use the the given group, based on a set of groups.
+     * Use the given group based on an {@link java.util.Optional} parameter.
+     * <p>
+     * If it is <em>empty</em>, this will resolve the same as {@link #useDefaultGroup()}, otherwise
+     * the provided value will be used with {@link #useGroup(String)}.
      *
-     * @param groups The names of the groups to use.
-     * @return A group corresponding to a combination of all the names.
+     * @param group The optional name of the group to use.
+     * @return The group corresponding to the optional name.
      */
-    G useGroups(final Set<String> groups);
+    G useOptionalGroup(final Optional<String> group);
 }

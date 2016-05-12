@@ -22,9 +22,12 @@
 package com.spotify.heroic.shell;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Charsets;
 import com.spotify.heroic.HeroicCoreInstance;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RangeFilter;
+import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
@@ -78,12 +81,18 @@ import org.joda.time.format.DateTimeParser;
 import org.joda.time.format.DateTimeParserBucket;
 import org.kohsuke.args4j.Option;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 public final class Tasks {
     static final List<ShellTaskDefinition> available = new ArrayList<>();
@@ -276,11 +285,46 @@ public final class Tasks {
             filter = filter.withEnd(BackendKeyFilter.ltToken(params.endToken));
         }
 
-        if (params.limit >= 0) {
-            filter = filter.withLimit(params.limit);
-        }
-
+        filter = filter.withLimit(params.limit);
         return filter;
+    }
+
+    public static Series parseSeries(final ObjectMapper mapper, final Optional<String> series) {
+        return series.<Series>map(s -> {
+            try {
+                return mapper.readValue(s, Series.class);
+            } catch (IOException e) {
+                throw new RuntimeException("Bad series: " + s, e);
+            }
+        }).orElseGet(Series::empty);
+    }
+
+    public static <T> Stream<T> parseJsonLines(
+        final ObjectMapper mapper, final Optional<Path> file, final ShellIO io, final Class<T> type
+    ) {
+        return file.<Stream<T>>map(f -> {
+            try {
+                final BufferedReader reader =
+                    new BufferedReader(new InputStreamReader(io.newInputStream(f), Charsets.UTF_8));
+
+                return reader.lines().onClose(() -> {
+                    try {
+                        reader.close();
+                    } catch (IOException e) {
+                        throw new RuntimeException("Failed to close file", e);
+                    }
+                }).map(line -> {
+                    try {
+                        return mapper.readValue(line.trim(), type);
+                    } catch (IOException e) {
+                        throw new RuntimeException("Failed to decode line (" + line.trim() + ")",
+                            e);
+                    }
+                });
+            } catch (final IOException e) {
+                throw new RuntimeException("Failed to open file: " + f, e);
+            }
+        }).orElseGet(Stream::empty);
     }
 
     public abstract static class QueryParamsBase extends AbstractShellTaskParams
@@ -323,7 +367,7 @@ public final class Tasks {
 
         @Option(name = "--limit", usage = "Limit the number keys to operate on", metaVar = "<int>")
         @Getter
-        protected int limit = -1;
+        protected OptionalLimit limit = OptionalLimit.empty();
     }
 
     public static RangeFilter setupRangeFilter(

@@ -19,43 +19,31 @@
  * under the License.
  */
 
-package com.spotify.heroic.common;
+package com.spotify.heroic.args4j;
 
-import com.google.common.collect.ImmutableSet;
-import lombok.RequiredArgsConstructor;
+import com.spotify.heroic.common.OptionalLimit;
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
+import org.kohsuke.args4j.OptionDef;
+import org.kohsuke.args4j.spi.OptionHandler;
+import org.kohsuke.args4j.spi.Parameters;
+import org.kohsuke.args4j.spi.Setter;
 
-import java.util.Iterator;
-import java.util.List;
-
-@RequiredArgsConstructor
-public class SelectedGroup<T extends Grouped> implements Grouped, Iterable<T> {
-    private final List<T> members;
-
-    public List<T> getMembers() {
-        return members;
+public class OptionalLimitOptionHandler extends OptionHandler<OptionalLimit> {
+    public OptionalLimitOptionHandler(
+        CmdLineParser parser, OptionDef option, Setter<? super OptionalLimit> setter
+    ) {
+        super(parser, option, setter);
     }
 
     @Override
-    public Iterator<T> iterator() {
-        return members.iterator();
-    }
-
-    public boolean isEmpty() {
-        return members.isEmpty();
+    public String getDefaultMetaVariable() {
+        return "[number]";
     }
 
     @Override
-    public Groups getGroups() {
-        final ImmutableSet.Builder<String> groups = ImmutableSet.builder();
-
-        for (final T member : members) {
-            groups.addAll(member.getGroups());
-        }
-
-        return new Groups(groups.build());
-    }
-
-    public int size() {
-        return members.size();
+    public int parseArguments(Parameters params) throws CmdLineException {
+        setter.addValue(OptionalLimit.of(Long.parseLong(params.getParameter(0))));
+        return 1;
     }
 }

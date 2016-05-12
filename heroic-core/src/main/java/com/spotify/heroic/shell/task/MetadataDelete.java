@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.shell.task;
 
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.FilterFactory;
@@ -46,6 +47,7 @@ import org.kohsuke.args4j.Option;
 import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @TaskUsage("Delete metadata matching the given query")
 @TaskName("metadata-delete")
@@ -76,20 +78,17 @@ public class MetadataDelete implements ShellTask {
 
         final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
 
-        final MetadataBackend group = metadata.useGroup(params.group);
+        final MetadataBackend group = metadata.useOptionalGroup(params.group);
 
-        return group.countSeries(filter).lazyTransform(new LazyTransform<CountSeries, Void>() {
-            @Override
-            public AsyncFuture<Void> transform(CountSeries c) throws Exception {
-                io.out().println(String.format("Deleteing %d entrie(s)", c.getCount()));
+        return group.countSeries(filter).lazyTransform((LazyTransform<CountSeries, Void>) c -> {
+            io.out().println(String.format("Deleteing %d entrie(s)", c.getCount()));
 
-                if (!params.ok) {
-                    io.out().println("Deletion stopped, use --ok to proceed");
-                    return async.resolved(null);
-                }
-
-                return group.deleteSeries(filter).directTransform(r -> null);
+            if (!params.ok) {
+                io.out().println("Deletion stopped, use --ok to proceed");
+                return async.resolved(null);
             }
+
+            return group.deleteSeries(filter).directTransform(r -> null);
         });
     }
 
@@ -97,14 +96,14 @@ public class MetadataDelete implements ShellTask {
     private static class Parameters extends Tasks.QueryParamsBase {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")
-        private String group;
+        private Optional<String> group = Optional.empty();
 
         @Option(name = "--ok", usage = "Verify that you actually want to run")
         private boolean ok = false;
 
         @Option(name = "--limit", usage = "Limit the number of deletes (default: alot)")
         @Getter
-        private int limit = Integer.MAX_VALUE;
+        private OptionalLimit limit = OptionalLimit.empty();
 
         @Argument
         @Getter

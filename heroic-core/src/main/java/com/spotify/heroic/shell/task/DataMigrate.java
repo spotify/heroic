@@ -56,6 +56,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
@@ -98,13 +99,11 @@ public class DataMigrate implements ShellTask {
 
         final QueryOptions.Builder options = QueryOptions.builder().tracing(params.tracing);
 
-        if (params.fetchSize != null) {
-            options.fetchSize(params.fetchSize);
-        }
+        params.fetchSize.ifPresent(options::fetchSize);
 
         final Filter filter = Tasks.setupFilter(filters, parser, params);
-        final MetricBackend from = metric.useGroup(params.from);
-        final MetricBackend to = metric.useGroup(params.to);
+        final MetricBackend from = metric.useOptionalGroup(params.from);
+        final MetricBackend to = metric.useOptionalGroup(params.to);
 
         final BackendKeyFilter keyFilter = Tasks.setupKeyFilter(params, mapper);
 
@@ -361,11 +360,11 @@ public class DataMigrate implements ShellTask {
     private static class Parameters extends Tasks.KeyspaceBase {
         @Option(name = "-f", aliases = {"--from"}, usage = "Backend group to load data from",
             metaVar = "<group>")
-        private String from;
+        private Optional<String> from = Optional.empty();
 
         @Option(name = "-t", aliases = {"--to"}, usage = "Backend group to load data to",
             metaVar = "<group>")
-        private String to;
+        private Optional<String> to = Optional.empty();
 
         @Option(name = "--page-limit",
             usage = "Limit the number metadata entries to fetch per page (default: 100)")
@@ -380,7 +379,7 @@ public class DataMigrate implements ShellTask {
         private int keysPageSize = 10;
 
         @Option(name = "--fetch-size", usage = "Use the given fetch size")
-        private Integer fetchSize = null;
+        private Optional<Integer> fetchSize = Optional.empty();
 
         @Option(name = "--tracing",
             usage = "Trace the queries for more debugging when things go wrong")
@@ -401,7 +400,7 @@ public class DataMigrate implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         DataMigrate task();
     }
 }

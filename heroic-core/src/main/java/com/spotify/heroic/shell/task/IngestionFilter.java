@@ -88,7 +88,7 @@ public class IngestionFilter implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         IngestionFilter task();
     }
 }

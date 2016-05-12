@@ -24,6 +24,7 @@ package com.spotify.heroic.cluster;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
@@ -122,7 +123,7 @@ public class TracingClusterNodeGroup implements ClusterNode.Group {
 
     @Override
     public AsyncFuture<TagValuesSuggest> tagValuesSuggest(
-        RangeFilter filter, List<String> exclude, int groupLimit
+        RangeFilter filter, List<String> exclude, OptionalLimit groupLimit
     ) {
         return delegate.tagValuesSuggest(filter, exclude, groupLimit);
     }

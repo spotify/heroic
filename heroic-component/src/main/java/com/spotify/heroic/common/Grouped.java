@@ -22,7 +22,9 @@
 package com.spotify.heroic.common;
 
 public interface Grouped {
-    Groups getGroups();
+    default Groups getGroups() {
+        return Groups.empty();
+    }
 
     default int size() {
         return 1;
