@@ -14,7 +14,24 @@ Not doing so might result in losing your data to goblins. It is currently not on
 
 ## Building
 
-Heroic requires Java 8, and is built using maven:
+Java 8 is required.
+
+There are some repackaged dependencies that you have to make available, you do
+this by running `tools/install-repackaged`.
+
+```bash
+$ tools/install-repackaged
+Installing repackaged/x
+Installing repackaged/y
+```
+
+These are dependencies that include packages that would otherwise conflict with
+packages used directly by Heroic.
+Notable examples include Netty (`io.netty`), gRPC (`io.grpc`), and Guava
+(`com.google.common`). See [Repackaged Dependencies](#repackaged-dependencies)
+for more details.
+
+After this, the project is built using Maven:
 
 ```bash
 $ mvn clean package
@@ -165,3 +182,46 @@ $ tools/heroic-shell <heroic-options> -- com.spotify.heroic.shell.task.<task-nam
 
 There are also profiles that can be activated with the `-P <profile>` switch,
 available profiles are listed in `--help`.
+
+## Repackaged Dependencies
+
+These are third-party dependencies that has to be repackaged to avoid binary
+incompatibilities with dependencies.
+
+Every time these are upgraded, they must be inspected for new conflicts.
+The easiest way to do this, is to build the project and look at the warnings
+for the shaded jar.
+
+```
+$> mvn clean package -D findbugs.skip=true -D checkstyle.skip=true -D maven.test.skip=true
+...
+[WARNING] foo-3.5.jar, foo-4.5.jar define 10 overlapping classes: 
+[WARNING]   - com.foo.ConflictingClass
+...
+```
+
+This would indicate that there is a package called foo with overlapping
+classes.
+
+You can find the culprit using the `dependency` plugin.
+
+```
+$> mvn package dependency:tree
+```
+
+#### [repackages/bigtable](./repackaged/bigtable/pom.xml)
+
+Relocations:
+```
+io.grpc               -> com.spotify.heroic.bigtable.grpc
+io.netty              -> com.spotify.heroic.bigtable.netty
+org.apache.commons    -> com.spotify.heroic.bigtable.commons
+com.fasterxml.jackson -> com.spotify.heroic.bigtable.jackson
+```
+
+#### [repackages/datastax](./repackaged/datastax/pom.xml)
+
+Relocations:
+```
+io.netty -> com.spotify.heroic.datastax.netty
+```
