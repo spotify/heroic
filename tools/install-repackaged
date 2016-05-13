@@ -2,8 +2,9 @@
 set -e
 
 MVN=${MVN:-mvn}
+MVN_OPTS=${MVN_OPTS:-"-B -V"}
 
 for r in repackaged/*; do
     echo "Installing $r"
-    (cd $r && $MVN -q clean install)
+    (cd $r && $MVN install $MVN_OPTS)
 done

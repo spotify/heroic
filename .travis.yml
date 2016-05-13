@@ -12,5 +12,6 @@ cache:
     - $HOME/.m2
     - .cache
 
-before_script:
-  - tools/install-repackaged
+# override default command since it doesn't skip checkstyle
+install:
+  - tools/install-ci

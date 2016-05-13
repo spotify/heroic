@@ -1,0 +1,15 @@
+#/bin/sh
+# Script to install dependencies in a CI environment.
+
+ROOT=$(dirname $0)
+
+MVN=${MVN:-mvn}
+
+MVN_OPTS="-B -V"
+MVN_OPTS="$MVN_OPTS -D maven.test.skip=true"
+MVN_OPTS="$MVN_OPTS -D findbugs.skip=true"
+MVN_OPTS="$MVN_OPTS -D checkstyle.skip=true"
+MVN_OPTS="$MVN_OPTS -D maven.javadoc.skip=true"
+
+$MVN install $MVN_OPTS
+env MVN="$MVN" $MVN_OPTS="$MVN_OPTS" $ROOT/install-repackaged
