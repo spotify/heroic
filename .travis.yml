@@ -14,4 +14,4 @@ cache:
 
 # override default command since it doesn't skip checkstyle
 install:
-  - tools/install-ci
+  - tools/install-repackaged
