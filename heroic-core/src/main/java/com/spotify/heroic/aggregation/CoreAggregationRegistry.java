@@ -64,6 +64,11 @@ public class CoreAggregationRegistry implements AggregationRegistry {
                     instanceType.getCanonicalName() + ") is already registered");
             }
 
+            if (builderMap.containsKey(id)) {
+                throw new IllegalArgumentException("An aggregation with the same id (" + id +
+                    ") is already registered");
+            }
+
             definitionMap.put(type, id);
             instanceMap.put(instanceType, id);
             builderMap.put(id, dsl);
