@@ -76,11 +76,6 @@ public class SemanticMetadataManagerReporter implements LocalMetadataManagerRepo
     }
 
     @Override
-    public FutureReporter.Context reportRefresh() {
-        return refresh.setup();
-    }
-
-    @Override
     public Context reportFindTags() {
         return findTags.setup();
     }

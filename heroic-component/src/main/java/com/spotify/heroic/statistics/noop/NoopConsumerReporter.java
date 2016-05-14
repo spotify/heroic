@@ -22,7 +22,6 @@
 package com.spotify.heroic.statistics.noop;
 
 import com.spotify.heroic.statistics.ConsumerReporter;
-import com.spotify.heroic.statistics.ThreadPoolReporter;
 
 public class NoopConsumerReporter implements ConsumerReporter {
     private NoopConsumerReporter() {
@@ -42,11 +41,6 @@ public class NoopConsumerReporter implements ConsumerReporter {
 
     @Override
     public void reportMessageDrift(final long ms) {
-    }
-
-    @Override
-    public ThreadPoolReporter newThreadPool() {
-        return NoopThreadPoolReporter.get();
     }
 
     private static final NoopConsumerReporter instance = new NoopConsumerReporter();

@@ -419,11 +419,6 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
     }
 
     @Override
-    public AsyncFuture<Void> refresh() {
-        return async.resolved(null);
-    }
-
-    @Override
     public boolean isReady() {
         return connection.isReady();
     }

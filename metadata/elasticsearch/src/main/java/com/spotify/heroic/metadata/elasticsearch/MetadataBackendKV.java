@@ -102,8 +102,6 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     static final TimeValue SCROLL_TIME = TimeValue.timeValueMillis(5000);
     static final int SCROLL_SIZE = 1000;
 
-    public static final String TEMPLATE_NAME = "heroic";
-
     private final Groups groups;
     private final LocalMetadataBackendReporter reporter;
     private final AsyncFramework async;
@@ -327,11 +325,6 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                 return new FindKeys(keys, size, duplicates);
             }).onDone(reporter.reportFindKeys());
         });
-    }
-
-    @Override
-    public AsyncFuture<Void> refresh() {
-        return async.resolved(null);
     }
 
     @Override

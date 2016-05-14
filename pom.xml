@@ -16,7 +16,6 @@
     <module>heroic-shell</module>
     <module>heroic-parser</module>
     <module>heroic-all</module>
-    <module>metric/astyanax</module>
     <module>metric/datastax</module>
     <module>metric/generated</module>
     <module>metric/bigtable</module>
@@ -48,7 +47,6 @@
     <hk2.version>2.3.0</hk2.version>
     <jetty.version>9.3.7.v20160115</jetty.version>
     <lucene.version>4.10.4</lucene.version>
-    <astyanax.version>2.0.2</astyanax.version>
     <datastax.version>2.1.9</datastax.version>
     <semantic-metrics.version>0.2.3</semantic-metrics.version>
     <netty.version>4.1.0.CR3</netty.version>
@@ -121,11 +119,6 @@
       <dependency>
         <groupId>com.spotify.heroic.metric</groupId>
         <artifactId>heroic-metric-datastax</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.spotify.heroic.metric</groupId>
-        <artifactId>heroic-metric-astyanax</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
@@ -261,44 +254,6 @@
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-lang3</artifactId>
         <version>3.3.2</version>
-      </dependency>
-
-      <!-- used by anything cassandra. -->
-      <dependency>
-        <groupId>com.netflix.astyanax</groupId>
-        <artifactId>astyanax-cassandra</artifactId>
-        <version>${astyanax.version}</version>
-        <!-- why does astyanax-cassandra depend on jetty? -->
-        <exclusions>
-          <exclusion>
-            <groupId>org.mortbay.jetty</groupId>
-            <artifactId>jetty</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>com.netflix.astyanax</groupId>
-        <artifactId>astyanax-thrift</artifactId>
-        <version>${astyanax.version}</version>
-        <!-- why does astyanax-thrift depend on servlet? -->
-        <exclusions>
-          <exclusion>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>javax.servlet</groupId>
-            <artifactId>servlet-api</artifactId>
-          </exclusion>
-        </exclusions>
       </dependency>
 
       <dependency>

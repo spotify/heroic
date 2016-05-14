@@ -22,8 +22,6 @@
 package com.spotify.heroic.statistics;
 
 public interface LocalMetadataBackendReporter {
-    FutureReporter.Context reportRefresh();
-
     FutureReporter.Context reportFindTags();
 
     FutureReporter.Context reportFindTagKeys();
@@ -35,10 +33,6 @@ public interface LocalMetadataBackendReporter {
     FutureReporter.Context reportFindKeys();
 
     FutureReporter.Context reportWrite();
-
-    void reportWriteCacheHit();
-
-    void reportWriteCacheMiss();
 
     void reportWriteDroppedByRateLimit();
 
@@ -57,8 +51,4 @@ public interface LocalMetadataBackendReporter {
     void reportWriteFailure(long n);
 
     void reportWriteBatchDuration(long millis);
-
-    void newWriteThreadPool(ThreadPoolProvider provider);
-
-    ThreadPoolReporter newThreadPool();
 }

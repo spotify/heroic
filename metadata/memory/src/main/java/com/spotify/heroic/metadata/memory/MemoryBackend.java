@@ -86,11 +86,6 @@ public class MemoryBackend implements MetadataBackend {
     }
 
     @Override
-    public AsyncFuture<Void> refresh() {
-        return async.resolved();
-    }
-
-    @Override
     public AsyncFuture<FindTags> findTags(RangeFilter filter) {
         final Map<String, Set<String>> tags = new HashMap<>();
 

@@ -35,10 +35,6 @@ public interface HeroicReporter {
 
     ClusteredMetadataManagerReporter newClusteredMetadataBackendManager();
 
-    AggregationCacheReporter newAggregationCache();
-
-    HttpClientManagerReporter newHttpClientManager();
-
     ConsumerReporter newConsumer(String id);
 
     IngestionManagerReporter newIngestionManager();

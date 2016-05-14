@@ -39,13 +39,10 @@ public interface MetadataBackend extends Grouped, Initializing {
     /**
      * Buffer a write for the specified series.
      *
-     * @param id Id of series to write.
      * @param series Series to write.
-     * @throws MetadataException If write could not be buffered.
+     * @param range Range to write for.
      */
     AsyncFuture<WriteResult> write(Series series, DateRange range);
-
-    AsyncFuture<Void> refresh();
 
     /**
      * Iterate <em>all</em> available metadata.

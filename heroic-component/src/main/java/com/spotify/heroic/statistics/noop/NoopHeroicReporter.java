@@ -21,13 +21,11 @@
 
 package com.spotify.heroic.statistics.noop;
 
-import com.spotify.heroic.statistics.AggregationCacheReporter;
 import com.spotify.heroic.statistics.AnalyticsReporter;
 import com.spotify.heroic.statistics.ClusteredMetadataManagerReporter;
 import com.spotify.heroic.statistics.ClusteredMetricManagerReporter;
 import com.spotify.heroic.statistics.ConsumerReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
-import com.spotify.heroic.statistics.HttpClientManagerReporter;
 import com.spotify.heroic.statistics.IngestionManagerReporter;
 import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
 import com.spotify.heroic.statistics.LocalMetricManagerReporter;
@@ -60,16 +58,6 @@ public class NoopHeroicReporter implements HeroicReporter {
     @Override
     public ClusteredMetadataManagerReporter newClusteredMetadataBackendManager() {
         return NoopClusteredMetadataManagerReporter.get();
-    }
-
-    @Override
-    public AggregationCacheReporter newAggregationCache() {
-        return NoopAggregationCacheReporter.get();
-    }
-
-    @Override
-    public HttpClientManagerReporter newHttpClientManager() {
-        return NoopHttpClientManagerReporter.get();
     }
 
     @Override

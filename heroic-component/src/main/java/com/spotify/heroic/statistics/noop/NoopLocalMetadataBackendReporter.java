@@ -23,16 +23,9 @@ package com.spotify.heroic.statistics.noop;
 
 import com.spotify.heroic.statistics.FutureReporter.Context;
 import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
-import com.spotify.heroic.statistics.ThreadPoolProvider;
-import com.spotify.heroic.statistics.ThreadPoolReporter;
 
 public class NoopLocalMetadataBackendReporter implements LocalMetadataBackendReporter {
     private NoopLocalMetadataBackendReporter() {
-    }
-
-    @Override
-    public Context reportRefresh() {
-        return NoopFutureReporterContext.get();
     }
 
     @Override
@@ -66,14 +59,6 @@ public class NoopLocalMetadataBackendReporter implements LocalMetadataBackendRep
     }
 
     @Override
-    public void reportWriteCacheHit() {
-    }
-
-    @Override
-    public void reportWriteCacheMiss() {
-    }
-
-    @Override
     public void reportWriteSuccess(long n) {
     }
 
@@ -83,15 +68,6 @@ public class NoopLocalMetadataBackendReporter implements LocalMetadataBackendRep
 
     @Override
     public void reportWriteBatchDuration(long millis) {
-    }
-
-    @Override
-    public void newWriteThreadPool(ThreadPoolProvider provider) {
-    }
-
-    @Override
-    public ThreadPoolReporter newThreadPool() {
-        return NoopThreadPoolReporter.get();
     }
 
     @Override

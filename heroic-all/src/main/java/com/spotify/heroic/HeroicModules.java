@@ -45,8 +45,7 @@ import java.util.Map;
 
 public class HeroicModules {
     // @formatter:off
-    public static final List<HeroicModule> ALL_MODULES = ImmutableList.<HeroicModule>of(
-        new com.spotify.heroic.metric.astyanax.Module(),
+    public static final List<HeroicModule> ALL_MODULES = ImmutableList.of(
         new com.spotify.heroic.metric.datastax.Module(),
         new com.spotify.heroic.metric.generated.Module(),
         new com.spotify.heroic.metric.memory.Module(),

@@ -24,7 +24,6 @@ package com.spotify.heroic.statistics.semantic;
 import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.FutureReporter.Context;
 import com.spotify.heroic.statistics.MetricBackendReporter;
-import com.spotify.heroic.statistics.ThreadPoolReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 import lombok.RequiredArgsConstructor;
@@ -67,10 +66,5 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
     @Override
     public Context reportFetch() {
         return fetch.setup();
-    }
-
-    @Override
-    public ThreadPoolReporter newThreadPool() {
-        return new SemanticThreadPoolReporter(registry, base);
     }
 }

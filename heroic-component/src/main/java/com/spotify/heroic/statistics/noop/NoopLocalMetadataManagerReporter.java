@@ -30,11 +30,6 @@ public class NoopLocalMetadataManagerReporter implements LocalMetadataManagerRep
     }
 
     @Override
-    public Context reportRefresh() {
-        return NoopFutureReporterContext.get();
-    }
-
-    @Override
     public Context reportFindTags() {
         return NoopFutureReporterContext.get();
     }

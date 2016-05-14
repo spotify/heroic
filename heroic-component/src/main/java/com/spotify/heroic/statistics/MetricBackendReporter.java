@@ -27,6 +27,4 @@ public interface MetricBackendReporter {
     FutureReporter.Context reportWrite();
 
     FutureReporter.Context reportFetch();
-
-    ThreadPoolReporter newThreadPool();
 }

@@ -21,14 +21,11 @@
 
 package com.spotify.heroic.statistics.semantic;
 
-import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
 import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.FutureReporter.Context;
 import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
-import com.spotify.heroic.statistics.ThreadPoolProvider;
-import com.spotify.heroic.statistics.ThreadPoolReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 import lombok.ToString;
@@ -88,11 +85,6 @@ public class SemanticLocalMetadataBackendReporter implements LocalMetadataBacken
     }
 
     @Override
-    public FutureReporter.Context reportRefresh() {
-        return refresh.setup();
-    }
-
-    @Override
     public FutureReporter.Context reportFindTags() {
         return findTags.setup();
     }
@@ -123,29 +115,8 @@ public class SemanticLocalMetadataBackendReporter implements LocalMetadataBacken
     }
 
     @Override
-    public void reportWriteCacheHit() {
-        writeCacheHit.mark();
-    }
-
-    @Override
-    public void reportWriteCacheMiss() {
-        writeCacheMiss.mark();
-    }
-
-    @Override
     public void reportWriteDroppedByRateLimit() {
         writesDroppedByRateLimit.mark();
-    }
-
-    @Override
-    public void newWriteThreadPool(final ThreadPoolProvider provider) {
-        registry.register(base.tagged("what", "write-thread-pool-size", "unit", Units.BYTE),
-            new Gauge<Integer>() {
-                @Override
-                public Integer getValue() {
-                    return provider.getQueueSize();
-                }
-            });
     }
 
     @Override
@@ -161,10 +132,5 @@ public class SemanticLocalMetadataBackendReporter implements LocalMetadataBacken
     @Override
     public void reportWriteBatchDuration(long millis) {
         writeBatchDuration.update(millis);
-    }
-
-    @Override
-    public ThreadPoolReporter newThreadPool() {
-        return new SemanticThreadPoolReporter(registry, base);
     }
 }

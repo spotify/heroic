@@ -26,10 +26,6 @@
     <!-- metric backends -->
     <dependency>
       <groupId>com.spotify.heroic.metric</groupId>
-      <artifactId>heroic-metric-astyanax</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.spotify.heroic.metric</groupId>
       <artifactId>heroic-metric-datastax</artifactId>
     </dependency>
     <dependency>

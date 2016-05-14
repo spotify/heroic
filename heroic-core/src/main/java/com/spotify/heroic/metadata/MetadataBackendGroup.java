@@ -86,12 +86,6 @@ public class MetadataBackendGroup implements MetadataBackend {
     }
 
     @Override
-    public AsyncFuture<Void> refresh() {
-        final List<AsyncFuture<Void>> callbacks = run(b -> b.refresh());
-        return async.collectAndDiscard(callbacks).onDone(reporter.reportRefresh());
-    }
-
-    @Override
     public AsyncFuture<WriteResult> write(final Series series, final DateRange range) {
         final List<AsyncFuture<WriteResult>> callbacks = run(b -> b.write(series, range));
         return async.collect(callbacks, WriteResult.merger());

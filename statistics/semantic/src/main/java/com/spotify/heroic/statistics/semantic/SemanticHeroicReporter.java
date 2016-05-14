@@ -21,14 +21,12 @@
 
 package com.spotify.heroic.statistics.semantic;
 
-import com.spotify.heroic.statistics.AggregationCacheReporter;
 import com.spotify.heroic.statistics.AnalyticsReporter;
 import com.spotify.heroic.statistics.ClusteredManager;
 import com.spotify.heroic.statistics.ClusteredMetadataManagerReporter;
 import com.spotify.heroic.statistics.ClusteredMetricManagerReporter;
 import com.spotify.heroic.statistics.ConsumerReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
-import com.spotify.heroic.statistics.HttpClientManagerReporter;
 import com.spotify.heroic.statistics.IngestionManagerReporter;
 import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
 import com.spotify.heroic.statistics.LocalMetricManagerReporter;
@@ -59,18 +57,8 @@ public class SemanticHeroicReporter implements HeroicReporter {
     }
 
     @Override
-    public AggregationCacheReporter newAggregationCache() {
-        return new SemanticAggregationCacheReporter(registry);
-    }
-
-    @Override
     public ConsumerReporter newConsumer(String id) {
         return new SemanticConsumerReporter(registry, id);
-    }
-
-    @Override
-    public HttpClientManagerReporter newHttpClientManager() {
-        return new SemanticHttpClientManagerReporter(registry);
     }
 
     @Override

@@ -22,8 +22,6 @@
 package com.spotify.heroic.statistics;
 
 public interface LocalMetadataManagerReporter {
-    FutureReporter.Context reportRefresh();
-
     FutureReporter.Context reportFindTags();
 
     FutureReporter.Context reportFindTimeSeries();
