@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 @EqualsAndHashCode
 @JsonSerialize(using = EmptyOptionalLimit.Serializer.class)
@@ -70,6 +71,11 @@ class EmptyOptionalLimit implements OptionalLimit {
     @Override
     public <T> List<T> limitList(final List<T> input) {
         return input;
+    }
+
+    @Override
+    public <T> Stream<T> limitStream(final Stream<T> stream) {
+        return stream;
     }
 
     @Override

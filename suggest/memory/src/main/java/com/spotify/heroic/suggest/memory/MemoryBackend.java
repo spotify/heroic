@@ -97,7 +97,41 @@ public class MemoryBackend implements SuggestBackend, Grouped {
     public AsyncFuture<TagValuesSuggest> tagValuesSuggest(
         final RangeFilter filter, final List<String> exclude, final OptionalLimit groupLimit
     ) {
-        return async.resolved(new TagValuesSuggest(ImmutableList.of(), true));
+        final Lock l = lock.readLock();
+
+        l.lock();
+
+        try {
+            final Map<String, Set<String>> counts = new HashMap<>();
+
+            lookupSeries(filter).forEach(s -> {
+                for (final Map.Entry<String, String> e : s.getTags().entrySet()) {
+                    Set<String> c = counts.get(e.getKey());
+
+                    if (c == null) {
+                        c = new HashSet<>();
+                        counts.put(e.getKey(), c);
+                    }
+
+                    if (groupLimit.isGreaterOrEqual(counts.size())) {
+                        continue;
+                    }
+
+                    c.add(e.getValue());
+                }
+            });
+
+            final List<TagValuesSuggest.Suggestion> suggestions = ImmutableList.copyOf(filter
+                .getLimit()
+                .limitStream(counts.entrySet().stream())
+                .map(e -> new TagValuesSuggest.Suggestion(e.getKey(),
+                    ImmutableList.copyOf(e.getValue()), false))
+                .iterator());
+
+            return async.resolved(new TagValuesSuggest(suggestions, false));
+        } finally {
+            l.unlock();
+        }
     }
 
     @Override
@@ -124,9 +158,9 @@ public class MemoryBackend implements SuggestBackend, Grouped {
                 }
             });
 
-            final List<TagKeyCount.Suggestion> suggestions = ImmutableList.copyOf(counts
-                .entrySet()
-                .stream()
+            final List<TagKeyCount.Suggestion> suggestions = ImmutableList.copyOf(filter
+                .getLimit()
+                .limitStream(counts.entrySet().stream())
                 .map(e -> new TagKeyCount.Suggestion(e.getKey(), (long) e.getValue().size()))
                 .iterator());
 
@@ -159,14 +193,13 @@ public class MemoryBackend implements SuggestBackend, Grouped {
                 .ifPresent(parts -> parts.forEach(
                     k -> ids.retainAll(tagValues.getOrDefault(k, ImmutableSet.of()))));
 
-            final List<TagSuggest.Suggestion> suggestions = filter
+            final List<TagSuggest.Suggestion> suggestions = ImmutableList.copyOf(filter
                 .getLimit()
-                .limitList(ImmutableList.copyOf(ids
-                    .stream()
-                    .map(tagIndex::get)
-                    .filter(v -> v != null)
-                    .map(d -> new TagSuggest.Suggestion(SCORE, d.id.key, d.id.value))
-                    .iterator()));
+                .limitStream(ids.stream())
+                .map(tagIndex::get)
+                .filter(v -> v != null)
+                .map(d -> new TagSuggest.Suggestion(SCORE, d.id.key, d.id.value))
+                .iterator());
 
             return async.resolved(new TagSuggest(suggestions));
         } finally {
@@ -191,10 +224,11 @@ public class MemoryBackend implements SuggestBackend, Grouped {
                 .ifPresent(parts -> parts.forEach(
                     k -> ids.retainAll(keys.getOrDefault(k, ImmutableSet.of()))));
 
-            final List<KeySuggest.Suggestion> suggestions = filter
+            final List<KeySuggest.Suggestion> suggestions = ImmutableList.copyOf(filter
                 .getLimit()
-                .limitList(ImmutableList.copyOf(
-                    ids.stream().map(d -> new KeySuggest.Suggestion(SCORE, d)).iterator()));
+                .limitStream(ids.stream())
+                .map(d -> new KeySuggest.Suggestion(SCORE, d))
+                .iterator());
 
             return async.resolved(new KeySuggest(suggestions));
         } finally {
@@ -206,7 +240,23 @@ public class MemoryBackend implements SuggestBackend, Grouped {
     public AsyncFuture<TagValueSuggest> tagValueSuggest(
         final RangeFilter filter, final Optional<String> key
     ) {
-        return async.resolved(new TagValueSuggest(ImmutableList.of(), true));
+        final Lock l = lock.readLock();
+
+        l.lock();
+
+        try {
+            final Stream<TagId> ids = lookupTags(filter).map(TagDocument::getId);
+
+            final List<String> values = filter
+                .getLimit()
+                .limitStream(key.map(k -> ids.filter(id -> id.key.equals(k))).orElse(ids))
+                .map(id -> id.value)
+                .collect(Collectors.toList());
+
+            return async.resolved(new TagValueSuggest(values, false));
+        } finally {
+            l.unlock();
+        }
     }
 
     @Override

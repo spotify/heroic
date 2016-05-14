@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 @JsonDeserialize(using = OptionalLimit.Deserializer.class)
 public interface OptionalLimit {
@@ -42,6 +43,8 @@ public interface OptionalLimit {
     boolean isZero();
 
     <T> List<T> limitList(List<T> input);
+
+    <T> Stream<T> limitStream(Stream<T> stream);
 
     Optional<Integer> asInteger();
 

@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 @EqualsAndHashCode
 @RequiredArgsConstructor
@@ -92,6 +93,11 @@ class ValueOptionalLimit implements OptionalLimit {
         }
 
         return input.subList(0, l);
+    }
+
+    @Override
+    public <T> Stream<T> limitStream(final Stream<T> stream) {
+        return stream.limit(limit);
     }
 
     @Override
