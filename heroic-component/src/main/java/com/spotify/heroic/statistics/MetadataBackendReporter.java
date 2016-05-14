@@ -21,6 +21,26 @@
 
 package com.spotify.heroic.statistics;
 
-public interface LocalMetricManagerReporter {
-    MetricBackendReporter newBackend(String id);
+import com.spotify.heroic.metadata.MetadataBackend;
+
+public interface MetadataBackendReporter {
+    void reportWriteDroppedByRateLimit();
+
+    /**
+     * report number of successful operations in a batch
+     *
+     * @param n number of successes
+     */
+    void reportWriteSuccess(long n);
+
+    /**
+     * report number of failed operations in a batch
+     *
+     * @param n number of failures
+     */
+    void reportWriteFailure(long n);
+
+    void reportWriteBatchDuration(long millis);
+
+    MetadataBackend decorate(MetadataBackend backend);
 }

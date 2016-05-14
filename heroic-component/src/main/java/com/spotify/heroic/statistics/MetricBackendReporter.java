@@ -21,10 +21,12 @@
 
 package com.spotify.heroic.statistics;
 
+import com.spotify.heroic.metric.MetricBackend;
+
 public interface MetricBackendReporter {
-    FutureReporter.Context reportWriteBatch();
+    MetricBackend decorate(MetricBackend backend);
 
-    FutureReporter.Context reportWrite();
+    FutureReporter.Context reportFindSeries();
 
-    FutureReporter.Context reportFetch();
+    FutureReporter.Context reportQueryMetrics();
 }

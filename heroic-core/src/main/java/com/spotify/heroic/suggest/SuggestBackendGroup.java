@@ -30,7 +30,6 @@ import com.spotify.heroic.common.SelectedGroup;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.WriteResult;
-import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.Data;
@@ -44,7 +43,6 @@ import java.util.Optional;
 public class SuggestBackendGroup implements SuggestBackend {
     private final AsyncFramework async;
     private final SelectedGroup<SuggestBackend> backends;
-    private final LocalMetadataManagerReporter reporter;
 
     @Override
     public AsyncFuture<Void> configure() {
@@ -55,27 +53,22 @@ public class SuggestBackendGroup implements SuggestBackend {
     public AsyncFuture<TagValuesSuggest> tagValuesSuggest(
         final RangeFilter filter, final List<String> exclude, final OptionalLimit groupLimit
     ) {
-        return async
-            .collect(run(b -> b.tagValuesSuggest(filter, exclude, groupLimit)),
-                TagValuesSuggest.reduce(filter.getLimit(), groupLimit))
-            .onDone(reporter.reportTagValuesSuggest());
+        return async.collect(run(b -> b.tagValuesSuggest(filter, exclude, groupLimit)),
+            TagValuesSuggest.reduce(filter.getLimit(), groupLimit));
     }
 
     @Override
     public AsyncFuture<TagValueSuggest> tagValueSuggest(
         final RangeFilter filter, final Optional<String> key
     ) {
-        return async
-            .collect(run(b -> b.tagValueSuggest(filter, key)),
-                TagValueSuggest.reduce(filter.getLimit()))
-            .onDone(reporter.reportTagValueSuggest());
+        return async.collect(run(b -> b.tagValueSuggest(filter, key)),
+            TagValueSuggest.reduce(filter.getLimit()));
     }
 
     @Override
     public AsyncFuture<TagKeyCount> tagKeyCount(final RangeFilter filter) {
-        return async
-            .collect(run(b -> b.tagKeyCount(filter)), TagKeyCount.reduce(filter.getLimit()))
-            .onDone(reporter.reportTagKeySuggest());
+        return async.collect(run(b -> b.tagKeyCount(filter)),
+            TagKeyCount.reduce(filter.getLimit()));
     }
 
     @Override
@@ -83,20 +76,16 @@ public class SuggestBackendGroup implements SuggestBackend {
         final RangeFilter filter, final MatchOptions options, final Optional<String> key,
         final Optional<String> value
     ) {
-        return async
-            .collect(run(b -> b.tagSuggest(filter, options, key, value)),
-                TagSuggest.reduce(filter.getLimit()))
-            .onDone(reporter.reportTagSuggest());
+        return async.collect(run(b -> b.tagSuggest(filter, options, key, value)),
+            TagSuggest.reduce(filter.getLimit()));
     }
 
     @Override
     public AsyncFuture<KeySuggest> keySuggest(
         final RangeFilter filter, final MatchOptions options, final Optional<String> key
     ) {
-        return async
-            .collect(run(b -> b.keySuggest(filter, options, key)),
-                KeySuggest.reduce(filter.getLimit()))
-            .onDone(reporter.reportKeySuggest());
+        return async.collect(run(b -> b.keySuggest(filter, options, key)),
+            KeySuggest.reduce(filter.getLimit()));
     }
 
     @Override

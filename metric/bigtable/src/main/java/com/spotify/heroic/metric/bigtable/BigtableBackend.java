@@ -198,7 +198,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
             final MetricCollection g = w.getData();
             results.add(writeTyped(series, client, g));
-            return async.collect(results, WriteResult.merger()).onDone(reporter.reportWrite());
+            return async.collect(results, WriteResult.merger());
         });
     }
 
@@ -264,7 +264,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                 });
             }
 
-            return future.onDone(reporter.reportWriteBatch());
+            return future;
         });
     }
 

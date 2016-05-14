@@ -46,7 +46,7 @@ import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
-import com.spotify.heroic.statistics.MetricBackendGroupReporter;
+import com.spotify.heroic.statistics.MetricBackendReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Collector;
@@ -109,7 +109,7 @@ public class LocalMetricManager implements MetricManager {
     private final AsyncFramework async;
     private final BackendGroups<MetricBackend> backends;
     private final MetadataManager metadata;
-    private final MetricBackendGroupReporter reporter;
+    private final MetricBackendReporter reporter;
 
     /**
      * @param groupLimit The maximum amount of groups this manager will allow to be generated.
@@ -123,7 +123,7 @@ public class LocalMetricManager implements MetricManager {
         final int groupLimit, final long seriesLimit, final long aggregationLimit,
         final long dataLimit, final int fetchParallelism, final AsyncFramework async,
         final BackendGroups<MetricBackend> backends, final MetadataManager metadata,
-        final MetricBackendGroupReporter reporter
+        final MetricBackendReporter reporter
     ) {
         this.groupLimit = groupLimit;
         this.seriesLimit = seriesLimit;
@@ -329,9 +329,7 @@ public class LocalMetricManager implements MetricManager {
 
         @Override
         public AsyncFuture<WriteResult> write(final WriteMetric write) {
-            return async
-                .collect(run(b -> b.write(write)), WriteResult.merger())
-                .onDone(reporter.reportWrite());
+            return async.collect(run(b -> b.write(write)), WriteResult.merger());
         }
 
         /**
@@ -342,9 +340,7 @@ public class LocalMetricManager implements MetricManager {
          */
         @Override
         public AsyncFuture<WriteResult> write(final Collection<WriteMetric> writes) {
-            return async
-                .collect(run(b -> b.write(writes)), WriteResult.merger())
-                .onDone(reporter.reportWriteBatch());
+            return async.collect(run(b -> b.write(writes)), WriteResult.merger());
         }
 
         @Override

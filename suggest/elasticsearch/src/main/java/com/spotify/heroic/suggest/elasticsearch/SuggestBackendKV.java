@@ -41,7 +41,7 @@ import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.metric.WriteResult;
-import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
+import com.spotify.heroic.statistics.SuggestBackendReporter;
 import com.spotify.heroic.suggest.KeySuggest;
 import com.spotify.heroic.suggest.MatchOptions;
 import com.spotify.heroic.suggest.SuggestBackend;
@@ -140,7 +140,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     private static final String[] TAG_SUGGEST_SOURCES = new String[]{TAG_SKEY, TAG_SVAL};
 
     private final Managed<Connection> connection;
-    private final LocalMetadataBackendReporter reporter;
+    private final SuggestBackendReporter reporter;
 
     /**
      * prevent unnecessary writes if entry is already in cache. Integer is the hashCode of the
@@ -153,7 +153,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     @Inject
     public SuggestBackendKV(
         final AsyncFramework async, final Managed<Connection> connection,
-        final LocalMetadataBackendReporter reporter,
+        final SuggestBackendReporter reporter,
         final RateLimitedCache<Pair<String, HashCode>> writeCache, final Groups groups,
         @Named("configure") boolean configure
     ) {

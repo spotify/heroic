@@ -41,7 +41,7 @@ import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.metric.WriteResult;
-import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
+import com.spotify.heroic.statistics.SuggestBackendReporter;
 import com.spotify.heroic.suggest.KeySuggest;
 import com.spotify.heroic.suggest.MatchOptions;
 import com.spotify.heroic.suggest.SuggestBackend;
@@ -133,7 +133,7 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
         new String[]{Utils.TAG_KEY, Utils.TAG_VALUE};
 
     private final Managed<Connection> connection;
-    private final LocalMetadataBackendReporter reporter;
+    private final SuggestBackendReporter reporter;
     /**
      * prevent unnecessary writes if entry is already in cache. Integer is the hashCode of the
      * series.
@@ -145,7 +145,7 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
     @Inject
     public SuggestBackendV1(
         final AsyncFramework async, final Managed<Connection> connection,
-        final LocalMetadataBackendReporter reporter,
+        final SuggestBackendReporter reporter,
         final RateLimitedCache<Pair<String, HashCode>> writeCache, final Groups groups,
         @Named("configure") boolean configure
     ) {

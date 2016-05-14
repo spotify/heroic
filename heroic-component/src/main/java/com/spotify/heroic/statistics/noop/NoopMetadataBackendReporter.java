@@ -21,41 +21,11 @@
 
 package com.spotify.heroic.statistics.noop;
 
-import com.spotify.heroic.statistics.FutureReporter.Context;
-import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
+import com.spotify.heroic.metadata.MetadataBackend;
+import com.spotify.heroic.statistics.MetadataBackendReporter;
 
-public class NoopLocalMetadataBackendReporter implements LocalMetadataBackendReporter {
-    private NoopLocalMetadataBackendReporter() {
-    }
-
-    @Override
-    public Context reportFindTags() {
-        return NoopFutureReporterContext.get();
-    }
-
-    @Override
-    public Context reportFindTagKeys() {
-        return NoopFutureReporterContext.get();
-    }
-
-    @Override
-    public Context reportFindTimeSeries() {
-        return NoopFutureReporterContext.get();
-    }
-
-    @Override
-    public Context reportCountSeries() {
-        return NoopFutureReporterContext.get();
-    }
-
-    @Override
-    public Context reportFindKeys() {
-        return NoopFutureReporterContext.get();
-    }
-
-    @Override
-    public Context reportWrite() {
-        return NoopFutureReporterContext.get();
+public class NoopMetadataBackendReporter implements MetadataBackendReporter {
+    private NoopMetadataBackendReporter() {
     }
 
     @Override
@@ -71,13 +41,19 @@ public class NoopLocalMetadataBackendReporter implements LocalMetadataBackendRep
     }
 
     @Override
+    public MetadataBackend decorate(
+        final MetadataBackend backend
+    ) {
+        return backend;
+    }
+
+    @Override
     public void reportWriteDroppedByRateLimit() {
     }
 
-    private static final NoopLocalMetadataBackendReporter instance =
-        new NoopLocalMetadataBackendReporter();
+    private static final NoopMetadataBackendReporter instance = new NoopMetadataBackendReporter();
 
-    public static NoopLocalMetadataBackendReporter get() {
+    public static NoopMetadataBackendReporter get() {
         return instance;
     }
 }

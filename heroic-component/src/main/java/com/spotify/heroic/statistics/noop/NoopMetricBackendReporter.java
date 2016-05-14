@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.statistics.noop;
 
+import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 
@@ -29,17 +30,17 @@ public class NoopMetricBackendReporter implements MetricBackendReporter {
     }
 
     @Override
-    public FutureReporter.Context reportWrite() {
+    public MetricBackend decorate(final MetricBackend backend) {
+        return backend;
+    }
+
+    @Override
+    public FutureReporter.Context reportFindSeries() {
         return NoopFutureReporterContext.get();
     }
 
     @Override
-    public FutureReporter.Context reportWriteBatch() {
-        return NoopFutureReporterContext.get();
-    }
-
-    @Override
-    public FutureReporter.Context reportFetch() {
+    public FutureReporter.Context reportQueryMetrics() {
         return NoopFutureReporterContext.get();
     }
 

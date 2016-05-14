@@ -23,7 +23,7 @@ package com.spotify.heroic.suggest;
 
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
-import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
+import com.spotify.heroic.statistics.SuggestBackendReporter;
 import lombok.Data;
 
 public interface SuggestModule {
@@ -34,7 +34,7 @@ public interface SuggestModule {
      */
     @Data
     class Depends {
-        private final LocalMetadataBackendReporter backendReporter;
+        private final SuggestBackendReporter backendReporter;
     }
 
     /**

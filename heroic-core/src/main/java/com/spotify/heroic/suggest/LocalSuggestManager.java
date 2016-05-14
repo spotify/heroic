@@ -23,7 +23,6 @@ package com.spotify.heroic.suggest;
 
 import com.spotify.heroic.common.BackendGroups;
 import com.spotify.heroic.common.GroupMember;
-import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
 import eu.toolchain.async.AsyncFramework;
 
 import javax.inject.Inject;
@@ -35,16 +34,13 @@ import java.util.Optional;
 public class LocalSuggestManager implements SuggestManager {
     private final AsyncFramework async;
     private final BackendGroups<SuggestBackend> backends;
-    private final LocalMetadataManagerReporter reporter;
 
     @Inject
     public LocalSuggestManager(
-        final AsyncFramework async, @Named("backends") final BackendGroups<SuggestBackend> backends,
-        final LocalMetadataManagerReporter reporter
+        final AsyncFramework async, @Named("backends") final BackendGroups<SuggestBackend> backends
     ) {
         this.async = async;
         this.backends = backends;
-        this.reporter = reporter;
     }
 
     @Override
@@ -69,6 +65,6 @@ public class LocalSuggestManager implements SuggestManager {
 
     @Override
     public SuggestBackend useOptionalGroup(final Optional<String> group) {
-        return new SuggestBackendGroup(async, backends.useOptionalGroup(group), reporter);
+        return new SuggestBackendGroup(async, backends.useOptionalGroup(group));
     }
 }

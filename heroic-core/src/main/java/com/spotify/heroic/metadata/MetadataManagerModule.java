@@ -31,9 +31,8 @@ import com.spotify.heroic.dagger.CorePrimaryComponent;
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.metadata.MetadataModule.Exposed;
-import com.spotify.heroic.statistics.ClusteredMetadataManagerReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
-import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
+import com.spotify.heroic.statistics.MetadataBackendReporter;
 import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
@@ -83,19 +82,13 @@ public class MetadataManagerModule {
 
         @Provides
         @MetadataScope
-        public LocalMetadataManagerReporter localReporter(HeroicReporter reporter) {
-            return reporter.newLocalMetadataBackendManager();
+        public MetadataBackendReporter localReporter(HeroicReporter reporter) {
+            return reporter.newMetadataBackend();
         }
 
         @Provides
         @MetadataScope
-        public ClusteredMetadataManagerReporter clusteredReporter(HeroicReporter reporter) {
-            return reporter.newClusteredMetadataBackendManager();
-        }
-
-        @Provides
-        @MetadataScope
-        public List<Exposed> components(final LocalMetadataManagerReporter reporter) {
+        public List<Exposed> components(final MetadataBackendReporter reporter) {
             final List<Exposed> results = new ArrayList<>();
 
             final ModuleIdBuilder idBuilder = new ModuleIdBuilder();
@@ -103,9 +96,7 @@ public class MetadataManagerModule {
             for (final MetadataModule m : backends) {
                 final String id = idBuilder.buildId(m);
 
-                final MetadataModule.Depends depends =
-                    new MetadataModule.Depends(reporter, reporter.newMetadataBackend(id));
-
+                final MetadataModule.Depends depends = new MetadataModule.Depends(reporter);
                 results.add(m.module(primary, depends, id));
             }
 
@@ -114,8 +105,11 @@ public class MetadataManagerModule {
 
         @Provides
         @MetadataScope
-        public Set<MetadataBackend> backends(List<Exposed> components) {
-            return ImmutableSet.copyOf(components.stream().map(Exposed::backend).iterator());
+        public Set<MetadataBackend> backends(
+            List<Exposed> components, MetadataBackendReporter reporter
+        ) {
+            return ImmutableSet.copyOf(
+                components.stream().map(Exposed::backend).map(reporter::decorate).iterator());
         }
 
         @Provides

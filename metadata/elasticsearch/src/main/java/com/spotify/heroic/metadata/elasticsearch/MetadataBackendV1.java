@@ -48,7 +48,7 @@ import com.spotify.heroic.metadata.FindTagKeys;
 import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metric.WriteResult;
-import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
+import com.spotify.heroic.statistics.MetadataBackendReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.LazyTransform;
@@ -118,7 +118,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
     public static final String TEMPLATE_NAME = "heroic";
 
     private final Groups groups;
-    private final LocalMetadataBackendReporter reporter;
+    private final MetadataBackendReporter reporter;
     private final AsyncFramework async;
     private final Managed<Connection> connection;
     private final RateLimitedCache<Pair<String, HashCode>> writeCache;
@@ -127,7 +127,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
 
     @Inject
     public MetadataBackendV1(
-        Groups groups, LocalMetadataBackendReporter reporter, AsyncFramework async,
+        Groups groups, MetadataBackendReporter reporter, AsyncFramework async,
         Managed<Connection> connection, RateLimitedCache<Pair<String, HashCode>> writeCache,
         FilterModifier modifier, @Named("configure") boolean configure
     ) {
@@ -178,16 +178,11 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
     @Override
     public AsyncFuture<FindTags> findTags(final RangeFilter filter) {
         return doto(c -> {
-            final Callable<SearchRequestBuilder> setup = new Callable<SearchRequestBuilder>() {
-                @Override
-                public SearchRequestBuilder call() throws Exception {
-                    return c.search(filter.getRange(), ElasticsearchUtils.TYPE_METADATA);
-                }
-            };
+            final Callable<SearchRequestBuilder> setup =
+                () -> c.search(filter.getRange(), ElasticsearchUtils.TYPE_METADATA);
 
-            return findTagKeys(filter)
-                .lazyTransform(new FindTagsTransformer(filter.getFilter(), setup, CTX))
-                .onDone(reporter.reportFindTags());
+            return findTagKeys(filter).lazyTransform(
+                new FindTagsTransformer(filter.getFilter(), setup, CTX));
         });
     }
 
@@ -296,8 +291,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
 
             request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-            return scrollOverSeries(c, request, filter.getLimit()).onDone(
-                reporter.reportFindTimeSeries());
+            return scrollOverSeries(c, request, filter.getLimit());
         });
     }
 
@@ -368,7 +362,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
                 }
 
                 return new FindTagKeys(keys, keys.size());
-            }).onDone(reporter.reportFindTagKeys());
+            });
         });
     }
 
@@ -414,7 +408,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
                 }
 
                 return new FindKeys(keys, size, duplicates);
-            }).onDone(reporter.reportFindKeys());
+            });
         });
     }
 

@@ -27,9 +27,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.elasticsearch.index.IndexMapping;
 import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
-import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
 import dagger.Module;
 import dagger.Provides;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
@@ -112,14 +112,13 @@ public class ConnectionModule {
     }
 
     @Provides
-    Provider connection(final AsyncFramework async, final LocalMetadataBackendReporter reporter) {
-        return new Provider(async, reporter);
+    Provider connection(final AsyncFramework async) {
+        return new Provider(async);
     }
 
     @RequiredArgsConstructor
     public class Provider {
         private final AsyncFramework async;
-        private final LocalMetadataBackendReporter reporter;
 
         public Managed<Connection> construct(
             final String defaultTemplateName,
@@ -140,16 +139,13 @@ public class ConnectionModule {
             return async.managed(new ManagedSetup<Connection>() {
                 @Override
                 public AsyncFuture<Connection> construct() {
-                    return async.call(new Callable<Connection>() {
-                        @Override
-                        public Connection call() throws Exception {
-                            final Client client = clientSetup.setup();
+                    return async.call(() -> {
+                        final Client client = clientSetup.setup();
 
-                            final BulkProcessor bulk = configureBulkProcessor(client);
+                        final BulkProcessor bulk = configureBulkProcessor(client);
 
-                            return new Connection(async, index, client, bulk, template, mappings,
-                                settings);
-                        }
+                        return new Connection(async, index, client, bulk, template, mappings,
+                            settings);
                     });
                 }
 
@@ -157,12 +153,9 @@ public class ConnectionModule {
                 public AsyncFuture<Void> destruct(Connection value) {
                     final List<AsyncFuture<Void>> futures = new ArrayList<>();
 
-                    futures.add(async.call(new Callable<Void>() {
-                        @Override
-                        public Void call() throws Exception {
-                            clientSetup.stop();
-                            return null;
-                        }
+                    futures.add(async.call((Callable<Void>) () -> {
+                        clientSetup.stop();
+                        return null;
                     }));
 
                     futures.add(value.close());
@@ -181,20 +174,18 @@ public class ConnectionModule {
                             public void afterBulk(
                                 long executionId, BulkRequest request, Throwable failure
                             ) {
-                                reporter.reportWriteFailure(request.numberOfActions());
                                 log.error("Failed to write bulk", failure);
                             }
 
+                            @SuppressFBWarnings(value = "UC_USELESS_VOID_METHOD",
+                                justification = "Might want to introduce instrumentation again")
                             @Override
                             public void afterBulk(
                                 long executionId, BulkRequest request, BulkResponse response
                             ) {
-                                reporter.reportWriteBatchDuration(response.getTookInMillis());
-
                                 final int all = response.getItems().length;
 
                                 if (!response.hasFailures()) {
-                                    reporter.reportWriteSuccess(all);
                                     return;
                                 }
 
@@ -206,9 +197,6 @@ public class ConnectionModule {
                                         failures++;
                                     }
                                 }
-
-                                reporter.reportWriteFailure(failures);
-                                reporter.reportWriteSuccess(all - failures);
                             }
                         });
 

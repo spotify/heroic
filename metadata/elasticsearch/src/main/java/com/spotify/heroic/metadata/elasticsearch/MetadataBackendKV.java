@@ -45,7 +45,7 @@ import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metric.WriteResult;
-import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
+import com.spotify.heroic.statistics.MetadataBackendReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
@@ -103,7 +103,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     static final int SCROLL_SIZE = 1000;
 
     private final Groups groups;
-    private final LocalMetadataBackendReporter reporter;
+    private final MetadataBackendReporter reporter;
     private final AsyncFramework async;
     private final Managed<Connection> connection;
     private final RateLimitedCache<Pair<String, HashCode>> writeCache;
@@ -111,7 +111,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
     @Inject
     public MetadataBackendKV(
-        Groups groups, LocalMetadataBackendReporter reporter, AsyncFramework async,
+        Groups groups, MetadataBackendReporter reporter, AsyncFramework async,
         Managed<Connection> connection, RateLimitedCache<Pair<String, HashCode>> writeCache,
         @Named("configure") boolean configure
     ) {
@@ -137,7 +137,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
     @Override
     public AsyncFuture<Void> configure() {
-        return doto(c -> c.configure());
+        return doto(Connection::configure);
     }
 
     @Override
@@ -147,7 +147,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
     @Override
     public AsyncFuture<FindTags> findTags(final RangeFilter filter) {
-        return doto(c -> async.resolved(FindTags.EMPTY).onDone(reporter.reportFindTags()));
+        return doto(c -> async.resolved(FindTags.EMPTY));
     }
 
     @Override
@@ -255,8 +255,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
             request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-            return scrollOverSeries(c, request, filter.getLimit()).onDone(
-                reporter.reportFindTimeSeries());
+            return scrollOverSeries(c, request, filter.getLimit());
         });
     }
 
@@ -323,7 +322,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                 }
 
                 return new FindKeys(keys, size, duplicates);
-            }).onDone(reporter.reportFindKeys());
+            });
         });
     }
 

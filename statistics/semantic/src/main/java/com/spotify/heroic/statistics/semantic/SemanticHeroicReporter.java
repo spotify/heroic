@@ -23,14 +23,12 @@ package com.spotify.heroic.statistics.semantic;
 
 import com.spotify.heroic.statistics.AnalyticsReporter;
 import com.spotify.heroic.statistics.ClusteredManager;
-import com.spotify.heroic.statistics.ClusteredMetadataManagerReporter;
-import com.spotify.heroic.statistics.ClusteredMetricManagerReporter;
 import com.spotify.heroic.statistics.ConsumerReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.IngestionManagerReporter;
-import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
-import com.spotify.heroic.statistics.LocalMetricManagerReporter;
-import com.spotify.heroic.statistics.MetricBackendGroupReporter;
+import com.spotify.heroic.statistics.MetadataBackendReporter;
+import com.spotify.heroic.statistics.MetricBackendReporter;
+import com.spotify.heroic.statistics.SuggestBackendReporter;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
@@ -47,23 +45,8 @@ public class SemanticHeroicReporter implements HeroicReporter {
     private final Set<ClusteredManager> clusteredManagers = new HashSet<>();
 
     @Override
-    public LocalMetricManagerReporter newLocalMetricBackendManager() {
-        return new SemanticLocalMetricManagerReporter(registry);
-    }
-
-    @Override
-    public LocalMetadataManagerReporter newLocalMetadataBackendManager() {
-        return new SemanticMetadataManagerReporter(registry);
-    }
-
-    @Override
     public ConsumerReporter newConsumer(String id) {
         return new SemanticConsumerReporter(registry, id);
-    }
-
-    @Override
-    public ClusteredMetricManagerReporter newClusteredMetricBackendManager() {
-        return new SemanticClusteredMetricManagerReporter(registry);
     }
 
     @Override
@@ -77,20 +60,18 @@ public class SemanticHeroicReporter implements HeroicReporter {
     }
 
     @Override
-    public ClusteredMetadataManagerReporter newClusteredMetadataBackendManager() {
-        final ClusteredMetadataManagerReporter reporter =
-            new SemanticClusteredMetadataManagerReporter(registry);
-
-        synchronized (clusteredManagers) {
-            clusteredManagers.add(reporter);
-        }
-
-        return reporter;
+    public MetadataBackendReporter newMetadataBackend() {
+        return new SemanticMetadataBackendReporter(registry);
     }
 
     @Override
-    public MetricBackendGroupReporter newMetricBackendsReporter() {
-        return new SemanticMetricBackendsReporter(registry);
+    public SuggestBackendReporter newSuggestBackend() {
+        return new SemanticSuggestBackendReporter(registry);
+    }
+
+    @Override
+    public MetricBackendReporter newMetricBackend() {
+        return new SemanticMetricBackendReporter(registry);
     }
 
     @Override

@@ -33,10 +33,8 @@ import com.spotify.heroic.dagger.CorePrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.metadata.MetadataComponent;
 import com.spotify.heroic.metadata.MetadataManager;
-import com.spotify.heroic.statistics.ClusteredMetricManagerReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
-import com.spotify.heroic.statistics.LocalMetricManagerReporter;
-import com.spotify.heroic.statistics.MetricBackendGroupReporter;
+import com.spotify.heroic.statistics.MetricBackendReporter;
 import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
@@ -136,20 +134,8 @@ public class MetricManagerModule {
 
         @Provides
         @MetricScope
-        public LocalMetricManagerReporter localReporter(HeroicReporter reporter) {
-            return reporter.newLocalMetricBackendManager();
-        }
-
-        @Provides
-        @MetricScope
-        public MetricBackendGroupReporter metricBackendsReporter(HeroicReporter reporter) {
-            return reporter.newMetricBackendsReporter();
-        }
-
-        @Provides
-        @MetricScope
-        public ClusteredMetricManagerReporter clusteredReporter(HeroicReporter reporter) {
-            return reporter.newClusteredMetricBackendManager();
+        public MetricBackendReporter reporter(HeroicReporter reporter) {
+            return reporter.newMetricBackend();
         }
 
         @Provides
@@ -164,7 +150,7 @@ public class MetricManagerModule {
 
         @Provides
         @MetricScope
-        public List<MetricModule.Exposed> components(final LocalMetricManagerReporter reporter) {
+        public List<MetricModule.Exposed> components(final MetricBackendReporter reporter) {
             final List<MetricModule.Exposed> backends = new ArrayList<>();
 
             final ModuleIdBuilder idBuilder = new ModuleIdBuilder();
@@ -172,9 +158,7 @@ public class MetricManagerModule {
             for (final MetricModule m : this.backends) {
                 final String id = idBuilder.buildId(m);
 
-                final MetricModule.Depends depends =
-                    new MetricModule.Depends(reporter, reporter.newBackend(id));
-
+                final MetricModule.Depends depends = new MetricModule.Depends(reporter);
                 backends.add(m.module(primary, depends, id));
             }
 
@@ -183,22 +167,28 @@ public class MetricManagerModule {
 
         @Provides
         @MetricScope
-        public Set<MetricBackend> backends(List<MetricModule.Exposed> components) {
-            return ImmutableSet.copyOf(components.stream().map(c -> c.backend()).iterator());
+        public Set<MetricBackend> backends(
+            List<MetricModule.Exposed> components, MetricBackendReporter reporter
+        ) {
+            return ImmutableSet.copyOf(components
+                .stream()
+                .map(MetricModule.Exposed::backend)
+                .map(reporter::decorate)
+                .iterator());
         }
 
         @Provides
         @MetricScope
         @Named("metric")
         public LifeCycle metricLife(List<MetricModule.Exposed> components) {
-            return LifeCycle.combined(components.stream().map(c -> c.life()));
+            return LifeCycle.combined(components.stream().map(MetricModule.Exposed::life));
         }
 
         @Provides
         @MetricScope
         public MetricManager metricManager(
             final AsyncFramework async, final BackendGroups<MetricBackend> backends,
-            final MetadataManager metadata, final MetricBackendGroupReporter reporter
+            final MetadataManager metadata, final MetricBackendReporter reporter
         ) {
             return new LocalMetricManager(groupLimit, seriesLimit, aggregationLimit, dataLimit,
                 fetchParallelism, async, backends, metadata, reporter);

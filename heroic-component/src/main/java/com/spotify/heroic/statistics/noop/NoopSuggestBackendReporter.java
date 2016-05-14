@@ -19,14 +19,27 @@
  * under the License.
  */
 
-package com.spotify.heroic.statistics;
+package com.spotify.heroic.statistics.noop;
 
-import com.spotify.heroic.cluster.NodeMetadata;
+import com.spotify.heroic.statistics.SuggestBackendReporter;
+import com.spotify.heroic.suggest.SuggestBackend;
 
-public interface ClusteredMetricManagerReporter {
-    FutureReporter.Context reportQuery();
+public class NoopSuggestBackendReporter implements SuggestBackendReporter {
+    private NoopSuggestBackendReporter() {
+    }
 
-    FutureReporter.Context reportWrite();
+    @Override
+    public SuggestBackend decorate(final SuggestBackend backend) {
+        return backend;
+    }
 
-    FutureReporter.Context reportShardFullQuery(NodeMetadata metadata);
+    @Override
+    public void reportWriteDroppedByRateLimit() {
+    }
+
+    private static final NoopSuggestBackendReporter instance = new NoopSuggestBackendReporter();
+
+    public static NoopSuggestBackendReporter get() {
+        return instance;
+    }
 }

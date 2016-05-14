@@ -21,50 +21,191 @@
 
 package com.spotify.heroic.statistics.semantic;
 
+import com.spotify.heroic.QueryOptions;
+import com.spotify.heroic.async.AsyncObservable;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Groups;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.metric.BackendEntry;
+import com.spotify.heroic.metric.BackendKey;
+import com.spotify.heroic.metric.BackendKeyFilter;
+import com.spotify.heroic.metric.BackendKeySet;
+import com.spotify.heroic.metric.FetchData;
+import com.spotify.heroic.metric.FetchQuotaWatcher;
+import com.spotify.heroic.metric.MetricBackend;
+import com.spotify.heroic.metric.MetricCollection;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.WriteMetric;
+import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.statistics.FutureReporter;
-import com.spotify.heroic.statistics.FutureReporter.Context;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
+import eu.toolchain.async.AsyncFuture;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
+import java.util.Collection;
+import java.util.List;
+
 @ToString(of = {"base"})
-@RequiredArgsConstructor
 public class SemanticMetricBackendReporter implements MetricBackendReporter {
     private static final String COMPONENT = "metric-backend";
 
-    private final MetricId base;
-    private final SemanticMetricRegistry registry;
-    private final FutureReporter writeBatch;
     private final FutureReporter write;
+    private final FutureReporter writeBatch;
     private final FutureReporter fetch;
+    private final FutureReporter deleteKey;
+    private final FutureReporter countKey;
+    private final FutureReporter fetchRow;
 
-    public SemanticMetricBackendReporter(SemanticMetricRegistry registry, String id) {
-        this.registry = registry;
+    private final FutureReporter findSeries;
+    private final FutureReporter queryMetrics;
 
-        this.base = MetricId.build().tagged("component", COMPONENT, "id", id);
+    public SemanticMetricBackendReporter(SemanticMetricRegistry registry) {
+        final MetricId base = MetricId.build().tagged("component", COMPONENT);
 
-        this.writeBatch = new SemanticFutureReporter(registry,
-            base.tagged("what", "write-batch", "unit", Units.WRITE));
         this.write =
             new SemanticFutureReporter(registry, base.tagged("what", "write", "unit", Units.WRITE));
+        this.writeBatch = new SemanticFutureReporter(registry,
+            base.tagged("what", "write-batch", "unit", Units.WRITE));
         this.fetch =
-            new SemanticFutureReporter(registry, base.tagged("what", "fetch", "unit", Units.READ));
+            new SemanticFutureReporter(registry, base.tagged("what", "fetch", "unit", Units.QUERY));
+        this.deleteKey = new SemanticFutureReporter(registry,
+            base.tagged("what", "delete-key", "unit", Units.DELETE));
+        this.countKey = new SemanticFutureReporter(registry,
+            base.tagged("what", "count-key", "unit", Units.QUERY));
+        this.fetchRow = new SemanticFutureReporter(registry,
+            base.tagged("what", "fetch-row", "unit", Units.QUERY));
+
+        this.findSeries = new SemanticFutureReporter(registry,
+            base.tagged("what", "find-series", "unit", Units.QUERY));
+        this.queryMetrics = new SemanticFutureReporter(registry,
+            base.tagged("what", "query-metrics", "unit", Units.QUERY));
     }
 
     @Override
-    public Context reportWrite() {
-        return write.setup();
+    public MetricBackend decorate(final MetricBackend backend) {
+        return new InstrumentedMetricBackend(backend);
     }
 
     @Override
-    public Context reportWriteBatch() {
-        return writeBatch.setup();
+    public FutureReporter.Context reportFindSeries() {
+        return findSeries.setup();
     }
 
     @Override
-    public Context reportFetch() {
-        return fetch.setup();
+    public FutureReporter.Context reportQueryMetrics() {
+        return queryMetrics.setup();
+    }
+
+    @RequiredArgsConstructor
+    private class InstrumentedMetricBackend implements MetricBackend {
+        private final MetricBackend delegate;
+
+        @Override
+        public Statistics getStatistics() {
+            return delegate.getStatistics();
+        }
+
+        @Override
+        public AsyncFuture<Void> configure() {
+            return delegate.configure();
+        }
+
+        @Override
+        public AsyncFuture<WriteResult> write(final WriteMetric w) {
+            return delegate.write(w).onDone(write.setup());
+        }
+
+        @Override
+        public AsyncFuture<WriteResult> write(final Collection<WriteMetric> writes) {
+            return delegate.write(writes).onDone(writeBatch.setup());
+        }
+
+        @Override
+        public AsyncFuture<FetchData> fetch(
+            final MetricType type, final Series series, final DateRange range,
+            final FetchQuotaWatcher watcher, final QueryOptions options
+        ) {
+            return delegate.fetch(type, series, range, watcher, options).onDone(fetch.setup());
+        }
+
+        @Override
+        public Iterable<BackendEntry> listEntries() {
+            return delegate.listEntries();
+        }
+
+        @Override
+        public AsyncObservable<BackendKeySet> streamKeys(
+            final BackendKeyFilter filter, final QueryOptions options
+        ) {
+            return delegate.streamKeys(filter, options);
+        }
+
+        @Override
+        public AsyncObservable<BackendKeySet> streamKeysPaged(
+            final BackendKeyFilter filter, final QueryOptions options, final int pageSize
+        ) {
+            return delegate.streamKeysPaged(filter, options, pageSize);
+        }
+
+        @Override
+        public AsyncFuture<List<String>> serializeKeyToHex(
+            final BackendKey key
+        ) {
+            return delegate.serializeKeyToHex(key);
+        }
+
+        @Override
+        public AsyncFuture<List<BackendKey>> deserializeKeyFromHex(final String key) {
+            return delegate.deserializeKeyFromHex(key);
+        }
+
+        @Override
+        public AsyncFuture<Void> deleteKey(final BackendKey key, final QueryOptions options) {
+            return delegate.deleteKey(key, options).onDone(deleteKey.setup());
+        }
+
+        @Override
+        public AsyncFuture<Long> countKey(final BackendKey key, final QueryOptions options) {
+            return delegate.countKey(key, options).onDone(countKey.setup());
+        }
+
+        @Override
+        public AsyncFuture<MetricCollection> fetchRow(final BackendKey key) {
+            return delegate.fetchRow(key).onDone(fetchRow.setup());
+        }
+
+        @Override
+        public AsyncObservable<MetricCollection> streamRow(final BackendKey key) {
+            return delegate.streamRow(key);
+        }
+
+        @Override
+        public boolean isReady() {
+            return delegate.isReady();
+        }
+
+        @Override
+        public Groups getGroups() {
+            return delegate.getGroups();
+        }
+
+        @Override
+        public int size() {
+            return delegate.size();
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return delegate.isEmpty();
+        }
+
+        @Override
+        public String toString() {
+            return delegate.toString() + "{semantic}";
+        }
     }
 }

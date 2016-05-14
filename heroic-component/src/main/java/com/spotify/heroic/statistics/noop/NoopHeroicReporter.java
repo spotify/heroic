@@ -22,44 +22,17 @@
 package com.spotify.heroic.statistics.noop;
 
 import com.spotify.heroic.statistics.AnalyticsReporter;
-import com.spotify.heroic.statistics.ClusteredMetadataManagerReporter;
-import com.spotify.heroic.statistics.ClusteredMetricManagerReporter;
 import com.spotify.heroic.statistics.ConsumerReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.IngestionManagerReporter;
-import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
-import com.spotify.heroic.statistics.LocalMetricManagerReporter;
-import com.spotify.heroic.statistics.MetricBackendGroupReporter;
+import com.spotify.heroic.statistics.MetadataBackendReporter;
+import com.spotify.heroic.statistics.MetricBackendReporter;
+import com.spotify.heroic.statistics.SuggestBackendReporter;
 
 import java.util.Map;
 import java.util.Set;
 
 public class NoopHeroicReporter implements HeroicReporter {
-    @Override
-    public LocalMetricManagerReporter newLocalMetricBackendManager() {
-        return NoopLocalMetricManagerReporter.get();
-    }
-
-    @Override
-    public ClusteredMetricManagerReporter newClusteredMetricBackendManager() {
-        return NoopClusteredMetricManagerReporter.get();
-    }
-
-    @Override
-    public LocalMetadataManagerReporter newLocalMetadataBackendManager() {
-        return NoopLocalMetadataManagerReporter.get();
-    }
-
-    @Override
-    public MetricBackendGroupReporter newMetricBackendsReporter() {
-        return NoopMetricBackendsReporter.get();
-    }
-
-    @Override
-    public ClusteredMetadataManagerReporter newClusteredMetadataBackendManager() {
-        return NoopClusteredMetadataManagerReporter.get();
-    }
-
     @Override
     public ConsumerReporter newConsumer(String id) {
         return NoopConsumerReporter.get();
@@ -73,6 +46,21 @@ public class NoopHeroicReporter implements HeroicReporter {
     @Override
     public AnalyticsReporter newAnalyticsReporter() {
         return NoopAnalyticsReporter.get();
+    }
+
+    @Override
+    public MetadataBackendReporter newMetadataBackend() {
+        return NoopMetadataBackendReporter.get();
+    }
+
+    @Override
+    public SuggestBackendReporter newSuggestBackend() {
+        return NoopSuggestBackendReporter.get();
+    }
+
+    @Override
+    public MetricBackendReporter newMetricBackend() {
+        return NoopMetricBackendReporter.get();
     }
 
     @Override

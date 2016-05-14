@@ -29,9 +29,8 @@ import com.spotify.heroic.common.BackendGroups;
 import com.spotify.heroic.common.ModuleIdBuilder;
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
-import com.spotify.heroic.statistics.ClusteredMetadataManagerReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
-import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
+import com.spotify.heroic.statistics.SuggestBackendReporter;
 import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
@@ -82,14 +81,8 @@ public class SuggestManagerModule {
 
         @Provides
         @SuggestScope
-        public LocalMetadataManagerReporter localReporter(HeroicReporter reporter) {
-            return reporter.newLocalMetadataBackendManager();
-        }
-
-        @Provides
-        @SuggestScope
-        public ClusteredMetadataManagerReporter clusteredReporter(HeroicReporter reporter) {
-            return reporter.newClusteredMetadataBackendManager();
+        public SuggestBackendReporter localReporter(HeroicReporter reporter) {
+            return reporter.newSuggestBackend();
         }
 
         @Provides
@@ -101,7 +94,7 @@ public class SuggestManagerModule {
 
         @Provides
         @SuggestScope
-        public List<SuggestModule.Exposed> components(LocalMetadataManagerReporter reporter) {
+        public List<SuggestModule.Exposed> components(SuggestBackendReporter reporter) {
             final ArrayList<SuggestModule.Exposed> results = new ArrayList<>();
 
             final ModuleIdBuilder idBuilder = new ModuleIdBuilder();
@@ -109,9 +102,7 @@ public class SuggestManagerModule {
             for (final SuggestModule m : backends) {
                 final String id = idBuilder.buildId(m);
 
-                final SuggestModule.Depends depends =
-                    new SuggestModule.Depends(reporter.newMetadataBackend(id));
-
+                final SuggestModule.Depends depends = new SuggestModule.Depends(reporter);
                 results.add(m.module(primary, depends, id));
             }
 
@@ -120,15 +111,21 @@ public class SuggestManagerModule {
 
         @Provides
         @SuggestScope
-        public Set<SuggestBackend> backends(List<SuggestModule.Exposed> components) {
-            return ImmutableSet.copyOf(components.stream().map(c -> c.backend()).iterator());
+        public Set<SuggestBackend> backends(
+            List<SuggestModule.Exposed> components, SuggestBackendReporter reporter
+        ) {
+            return ImmutableSet.copyOf(components
+                .stream()
+                .map(SuggestModule.Exposed::backend)
+                .map(reporter::decorate)
+                .iterator());
         }
 
         @Provides
         @SuggestScope
         @Named("suggest")
         public LifeCycle suggestLife(List<SuggestModule.Exposed> components) {
-            return LifeCycle.combined(components.stream().map(c -> c.life()));
+            return LifeCycle.combined(components.stream().map(SuggestModule.Exposed::life));
         }
     }
 

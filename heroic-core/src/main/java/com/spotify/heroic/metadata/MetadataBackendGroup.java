@@ -30,7 +30,6 @@ import com.spotify.heroic.common.SelectedGroup;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.WriteResult;
-import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.RequiredArgsConstructor;
@@ -44,7 +43,6 @@ import java.util.List;
 public class MetadataBackendGroup implements MetadataBackend {
     private final SelectedGroup<MetadataBackend> backends;
     private final AsyncFramework async;
-    private final LocalMetadataManagerReporter reporter;
 
     @Override
     public AsyncFuture<Void> configure() {
@@ -56,21 +54,19 @@ public class MetadataBackendGroup implements MetadataBackend {
     @Override
     public AsyncFuture<FindTags> findTags(final RangeFilter filter) {
         final List<AsyncFuture<FindTags>> callbacks = run(b -> b.findTags(filter));
-        return async.collect(callbacks, FindTags.reduce()).onDone(reporter.reportFindTags());
+        return async.collect(callbacks, FindTags.reduce());
     }
 
     @Override
     public AsyncFuture<CountSeries> countSeries(final RangeFilter filter) {
         final List<AsyncFuture<CountSeries>> callbacks = run(b -> b.countSeries(filter));
-        return async.collect(callbacks, CountSeries.reduce()).onDone(reporter.reportCountSeries());
+        return async.collect(callbacks, CountSeries.reduce());
     }
 
     @Override
     public AsyncFuture<FindSeries> findSeries(final RangeFilter filter) {
         final List<AsyncFuture<FindSeries>> callbacks = run(v -> v.findSeries(filter));
-        return async
-            .collect(callbacks, FindSeries.reduce(filter.getLimit()))
-            .onDone(reporter.reportFindTimeSeries());
+        return async.collect(callbacks, FindSeries.reduce(filter.getLimit()));
     }
 
     @Override
@@ -82,7 +78,7 @@ public class MetadataBackendGroup implements MetadataBackend {
     @Override
     public AsyncFuture<FindKeys> findKeys(final RangeFilter filter) {
         final List<AsyncFuture<FindKeys>> callbacks = run(b -> b.findKeys(filter));
-        return async.collect(callbacks, FindKeys.reduce()).onDone(reporter.reportFindKeys());
+        return async.collect(callbacks, FindKeys.reduce());
     }
 
     @Override

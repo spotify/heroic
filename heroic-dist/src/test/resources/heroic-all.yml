@@ -26,7 +26,6 @@ metrics:
       project: project
       zone: zone
     - type: datastax
-    - type: astyanax
     - type: generated
     - type: memory
 

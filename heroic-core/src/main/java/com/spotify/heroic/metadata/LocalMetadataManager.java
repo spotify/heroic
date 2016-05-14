@@ -23,7 +23,6 @@ package com.spotify.heroic.metadata;
 
 import com.spotify.heroic.common.BackendGroups;
 import com.spotify.heroic.common.GroupMember;
-import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
 import eu.toolchain.async.AsyncFramework;
 
 import javax.inject.Inject;
@@ -35,17 +34,13 @@ import java.util.Optional;
 public class LocalMetadataManager implements MetadataManager {
     private final AsyncFramework async;
     private final BackendGroups<MetadataBackend> backends;
-    private final LocalMetadataManagerReporter reporter;
 
     @Inject
     public LocalMetadataManager(
-        final AsyncFramework async,
-        @Named("backends") final BackendGroups<MetadataBackend> backends,
-        final LocalMetadataManagerReporter reporter
+        final AsyncFramework async, @Named("backends") final BackendGroups<MetadataBackend> backends
     ) {
         this.async = async;
         this.backends = backends;
-        this.reporter = reporter;
     }
 
     @Override
@@ -70,6 +65,6 @@ public class LocalMetadataManager implements MetadataManager {
 
     @Override
     public MetadataBackend useOptionalGroup(Optional<String> group) {
-        return new MetadataBackendGroup(backends.useOptionalGroup(group), async, reporter);
+        return new MetadataBackendGroup(backends.useOptionalGroup(group), async);
     }
 }

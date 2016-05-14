@@ -21,24 +21,10 @@
 
 package com.spotify.heroic.statistics;
 
-public interface LocalMetadataManagerReporter {
-    FutureReporter.Context reportFindTags();
+import com.spotify.heroic.suggest.SuggestBackend;
 
-    FutureReporter.Context reportFindTimeSeries();
+public interface SuggestBackendReporter {
+    SuggestBackend decorate(SuggestBackend backend);
 
-    FutureReporter.Context reportFindKeys();
-
-    FutureReporter.Context reportTagKeySuggest();
-
-    FutureReporter.Context reportTagSuggest();
-
-    FutureReporter.Context reportKeySuggest();
-
-    FutureReporter.Context reportCountSeries();
-
-    FutureReporter.Context reportTagValuesSuggest();
-
-    FutureReporter.Context reportTagValueSuggest();
-
-    LocalMetadataBackendReporter newMetadataBackend(String id);
+    void reportWriteDroppedByRateLimit();
 }
