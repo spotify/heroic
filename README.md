@@ -185,6 +185,9 @@ available profiles are listed in `--help`.
 
 ## Repackaged Dependencies
 
+* [repackaged/bigtable](./repackaged/bigtable/)
+* [repackaged/datastax](./repackaged/datastax/)
+
 These are third-party dependencies that has to be repackaged to avoid binary
 incompatibilities with dependencies.
 
@@ -207,21 +210,4 @@ You can find the culprit using the `dependency` plugin.
 
 ```
 $> mvn package dependency:tree
-```
-
-#### [repackages/bigtable](./repackaged/bigtable/pom.xml)
-
-Relocations:
-```
-io.grpc               -> com.spotify.heroic.bigtable.grpc
-io.netty              -> com.spotify.heroic.bigtable.netty
-org.apache.commons    -> com.spotify.heroic.bigtable.commons
-com.fasterxml.jackson -> com.spotify.heroic.bigtable.jackson
-```
-
-#### [repackages/datastax](./repackaged/datastax/pom.xml)
-
-Relocations:
-```
-io.netty -> com.spotify.heroic.datastax.netty
 ```
