@@ -97,14 +97,10 @@ public class MemoryBackend implements SuggestBackend, Grouped {
     public AsyncFuture<TagValuesSuggest> tagValuesSuggest(
         final RangeFilter filter, final List<String> exclude, final OptionalLimit groupLimit
     ) {
-        final Lock l = lock.readLock();
+        final Map<String, Set<String>> counts = new HashMap<>();
 
-        l.lock();
-
-        try {
-            final Map<String, Set<String>> counts = new HashMap<>();
-
-            lookupSeries(filter).forEach(s -> {
+        try (final Stream<Series> series = lookupSeries(filter)) {
+            series.forEach(s -> {
                 for (final Map.Entry<String, String> e : s.getTags().entrySet()) {
                     Set<String> c = counts.get(e.getKey());
 
@@ -113,39 +109,34 @@ public class MemoryBackend implements SuggestBackend, Grouped {
                         counts.put(e.getKey(), c);
                     }
 
-                    if (groupLimit.isGreaterOrEqual(counts.size())) {
+                    if (groupLimit.isGreaterOrEqual(c.size())) {
                         continue;
                     }
 
                     c.add(e.getValue());
                 }
             });
-
-            final List<TagValuesSuggest.Suggestion> suggestions = ImmutableList.copyOf(filter
-                .getLimit()
-                .limitStream(counts.entrySet().stream())
-                .map(e -> new TagValuesSuggest.Suggestion(e.getKey(),
-                    ImmutableList.copyOf(e.getValue()), false))
-                .iterator());
-
-            return async.resolved(new TagValuesSuggest(suggestions, false));
-        } finally {
-            l.unlock();
         }
+
+        final List<TagValuesSuggest.Suggestion> suggestions = ImmutableList.copyOf(filter
+            .getLimit()
+            .limitStream(counts.entrySet().stream())
+            .map(
+                e -> new TagValuesSuggest.Suggestion(e.getKey(), ImmutableList.copyOf(e.getValue()),
+                    false))
+            .iterator());
+
+        return async.resolved(new TagValuesSuggest(suggestions, false));
     }
 
     @Override
     public AsyncFuture<TagKeyCount> tagKeyCount(
         final RangeFilter filter
     ) {
-        final Lock l = lock.readLock();
+        final Map<String, Set<String>> counts = new HashMap<>();
 
-        l.lock();
-
-        try {
-            final Map<String, Set<String>> counts = new HashMap<>();
-
-            lookupSeries(filter).forEach(s -> {
+        try (final Stream<Series> series = lookupSeries(filter)) {
+            series.forEach(s -> {
                 for (final Map.Entry<String, String> e : s.getTags().entrySet()) {
                     Set<String> c = counts.get(e.getKey());
 
@@ -157,17 +148,15 @@ public class MemoryBackend implements SuggestBackend, Grouped {
                     c.add(e.getValue());
                 }
             });
-
-            final List<TagKeyCount.Suggestion> suggestions = ImmutableList.copyOf(filter
-                .getLimit()
-                .limitStream(counts.entrySet().stream())
-                .map(e -> new TagKeyCount.Suggestion(e.getKey(), (long) e.getValue().size()))
-                .iterator());
-
-            return async.resolved(new TagKeyCount(suggestions, false));
-        } finally {
-            l.unlock();
         }
+
+        final List<TagKeyCount.Suggestion> suggestions = ImmutableList.copyOf(filter
+            .getLimit()
+            .limitStream(counts.entrySet().stream())
+            .map(e -> new TagKeyCount.Suggestion(e.getKey(), (long) e.getValue().size()))
+            .iterator());
+
+        return async.resolved(new TagKeyCount(suggestions, false));
     }
 
     @Override
@@ -175,77 +164,62 @@ public class MemoryBackend implements SuggestBackend, Grouped {
         final RangeFilter filter, final MatchOptions options, final Optional<String> key,
         final Optional<String> value
     ) {
-        final Lock l = lock.readLock();
+        final Optional<Set<String>> keys = key.map(MemoryBackend::analyze);
+        final Optional<Set<String>> values = value.map(MemoryBackend::analyze);
 
-        l.lock();
+        final List<TagSuggest.Suggestion> suggestions;
 
-        try {
-            final Set<TagId> ids =
-                lookupTags(filter).map(TagDocument::getId).collect(Collectors.toSet());
+        try (final Stream<TagDocument> docs = lookupTags(filter)) {
+            final Set<TagId> ids = docs.map(TagDocument::getId).collect(Collectors.toSet());
 
-            key
-                .map(MemoryBackend::analyze)
-                .ifPresent(parts -> parts.forEach(
-                    k -> ids.retainAll(tagKeys.getOrDefault(k, ImmutableSet.of()))));
+            keys.ifPresent(parts -> parts.forEach(
+                k -> ids.retainAll(tagKeys.getOrDefault(k, ImmutableSet.of()))));
 
-            value
-                .map(MemoryBackend::analyze)
-                .ifPresent(parts -> parts.forEach(
-                    k -> ids.retainAll(tagValues.getOrDefault(k, ImmutableSet.of()))));
+            values.ifPresent(parts -> parts.forEach(
+                k -> ids.retainAll(tagValues.getOrDefault(k, ImmutableSet.of()))));
 
-            final List<TagSuggest.Suggestion> suggestions = ImmutableList.copyOf(filter
+            suggestions = ImmutableList.copyOf(filter
                 .getLimit()
                 .limitStream(ids.stream())
                 .map(tagIndex::get)
                 .filter(v -> v != null)
                 .map(d -> new TagSuggest.Suggestion(SCORE, d.id.key, d.id.value))
                 .iterator());
-
-            return async.resolved(new TagSuggest(suggestions));
-        } finally {
-            l.unlock();
         }
+
+        return async.resolved(new TagSuggest(suggestions));
     }
 
     @Override
     public AsyncFuture<KeySuggest> keySuggest(
         final RangeFilter filter, final MatchOptions options, final Optional<String> key
     ) {
-        final Lock l = lock.readLock();
+        final Optional<Set<String>> analyzedKeys = key.map(MemoryBackend::analyze);
 
-        l.lock();
+        final Set<String> ids;
 
-        try {
-            final Set<String> ids =
-                lookupKeys(filter).map(KeyDocument::getId).collect(Collectors.toSet());
+        try (final Stream<KeyDocument> docs = lookupKeys(filter)) {
+            ids = docs.map(KeyDocument::getId).collect(Collectors.toSet());
 
-            key
-                .map(MemoryBackend::analyze)
-                .ifPresent(parts -> parts.forEach(
-                    k -> ids.retainAll(keys.getOrDefault(k, ImmutableSet.of()))));
-
-            final List<KeySuggest.Suggestion> suggestions = ImmutableList.copyOf(filter
-                .getLimit()
-                .limitStream(ids.stream())
-                .map(d -> new KeySuggest.Suggestion(SCORE, d))
-                .iterator());
-
-            return async.resolved(new KeySuggest(suggestions));
-        } finally {
-            l.unlock();
+            analyzedKeys.ifPresent(parts -> parts.forEach(
+                k -> ids.retainAll(keys.getOrDefault(k, ImmutableSet.of()))));
         }
+
+        final List<KeySuggest.Suggestion> suggestions = ImmutableList.copyOf(filter
+            .getLimit()
+            .limitStream(ids.stream())
+            .map(d -> new KeySuggest.Suggestion(SCORE, d))
+            .iterator());
+
+        return async.resolved(new KeySuggest(suggestions));
     }
 
     @Override
     public AsyncFuture<TagValueSuggest> tagValueSuggest(
         final RangeFilter filter, final Optional<String> key
     ) {
-        final Lock l = lock.readLock();
-
-        l.lock();
-
-        try {
-            final Stream<TagId> ids = lookupTags(filter).map(TagDocument::getId);
+        try (final Stream<TagDocument> docs = lookupTags(filter)) {
+            final Stream<TagId> ids = docs.map(TagDocument::getId);
 
             final List<String> values = filter
                 .getLimit()
@@ -254,32 +228,30 @@ public class MemoryBackend implements SuggestBackend, Grouped {
                 .collect(Collectors.toList());
 
             return async.resolved(new TagValueSuggest(values, false));
-        } finally {
-            l.unlock();
         }
     }
 
     @Override
     public AsyncFuture<WriteResult> write(
-        final Series series, final DateRange range
+        final Series s, final DateRange range
     ) {
         final Lock l = lock.writeLock();
 
         l.lock();
 
         try {
-            this.series.add(series);
+            series.add(s);
 
-            keyIndex.put(series.getKey(), new KeyDocument(series.getKey(), series));
+            keyIndex.put(s.getKey(), new KeyDocument(s.getKey(), s));
 
-            for (final String t : analyze(series.getKey())) {
-                putEntry(keys, t, series.getKey());
+            for (final String t : analyze(s.getKey())) {
+                putEntry(keys, t, s.getKey());
             }
 
-            for (final Map.Entry<String, String> tag : series.getTags().entrySet()) {
+            for (final Map.Entry<String, String> tag : s.getTags().entrySet()) {
                 final TagId id = new TagId(tag.getKey(), tag.getValue());
 
-                tagIndex.put(id, new TagDocument(id, series));
+                tagIndex.put(id, new TagDocument(id, s));
 
                 for (final String t : analyze(tag.getKey())) {
                     putEntry(tagKeys, t, id);
@@ -354,17 +326,23 @@ public class MemoryBackend implements SuggestBackend, Grouped {
     }
 
     private Stream<KeyDocument> lookupKeys(final RangeFilter filter) {
+        final Lock l = lock.readLock();
+        l.lock();
         final Filter f = filter.getFilter();
-        return keyIndex.values().stream().filter(e -> f.apply(e.series));
+        return keyIndex.values().stream().filter(e -> f.apply(e.series)).onClose(l::unlock);
     }
 
     private Stream<TagDocument> lookupTags(final RangeFilter filter) {
+        final Lock l = lock.readLock();
+        l.lock();
         final Filter f = filter.getFilter();
-        return tagIndex.values().stream().filter(e -> f.apply(e.series));
+        return tagIndex.values().stream().filter(e -> f.apply(e.series)).onClose(l::unlock);
     }
 
     private Stream<Series> lookupSeries(final RangeFilter filter) {
-        return series.stream().filter(filter.getFilter()::apply);
+        final Lock l = lock.readLock();
+        l.lock();
+        return series.stream().filter(filter.getFilter()::apply).onClose(l::unlock);
     }
 
     @EqualsAndHashCode
