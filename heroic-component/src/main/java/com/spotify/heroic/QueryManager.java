@@ -38,10 +38,6 @@ public interface QueryManager extends UsableGroupManager<QueryManager.Group> {
 
     QueryBuilder newQueryFromString(String query);
 
-    String queryToString(final Query query);
-
-    String queryToString(final Query query, Optional<Integer> indent);
-
     AsyncFuture<Void> initialized();
 
     interface Group extends Iterable<ClusterNode.Group> {

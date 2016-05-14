@@ -51,9 +51,4 @@ public class Template extends SamplingAggregation {
     public TemplateInstance apply(AggregationContext context, final long size, final long extent) {
         return new TemplateInstance(size, extent);
     }
-
-    @Override
-    public String toDSL() {
-        return samplingDSL(NAME);
-    }
 }

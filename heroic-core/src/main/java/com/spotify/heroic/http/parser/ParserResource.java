@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.http.parser;
 
-import com.spotify.heroic.Query;
 import com.spotify.heroic.QueryManager;
 import com.spotify.heroic.grammar.QueryParser;
 
@@ -34,7 +33,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.Optional;
 
 @Path("/parser")
 public class ParserResource {
@@ -64,26 +62,10 @@ public class ParserResource {
     }
 
     @POST
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.TEXT_PLAIN)
-    @Path("stringify-query")
-    public Response stringifyQuery(@QueryParam("indent") Integer indent, Query query) {
-        return Response.ok(this.query.queryToString(query, Optional.ofNullable(indent))).build();
-    }
-
-    @POST
     @Consumes(MediaType.TEXT_PLAIN)
     @Produces(MediaType.APPLICATION_JSON)
     @Path("parse-filter")
     public Response parseFilter(String filter) {
         return Response.ok(parser.parseFilter(filter)).build();
-    }
-
-    @POST
-    @Consumes(MediaType.TEXT_PLAIN)
-    @Produces(MediaType.APPLICATION_JSON)
-    @Path("parse-aggregation")
-    public Response parseAggregation(String aggregation) {
-        return Response.ok(parser.parseAggregation(aggregation)).build();
     }
 }

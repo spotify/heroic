@@ -51,9 +51,4 @@ public class Max extends SamplingAggregation {
     public MaxInstance apply(final AggregationContext contex, final long size, final long extent) {
         return new MaxInstance(size, extent);
     }
-
-    @Override
-    public String toDSL() {
-        return samplingDSL(NAME);
-    }
 }

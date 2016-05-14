@@ -21,14 +21,14 @@
 
 package com.spotify.heroic.aggregation;
 
-import com.spotify.heroic.grammar.AggregationValue;
+import com.spotify.heroic.grammar.FunctionExpression;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public abstract class AbstractAggregationDSL implements AggregationDSL {
     private final AggregationFactory factory;
 
-    protected Aggregation asAggregation(final AggregationValue value) {
-        return value.build(factory);
+    protected Aggregation asAggregation(final FunctionExpression value) {
+        return factory.build(value.getName(), value.getArguments(), value.getKeywords());
     }
 }

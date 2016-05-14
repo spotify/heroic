@@ -85,10 +85,4 @@ public class Partition implements Aggregation {
             ImmutableList.copyOf(this.children.stream().map((c) -> c.apply(context)).iterator());
         return new PartitionInstance(children);
     }
-
-    @Override
-    public String toDSL() {
-        return String.format("%s(%s)", NAME,
-            params.join(children.stream().map(Aggregation::toDSL).iterator()));
-    }
 }

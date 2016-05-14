@@ -58,9 +58,4 @@ public class BottomK implements Aggregation {
     public BottomKInstance apply(final AggregationContext context) {
         return new BottomKInstance(k, of.apply(context));
     }
-
-    @Override
-    public String toDSL() {
-        return String.format("%s(%s, %d)", NAME, of.toDSL(), k);
-    }
 }

@@ -49,9 +49,4 @@ public class Count extends SamplingAggregation {
     ) {
         return new CountInstance(size, extent);
     }
-
-    @Override
-    public String toDSL() {
-        return samplingDSL(NAME);
-    }
 }

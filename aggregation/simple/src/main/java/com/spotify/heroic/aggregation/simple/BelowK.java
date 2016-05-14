@@ -58,9 +58,4 @@ public class BelowK implements Aggregation {
     public BelowKInstance apply(final AggregationContext context) {
         return new BelowKInstance(k, of.apply(context));
     }
-
-    @Override
-    public String toDSL() {
-        return String.format("%s(%s, %f)", NAME, of.toDSL(), k);
-    }
 }

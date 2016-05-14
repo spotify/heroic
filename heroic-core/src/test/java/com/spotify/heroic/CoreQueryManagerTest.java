@@ -1,6 +1,7 @@
 package com.spotify.heroic;
 
 import com.google.common.collect.ImmutableSet;
+import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.cache.QueryCache;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.common.DateRange;
@@ -16,7 +17,6 @@ import org.mockito.runners.MockitoJUnitRunner;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
-
 
 @RunWith(MockitoJUnitRunner.class)
 public class CoreQueryManagerTest {
@@ -39,9 +39,13 @@ public class CoreQueryManagerTest {
     @Mock
     private QueryCache queryCache;
 
+    @Mock
+    private AggregationFactory aggregations;
+
     @Before
     public void setup() {
-        manager = new CoreQueryManager(features, async, cluster, filters, parser, queryCache);
+        manager = new CoreQueryManager(features, async, cluster, filters, parser, queryCache,
+            aggregations);
     }
 
     @Test
@@ -86,5 +90,4 @@ public class CoreQueryManagerTest {
 
         manager.buildShiftedRange(range, 5_000, 40_000L);
     }
-
 }

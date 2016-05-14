@@ -83,14 +83,4 @@ public class Chain implements Aggregation {
 
         return new ChainInstance(Lists.reverse(chain.build()));
     }
-
-    @Override
-    public String toDSL() {
-        return PIPE.join(chain.stream().map(Aggregation::toDSL).iterator());
-    }
-
-    @Override
-    public String toString() {
-        return toDSL();
-    }
 }

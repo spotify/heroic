@@ -21,48 +21,58 @@
 
 package com.spotify.heroic.grammar;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Iterators;
-import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.aggregation.AggregationFactory;
+import com.spotify.heroic.aggregation.AggregationArguments;
+import lombok.AccessLevel;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 import java.util.Iterator;
 import java.util.Map;
 
-@ValueName("aggregation")
 @Data
-@EqualsAndHashCode(exclude = {"c"})
-public class AggregationValue implements Value {
+@EqualsAndHashCode(exclude = {"ctx"})
+@JsonTypeName("function")
+@RequiredArgsConstructor
+public class FunctionExpression implements Expression {
+    @Getter(AccessLevel.NONE)
+    private final Context ctx;
+
     private final String name;
-    private final ListValue arguments;
-    private final Map<String, Value> keywordArguments;
-    private final Context c;
+    private final ListExpression arguments;
+    private final Map<String, Expression> keywords;
+
+    @JsonCreator
+    public FunctionExpression(
+        @JsonProperty("name") final String name,
+        @JsonProperty("arguments") final ListExpression arguments,
+        @JsonProperty("keywords") final Map<String, Expression> keywords
+    ) {
+        this(Context.empty(), name, arguments, keywords);
+    }
+
+    @Override
+    public Expression eval(final Scope scope) {
+        final Map<String, Expression> keywordArguments =
+            Expression.evalMap(this.keywords, scope);
+
+        return new FunctionExpression(ctx, name, arguments.eval(scope), keywordArguments);
+    }
+
+    @Override
+    public <R> R visit(final Visitor<R> visitor) {
+        return visitor.visitFunction(this);
+    }
 
     @Override
     public Context context() {
-        return c;
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public <T> T cast(T to) {
-        if (to instanceof AggregationValue) {
-            return (T) this;
-        }
-
-        throw c.castError(this, to);
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public <T> T cast(Class<T> to) {
-        if (to.isAssignableFrom(AggregationValue.class)) {
-            return (T) this;
-        }
-
-        throw c.castError(this, to);
+        return ctx;
     }
 
     @Override
@@ -70,7 +80,7 @@ public class AggregationValue implements Value {
         final Joiner args = Joiner.on(", ");
         final Iterator<String> a =
             this.arguments.getList().stream().map(v -> v.toString()).iterator();
-        final Iterator<String> k = keywordArguments
+        final Iterator<String> k = keywords
             .entrySet()
             .stream()
             .map(e -> e.getKey() + "=" + e.getValue())
@@ -78,7 +88,7 @@ public class AggregationValue implements Value {
         return "" + name + "(" + args.join(Iterators.concat(a, k)) + ")";
     }
 
-    public Aggregation build(final AggregationFactory aggregations) {
-        return aggregations.build(name, arguments, keywordArguments);
+    public AggregationArguments arguments() {
+        return new AggregationArguments(getArguments().getList(), getKeywords());
     }
 }

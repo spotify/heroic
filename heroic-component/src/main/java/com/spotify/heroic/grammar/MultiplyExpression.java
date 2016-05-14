@@ -21,52 +21,50 @@
 
 package com.spotify.heroic.grammar;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import lombok.AccessLevel;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-
-import java.util.Optional;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 @Data
-@EqualsAndHashCode(exclude = {"c"})
-public class EmptyValue implements Value {
-    private final Context c;
+@EqualsAndHashCode(exclude = {"ctx"})
+@JsonTypeName("multiply")
+@RequiredArgsConstructor
+public class MultiplyExpression implements Expression {
+    @Getter(AccessLevel.NONE)
+    private final Context ctx;
+
+    private final Expression left;
+    private final Expression right;
+
+    @JsonCreator
+    public MultiplyExpression(
+        @JsonProperty("left") final Expression left, @JsonProperty("right") final Expression right
+    ) {
+        this(Context.empty(), left, right);
+    }
+
+    @Override
+    public Expression eval(Scope scope) {
+        return left.eval(scope).multiply(right.eval(scope));
+    }
+
+    @Override
+    public <R> R visit(final Visitor<R> visitor) {
+        return visitor.visitMultiply(this);
+    }
 
     @Override
     public Context context() {
-        return c;
-    }
-
-    @Override
-    public Value sub(Value other) {
-        throw new IllegalArgumentException("empty does not support subtraction");
-    }
-
-    @Override
-    public Value add(Value other) {
-        throw new IllegalArgumentException("empty does not support addition");
-    }
-
-    @Override
-    public <T> T cast(T to) {
-        throw c.castError(this, to);
-    }
-
-    @Override
-    public <T> T cast(Class<T> to) {
-        if (to.equals(Value.class) || to.equals(EmptyValue.class)) {
-            return (T) this;
-        }
-
-        throw c.castError(this, to);
-    }
-
-    @Override
-    public Optional<Value> toOptional() {
-        return Optional.empty();
+        return ctx;
     }
 
     @Override
     public String toString() {
-        return "<empty>";
+        return String.format("<%s * %s>", left, right);
     }
 }

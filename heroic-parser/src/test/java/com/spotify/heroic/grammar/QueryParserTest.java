@@ -1,7 +1,7 @@
 package com.spotify.heroic.grammar;
 
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.QueryDateRange;
+import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
@@ -16,12 +16,24 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-import static com.spotify.heroic.grammar.Value.list;
-import static com.spotify.heroic.grammar.Value.string;
+import static com.spotify.heroic.grammar.Expression.duration;
+import static com.spotify.heroic.grammar.Expression.integer;
+import static com.spotify.heroic.grammar.Expression.let;
+import static com.spotify.heroic.grammar.Expression.list;
+import static com.spotify.heroic.grammar.Expression.minus;
+import static com.spotify.heroic.grammar.Expression.plus;
+import static com.spotify.heroic.grammar.Expression.query;
+import static com.spotify.heroic.grammar.Expression.range;
+import static com.spotify.heroic.grammar.Expression.reference;
+import static com.spotify.heroic.grammar.Expression.string;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyList;
@@ -44,6 +56,8 @@ public class QueryParserTest {
     @Mock
     Filter optimized;
 
+    Expression.Scope scope;
+
     @Before
     public void setupFilters() {
         filters = Mockito.mock(FilterFactory.class);
@@ -59,89 +73,87 @@ public class QueryParserTest {
         Mockito.when(or.optimize()).thenReturn(optimized);
         Mockito.when(and.optimize()).thenReturn(optimized);
 
-        parser = new CoreQueryParser(filters, aggregations);
+        parser = new CoreQueryParser(filters);
+
+        scope = new DefaultScope(10000);
     }
 
     @Test
     public void testList() {
-        assertEquals(Value.list(Value.number(1), Value.number(2), Value.number(3)),
+        assertEquals(
+            Expression.list(Expression.number(1), Expression.number(2), Expression.number(3)),
             expr("[1, 2, 3]"));
         assertEquals(expr("[1, 2, 3]"), expr("{1, 2, 3}"));
     }
 
     @Test
     public void testAggregation() {
-        final Value d = Value.duration(TimeUnit.HOURS, 30);
+        final Expression d = duration(TimeUnit.HOURS, 30);
 
         assertEquals(a("average", d), aggregation("average(30H)"));
         assertEquals(a("sum", d), aggregation("sum(30H)"));
 
-        final AggregationValue chain =
-            a("chain", a("group", Value.list(Value.string("host")), a("average", d)), a("sum", d));
+        final FunctionExpression chain =
+            a("chain", a("group", Expression.list(Expression.string("host")), a("average", d)),
+                a("sum", d));
 
         assertEquals(chain, aggregation("chain(group([host], average(30H)), sum(30H))"));
         assertEquals(chain, aggregation("average(30H) by host | sum(30H)"));
 
-        // @formatter:off
-        assertEquals(
-                a("chain",
-                    a("group", list(string("host")), a("average")),
-                    a("group", list(string("site")), a("sum"))),
-                aggregation("average() by host | sum() by site"));
-        // @formatter:on
+        assertEquals(a("chain", a("group", list(string("host")), a("average")),
+            a("group", list(string("site")), a("sum"))),
+            aggregation("average by host | sum by site"));
 
         // test grouping
-        // @formatter:off
-        assertEquals(
-                a("group",
-                    list(string("site")),
-                    a("chain",
-                        a("group",list(string("host")), a("average")),
-                        a("sum"))),
-                aggregation("(average() by host | sum()) by site"));
-        // @formatter:on
+        assertEquals(a("group", list(string("site")),
+            a("chain", a("group", list(string("host")), a("average")), string("sum"))),
+            aggregation("(average by host | sum) by site"));
     }
 
     @Test
     public void testByAll() {
-        final AggregationValue reference =
-            Value.aggregation("group", Value.list(Value.empty(), Value.aggregation("average")));
+        final FunctionExpression reference = Expression.aggregation("group",
+            Expression.list(Expression.empty(), Expression.aggregation("average")));
         assertEquals(reference, parser.parse(CoreQueryParser.AGGREGATION, "average by *"));
     }
 
     @Test
     public void testArithmetics() {
-        final Value foo = expr("foo"), bar = expr("bar");
+        final Expression foo = expr("foo"), bar = expr("bar");
 
         // numbers
-        assertEquals((Long) 3L, expr("1 + 2 + 3 - 3").cast(Long.class));
+        assertEquals(3L,
+            expr("1 + 2 + 3 - 3").eval(scope).cast(IntegerExpression.class).getValue());
 
         // two strings
-        assertEquals("foobar", expr("foo + bar").cast(String.class));
+        assertEquals("foobar",
+            expr("foo + bar").eval(scope).cast(StringExpression.class).getString());
 
         // two lists
-        assertEquals(Value.list(foo, bar), expr("[foo] + [bar]").cast(ListValue.class));
+        assertEquals(Expression.list(foo, bar),
+            expr("[foo] + [bar]").eval(scope).cast(ListExpression.class));
 
         // durations
-        assertEquals(Value.duration(TimeUnit.MINUTES, 55), expr("1H - 5m"));
-        assertEquals(Value.duration(TimeUnit.HOURS, 7), expr("3H + 4H"));
-        assertEquals(Value.duration(TimeUnit.MINUTES, 59), expr("119m - 1H"));
-        assertEquals(Value.duration(TimeUnit.MINUTES, 60 * 11), expr("1H + 1m - 1m + 10H"));
+        assertEquals(duration(TimeUnit.MINUTES, 55), expr("1H - 5m").eval(scope));
+        assertEquals(duration(TimeUnit.HOURS, 7), expr("3H + 4H").eval(scope));
+        assertEquals(duration(TimeUnit.MINUTES, 59), expr("119m - 1H").eval(scope));
+        assertEquals(duration(TimeUnit.MINUTES, 60 * 11), expr("1H + 1m - 1m + 10H").eval(scope));
     }
 
     @Test
     public void testFrom() {
-        checkFrom(MetricType.POINT, Optional.empty(), from("from points"));
-        checkFrom(MetricType.EVENT, Optional.empty(), from("from events"));
+        checkFrom(MetricType.POINT, empty(), from("from points"));
+        checkFrom(MetricType.EVENT, empty(), from("from events"));
+
+        final Optional<Expression> r1 = of(range(integer(0), integer(1000)));
 
         // absolute
-        checkFrom(MetricType.POINT, Optional.of(new QueryDateRange.Absolute(0, 1234 + 4321)),
-            from("from points(0, 1234 + 4321)"));
+        checkFrom(MetricType.POINT, r1, from("from points(0, 400 + 600)").eval(scope));
+
+        final Optional<Expression> r2 = of(range(integer(9000), integer(10000)));
 
         // relative
-        checkFrom(MetricType.POINT,
-            Optional.of(new QueryDateRange.Relative(TimeUnit.MILLISECONDS, 1000)),
-            from("from points(1000ms)"));
+        checkFrom(MetricType.POINT, r2, from("from points(1000ms)").eval(scope));
     }
 
     @Test
@@ -176,16 +188,9 @@ public class QueryParserTest {
     }
 
     @Test
-    public void testErrorChar() {
-        exception.expect(ParseException.class);
-        exception.expectMessage("garbage");
-        parser.parse(CoreQueryParser.SELECT, "* 1");
-    }
-
-    @Test
     public void testInvalidSelect() {
         exception.expect(ParseException.class);
-        parser.parse(CoreQueryParser.SELECT, "1");
+        parser.parse(CoreQueryParser.EXPRESSION, "%1");
     }
 
     @Test
@@ -195,19 +200,66 @@ public class QueryParserTest {
         parser.parse(CoreQueryParser.QUERY, "~ from points");
     }
 
-    public static AggregationValue a(final String name, final Value... values) {
-        return Value.aggregation(name,
-            new ListValue(ImmutableList.copyOf(values), Context.empty()));
+    @Test
+    public void testParseDateTime() {
+        final Expression.Scope scope = new DefaultScope(0L);
+
+        final Expression e = parser
+            .parse(CoreQueryParser.EXPRESSION, "{2014-01-01 00:00:00.000} + {00:01}")
+            .eval(scope);
+
+        final InstantExpression expected =
+            new InstantExpression(Context.empty(), Instant.parse("2014-01-01T00:01:00.000Z"));
+
+        assertEquals(expected, e);
+    }
+
+    @Test
+    public void testMultipleStatements() {
+        final StringBuilder query = new StringBuilder();
+        query.append("let $a = * from points(1d);\n");
+        query.append("let $b = * from points($now - 2d, $now - 1d);\n");
+        query.append("$a + $b as key = \"value\";");
+
+        final Statements statements = parser.parse(CoreQueryParser.STATEMENTS, query.toString());
+
+        // @formatter:off
+        final List<Expression> expected = new ArrayList<>();
+        expected.add(let(reference("a"),
+                query(empty(), of(MetricType.POINT),
+                    of(range(
+                        minus(reference("now"),
+                            duration(TimeUnit.DAYS, 1)),
+                        reference("now"))), empty(), ImmutableMap.of(), ImmutableMap.of())));
+        expected.add(
+            let(reference("b"),
+                query(empty(), of(MetricType.POINT),
+                    of(range(
+                        minus(reference("now"), duration(TimeUnit.DAYS, 2)),
+                        minus(reference("now"), duration(TimeUnit.DAYS, 1)))),
+                    empty(), ImmutableMap.of(), ImmutableMap.of())));
+
+        expected.add(
+            query(of(plus(reference("a"), reference("b"))), empty(), empty(), empty(),
+                ImmutableMap.of(), ImmutableMap.of("key", string("value"))));
+        // @formatter:on
+
+        assertEquals(expected, statements.getExpressions());
+    }
+
+    public static FunctionExpression a(final String name, final Expression... expressions) {
+        return Expression.aggregation(name,
+            new ListExpression(Context.empty(), ImmutableList.copyOf(expressions)));
     }
 
     void checkFrom(
-        MetricType source, Optional<QueryDateRange> range, CoreQueryParser.FromDSL result
+        MetricType source, Optional<Expression> range, CoreQueryParser.FromDSL result
     ) {
         assertEquals(source, result.getSource());
         assertEquals(range, result.getRange());
     }
 
-    private AggregationValue aggregation(String input) {
+    private FunctionExpression aggregation(String input) {
         return parser.parse(CoreQueryParser.AGGREGATION, input);
     }
 
@@ -215,7 +267,7 @@ public class QueryParserTest {
         return any(Filter.class);
     }
 
-    Value expr(String input) {
+    Expression expr(String input) {
         return parser.parse(CoreQueryParser.EXPRESSION, input);
     }
 

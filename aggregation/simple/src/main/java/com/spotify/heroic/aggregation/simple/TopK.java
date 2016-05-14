@@ -58,9 +58,4 @@ public class TopK implements Aggregation {
     public TopKInstance apply(final AggregationContext context) {
         return new TopKInstance(k, of.apply(context));
     }
-
-    @Override
-    public String toDSL() {
-        return String.format("%s(%s, %d)", NAME, of.toDSL(), k);
-    }
 }

@@ -19,38 +19,48 @@
  * under the License.
  */
 
-package com.spotify.heroic.aggregation.simple;
+package com.spotify.heroic.grammar;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.aggregation.AggregationContext;
-import com.spotify.heroic.aggregation.SamplingQuery;
-import com.spotify.heroic.common.Duration;
-import com.spotify.heroic.common.Optionals;
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import lombok.AccessLevel;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-
-import java.util.Optional;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 @Data
-@EqualsAndHashCode(callSuper = true)
-public class CountUnique extends SamplingAggregation {
-    public static final String NAME = "count-unique";
+@EqualsAndHashCode(exclude = {"ctx"})
+@JsonTypeName("let")
+@RequiredArgsConstructor
+public class LetExpression implements Expression {
+    @Getter(AccessLevel.NONE)
+    private final Context ctx;
+
+    private final ReferenceExpression reference;
+    private final Expression expression;
 
     @JsonCreator
-    public CountUnique(
-        @JsonProperty("sampling") Optional<SamplingQuery> sampling,
-        @JsonProperty("size") Optional<Duration> size,
-        @JsonProperty("extent") Optional<Duration> extent
+    public LetExpression(
+        @JsonProperty("reference") final ReferenceExpression reference,
+        @JsonProperty("expression") final Expression expression
     ) {
-        super(Optionals.firstPresent(size, sampling.flatMap(SamplingQuery::getSize)),
-            Optionals.firstPresent(extent, sampling.flatMap(SamplingQuery::getExtent)));
+        this(Context.empty(), reference, expression);
     }
 
     @Override
-    public CountUniqueInstance apply(
-        final AggregationContext context, final long size, final long extent
-    ) {
-        return new CountUniqueInstance(size, extent);
+    public <R> R visit(final Visitor<R> visitor) {
+        return visitor.visitLet(this);
+    }
+
+    @Override
+    public Context context() {
+        return ctx;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("let %s = %s", reference, expression);
     }
 }

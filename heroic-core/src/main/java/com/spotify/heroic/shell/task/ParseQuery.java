@@ -25,7 +25,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Joiner;
 import com.spotify.heroic.dagger.CoreComponent;
+import com.spotify.heroic.grammar.DefaultScope;
+import com.spotify.heroic.grammar.Expression;
 import com.spotify.heroic.grammar.QueryParser;
+import com.spotify.heroic.grammar.Statements;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
@@ -74,9 +77,14 @@ public class ParseQuery implements ShellTask {
             m.enable(SerializationFeature.INDENT_OUTPUT);
         }
 
-        io
-            .out()
-            .println(m.writeValueAsString(parser.parseQuery(Joiner.on(" ").join(params.query))));
+        Statements statements = parser.parse(Joiner.on(" ").join(params.query));
+
+        if (params.eval) {
+            final Expression.Scope scope = new DefaultScope(System.currentTimeMillis());
+            statements = statements.eval(scope);
+        }
+
+        io.out().println(m.writeValueAsString(statements));
         return async.resolved();
     }
 
@@ -84,6 +92,9 @@ public class ParseQuery implements ShellTask {
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "--no-indent", usage = "Do not indent output")
         private boolean noIndent = false;
+
+        @Option(name = "-e", aliases = {"--eval"}, usage = "Evaluate output")
+        private boolean eval = false;
 
         @Argument(usage = "Query to parse")
         private List<String> query = new ArrayList<>();

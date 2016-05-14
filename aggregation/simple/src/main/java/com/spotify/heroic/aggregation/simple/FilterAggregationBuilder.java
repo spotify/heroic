@@ -25,7 +25,7 @@ import com.spotify.heroic.aggregation.AbstractAggregationDSL;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationArguments;
 import com.spotify.heroic.aggregation.AggregationFactory;
-import com.spotify.heroic.grammar.AggregationValue;
+import com.spotify.heroic.grammar.FunctionExpression;
 
 public abstract class FilterAggregationBuilder<T extends Aggregation>
     extends AbstractAggregationDSL {
@@ -36,8 +36,8 @@ public abstract class FilterAggregationBuilder<T extends Aggregation>
 
     @Override
     public Aggregation build(AggregationArguments args) {
-        final AggregationValue of = args
-            .positional(AggregationValue.class)
+        final FunctionExpression of = args
+            .positional(FunctionExpression.class)
             .orElseThrow(
                 () -> new IllegalArgumentException("missing required child aggregation 'of'"));
 

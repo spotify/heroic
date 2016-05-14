@@ -21,13 +21,31 @@
 
 package com.spotify.heroic.grammar;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import com.google.common.collect.ImmutableMap;
 
-@Target(ElementType.TYPE)
-@Retention(RetentionPolicy.RUNTIME)
-public @interface ValueName {
-    public String value();
+import java.util.Map;
+
+public class DefaultScope implements Expression.Scope {
+    final Map<String, Expression> scope;
+
+    public DefaultScope(final long now) {
+        this.scope = buildScope(now);
+    }
+
+    private Map<String, Expression> buildScope(final long now) {
+        final ImmutableMap.Builder<String, Expression> scope = ImmutableMap.builder();
+        scope.put(Expression.NOW, Expression.integer(now));
+        return scope.build();
+    }
+
+    @Override
+    public Expression lookup(final Context c, final String name) {
+        final Expression variable = scope.get(name);
+
+        if (variable == null) {
+            throw c.scopeLookupError(name);
+        }
+
+        return variable;
+    }
 }

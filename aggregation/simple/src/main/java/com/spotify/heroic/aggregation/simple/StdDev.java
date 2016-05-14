@@ -51,9 +51,4 @@ public class StdDev extends SamplingAggregation {
     public StdDevInstance apply(AggregationContext context, final long size, final long extent) {
         return new StdDevInstance(size, extent);
     }
-
-    @Override
-    public String toDSL() {
-        return samplingDSL(NAME);
-    }
 }

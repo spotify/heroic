@@ -29,6 +29,9 @@ import com.spotify.heroic.aggregation.AggregationRegistry;
 import com.spotify.heroic.aggregation.SamplingQuery;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.dagger.LoadingComponent;
+import com.spotify.heroic.grammar.DoubleExpression;
+import com.spotify.heroic.grammar.Expression;
+import com.spotify.heroic.grammar.IntegerExpression;
 import dagger.Component;
 import eu.toolchain.serializer.SerializerFramework;
 
@@ -103,9 +106,11 @@ public class Module implements HeroicModule {
                         final Optional<Duration> extent
                     ) {
                         final Optional<Double> q =
-                            args.getNext("q", Long.class).map(v -> ((double) v) / 100.0);
+                            args.getNext("q", DoubleExpression.class).map
+                                (DoubleExpression::getValue);
                         final Optional<Double> error =
-                            args.getNext("error", Long.class).map(v -> ((double) v) / 100.0);
+                            args.getNext("error", DoubleExpression.class).map
+                                (DoubleExpression::getValue);
                         return new Quantile(Optional.empty(), size, extent, q, error);
                     }
                 });
@@ -114,7 +119,7 @@ public class Module implements HeroicModule {
                 new FilterAggregationBuilder<TopK>(factory) {
                     @Override
                     protected TopK buildAggregation(AggregationArguments args, Aggregation of) {
-                        return new TopK(fetchK(args, Long.class), of);
+                        return new TopK(fetchK(args, IntegerExpression.class).getValue(), of);
 
                     }
                 });
@@ -124,7 +129,7 @@ public class Module implements HeroicModule {
                     @Override
                     protected BottomK buildAggregation(AggregationArguments args,
                                                        Aggregation of) {
-                        return new BottomK(fetchK(args, Long.class), of);
+                        return new BottomK(fetchK(args, IntegerExpression.class).getValue(), of);
 
                     }
                 });
@@ -134,7 +139,7 @@ public class Module implements HeroicModule {
                     @Override
                     protected AboveK buildAggregation(AggregationArguments args,
                                                       Aggregation of) {
-                        return new AboveK(fetchK(args, Double.class), of);
+                        return new AboveK(fetchK(args, DoubleExpression.class).getValue(), of);
                     }
                 });
 
@@ -143,13 +148,13 @@ public class Module implements HeroicModule {
                     @Override
                     protected BelowK buildAggregation(AggregationArguments args,
                                                       Aggregation of) {
-                        return new BelowK(fetchK(args, Double.class), of);
+                        return new BelowK(fetchK(args, DoubleExpression.class).getValue(), of);
                     }
                 });
             }
         // @formatter:on
 
-        private <T extends Number> T fetchK(AggregationArguments args, Class<T> doubleClass) {
+        private <T extends Expression> T fetchK(AggregationArguments args, Class<T> doubleClass) {
             return args
                 .positional(doubleClass)
                 .orElseThrow(() -> new IllegalArgumentException("missing required argument 'k'"));

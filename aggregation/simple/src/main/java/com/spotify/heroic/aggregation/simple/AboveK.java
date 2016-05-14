@@ -58,9 +58,4 @@ public class AboveK implements Aggregation {
     public AboveKInstance apply(final AggregationContext context) {
         return new AboveKInstance(k, of.apply(context));
     }
-
-    @Override
-    public String toDSL() {
-        return String.format("%s(%s, %f)", NAME, of.toDSL(), k);
-    }
 }

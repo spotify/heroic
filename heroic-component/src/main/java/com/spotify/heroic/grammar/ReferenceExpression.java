@@ -21,54 +21,47 @@
 
 package com.spotify.heroic.grammar;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import lombok.AccessLevel;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
-import java.util.ArrayList;
-import java.util.List;
-
-@ValueName("list")
 @Data
-@EqualsAndHashCode(exclude = {"c"})
-public final class ListValue implements Value {
-    private final List<? extends Value> list;
-    private final Context c;
+@EqualsAndHashCode(exclude = {"ctx"})
+@JsonTypeName("reference")
+@RequiredArgsConstructor
+public class ReferenceExpression implements Expression {
+    @Getter(AccessLevel.NONE)
+    private final Context ctx;
+
+    private final String name;
+
+    @JsonCreator
+    public ReferenceExpression(@JsonProperty("name") final String name) {
+        this(Context.empty(), name);
+    }
+
+    @Override
+    public Expression eval(final Scope scope) {
+        return scope.lookup(ctx, name).eval(scope);
+    }
+
+    @Override
+    public <R> R visit(final Visitor<R> visitor) {
+        return visitor.visitReference(this);
+    }
 
     @Override
     public Context context() {
-        return c;
+        return ctx;
     }
 
     @Override
-    public Value add(Value other) {
-        final ListValue o = other.cast(this);
-        final ArrayList<Value> list = new ArrayList<Value>();
-        list.addAll(this.list);
-        list.addAll(o.list);
-        return new ListValue(list, c.join(other.context()));
-    }
-
     public String toString() {
-        return list.toString();
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public <T> T cast(T to) {
-        if (to instanceof ListValue) {
-            return (T) this;
-        }
-
-        throw c.castError(this, to);
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public <T> T cast(Class<T> to) {
-        if (to.isAssignableFrom(ListValue.class)) {
-            return (T) this;
-        }
-
-        throw c.castError(this, to);
+        return String.format("$%s", name);
     }
 }

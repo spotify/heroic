@@ -19,29 +19,20 @@
  * under the License.
  */
 
-package com.spotify.heroic.aggregation;
+package com.spotify.heroic.grammar;
 
-import com.spotify.heroic.grammar.Expression;
-import com.spotify.heroic.grammar.ListExpression;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-import java.util.Map;
+import java.util.List;
 
-/**
- * Factory to dynamically build aggregations.
- * <p>
- * Used in Query DSL.
- *
- * @author udoprog
- */
-public interface AggregationFactory {
-    /**
-     * Build an aggregation with the given name and arguments.
-     *
-     * @param name The name of the aggregation.
-     * @param args Positional arguments of the aggregation.
-     * @param keywords Keyword arguments of the aggregation.
-     * @return The built aggregation.
-     * @throws MissingAggregation If the given name does not reflect an available aggregation.
-     */
-    Aggregation build(String name, ListExpression args, Map<String, Expression> keywords);
+@Data
+@EqualsAndHashCode(exclude = {"ctx"})
+public class Statements {
+    final Context ctx;
+    final List<Expression> expressions;
+
+    public Statements eval(final Expression.Scope scope) {
+        return new Statements(ctx, Expression.evalList(expressions, scope));
+    }
 }

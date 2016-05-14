@@ -51,9 +51,4 @@ public class Spread extends SamplingAggregation {
     public SpreadInstance apply(AggregationContext context, final long size, final long extent) {
         return new SpreadInstance(size, extent);
     }
-
-    @Override
-    public String toDSL() {
-        return samplingDSL(NAME);
-    }
 }

@@ -53,9 +53,4 @@ public class Average extends SamplingAggregation {
     ) {
         return new AverageInstance(size, extent);
     }
-
-    @Override
-    public String toDSL() {
-        return samplingDSL(NAME);
-    }
 }

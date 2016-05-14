@@ -23,7 +23,7 @@ package com.spotify.heroic.aggregation;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.grammar.Value;
+import com.spotify.heroic.grammar.Expression;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -37,11 +37,11 @@ import java.util.Optional;
  * parameters and guarantee that all are consumed.
  */
 public class AggregationArguments {
-    private final LinkedList<Value> args;
-    private final Map<String, Value> kw;
+    private final LinkedList<Expression> args;
+    private final Map<String, Expression> kw;
 
     public AggregationArguments(
-        final List<? extends Value> args, final Map<String, ? extends Value> kw
+        final List<? extends Expression> args, final Map<String, ? extends Expression> kw
     ) {
         this.args = new LinkedList<>(args);
         this.kw = new HashMap<>(kw);
@@ -50,14 +50,22 @@ public class AggregationArguments {
     /**
      * Take all arguments as a list with the given type.
      */
-    public <T> List<T> takeArguments(final Class<T> expected) {
+    public <T extends Expression> List<T> takeArguments(final Class<T> expected) {
         final List<T> result =
             ImmutableList.copyOf(args.stream().map(v -> v.cast(expected)).iterator());
         args.clear();
         return result;
     }
 
-    public <T> Optional<T> getNext(final String key, Class<T> expected) {
+    public Optional<Expression> getNext() {
+        if (!args.isEmpty()) {
+            return Optional.of(args.removeFirst());
+        }
+
+        return Optional.empty();
+    }
+
+    public <T extends Expression> Optional<T> getNext(final String key, Class<T> expected) {
         if (!args.isEmpty()) {
             return Optional.of(args.removeFirst().cast(expected));
         }
@@ -65,7 +73,7 @@ public class AggregationArguments {
         return Optional.ofNullable(kw.remove(key)).map(v -> v.cast(expected));
     }
 
-    public <T> Optional<T> positional(Class<T> expected) {
+    public <T extends Expression> Optional<T> positional(Class<T> expected) {
         if (args.isEmpty()) {
             return Optional.empty();
         }
@@ -73,7 +81,7 @@ public class AggregationArguments {
         return Optional.of(args.removeFirst().cast(expected));
     }
 
-    public <T> Optional<T> keyword(final String key, Class<T> expected) {
+    public <T extends Expression> Optional<T> keyword(final String key, Class<T> expected) {
         return Optional.ofNullable(kw.remove(key)).map(v -> v.cast(expected));
     }
 

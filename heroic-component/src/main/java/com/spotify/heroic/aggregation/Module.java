@@ -25,7 +25,8 @@ import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicModule;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.dagger.LoadingComponent;
-import com.spotify.heroic.grammar.AggregationValue;
+import com.spotify.heroic.grammar.DurationExpression;
+import com.spotify.heroic.grammar.FunctionExpression;
 import dagger.Component;
 import eu.toolchain.serializer.SerializerFramework;
 
@@ -90,7 +91,7 @@ public class Module implements HeroicModule {
                     @Override
                     public Aggregation build(final AggregationArguments args) {
                         final List<Aggregation> chain = ImmutableList.copyOf(args
-                            .takeArguments(AggregationValue.class)
+                            .takeArguments(FunctionExpression.class)
                             .stream()
                             .map(this::asAggregation)
                             .iterator());
@@ -104,7 +105,7 @@ public class Module implements HeroicModule {
                     @Override
                     public Aggregation build(final AggregationArguments args) {
                         final List<Aggregation> children = ImmutableList.copyOf(args
-                            .takeArguments(AggregationValue.class)
+                            .takeArguments(FunctionExpression.class)
                             .stream()
                             .map(this::asAggregation)
                             .iterator());
@@ -117,11 +118,15 @@ public class Module implements HeroicModule {
                     @Override
                     public Aggregation build(final AggregationArguments args) {
                         final Optional<Aggregation> child = args
-                            .getNext("aggregation", AggregationValue.class)
+                            .getNext("aggregation", FunctionExpression.class)
                             .map(this::asAggregation);
 
-                        final Optional<Duration> size = args.keyword("size", Duration.class);
-                        final Optional<Duration> extent = args.keyword("extent", Duration.class);
+                        final Optional<Duration> size = args
+                            .keyword("size", DurationExpression.class)
+                            .map(DurationExpression::toDuration);
+                        final Optional<Duration> extent = args
+                            .keyword("extent", DurationExpression.class)
+                            .map(DurationExpression::toDuration);
 
                         final Optional<SamplingQuery> sampling;
 

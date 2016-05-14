@@ -62,7 +62,6 @@ import com.spotify.heroic.shell.task.Refresh;
 import com.spotify.heroic.shell.task.Resume;
 import com.spotify.heroic.shell.task.SerializeKey;
 import com.spotify.heroic.shell.task.Statistics;
-import com.spotify.heroic.shell.task.StringifyQuery;
 import com.spotify.heroic.shell.task.SuggestKey;
 import com.spotify.heroic.shell.task.SuggestPerformance;
 import com.spotify.heroic.shell.task.SuggestTag;
@@ -132,7 +131,6 @@ public final class Tasks {
         shellTask(IngestionFilter::setup, IngestionFilter.class);
         shellTask(DataMigrate::setup, DataMigrate.class);
         shellTask(ParseQuery::setup, ParseQuery.class);
-        shellTask(StringifyQuery::setup, StringifyQuery.class);
         shellTask(AnalyticsReportFetchSeries::setup, AnalyticsReportFetchSeries.class);
         shellTask(AnalyticsDumpFetchSeries::setup, AnalyticsDumpFetchSeries.class);
         shellTask(LoadGenerated::setup, LoadGenerated.class);

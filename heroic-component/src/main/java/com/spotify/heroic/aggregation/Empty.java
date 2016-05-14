@@ -50,9 +50,4 @@ public class Empty implements Aggregation {
     public EmptyInstance apply(AggregationContext context) {
         return EmptyInstance.INSTANCE;
     }
-
-    @Override
-    public String toDSL() {
-        return String.format("%s()", NAME);
-    }
 }

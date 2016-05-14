@@ -68,9 +68,4 @@ public class Options implements Aggregation {
             .apply(new OptionsContext(context, sampling.flatMap(SamplingQuery::getSize),
                 sampling.flatMap(SamplingQuery::getExtent)));
     }
-
-    @Override
-    public String toDSL() {
-        return String.format("%s()", NAME);
-    }
 }

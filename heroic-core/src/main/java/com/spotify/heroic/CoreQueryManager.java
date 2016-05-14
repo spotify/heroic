@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSortedSet;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationCombiner;
 import com.spotify.heroic.aggregation.AggregationContext;
+import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.DefaultAggregationContext;
 import com.spotify.heroic.aggregation.Empty;
@@ -36,7 +37,13 @@ import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
+import com.spotify.heroic.grammar.DefaultScope;
+import com.spotify.heroic.grammar.Expression;
+import com.spotify.heroic.grammar.FunctionExpression;
+import com.spotify.heroic.grammar.IntegerExpression;
+import com.spotify.heroic.grammar.QueryExpression;
 import com.spotify.heroic.grammar.QueryParser;
+import com.spotify.heroic.grammar.RangeExpression;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.QueryResultPart;
@@ -70,12 +77,13 @@ public class CoreQueryManager implements QueryManager {
     private final FilterFactory filters;
     private final QueryParser parser;
     private final QueryCache queryCache;
+    private final AggregationFactory aggregations;
 
     @Inject
     public CoreQueryManager(
         @Named("features") final Set<String> features, final AsyncFramework async,
         final ClusterManager cluster, final FilterFactory filters, final QueryParser parser,
-        final QueryCache queryCache
+        final QueryCache queryCache, final AggregationFactory aggregations
     ) {
         this.features = features;
         this.async = async;
@@ -83,6 +91,7 @@ public class CoreQueryManager implements QueryManager {
         this.filters = filters;
         this.parser = parser;
         this.queryCache = queryCache;
+        this.aggregations = aggregations;
     }
 
     @Override
@@ -119,26 +128,49 @@ public class CoreQueryManager implements QueryManager {
 
     @Override
     public QueryBuilder newQueryFromString(final String queryString) {
-        final Query q = parser.parseQuery(queryString);
+        final List<Expression> expressions = parser.parse(queryString).getExpressions();
 
-        /* get aggregation that is part of statement, if any */
-        final Optional<Aggregation> aggregation = q.getAggregation();
+        final Expression.Scope scope = new DefaultScope(System.currentTimeMillis());
 
-        return newQuery()
-            .source(q.getSource())
-            .range(q.getRange())
-            .aggregation(aggregation)
-            .filter(q.getFilter());
-    }
+        if (expressions.size() != 1) {
+            throw new IllegalArgumentException("Expected exactly one expression");
+        }
 
-    @Override
-    public String queryToString(final Query q) {
-        return parser.stringifyQuery(q);
-    }
+        return expressions.get(0).eval(scope).visit(new Expression.Visitor<QueryBuilder>() {
+            @Override
+            public QueryBuilder visitQuery(final QueryExpression e) {
+                final Optional<MetricType> source = e.getSource();
 
-    @Override
-    public String queryToString(final Query q, final Optional<Integer> indent) {
-        return parser.stringifyQuery(q, indent);
+                final Optional<QueryDateRange> range =
+                    e.getRange().map(expr -> expr.visit(new Expression.Visitor<QueryDateRange>() {
+                        @Override
+                        public QueryDateRange visitRange(final RangeExpression e) {
+                            final long start =
+                                e.getStart().cast(IntegerExpression.class).getValue();
+                            final long end = e.getEnd().cast(IntegerExpression.class).getValue();
+
+                            return new QueryDateRange.Absolute(start, end);
+                        }
+                    }));
+
+                final Optional<Aggregation> aggregation =
+                    e.getSelect().map(expr -> expr.visit(new Expression.Visitor<Aggregation>() {
+                        @Override
+                        public Aggregation visitFunction(final FunctionExpression e) {
+                            return aggregations.build(e.getName(), e.getArguments(),
+                                e.getKeywords());
+                        }
+                    }));
+
+                final Optional<Filter> filter = e.getFilter();
+
+                return newQuery()
+                    .source(source)
+                    .range(range)
+                    .aggregation(aggregation)
+                    .filter(filter);
+            }
+        });
     }
 
     @Override

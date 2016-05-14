@@ -52,9 +52,4 @@ public class GroupUnique extends SamplingAggregation {
     protected AggregationInstance apply(AggregationContext context, long size, long extent) {
         return new GroupUniqueInstance(size, extent);
     }
-
-    @Override
-    public String toDSL() {
-        return samplingDSL(NAME);
-    }
 }
