@@ -56,6 +56,10 @@
       <groupId>com.spotify.heroic.suggest</groupId>
       <artifactId>heroic-suggest-elasticsearch</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.spotify.heroic.suggest</groupId>
+      <artifactId>heroic-suggest-memory</artifactId>
+    </dependency>
 
     <!-- discovery implementations -->
     <dependency>

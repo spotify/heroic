@@ -40,6 +40,7 @@ import com.spotify.heroic.metric.memory.MemoryMetricModule;
 import com.spotify.heroic.suggest.SuggestManagerModule;
 import com.spotify.heroic.suggest.SuggestModule;
 import com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestModule;
+import com.spotify.heroic.suggest.memory.MemorySuggestModule;
 
 import java.util.List;
 import java.util.Optional;
@@ -54,41 +55,31 @@ public class MemoryProfile extends HeroicProfileBase {
         final boolean elasticsearch = params.getBoolean("elasticsearch").orElse(false);
         final boolean synchronizedStorage = params.getBoolean("synchronizedStorage").orElse(false);
 
-        if (!elasticsearch) {
-            builder.metadata(MetadataManagerModule
-                .builder()
-                .backends(ImmutableList.<MetadataModule>of(MemoryMetadataModule
-                    .builder()
-                    .synchronizedStorage(synchronizedStorage)
-                    .build())));
-        }
+        final ImmutableList.Builder<SuggestModule> suggest = ImmutableList.builder();
+        final ImmutableList.Builder<MetadataModule> metadata = ImmutableList.builder();
 
         if (elasticsearch) {
-            builder.metadata(MetadataManagerModule
+            suggest.add(ElasticsearchSuggestModule
                 .builder()
-                .backends(ImmutableList.<MetadataModule>of(ElasticsearchMetadataModule
+                .connection(ConnectionModule
                     .builder()
-                    .connection(ConnectionModule
-                        .builder()
-                        .clientSetup(StandaloneClientSetup.builder().build())
-                        .index(
-                            RotatingIndexMapping.builder().pattern("heroic-metadata-v1-%s").build())
-                        .build())
-                    .build())));
-        }
+                    .clientSetup(StandaloneClientSetup.builder().build())
+                    .index(RotatingIndexMapping.builder().pattern("heroic-suggest-%s").build())
+                    .build())
+                .build());
 
-        if (elasticsearch) {
-            builder.suggest(SuggestManagerModule
+            metadata.add(ElasticsearchMetadataModule
                 .builder()
-                .backends(ImmutableList.<SuggestModule>of(ElasticsearchSuggestModule
+                .connection(ConnectionModule
                     .builder()
-                    .connection(ConnectionModule
-                        .builder()
-                        .clientSetup(StandaloneClientSetup.builder().build())
-                        .index(
-                            RotatingIndexMapping.builder().pattern("heroic-suggest-v1-%s").build())
-                        .build())
-                    .build())));
+                    .clientSetup(StandaloneClientSetup.builder().build())
+                    .index(RotatingIndexMapping.builder().pattern("heroic-metadata-%s").build())
+                    .build())
+                .build());
+        } else {
+            suggest.add(MemorySuggestModule.builder().build());
+            metadata.add(
+                MemoryMetadataModule.builder().synchronizedStorage(synchronizedStorage).build());
         }
 
         // @formatter:off
@@ -104,7 +95,9 @@ public class MemoryProfile extends HeroicProfileBase {
                             .synchronizedStorage(synchronizedStorage)
                             .build()
                     ))
-            );
+            )
+            .metadata(MetadataManagerModule.builder().backends(metadata.build()))
+            .suggest(SuggestManagerModule.builder().backends(suggest.build()));
         // @formatter:on
     }
 

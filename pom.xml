@@ -23,6 +23,7 @@
     <module>metadata/elasticsearch</module>
     <module>metadata/memory</module>
     <module>suggest/elasticsearch</module>
+    <module>suggest/memory</module>
     <module>discovery/simple</module>
     <module>aggregation/simple</module>
     <module>consumer/kafka</module>
@@ -149,6 +150,11 @@
       <dependency>
         <groupId>com.spotify.heroic.suggest</groupId>
         <artifactId>heroic-suggest-elasticsearch</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.spotify.heroic.suggest</groupId>
+        <artifactId>heroic-suggest-memory</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
