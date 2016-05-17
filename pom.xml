@@ -43,6 +43,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <jersey.version>2.13</jersey.version>
     <jackson.version>2.7.4</jackson.version>
     <hk2.version>2.3.0</hk2.version>
@@ -51,7 +52,7 @@
     <datastax.version>2.1.9</datastax.version>
     <semantic-metrics.version>0.2.3</semantic-metrics.version>
     <netty.version>4.1.0.CR3</netty.version>
-    <tiny-async.version>1.7.0</tiny-async.version>
+    <tiny-async.version>1.7.1-SNAPSHOT</tiny-async.version>
     <tiny-serializer.version>1.4.4</tiny-serializer.version>
     <antlr.version>4.5</antlr.version>
     <log4j.version>2.2</log4j.version>
@@ -61,9 +62,42 @@
     <findbugs.version>3.0.1</findbugs.version>
     <dagger.version>2.4</dagger.version>
     <slf4j.version>1.7.21</slf4j.version>
+    <junit.version>4.12</junit.version>
   </properties>
 
   <profiles>
+    <profile>
+      <id>integration-tests</id>
+
+      <activation>
+        <property>
+          <name>environment</name>
+          <value>test</value>
+        </property>
+      </activation>
+
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <version>2.19.1</version>
+            <configuration>
+              <parallel>methods</parallel>
+              <threadCount>10</threadCount>
+            </configuration>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>integration-test</goal>
+                  <goal>verify</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
     <profile>
       <id>checkstyle</id>
 
@@ -170,6 +204,12 @@
   <dependencyManagement>
     <dependencies>
       <!-- heroic components -->
+      <dependency>
+        <groupId>com.spotify.heroic</groupId>
+        <artifactId>heroic-test</artifactId>
+        <version>${project.version}</version>
+        <type>pom</type>
+      </dependency>
       <dependency>
         <groupId>com.spotify.heroic</groupId>
         <artifactId>heroic-component</artifactId>
@@ -607,7 +647,7 @@
       <dependency>
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>
-        <version>4.11</version>
+        <version>${junit.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -621,6 +661,14 @@
 
   <build>
     <plugins>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.19.1</version>
+        <configuration>
+          <excludedGroups>com.spotify.heroic.test.IntegrationTests</excludedGroups>
+        </configuration>
+      </plugin>
+
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.1</version>

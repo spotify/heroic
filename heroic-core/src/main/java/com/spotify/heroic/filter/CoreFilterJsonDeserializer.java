@@ -27,7 +27,6 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.spotify.heroic.filter.Filter.Raw;
 import com.spotify.heroic.grammar.QueryParser;
 import lombok.RequiredArgsConstructor;
 
@@ -71,8 +70,8 @@ public class CoreFilterJsonDeserializer extends JsonDeserializer<Filter> {
                 throw c.mappingException("Expected end of array from '" + deserializer + "'");
             }
 
-            if (filter instanceof Filter.Raw) {
-                return parseRawFilter((Filter.Raw) filter);
+            if (filter instanceof RawFilter) {
+                return parseRawFilter((RawFilter) filter);
             }
 
             return filter.optimize();
@@ -82,7 +81,7 @@ public class CoreFilterJsonDeserializer extends JsonDeserializer<Filter> {
         }
     }
 
-    private Filter parseRawFilter(Raw filter) {
+    private Filter parseRawFilter(RawFilter filter) {
         return parser.parseFilter(filter.first());
     }
 

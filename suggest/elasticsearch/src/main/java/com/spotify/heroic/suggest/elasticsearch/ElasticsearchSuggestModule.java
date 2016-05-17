@@ -35,7 +35,6 @@ import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.ModuleId;
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.elasticsearch.BackendType;
-import com.spotify.heroic.elasticsearch.BackendTypeFactory;
 import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.ConnectionModule;
 import com.spotify.heroic.elasticsearch.DefaultRateLimitedCache;
@@ -60,6 +59,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Optional.empty;
@@ -85,14 +85,12 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
     private final String templateName;
     private final String backendType;
 
-    private static BackendTypeFactory<SuggestBackend> defaultSetup = SuggestBackendKV.factory();
+    private static Supplier<BackendType> defaultSetup = SuggestBackendKV.factory();
 
-    private static final Map<String, BackendTypeFactory<SuggestBackend>> backendTypes =
-        new HashMap<>();
+    private static final Map<String, Supplier<BackendType>> backendTypes = new HashMap<>();
 
     static {
         backendTypes.put("kv", defaultSetup);
-        backendTypes.put("v1", SuggestBackendV1.factory());
     }
 
     public static final List<String> types() {
@@ -100,7 +98,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
     }
 
     @JsonIgnore
-    private final BackendTypeFactory<SuggestBackend> backendTypeBuilder;
+    private final Supplier<BackendType> type;
 
     @JsonCreator
     public ElasticsearchSuggestModule(
@@ -119,13 +117,13 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
             writeCacheDurationMinutes.orElse(DEFAULT_WRITES_CACHE_DURATION_MINUTES);
         this.templateName = templateName.orElse(DEFAULT_TEMPLATE_NAME);
         this.backendType = backendType.orElse(DEFAULT_BACKEND_TYPE);
-        this.backendTypeBuilder =
+        this.type =
             backendType.flatMap(bt -> ofNullable(backendTypes.get(bt))).orElse(defaultSetup);
     }
 
     @Override
     public Exposed module(PrimaryComponent primary, Depends depends, final String id) {
-        final BackendType<SuggestBackend> backendType = backendTypeBuilder.setup();
+        final BackendType backendType = type.get();
 
         return DaggerElasticsearchSuggestModule_C
             .builder()
@@ -150,7 +148,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
     @RequiredArgsConstructor
     @Module
     class M {
-        private final BackendType<SuggestBackend> backendType;
+        private final BackendType backendType;
 
         @Provides
         @ElasticsearchScope
@@ -161,7 +159,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
         @Provides
         @ElasticsearchScope
         public Managed<Connection> connection(ConnectionModule.Provider provider) {
-            return provider.construct(templateName, backendType.mappings(), backendType.settings());
+            return provider.construct(templateName, backendType);
         }
 
         @Provides
@@ -191,23 +189,15 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
 
         @Provides
         @ElasticsearchScope
-        public SuggestBackend suggestBackend(Lazy<SuggestBackendV1> v1, Lazy<SuggestBackendKV> kv) {
-            if (backendType.type().equals(SuggestBackendV1.class)) {
-                return v1.get();
-            }
-
+        public SuggestBackend suggestBackend(Lazy<SuggestBackendKV> kv) {
             return kv.get();
         }
 
         @Provides
         @ElasticsearchScope
         public LifeCycle life(
-            LifeCycleManager manager, Lazy<SuggestBackendV1> v1, Lazy<SuggestBackendKV> kv
+            LifeCycleManager manager, Lazy<SuggestBackendKV> kv
         ) {
-            if (backendType.type().equals(SuggestBackendV1.class)) {
-                return manager.build(v1.get());
-            }
-
             return manager.build(kv.get());
         }
     }

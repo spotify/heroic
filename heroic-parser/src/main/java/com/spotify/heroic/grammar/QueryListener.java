@@ -25,8 +25,17 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.spotify.heroic.filter.AndFilter;
+import com.spotify.heroic.filter.FalseFilter;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.FilterFactory;
+import com.spotify.heroic.filter.HasTagFilter;
+import com.spotify.heroic.filter.MatchKeyFilter;
+import com.spotify.heroic.filter.MatchTagFilter;
+import com.spotify.heroic.filter.NotFilter;
+import com.spotify.heroic.filter.OrFilter;
+import com.spotify.heroic.filter.RegexFilter;
+import com.spotify.heroic.filter.StartsWithFilter;
+import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.grammar.HeroicQueryParser.AggregationByAllContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.AggregationByContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.AggregationPipeContext;
@@ -75,8 +84,6 @@ import java.util.concurrent.TimeUnit;
 @SuppressWarnings("unchecked")
 @RequiredArgsConstructor
 public class QueryListener extends HeroicQueryBaseListener {
-    private final FilterFactory filters;
-
     private static final Object KEY_VALUES_MARK = new ObjectMark("KEY_VALUES_MARK");
     private static final Object LIST_MARK = new ObjectMark("LIST_MARK");
     private static final Object EXPR_FUNCTION_ENTER = new ObjectMark("EXPR_FUNCTION_ENTER");
@@ -248,7 +255,7 @@ public class QueryListener extends HeroicQueryBaseListener {
         final Expression match = pop(c, Expression.class);
         final StringExpression key = pop(c, StringExpression.class);
 
-        push(filters.or(buildIn(c, key, match)));
+        push(new OrFilter(buildIn(c, key, match)));
     }
 
     @Override
@@ -257,7 +264,7 @@ public class QueryListener extends HeroicQueryBaseListener {
         final ListExpression match = pop(c, ListExpression.class);
         final StringExpression key = pop(c, StringExpression.class);
 
-        push(filters.not(filters.or(buildIn(c, key, match))));
+        push(new NotFilter(new OrFilter(buildIn(c, key, match))));
     }
 
     @Override
@@ -453,26 +460,26 @@ public class QueryListener extends HeroicQueryBaseListener {
     public void exitFilterHas(FilterHasContext ctx) {
         final StringExpression value = pop(context(ctx), StringExpression.class);
 
-        push(filters.hasTag(value.getString()));
+        push(new HasTagFilter(value.getString()));
     }
 
     @Override
     public void exitFilterNot(FilterNotContext ctx) {
-        push(filters.not(pop(context(ctx), Filter.class)));
+        push(new NotFilter(pop(context(ctx), Filter.class)));
     }
 
     @Override
     public void exitFilterKeyEq(FilterKeyEqContext ctx) {
         final StringExpression value = pop(context(ctx), StringExpression.class);
 
-        push(filters.matchKey(value.getString()));
+        push(new MatchKeyFilter(value.getString()));
     }
 
     @Override
     public void exitFilterKeyNotEq(FilterKeyNotEqContext ctx) {
         final StringExpression value = pop(context(ctx), StringExpression.class);
 
-        push(filters.not(filters.matchKey(value.getString())));
+        push(new NotFilter(new MatchKeyFilter(value.getString())));
     }
 
     @Override
@@ -480,7 +487,7 @@ public class QueryListener extends HeroicQueryBaseListener {
         final StringExpression value = pop(context(ctx), StringExpression.class);
         final StringExpression key = pop(context(ctx), StringExpression.class);
 
-        push(filters.matchTag(key.getString(), value.getString()));
+        push(new MatchTagFilter(key.getString(), value.getString()));
     }
 
     @Override
@@ -488,7 +495,7 @@ public class QueryListener extends HeroicQueryBaseListener {
         final StringExpression value = pop(context(ctx), StringExpression.class);
         final StringExpression key = pop(context(ctx), StringExpression.class);
 
-        push(filters.not(filters.matchTag(key.getString(), value.getString())));
+        push(new NotFilter(new MatchTagFilter(key.getString(), value.getString())));
     }
 
     @Override
@@ -496,7 +503,7 @@ public class QueryListener extends HeroicQueryBaseListener {
         final StringExpression value = pop(context(ctx), StringExpression.class);
         final StringExpression key = pop(context(ctx), StringExpression.class);
 
-        push(filters.startsWith(key.getString(), value.getString()));
+        push(new StartsWithFilter(key.getString(), value.getString()));
     }
 
     @Override
@@ -504,7 +511,7 @@ public class QueryListener extends HeroicQueryBaseListener {
         final StringExpression value = pop(context(ctx), StringExpression.class);
         final StringExpression key = pop(context(ctx), StringExpression.class);
 
-        push(filters.not(filters.startsWith(key.getString(), value.getString())));
+        push(new NotFilter(new StartsWithFilter(key.getString(), value.getString())));
     }
 
     @Override
@@ -512,7 +519,7 @@ public class QueryListener extends HeroicQueryBaseListener {
         final StringExpression value = pop(context(ctx), StringExpression.class);
         final StringExpression key = pop(context(ctx), StringExpression.class);
 
-        push(filters.regex(key.getString(), value.getString()));
+        push(new RegexFilter(key.getString(), value.getString()));
     }
 
     @Override
@@ -520,7 +527,7 @@ public class QueryListener extends HeroicQueryBaseListener {
         final StringExpression value = pop(context(ctx), StringExpression.class);
         final StringExpression key = pop(context(ctx), StringExpression.class);
 
-        push(filters.not(filters.regex(key.getString(), value.getString())));
+        push(new NotFilter(new RegexFilter(key.getString(), value.getString())));
     }
 
     @Override
@@ -528,7 +535,7 @@ public class QueryListener extends HeroicQueryBaseListener {
         final Context c = context(ctx);
         final Filter b = pop(c, Filter.class);
         final Filter a = pop(c, Filter.class);
-        push(filters.and(a, b));
+        push(new AndFilter(ImmutableList.of(a, b)));
     }
 
     @Override
@@ -536,7 +543,7 @@ public class QueryListener extends HeroicQueryBaseListener {
         final Context c = context(ctx);
         final Filter b = pop(c, Filter.class);
         final Filter a = pop(c, Filter.class);
-        push(filters.or(a, b));
+        push(new OrFilter(ImmutableList.of(a, b)));
     }
 
     @Override
@@ -578,12 +585,12 @@ public class QueryListener extends HeroicQueryBaseListener {
         final String literal = ctx.getText();
 
         if ("true".equals(literal)) {
-            push(filters.t());
+            push(TrueFilter.get());
             return;
         }
 
         if ("false".equals(literal)) {
-            push(filters.f());
+            push(FalseFilter.get());
             return;
         }
 
@@ -605,8 +612,8 @@ public class QueryListener extends HeroicQueryBaseListener {
         final Context c, final StringExpression key, final Expression match
     ) {
         if (match instanceof StringExpression) {
-            return ImmutableList.of(
-                filters.matchTag(key.getString(), match.cast(StringExpression.class).getString()));
+            return ImmutableList.of(new MatchTagFilter(key.getString(),
+                match.cast(StringExpression.class).getString()));
         }
 
         if (!(match instanceof ListExpression)) {
@@ -617,7 +624,7 @@ public class QueryListener extends HeroicQueryBaseListener {
 
         for (final Expression v : ((ListExpression) match).getList()) {
             values.add(
-                filters.matchTag(key.getString(), v.cast(StringExpression.class).getString()));
+                new MatchTagFilter(key.getString(), v.cast(StringExpression.class).getString()));
         }
 
         return values;

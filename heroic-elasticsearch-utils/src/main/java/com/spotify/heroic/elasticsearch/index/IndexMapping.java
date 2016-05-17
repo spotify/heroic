@@ -35,18 +35,18 @@ import org.elasticsearch.client.Client;
         name = "rotating"), @JsonSubTypes.Type(value = SingleIndexMapping.class, name = "single")
 })
 public interface IndexMapping {
-    public String template();
+    String template();
 
-    public String[] readIndices(DateRange range) throws NoIndexSelectedException;
+    String[] readIndices(DateRange range) throws NoIndexSelectedException;
 
-    public String[] writeIndices(DateRange range) throws NoIndexSelectedException;
+    String[] writeIndices(DateRange range) throws NoIndexSelectedException;
 
-    public SearchRequestBuilder search(Client client, DateRange range, String type)
+    SearchRequestBuilder search(Client client, DateRange range, String type)
         throws NoIndexSelectedException;
 
-    public DeleteByQueryRequestBuilder deleteByQuery(Client client, DateRange range, String type)
+    DeleteByQueryRequestBuilder deleteByQuery(Client client, DateRange range, String type)
         throws NoIndexSelectedException;
 
-    public CountRequestBuilder count(Client client, DateRange range, String metadataType)
+    CountRequestBuilder count(Client client, DateRange range, String metadataType)
         throws NoIndexSelectedException;
 }

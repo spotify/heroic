@@ -32,12 +32,21 @@ import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.elasticsearch.AbstractElasticsearchMetadataBackend;
 import com.spotify.heroic.elasticsearch.BackendType;
-import com.spotify.heroic.elasticsearch.BackendTypeFactory;
 import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
 import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
+import com.spotify.heroic.filter.AndFilter;
+import com.spotify.heroic.filter.FalseFilter;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterModifier;
+import com.spotify.heroic.filter.HasTagFilter;
+import com.spotify.heroic.filter.MatchKeyFilter;
+import com.spotify.heroic.filter.MatchTagFilter;
+import com.spotify.heroic.filter.NotFilter;
+import com.spotify.heroic.filter.OrFilter;
+import com.spotify.heroic.filter.RegexFilter;
+import com.spotify.heroic.filter.StartsWithFilter;
+import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.metadata.CountSeries;
@@ -69,7 +78,6 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.BoolFilterBuilder;
 import org.elasticsearch.index.query.FilterBuilder;
-import org.elasticsearch.index.query.FilterBuilders;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.TermFilterBuilder;
 import org.elasticsearch.search.SearchHit;
@@ -102,7 +110,6 @@ import static org.elasticsearch.index.query.FilterBuilders.boolFilter;
 import static org.elasticsearch.index.query.FilterBuilders.matchAllFilter;
 import static org.elasticsearch.index.query.FilterBuilders.nestedFilter;
 import static org.elasticsearch.index.query.FilterBuilders.notFilter;
-import static org.elasticsearch.index.query.FilterBuilders.orFilter;
 import static org.elasticsearch.index.query.FilterBuilders.prefixFilter;
 import static org.elasticsearch.index.query.FilterBuilders.regexpFilter;
 import static org.elasticsearch.index.query.FilterBuilders.termFilter;
@@ -545,80 +552,85 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
             }
 
             public FilterBuilder filter(final Filter filter) {
-                if (filter instanceof Filter.True) {
-                    return matchAllFilter();
-                }
-
-                if (filter instanceof Filter.False) {
-                    return null;
-                }
-
-                if (filter instanceof Filter.And) {
-                    final Filter.And and = (Filter.And) filter;
-                    final List<FilterBuilder> filters = new ArrayList<>(and.terms().size());
-
-                    for (final Filter stmt : and.terms()) {
-                        filters.add(filter(stmt));
+                return filter.visit(new Filter.Visitor<FilterBuilder>() {
+                    @Override
+                    public FilterBuilder visitTrue(final TrueFilter filter) {
+                        return matchAllFilter();
                     }
 
-                    return andFilter(filters.toArray(new FilterBuilder[0]));
-                }
-
-                if (filter instanceof Filter.Or) {
-                    final Filter.Or or = (Filter.Or) filter;
-                    final List<FilterBuilder> filters = new ArrayList<>(or.terms().size());
-
-                    for (final Filter stmt : or.terms()) {
-                        filters.add(filter(stmt));
+                    @Override
+                    public FilterBuilder visitFalse(final FalseFilter filter) {
+                        return notFilter(matchAllFilter());
                     }
 
-                    return orFilter(filters.toArray(new FilterBuilder[0]));
-                }
+                    @Override
+                    public FilterBuilder visitAnd(final AndFilter and) {
+                        final List<FilterBuilder> filters = new ArrayList<>(and.terms().size());
 
-                if (filter instanceof Filter.Not) {
-                    final Filter.Not not = (Filter.Not) filter;
-                    return notFilter(filter(not.first()));
-                }
+                        for (final Filter stmt : and.terms()) {
+                            filters.add(filter(stmt));
+                        }
 
-                if (filter instanceof Filter.MatchTag) {
-                    final Filter.MatchTag matchTag = (Filter.MatchTag) filter;
+                        return andFilter(filters.toArray(new FilterBuilder[0]));
+                    }
 
-                    final BoolFilterBuilder nested = boolFilter();
-                    nested.must(termFilter(tagsKey, matchTag.first()));
-                    nested.must(termFilter(tagsValue, matchTag.second()));
-                    return nestedFilter(tags, nested);
-                }
+                    @Override
+                    public FilterBuilder visitOr(final OrFilter and) {
+                        final List<FilterBuilder> filters = new ArrayList<>(and.terms().size());
 
-                if (filter instanceof Filter.StartsWith) {
-                    final Filter.StartsWith startsWith = (Filter.StartsWith) filter;
+                        for (final Filter stmt : and.terms()) {
+                            filters.add(filter(stmt));
+                        }
 
-                    final BoolFilterBuilder nested = boolFilter();
-                    nested.must(termFilter(tagsKey, startsWith.first()));
-                    nested.must(prefixFilter(tagsValue, startsWith.second()));
-                    return nestedFilter(tags, nested);
-                }
+                        return andFilter(filters.toArray(new FilterBuilder[0]));
+                    }
 
-                if (filter instanceof Filter.Regex) {
-                    final Filter.Regex regex = (Filter.Regex) filter;
+                    @Override
+                    public FilterBuilder visitNot(final NotFilter not) {
+                        return notFilter(filter(not.first()));
+                    }
 
-                    final BoolFilterBuilder nested = boolFilter();
-                    nested.must(termFilter(tagsKey, regex.first()));
-                    nested.must(regexpFilter(tagsValue, regex.second()));
-                    return nestedFilter(tags, nested);
-                }
+                    @Override
+                    public FilterBuilder visitMatchTag(final MatchTagFilter matchTag) {
+                        final BoolFilterBuilder nested = boolFilter();
+                        nested.must(termFilter(tagsKey, matchTag.first()));
+                        nested.must(termFilter(tagsValue, matchTag.second()));
+                        return nestedFilter(tags, nested);
+                    }
 
-                if (filter instanceof Filter.HasTag) {
-                    final Filter.HasTag hasTag = (Filter.HasTag) filter;
-                    final TermFilterBuilder nested = termFilter(tagsKey, hasTag.first());
-                    return nestedFilter(tags, nested);
-                }
+                    @Override
+                    public FilterBuilder visitStartsWith(final StartsWithFilter startsWith) {
+                        final BoolFilterBuilder nested = boolFilter();
+                        nested.must(termFilter(tagsKey, startsWith.first()));
+                        nested.must(prefixFilter(tagsValue, startsWith.second()));
+                        return nestedFilter(tags, nested);
+                    }
 
-                if (filter instanceof Filter.MatchKey) {
-                    final Filter.MatchKey matchKey = (Filter.MatchKey) filter;
-                    return termFilter(seriesKey, matchKey.first());
-                }
+                    @Override
+                    public FilterBuilder visitRegex(final RegexFilter regex) {
+                        final BoolFilterBuilder nested = boolFilter();
+                        nested.must(termFilter(tagsKey, regex.first()));
+                        nested.must(regexpFilter(tagsValue, regex.second()));
+                        return nestedFilter(tags, nested);
+                    }
 
-                throw new IllegalArgumentException("Invalid filter statement: " + filter);
+                    @Override
+                    public FilterBuilder visitHasTag(final HasTagFilter hasTag) {
+                        final TermFilterBuilder nested = termFilter(tagsKey, hasTag.first());
+                        return nestedFilter(tags, nested);
+                    }
+
+                    @Override
+                    public FilterBuilder visitMatchKey(final MatchKeyFilter matchKey) {
+                        return termFilter(seriesKey, matchKey.first());
+                    }
+
+                    @Override
+                    public FilterBuilder defaultAction(final Filter filter) {
+                        throw new IllegalArgumentException(
+                            "Unsupported filter statement: " + filter);
+                    }
+                });
             }
         }
     }
@@ -636,7 +648,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
                 AggregationBuilders.terms("terms").field(ctx.tagsValue()).size(0);
             final FilterAggregationBuilder filterAggregation = AggregationBuilders
                 .filter("filter")
-                .filter(FilterBuilders.termFilter(ctx.tagsKey(), key))
+                .filter(termFilter(ctx.tagsKey(), key))
                 .subAggregation(terms);
             final NestedBuilder nestedAggregation = AggregationBuilders
                 .nested("nested")
@@ -693,41 +705,14 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
          */
         private AsyncFuture<FindTags> findSingle(final String tag) throws Exception {
             final Filter filter = modifier.removeTag(this.filter, tag);
-
             final FilterBuilder f = ctx.filter(filter);
-
-            if (f == null) {
-                return async.resolved(FindTags.EMPTY);
-            }
-
             return findtags(setup, ctx, f, tag);
         }
     }
 
-    public static BackendTypeFactory<MetadataBackend> factory() {
-        return new BackendTypeFactory<MetadataBackend>() {
-            @Override
-            public BackendType<MetadataBackend> setup() {
-                return new BackendType<MetadataBackend>() {
-                    @Override
-                    public Map<String, Map<String, Object>> mappings() {
-                        final Map<String, Map<String, Object>> mappings = new HashMap<>();
-                        mappings.put("metadata",
-                            ElasticsearchMetadataUtils.loadJsonResource("v1/metadata.json"));
-                        return mappings;
-                    }
-
-                    @Override
-                    public Map<String, Object> settings() {
-                        return ImmutableMap.of();
-                    }
-
-                    @Override
-                    public Class<? extends MetadataBackend> type() {
-                        return MetadataBackendV1.class;
-                    }
-                };
-            }
-        };
+    public static BackendType backendType() {
+        final Map<String, Map<String, Object>> mappings = new HashMap<>();
+        mappings.put("metadata", ElasticsearchMetadataUtils.loadJsonResource("v1/metadata.json"));
+        return new BackendType(mappings, ImmutableMap.of(), MetadataBackendV1.class);
     }
 }

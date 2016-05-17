@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.dagger.CoreComponent;
-import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
@@ -53,17 +52,14 @@ import java.util.Optional;
 @TaskName("suggest-tag")
 public class SuggestTag implements ShellTask {
     private final SuggestManager suggest;
-    private final FilterFactory filters;
     private final QueryParser parser;
     private final ObjectMapper mapper;
 
     @Inject
     public SuggestTag(
-        SuggestManager suggest, FilterFactory filters, QueryParser parser,
-        @Named("application/json") ObjectMapper mapper
+        SuggestManager suggest, QueryParser parser, @Named("application/json") ObjectMapper mapper
     ) {
         this.suggest = suggest;
-        this.filters = filters;
         this.parser = parser;
         this.mapper = mapper;
     }
@@ -77,7 +73,7 @@ public class SuggestTag implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
+        final RangeFilter filter = Tasks.setupRangeFilter(parser, params);
 
         final MatchOptions fuzzyOptions = MatchOptions.builder().build();
 

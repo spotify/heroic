@@ -33,11 +33,19 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.elasticsearch.AbstractElasticsearchBackend;
 import com.spotify.heroic.elasticsearch.BackendType;
-import com.spotify.heroic.elasticsearch.BackendTypeFactory;
 import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
 import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
+import com.spotify.heroic.filter.AndFilter;
+import com.spotify.heroic.filter.FalseFilter;
 import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.filter.HasTagFilter;
+import com.spotify.heroic.filter.MatchKeyFilter;
+import com.spotify.heroic.filter.MatchTagFilter;
+import com.spotify.heroic.filter.NotFilter;
+import com.spotify.heroic.filter.OrFilter;
+import com.spotify.heroic.filter.StartsWithFilter;
+import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.metric.WriteResult;
@@ -93,6 +101,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 import static com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestUtils.loadJsonResource;
@@ -193,7 +202,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
         return connection.doto((final Connection c) -> {
             final BoolFilterBuilder bool = boolFilter();
 
-            if (!(filter.getFilter() instanceof Filter.True)) {
+            if (!(filter.getFilter() instanceof TrueFilter)) {
                 bool.must(filter(filter.getFilter()));
             }
 
@@ -273,7 +282,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
             QueryBuilder query = bool.hasClauses() ? bool : matchAllQuery();
 
-            if (!(filter.getFilter() instanceof Filter.True)) {
+            if (!(filter.getFilter() instanceof TrueFilter)) {
                 query = filteredQuery(query, filter(filter.getFilter()));
             }
 
@@ -382,7 +391,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
             QueryBuilder query = bool.hasClauses() ? bool : matchAllQuery();
 
-            if (!(filter.getFilter() instanceof Filter.True)) {
+            if (!(filter.getFilter() instanceof TrueFilter)) {
                 query = filteredQuery(query, filter(filter.getFilter()));
             }
 
@@ -455,7 +464,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
             QueryBuilder query = bool.hasClauses() ? bool : matchAllQuery();
 
-            if (!(filter.getFilter() instanceof Filter.True)) {
+            if (!(filter.getFilter() instanceof TrueFilter)) {
                 query = filteredQuery(query, filter(filter.getFilter()));
             }
 
@@ -637,88 +646,84 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
         b.field(TAG_KV, e.getKey() + TAG_DELIMITER + e.getValue());
     }
 
+    private static final Filter.Visitor<FilterBuilder> FILTER_CONVERTER =
+        new Filter.Visitor<FilterBuilder>() {
+            @Override
+            public FilterBuilder visitTrue(final TrueFilter filter) {
+                return matchAllFilter();
+            }
+
+            @Override
+            public FilterBuilder visitFalse(final FalseFilter filter) {
+                return notFilter(matchAllFilter());
+            }
+
+            @Override
+            public FilterBuilder visitAnd(final AndFilter and) {
+                final List<FilterBuilder> filters = new ArrayList<>(and.terms().size());
+
+                for (final Filter stmt : and.terms()) {
+                    filters.add(filter(stmt));
+                }
+
+                return andFilter(filters.toArray(new FilterBuilder[0]));
+            }
+
+            @Override
+            public FilterBuilder visitOr(final OrFilter or) {
+                final List<FilterBuilder> filters = new ArrayList<>(or.terms().size());
+
+                for (final Filter stmt : or.terms()) {
+                    filters.add(filter(stmt));
+                }
+
+                return orFilter(filters.toArray(new FilterBuilder[0]));
+            }
+
+            @Override
+            public FilterBuilder visitNot(final NotFilter not) {
+                return notFilter(filter(not.first()));
+            }
+
+            @Override
+            public FilterBuilder visitMatchTag(final MatchTagFilter matchTag) {
+                return termFilter(TAGS, matchTag.first() + '\0' + matchTag.second());
+            }
+
+            @Override
+            public FilterBuilder visitStartsWith(final StartsWithFilter startsWith) {
+                return prefixFilter(TAGS, startsWith.first() + '\0' + startsWith.second());
+            }
+
+            @Override
+            public FilterBuilder visitHasTag(final HasTagFilter hasTag) {
+                return termFilter(TAG_KEYS, hasTag.first());
+            }
+
+            @Override
+            public FilterBuilder visitMatchKey(final MatchKeyFilter matchKey) {
+                return termFilter(KEY, matchKey.first());
+            }
+
+            @Override
+            public FilterBuilder defaultAction(Filter filter) {
+                throw new IllegalArgumentException("Unsupported filter: " + filter);
+            }
+        };
+
     public static FilterBuilder filter(final Filter filter) {
-        if (filter instanceof Filter.True) {
-            return matchAllFilter();
-        }
-
-        if (filter instanceof Filter.False) {
-            return null;
-        }
-
-        if (filter instanceof Filter.And) {
-            final Filter.And and = (Filter.And) filter;
-            final List<FilterBuilder> filters = new ArrayList<>(and.terms().size());
-
-            for (final Filter stmt : and.terms()) {
-                filters.add(filter(stmt));
-            }
-
-            return andFilter(filters.toArray(new FilterBuilder[0]));
-        }
-
-        if (filter instanceof Filter.Or) {
-            final Filter.Or or = (Filter.Or) filter;
-            final List<FilterBuilder> filters = new ArrayList<>(or.terms().size());
-
-            for (final Filter stmt : or.terms()) {
-                filters.add(filter(stmt));
-            }
-
-            return orFilter(filters.toArray(new FilterBuilder[0]));
-        }
-
-        if (filter instanceof Filter.Not) {
-            final Filter.Not not = (Filter.Not) filter;
-            return notFilter(filter(not.first()));
-        }
-
-        if (filter instanceof Filter.MatchTag) {
-            final Filter.MatchTag matchTag = (Filter.MatchTag) filter;
-            return termFilter(TAGS, matchTag.first() + '\0' + matchTag.second());
-        }
-
-        if (filter instanceof Filter.StartsWith) {
-            final Filter.StartsWith startsWith = (Filter.StartsWith) filter;
-            return prefixFilter(TAGS, startsWith.first() + '\0' + startsWith.second());
-        }
-
-        if (filter instanceof Filter.Regex) {
-            throw new IllegalArgumentException("regex not supported");
-        }
-
-        if (filter instanceof Filter.HasTag) {
-            final Filter.HasTag hasTag = (Filter.HasTag) filter;
-            return termFilter(TAG_KEYS, hasTag.first());
-        }
-
-        if (filter instanceof Filter.MatchKey) {
-            final Filter.MatchKey matchKey = (Filter.MatchKey) filter;
-            return termFilter(KEY, matchKey.first());
-        }
-
-        throw new IllegalArgumentException("Invalid filter statement: " + filter);
+        return filter.visit(FILTER_CONVERTER);
     }
 
-    public static BackendTypeFactory<SuggestBackend> factory() {
-        return () -> new BackendType<SuggestBackend>() {
-            @Override
-            public Map<String, Map<String, Object>> mappings() {
-                final Map<String, Map<String, Object>> mappings = new HashMap<>();
-                mappings.put("tag", loadJsonResource("kv/tag.json"));
-                mappings.put("series", loadJsonResource("kv/series.json"));
-                return mappings;
-            }
+    public static Supplier<BackendType> factory() {
+        return () -> {
+            final Map<String, Map<String, Object>> mappings = new HashMap<>();
+            mappings.put("tag", loadJsonResource("kv/tag.json"));
+            mappings.put("series", loadJsonResource("kv/series.json"));
 
-            @Override
-            public Map<String, Object> settings() {
-                return loadJsonResource("kv/settings.json");
-            }
+            final Map<String, Object> settings = loadJsonResource("kv/settings.json");
 
-            @Override
-            public Class<? extends SuggestBackend> type() {
-                return SuggestBackendKV.class;
-            }
+            return new BackendType(mappings, settings, SuggestBackendKV.class);
         };
     }
 }

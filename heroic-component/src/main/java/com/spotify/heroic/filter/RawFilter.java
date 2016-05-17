@@ -19,23 +19,27 @@
  * under the License.
  */
 
-package com.spotify.heroic.filter.impl;
+package com.spotify.heroic.filter;
 
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.filter.Filter;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(of = {"OPERATOR", "filter"}, doNotUseGetters = true)
-public class NotFilterImpl implements Filter.Not {
-    public static final String OPERATOR = "not";
+public class RawFilter implements Filter.OneArg<String> {
+    public static final String OPERATOR = "q";
 
-    private final Filter filter;
+    private final String filter;
 
     @Override
     public boolean apply(Series series) {
-        return !filter.apply(series);
+        throw new RuntimeException("Not supported");
+    }
+
+    @Override
+    public <T> T visit(final Visitor<T> visitor) {
+        return visitor.visitRaw(this);
     }
 
     @Override
@@ -44,12 +48,8 @@ public class NotFilterImpl implements Filter.Not {
     }
 
     @Override
-    public Filter optimize() {
-        if (filter instanceof Filter.Not) {
-            return ((Filter.Not) filter).first().optimize();
-        }
-
-        return new NotFilterImpl(filter.optimize());
+    public RawFilter optimize() {
+        return this;
     }
 
     @Override
@@ -58,21 +58,22 @@ public class NotFilterImpl implements Filter.Not {
     }
 
     @Override
-    public Filter first() {
+    public String first() {
         return filter;
     }
 
     @Override
     public int compareTo(Filter o) {
-        if (!Filter.Not.class.isAssignableFrom(o.getClass())) {
+        if (!RawFilter.class.isAssignableFrom(o.getClass())) {
             return operator().compareTo(o.operator());
         }
 
-        return filter.compareTo(o);
+        final RawFilter other = (RawFilter) o;
+        return filter.compareTo(other.first());
     }
 
     @Override
     public String toDSL() {
-        return "!(" + filter.toDSL() + ")";
+        throw new RuntimeException("raw filter cannot be converted to DSL");
     }
 }

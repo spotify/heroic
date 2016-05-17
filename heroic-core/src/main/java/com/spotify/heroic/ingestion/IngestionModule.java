@@ -27,7 +27,7 @@ import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.common.Optionals;
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.FilterFactory;
+import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metadata.MetadataComponent;
 import com.spotify.heroic.metric.MetricComponent;
@@ -129,12 +129,12 @@ public class IngestionModule {
         @Provides
         @IngestionScope
         public Filter filter(
-            final QueryParser parser, final FilterFactory filters, final ExtraParameters params
+            final QueryParser parser, final ExtraParameters params
         ) {
             return Optionals
                 .pickOptional(filter.map(parser::parseFilter),
                     params.getFilter(INGESTION_FILTER_PARAM, parser))
-                .orElseGet(filters::t);
+                .orElseGet(TrueFilter::get);
         }
     }
 

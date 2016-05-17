@@ -19,10 +19,9 @@
  * under the License.
  */
 
-package com.spotify.heroic.filter.impl;
+package com.spotify.heroic.filter;
 
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -31,7 +30,7 @@ import java.util.regex.Pattern;
 
 @Data
 @EqualsAndHashCode(of = {"OPERATOR", "tag", "value"}, doNotUseGetters = true)
-public class RegexFilterImpl implements Filter.Regex {
+public class RegexFilter implements Filter.TwoArgs<String, String> {
     public static final String OPERATOR = "~";
 
     private final String tag;
@@ -45,12 +44,17 @@ public class RegexFilterImpl implements Filter.Regex {
     }
 
     @Override
+    public <T> T visit(final Visitor<T> visitor) {
+        return visitor.visitRegex(this);
+    }
+
+    @Override
     public String toString() {
         return "[" + OPERATOR + ", " + tag + ", " + value + "]";
     }
 
     @Override
-    public RegexFilterImpl optimize() {
+    public RegexFilter optimize() {
         return this;
     }
 
@@ -71,11 +75,11 @@ public class RegexFilterImpl implements Filter.Regex {
 
     @Override
     public int compareTo(Filter o) {
-        if (!Filter.Regex.class.isAssignableFrom(o.getClass())) {
+        if (!RegexFilter.class.isAssignableFrom(o.getClass())) {
             return operator().compareTo(o.operator());
         }
 
-        final Filter.Regex other = (Filter.Regex) o;
+        final RegexFilter other = (RegexFilter) o;
         final int first = FilterComparatorUtils.stringCompare(first(), other.first());
 
         if (first != 0) {

@@ -34,7 +34,6 @@ import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateRequestBuilder;
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateResponse;
-import org.elasticsearch.action.bulk.BulkProcessor;
 import org.elasticsearch.action.count.CountRequestBuilder;
 import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
 import org.elasticsearch.action.index.IndexRequestBuilder;
@@ -58,29 +57,16 @@ public class Connection {
     private final AsyncFramework async;
     private final IndexMapping index;
     private final Client client;
-    private final BulkProcessor bulk;
 
     private final String templateName;
-    private final Map<String, Map<String, Object>> mappings;
-    private final Map<String, Object> settings;
+    private final BackendType type;
 
     public AsyncFuture<Void> close() {
         final List<AsyncFuture<Void>> futures = new ArrayList<>();
 
-        futures.add(async.call(new Callable<Void>() {
-            @Override
-            public Void call() throws Exception {
-                client.close();
-                return null;
-            }
-        }));
-
-        futures.add(async.call(new Callable<Void>() {
-            @Override
-            public Void call() throws Exception {
-                bulk.close();
-                return null;
-            }
+        futures.add(async.call((Callable<Void>) () -> {
+            client.close();
+            return null;
         }));
 
         return async.collectAndDiscard(futures);
@@ -93,10 +79,10 @@ public class Connection {
 
         final PutIndexTemplateRequestBuilder put = indices.preparePutTemplate(templateName);
 
-        put.setSettings(settings);
+        put.setSettings(type.getSettings());
         put.setTemplate(index.template());
 
-        for (final Map.Entry<String, Map<String, Object>> mapping : mappings.entrySet()) {
+        for (final Map.Entry<String, Map<String, Object>> mapping : type.getMappings().entrySet()) {
             put.addMapping(mapping.getKey(), mapping.getValue());
         }
 
@@ -153,13 +139,5 @@ public class Connection {
 
     public SearchScrollRequestBuilder prepareSearchScroll(String scrollId) {
         return client.prepareSearchScroll(scrollId);
-    }
-
-    public Client client() {
-        return client;
-    }
-
-    public BulkProcessor bulk() {
-        return bulk;
     }
 }

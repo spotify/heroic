@@ -29,47 +29,31 @@ import com.spotify.heroic.elasticsearch.index.IndexMapping;
 import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
 import dagger.Module;
 import dagger.Provides;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.elasticsearch.action.bulk.BulkItemResponse;
-import org.elasticsearch.action.bulk.BulkProcessor;
-import org.elasticsearch.action.bulk.BulkProcessor.Listener;
-import org.elasticsearch.action.bulk.BulkRequest;
-import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.common.unit.ByteSizeValue;
-import org.elasticsearch.common.unit.TimeValue;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Optional.ofNullable;
 
 @Module
 @Slf4j
 public class ConnectionModule {
     public static final String DEFAULT_CLUSTER_NAME = "elasticsearch";
-    public static final String DEFAULT_TEMPLATE_NAME = "heroic";
-    public static final int DEFAULT_CONCURRENT_BULK_REQUESTS = 5;
-    public static final int DEFAULT_FLUSH_INTERVAL = 1000;
-    public static final int DEFAULT_BULK_ACTIONS = 1000;
     public static final List<String> DEFAULT_SEEDS = ImmutableList.of("localhost");
     public static final Map<String, Object> DEFAULT_SETTINGS = ImmutableMap.of();
 
     private final String clusterName;
     private final List<String> seeds;
     private final boolean nodeClient;
-    private final int concurrentBulkRequests;
-    private final long flushInterval;
-    private final int bulkActions;
     private final IndexMapping index;
     private final String templateName;
     private final ClientSetup clientSetup;
@@ -77,20 +61,13 @@ public class ConnectionModule {
     @JsonCreator
     public ConnectionModule(
         @JsonProperty("clusterName") String clusterName, @JsonProperty("seeds") List<String> seeds,
-        @JsonProperty("nodeClient") Boolean nodeClient,
-        @JsonProperty("concurrentBulkRequests") Integer concurrentBulkRequests,
-        @JsonProperty("flushInterval") Integer flushInterval,
-        @JsonProperty("bulkActions") Integer bulkActions, @JsonProperty("index") IndexMapping index,
+        @JsonProperty("nodeClient") Boolean nodeClient, @JsonProperty("index") IndexMapping index,
         @JsonProperty("templateName") String templateName,
         @JsonProperty("client") ClientSetup clientSetup
     ) {
         this.clusterName = ofNullable(clusterName).orElse(DEFAULT_CLUSTER_NAME);
         this.seeds = ofNullable(seeds).orElse(DEFAULT_SEEDS);
         this.nodeClient = ofNullable(nodeClient).orElse(false);
-        this.concurrentBulkRequests =
-            ofNullable(concurrentBulkRequests).orElse(DEFAULT_CONCURRENT_BULK_REQUESTS);
-        this.flushInterval = ofNullable(flushInterval).orElse(DEFAULT_FLUSH_INTERVAL);
-        this.bulkActions = ofNullable(bulkActions).orElse(DEFAULT_BULK_ACTIONS);
         this.index = ofNullable(index).orElseGet(RotatingIndexMapping.builder()::build);
         this.templateName = templateName;
         this.clientSetup = ofNullable(clientSetup).orElseGet(this::defaultClientSetup);
@@ -108,7 +85,7 @@ public class ConnectionModule {
     }
 
     public static ConnectionModule buildDefault() {
-        return new ConnectionModule(null, null, null, null, null, null, null, null, null);
+        return new ConnectionModule(null, null, null, null, null, null);
     }
 
     @Provides
@@ -121,31 +98,16 @@ public class ConnectionModule {
         private final AsyncFramework async;
 
         public Managed<Connection> construct(
-            final String defaultTemplateName,
-            final Map<String, Map<String, Object>> suggestedMappings
-        ) {
-            return construct(defaultTemplateName, suggestedMappings, DEFAULT_SETTINGS);
-        }
-
-        public Managed<Connection> construct(
-            final String defaultTemplateName,
-            final Map<String, Map<String, Object>> suggestedMappings,
-            final Map<String, Object> settings
+            final String defaultTemplateName, final BackendType type
         ) {
             final String template = ofNullable(templateName).orElse(defaultTemplateName);
-            final Map<String, Map<String, Object>> mappings =
-                checkNotNull(suggestedMappings, "mappings must be configured");
 
             return async.managed(new ManagedSetup<Connection>() {
                 @Override
                 public AsyncFuture<Connection> construct() {
                     return async.call(() -> {
                         final Client client = clientSetup.setup();
-
-                        final BulkProcessor bulk = configureBulkProcessor(client);
-
-                        return new Connection(async, index, client, bulk, template, mappings,
-                            settings);
+                        return new Connection(async, index, client, template, type);
                     });
                 }
 
@@ -161,53 +123,6 @@ public class ConnectionModule {
                     futures.add(value.close());
 
                     return async.collectAndDiscard(futures);
-                }
-
-                private BulkProcessor configureBulkProcessor(final Client client) {
-                    final BulkProcessor.Builder builder =
-                        BulkProcessor.builder(client, new Listener() {
-                            @Override
-                            public void beforeBulk(long executionId, BulkRequest request) {
-                            }
-
-                            @Override
-                            public void afterBulk(
-                                long executionId, BulkRequest request, Throwable failure
-                            ) {
-                                log.error("Failed to write bulk", failure);
-                            }
-
-                            @SuppressFBWarnings(value = "UC_USELESS_VOID_METHOD",
-                                justification = "Might want to introduce instrumentation again")
-                            @Override
-                            public void afterBulk(
-                                long executionId, BulkRequest request, BulkResponse response
-                            ) {
-                                final int all = response.getItems().length;
-
-                                if (!response.hasFailures()) {
-                                    return;
-                                }
-
-                                final BulkItemResponse[] responses = response.getItems();
-                                int failures = 0;
-
-                                for (final BulkItemResponse r : responses) {
-                                    if (r.isFailed()) {
-                                        failures++;
-                                    }
-                                }
-                            }
-                        });
-
-                    builder.setConcurrentRequests(concurrentBulkRequests);
-                    builder.setFlushInterval(new TimeValue(flushInterval));
-                    builder.setBulkSize(new ByteSizeValue(-1)); // Disable bulk size
-                    builder.setBulkActions(bulkActions);
-
-                    final BulkProcessor bulkProcessor = builder.build();
-
-                    return bulkProcessor;
                 }
             });
         }
@@ -274,8 +189,8 @@ public class ConnectionModule {
         }
 
         public ConnectionModule build() {
-            return new ConnectionModule(clusterName, seeds, nodeClient, concurrentBulkRequests,
-                flushInterval, bulkActions, index, templateName, clientSetup);
+            return new ConnectionModule(clusterName, seeds, nodeClient, index, templateName,
+                clientSetup);
         }
     }
 };

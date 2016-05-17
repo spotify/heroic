@@ -33,11 +33,20 @@ import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.elasticsearch.AbstractElasticsearchBackend;
 import com.spotify.heroic.elasticsearch.BackendType;
-import com.spotify.heroic.elasticsearch.BackendTypeFactory;
 import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
 import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
+import com.spotify.heroic.filter.AndFilter;
+import com.spotify.heroic.filter.FalseFilter;
 import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.filter.HasTagFilter;
+import com.spotify.heroic.filter.MatchKeyFilter;
+import com.spotify.heroic.filter.MatchTagFilter;
+import com.spotify.heroic.filter.NotFilter;
+import com.spotify.heroic.filter.OrFilter;
+import com.spotify.heroic.filter.RegexFilter;
+import com.spotify.heroic.filter.StartsWithFilter;
+import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.metric.WriteResult;
@@ -60,8 +69,6 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
-import org.elasticsearch.action.bulk.BulkProcessor;
-import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexRequest.OpType;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
@@ -381,7 +388,7 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
                 }
             });
 
-            if (filter.getFilter() instanceof Filter.True) {
+            if (filter.getFilter() instanceof TrueFilter) {
                 query = fuzzy;
             } else {
                 query = QueryBuilders.filteredQuery(fuzzy, TAG_CTX.filter(filter.getFilter()));
@@ -453,7 +460,7 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
                 }
             });
 
-            if (filter instanceof Filter.True) {
+            if (filter.getFilter() instanceof TrueFilter) {
                 query = fuzzy;
             } else {
                 query = QueryBuilders.filteredQuery(fuzzy, SERIES_CTX.filter(filter.getFilter()));
@@ -542,8 +549,6 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
                 return async.failed(e);
             }
 
-            final BulkProcessor bulk = c.bulk();
-
             final List<AsyncFuture<WriteResult>> futures = new ArrayList<>();
 
             for (final String index : indices) {
@@ -556,9 +561,13 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
 
                 final Stopwatch watch = Stopwatch.createStarted();
 
-                bulk.add(new IndexRequest(index, Utils.TYPE_SERIES, seriesId)
-                    .source(xSeries)
-                    .opType(OpType.CREATE));
+                futures.add(bind(c
+                    .index(index, Utils.TYPE_SERIES)
+                    .setId(seriesId)
+                    .setSource(xSeries)
+                    .setOpType(OpType.CREATE)
+                    .execute()).directTransform(
+                    result -> WriteResult.of(watch.elapsed(TimeUnit.NANOSECONDS))));
 
                 try {
                     for (final Map.Entry<String, String> e : series.getTags().entrySet()) {
@@ -569,15 +578,16 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
                         Utils.buildTagDoc(suggest, rawSeries, e);
                         suggest.endObject();
 
-                        bulk.add(new IndexRequest(index, Utils.TYPE_TAG, suggestId)
-                            .source(suggest)
-                            .opType(OpType.CREATE));
+                        futures.add(bind(c
+                            .index(index, Utils.TYPE_TAG)
+                            .setId(suggestId)
+                            .setSource(suggest)
+                            .setOpType(OpType.CREATE)
+                            .execute()).directTransform(
+                            result -> WriteResult.of(watch.elapsed(TimeUnit.NANOSECONDS))));
                     }
-
-                    futures.add(
-                        async.resolved(WriteResult.of(watch.elapsed(TimeUnit.NANOSECONDS))));
                 } catch (final Exception e) {
-                    futures.add(async.failed(e));
+                    return async.failed(e);
                 }
             }
 
@@ -763,103 +773,93 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
             }
 
             public FilterBuilder filter(final Filter filter) {
-                if (filter instanceof Filter.True) {
-                    return matchAllFilter();
-                }
-
-                if (filter instanceof Filter.False) {
-                    return null;
-                }
-
-                if (filter instanceof Filter.And) {
-                    final Filter.And and = (Filter.And) filter;
-                    final List<FilterBuilder> filters = new ArrayList<>(and.terms().size());
-
-                    for (final Filter stmt : and.terms()) {
-                        filters.add(filter(stmt));
+                return filter.visit(new Filter.Visitor<FilterBuilder>() {
+                    @Override
+                    public FilterBuilder visitTrue(final TrueFilter filter) {
+                        return matchAllFilter();
                     }
 
-                    return andFilter(filters.toArray(new FilterBuilder[0]));
-                }
-
-                if (filter instanceof Filter.Or) {
-                    final Filter.Or or = (Filter.Or) filter;
-                    final List<FilterBuilder> filters = new ArrayList<>(or.terms().size());
-
-                    for (final Filter stmt : or.terms()) {
-                        filters.add(filter(stmt));
+                    @Override
+                    public FilterBuilder visitFalse(final FalseFilter filter) {
+                        return notFilter(matchAllFilter());
                     }
 
-                    return orFilter(filters.toArray(new FilterBuilder[0]));
-                }
+                    @Override
+                    public FilterBuilder visitAnd(final AndFilter and) {
+                        final List<FilterBuilder> filters = new ArrayList<>(and.terms().size());
 
-                if (filter instanceof Filter.Not) {
-                    final Filter.Not not = (Filter.Not) filter;
-                    return notFilter(filter(not.first()));
-                }
+                        for (final Filter stmt : and.terms()) {
+                            filters.add(filter(stmt));
+                        }
 
-                if (filter instanceof Filter.MatchTag) {
-                    final Filter.MatchTag matchTag = (Filter.MatchTag) filter;
+                        return andFilter(filters.toArray(new FilterBuilder[0]));
+                    }
 
-                    final BoolFilterBuilder nested = boolFilter();
-                    nested.must(termFilter(tagsKey, matchTag.first()));
-                    nested.must(termFilter(tagsValue, matchTag.second()));
-                    return nestedFilter(tags, nested);
-                }
+                    @Override
+                    public FilterBuilder visitOr(final OrFilter or) {
+                        final List<FilterBuilder> filters = new ArrayList<>(or.terms().size());
 
-                if (filter instanceof Filter.StartsWith) {
-                    final Filter.StartsWith startsWith = (Filter.StartsWith) filter;
+                        for (final Filter stmt : or.terms()) {
+                            filters.add(filter(stmt));
+                        }
 
-                    final BoolFilterBuilder nested = boolFilter();
-                    nested.must(termFilter(tagsKey, startsWith.first()));
-                    nested.must(prefixFilter(tagsValue, startsWith.second()));
-                    return nestedFilter(tags, nested);
-                }
+                        return orFilter(filters.toArray(new FilterBuilder[0]));
+                    }
 
-                if (filter instanceof Filter.Regex) {
-                    final Filter.Regex regex = (Filter.Regex) filter;
+                    @Override
+                    public FilterBuilder visitNot(final NotFilter not) {
+                        return notFilter(filter(not.first()));
+                    }
 
-                    final BoolFilterBuilder nested = boolFilter();
-                    nested.must(termFilter(tagsKey, regex.first()));
-                    nested.must(regexpFilter(tagsValue, regex.second()));
-                    return nestedFilter(tags, nested);
-                }
+                    @Override
+                    public FilterBuilder visitMatchTag(final MatchTagFilter matchTag) {
+                        final BoolFilterBuilder nested = boolFilter();
+                        nested.must(termFilter(tagsKey, matchTag.first()));
+                        nested.must(termFilter(tagsValue, matchTag.second()));
+                        return nestedFilter(tags, nested);
+                    }
 
-                if (filter instanceof Filter.HasTag) {
-                    final Filter.HasTag hasTag = (Filter.HasTag) filter;
-                    final TermFilterBuilder nested = termFilter(tagsKey, hasTag.first());
-                    return nestedFilter(tags, nested);
-                }
+                    @Override
+                    public FilterBuilder visitStartsWith(final StartsWithFilter startsWith) {
+                        final BoolFilterBuilder nested = boolFilter();
+                        nested.must(termFilter(tagsKey, startsWith.first()));
+                        nested.must(prefixFilter(tagsValue, startsWith.second()));
+                        return nestedFilter(tags, nested);
+                    }
 
-                if (filter instanceof Filter.MatchKey) {
-                    final Filter.MatchKey matchKey = (Filter.MatchKey) filter;
-                    return termFilter(seriesKey, matchKey.first());
-                }
+                    @Override
+                    public FilterBuilder visitRegex(final RegexFilter regex) {
+                        final BoolFilterBuilder nested = boolFilter();
+                        nested.must(termFilter(tagsKey, regex.first()));
+                        nested.must(regexpFilter(tagsValue, regex.second()));
+                        return nestedFilter(tags, nested);
+                    }
 
-                throw new IllegalArgumentException("Invalid filter statement: " + filter);
+                    @Override
+                    public FilterBuilder visitHasTag(final HasTagFilter hasTag) {
+                        final TermFilterBuilder nested = termFilter(tagsKey, hasTag.first());
+                        return nestedFilter(tags, nested);
+                    }
+
+                    @Override
+                    public FilterBuilder visitMatchKey(final MatchKeyFilter matchKey) {
+                        return termFilter(seriesKey, matchKey.first());
+                    }
+
+                    @Override
+                    public FilterBuilder defaultAction(final Filter filter) {
+                        throw new IllegalArgumentException(
+                            "Unsupported filter statement: " + filter);
+                    }
+                });
             }
         }
     }
 
-    public static BackendTypeFactory<SuggestBackend> factory() {
-        return () -> new BackendType<SuggestBackend>() {
-            @Override
-            public Map<String, Map<String, Object>> mappings() {
-                final Map<String, Map<String, Object>> mappings = new HashMap<>();
-                mappings.put("tag", loadJsonResource("v1/tag.json"));
-                mappings.put("series", loadJsonResource("v1/series.json"));
-                return mappings;
-            }
-
-            @Override
-            public Map<String, Object> settings() {
-                return ImmutableMap.of();
-            }
-
-            @Override
-            public Class<? extends SuggestBackend> type() {
-                return SuggestBackendV1.class;
-            }
-        };
+    public static BackendType backendType() {
+        final Map<String, Map<String, Object>> mappings = new HashMap<>();
+        mappings.put("tag", loadJsonResource("v1/tag.json"));
+        mappings.put("series", loadJsonResource("v1/series.json"));
+        return new BackendType(mappings, ImmutableMap.of(), SuggestBackendV1.class);
     }
 }

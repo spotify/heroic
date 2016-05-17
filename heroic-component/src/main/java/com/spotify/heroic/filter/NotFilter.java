@@ -19,34 +19,41 @@
  * under the License.
  */
 
-package com.spotify.heroic.filter.impl;
+package com.spotify.heroic.filter;
 
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.grammar.QueryParser;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 @Data
-@EqualsAndHashCode(of = {"OPERATOR", "tag"}, doNotUseGetters = true)
-public class HasTagFilterImpl implements Filter.HasTag {
-    public static final String OPERATOR = "+";
+@EqualsAndHashCode(of = {"OPERATOR", "filter"}, doNotUseGetters = true)
+public class NotFilter implements Filter.OneArg<Filter> {
+    public static final String OPERATOR = "not";
 
-    private final String tag;
+    private final Filter filter;
 
     @Override
     public boolean apply(Series series) {
-        return series.getTags().containsKey(tag);
+        return !filter.apply(series);
+    }
+
+    @Override
+    public <T> T visit(final Visitor<T> visitor) {
+        return visitor.visitNot(this);
     }
 
     @Override
     public String toString() {
-        return "[" + OPERATOR + ", " + tag + "]";
+        return "[" + OPERATOR + ", " + filter + "]";
     }
 
     @Override
-    public HasTagFilterImpl optimize() {
-        return this;
+    public Filter optimize() {
+        if (filter instanceof NotFilter) {
+            return ((NotFilter) filter).first().optimize();
+        }
+
+        return new NotFilter(filter.optimize());
     }
 
     @Override
@@ -55,26 +62,21 @@ public class HasTagFilterImpl implements Filter.HasTag {
     }
 
     @Override
-    public String first() {
-        return tag;
-    }
-
-    public static Filter of(String tag) {
-        return new HasTagFilterImpl(tag);
+    public Filter first() {
+        return filter;
     }
 
     @Override
     public int compareTo(Filter o) {
-        if (!Filter.HasTag.class.isAssignableFrom(o.getClass())) {
+        if (!NotFilter.class.equals(o.getClass())) {
             return operator().compareTo(o.operator());
         }
 
-        final Filter.HasTag other = (Filter.HasTag) o;
-        return FilterComparatorUtils.stringCompare(this.tag, other.first());
+        return filter.compareTo(o);
     }
 
     @Override
     public String toDSL() {
-        return "+" + QueryParser.escapeString(tag);
+        return "!(" + filter.toDSL() + ")";
     }
 }

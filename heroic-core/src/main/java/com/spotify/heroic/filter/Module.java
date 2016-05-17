@@ -24,18 +24,6 @@ package com.spotify.heroic.filter;
 import com.google.common.collect.Lists;
 import com.spotify.heroic.HeroicModule;
 import com.spotify.heroic.dagger.LoadingComponent;
-import com.spotify.heroic.filter.impl.AndFilterImpl;
-import com.spotify.heroic.filter.impl.FalseFilterImpl;
-import com.spotify.heroic.filter.impl.HasTagFilterImpl;
-import com.spotify.heroic.filter.impl.MatchKeyFilterImpl;
-import com.spotify.heroic.filter.impl.MatchTagFilterImpl;
-import com.spotify.heroic.filter.impl.NotFilterImpl;
-import com.spotify.heroic.filter.impl.OrFilterImpl;
-import com.spotify.heroic.filter.impl.RawFilterImpl;
-import com.spotify.heroic.filter.impl.RegexFilterImpl;
-import com.spotify.heroic.filter.impl.SerializerCommon;
-import com.spotify.heroic.filter.impl.StartsWithFilterImpl;
-import com.spotify.heroic.filter.impl.TrueFilterImpl;
 import dagger.Component;
 import eu.toolchain.serializer.SerializerFramework;
 
@@ -70,94 +58,94 @@ public class Module implements HeroicModule {
 
         @Override
         public void setup() {
-            c.register(AndFilterImpl.OPERATOR, Filter.And.class,
-                new MultiArgumentsFilterBase<Filter.And, Filter>(SerializerCommon.FILTER) {
+            c.register(AndFilter.OPERATOR, AndFilter.class,
+                new MultiArgumentsFilterBase<AndFilter, Filter>(SerializerCommon.FILTER) {
                     @Override
-                    public Filter.And build(Collection<Filter> filters) {
-                        return new AndFilterImpl(Lists.newArrayList(filters));
+                    public AndFilter build(Collection<Filter> filters) {
+                        return new AndFilter(Lists.newArrayList(filters));
                     }
                 }, filter);
 
-            c.register(OrFilterImpl.OPERATOR, Filter.Or.class,
-                new MultiArgumentsFilterBase<Filter.Or, Filter>(SerializerCommon.FILTER) {
+            c.register(OrFilter.OPERATOR, OrFilter.class,
+                new MultiArgumentsFilterBase<OrFilter, Filter>(SerializerCommon.FILTER) {
                     @Override
-                    public Filter.Or build(Collection<Filter> filters) {
-                        return new OrFilterImpl(Lists.newArrayList(filters));
+                    public OrFilter build(Collection<Filter> filters) {
+                        return new OrFilter(Lists.newArrayList(filters));
                     }
                 }, filter);
 
-            c.register(NotFilterImpl.OPERATOR, Filter.Not.class,
-                new OneArgumentFilterBase<Filter.Not, Filter>(SerializerCommon.FILTER) {
+            c.register(NotFilter.OPERATOR, NotFilter.class,
+                new OneArgumentFilterBase<NotFilter, Filter>(SerializerCommon.FILTER) {
                     @Override
-                    public Filter.Not build(Filter filter) {
-                        return new NotFilterImpl(filter);
+                    public NotFilter build(Filter filter) {
+                        return new NotFilter(filter);
                     }
                 }, filter);
 
-            c.register(MatchKeyFilterImpl.OPERATOR, Filter.MatchKey.class,
-                new OneArgumentFilterBase<Filter.MatchKey, String>(SerializerCommon.STRING) {
+            c.register(MatchKeyFilter.OPERATOR, MatchKeyFilter.class,
+                new OneArgumentFilterBase<MatchKeyFilter, String>(SerializerCommon.STRING) {
                     @Override
-                    public Filter.MatchKey build(String first) {
-                        return new MatchKeyFilterImpl(first);
+                    public MatchKeyFilter build(String first) {
+                        return new MatchKeyFilter(first);
                     }
                 }, s.string());
 
-            c.register(MatchTagFilterImpl.OPERATOR, Filter.MatchTag.class,
-                new TwoArgumentsFilterBase<Filter.MatchTag, String, String>(SerializerCommon.STRING,
+            c.register(MatchTagFilter.OPERATOR, MatchTagFilter.class,
+                new TwoArgumentsFilterBase<MatchTagFilter, String, String>(SerializerCommon.STRING,
                     SerializerCommon.STRING) {
                     @Override
-                    public Filter.MatchTag build(String first, String second) {
-                        return new MatchTagFilterImpl(first, second);
+                    public MatchTagFilter build(String first, String second) {
+                        return new MatchTagFilter(first, second);
                     }
                 }, s.string(), s.string());
 
-            c.register(HasTagFilterImpl.OPERATOR, Filter.HasTag.class,
-                new OneArgumentFilterBase<Filter.HasTag, String>(SerializerCommon.STRING) {
+            c.register(HasTagFilter.OPERATOR, HasTagFilter.class,
+                new OneArgumentFilterBase<HasTagFilter, String>(SerializerCommon.STRING) {
                     @Override
-                    public Filter.HasTag build(String first) {
-                        return new HasTagFilterImpl(first);
+                    public HasTagFilter build(String first) {
+                        return new HasTagFilter(first);
                     }
                 }, s.string());
 
-            c.register(StartsWithFilterImpl.OPERATOR, Filter.StartsWith.class,
-                new TwoArgumentsFilterBase<Filter.StartsWith, String, String>(
+            c.register(StartsWithFilter.OPERATOR, StartsWithFilter.class,
+                new TwoArgumentsFilterBase<StartsWithFilter, String, String>(
                     SerializerCommon.STRING, SerializerCommon.STRING) {
                     @Override
-                    public Filter.StartsWith build(String first, String second) {
-                        return new StartsWithFilterImpl(first, second);
+                    public StartsWithFilter build(String first, String second) {
+                        return new StartsWithFilter(first, second);
                     }
                 }, s.string(), s.string());
 
-            c.register(RegexFilterImpl.OPERATOR, Filter.Regex.class,
-                new TwoArgumentsFilterBase<Filter.Regex, String, String>(SerializerCommon.STRING,
+            c.register(RegexFilter.OPERATOR, RegexFilter.class,
+                new TwoArgumentsFilterBase<RegexFilter, String, String>(SerializerCommon.STRING,
                     SerializerCommon.STRING) {
                     @Override
-                    public Filter.Regex build(String first, String second) {
-                        return new RegexFilterImpl(first, second);
+                    public RegexFilter build(String first, String second) {
+                        return new RegexFilter(first, second);
                     }
                 }, s.string(), s.string());
 
-            c.register(TrueFilterImpl.OPERATOR, Filter.True.class,
-                new NoArgumentFilterBase<Filter.True>() {
+            c.register(TrueFilter.OPERATOR, TrueFilter.class,
+                new NoArgumentFilterBase<TrueFilter>() {
                     @Override
-                    public Filter.True build() {
-                        return TrueFilterImpl.get();
+                    public TrueFilter build() {
+                        return TrueFilter.get();
                     }
                 });
 
-            c.register(FalseFilterImpl.OPERATOR, Filter.False.class,
-                new NoArgumentFilterBase<Filter.False>() {
+            c.register(FalseFilter.OPERATOR, FalseFilter.class,
+                new NoArgumentFilterBase<FalseFilter>() {
                     @Override
-                    public Filter.False build() {
-                        return FalseFilterImpl.get();
+                    public FalseFilter build() {
+                        return FalseFilter.get();
                     }
                 });
 
-            c.register(RawFilterImpl.OPERATOR, Filter.Raw.class,
-                new OneArgumentFilterBase<Filter.Raw, String>(SerializerCommon.STRING) {
+            c.register(RawFilter.OPERATOR, RawFilter.class,
+                new OneArgumentFilterBase<RawFilter, String>(SerializerCommon.STRING) {
                     @Override
-                    public Filter.Raw build(String first) {
-                        return new RawFilterImpl(first);
+                    public RawFilter build(String first) {
+                        return new RawFilter(first);
                     }
                 }, s.string());
         }

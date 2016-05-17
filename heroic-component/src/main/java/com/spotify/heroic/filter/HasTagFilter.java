@@ -19,36 +19,37 @@
  * under the License.
  */
 
-package com.spotify.heroic.filter.impl;
+package com.spotify.heroic.filter;
 
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.grammar.QueryParser;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 @Data
-@EqualsAndHashCode(of = {"OPERATOR"}, doNotUseGetters = true)
-public class FalseFilterImpl implements Filter.False {
-    public static final String OPERATOR = "false";
+@EqualsAndHashCode(of = {"OPERATOR", "tag"}, doNotUseGetters = true)
+public class HasTagFilter implements Filter.OneArg<String> {
+    public static final String OPERATOR = "+";
 
-    private static final Filter.False instance = new FalseFilterImpl();
+    private final String tag;
 
     @Override
     public boolean apply(Series series) {
-        return false;
+        return series.getTags().containsKey(tag);
     }
 
-    public static Filter.False get() {
-        return instance;
+    @Override
+    public <T> T visit(final Visitor<T> visitor) {
+        return visitor.visitHasTag(this);
     }
 
     @Override
     public String toString() {
-        return "[" + OPERATOR + "]";
+        return "[" + OPERATOR + ", " + tag + "]";
     }
 
     @Override
-    public FalseFilterImpl optimize() {
+    public HasTagFilter optimize() {
         return this;
     }
 
@@ -58,21 +59,26 @@ public class FalseFilterImpl implements Filter.False {
     }
 
     @Override
-    public Filter invert() {
-        return TrueFilterImpl.get();
+    public String first() {
+        return tag;
+    }
+
+    public static Filter of(String tag) {
+        return new HasTagFilter(tag);
     }
 
     @Override
     public int compareTo(Filter o) {
-        if (!Filter.False.class.isAssignableFrom(o.getClass())) {
+        if (!HasTagFilter.class.isAssignableFrom(o.getClass())) {
             return operator().compareTo(o.operator());
         }
 
-        return 0;
+        final HasTagFilter other = (HasTagFilter) o;
+        return FilterComparatorUtils.stringCompare(this.tag, other.first());
     }
 
     @Override
     public String toDSL() {
-        return "false";
+        return "+" + QueryParser.escapeString(tag);
     }
 }

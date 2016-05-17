@@ -30,7 +30,7 @@ import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.FilterFactory;
+import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metric.BackendKeyFilter;
 import com.spotify.heroic.shell.task.AnalyticsDumpFetchSeries;
@@ -240,12 +240,12 @@ public final class Tasks {
     }
 
     public static Filter setupFilter(
-        FilterFactory filters, QueryParser parser, TaskQueryParameters params
+        QueryParser parser, TaskQueryParameters params
     ) {
         final List<String> query = params.getQuery();
 
         if (query.isEmpty()) {
-            return filters.t();
+            return TrueFilter.get();
         }
 
         return parser.parseFilter(StringUtils.join(query, " "));
@@ -369,9 +369,9 @@ public final class Tasks {
     }
 
     public static RangeFilter setupRangeFilter(
-        FilterFactory filters, QueryParser parser, TaskQueryParameters params
+        QueryParser parser, TaskQueryParameters params
     ) {
-        final Filter filter = setupFilter(filters, parser, params);
+        final Filter filter = setupFilter(parser, params);
         return new RangeFilter(filter, params.getRange(), params.getLimit());
     }
 

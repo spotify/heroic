@@ -24,7 +24,6 @@ package com.spotify.heroic.shell.task;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.dagger.CoreComponent;
-import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.shell.ShellIO;
@@ -50,13 +49,11 @@ import java.util.Optional;
 public class MetadataCount implements ShellTask {
     private final MetadataManager metadata;
     private final QueryParser parser;
-    private final FilterFactory filters;
 
     @Inject
-    public MetadataCount(MetadataManager metadata, QueryParser parser, FilterFactory filters) {
+    public MetadataCount(MetadataManager metadata, QueryParser parser) {
         this.metadata = metadata;
         this.parser = parser;
-        this.filters = filters;
     }
 
     @Override
@@ -68,7 +65,7 @@ public class MetadataCount implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
+        final RangeFilter filter = Tasks.setupRangeFilter(parser, params);
 
         return metadata
             .useOptionalGroup(params.group)

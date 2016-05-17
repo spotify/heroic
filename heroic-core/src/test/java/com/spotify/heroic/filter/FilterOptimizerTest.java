@@ -3,48 +3,39 @@ package com.spotify.heroic.filter;
 import com.google.common.collect.ImmutableList;
 import org.junit.Assert;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeSet;
 
 public class FilterOptimizerTest {
-    private static final FilterFactory f = new CoreFilterFactory();
+    private final Filter a = new HasTagFilter("a");
+    private final Filter b = new HasTagFilter("b");
+    private final Filter c = new HasTagFilter("c");
+    private final Filter tag1a = new MatchTagFilter("foo", "a");
+    private final Filter tag1b = new MatchTagFilter("foo", "b");
 
-    public static Filter mockFilter() {
-        final Filter f = Mockito.mock(Filter.class);
-        Mockito.when(f.optimize()).thenReturn(f);
-        return f;
-    }
-
-    private final Filter a = f.hasTag("a");
-    private final Filter b = f.hasTag("b");
-    private final Filter c = f.hasTag("c");
-    private final Filter tag1a = f.matchTag("foo", "a");
-    private final Filter tag1b = f.matchTag("foo", "b");
-
-    private final Filter s1a = f.startsWith("foo", "abc");
-    private final Filter s1b = f.startsWith("foo", "abcdef");
+    private final Filter s1a = new StartsWithFilter("foo", "abc");
+    private final Filter s1b = new StartsWithFilter("foo", "abcdef");
 
     @Test
     public void optimizeAndTest() {
-        final Filter ref = f.and(a, b).optimize();
+        final Filter ref = AndFilter.of(a, b).optimize();
         Assert.assertTrue(ref instanceof Filter.MultiArgs);
         Assert.assertEquals(2, ((Filter.MultiArgs<?>) ref).terms().size());
-        Assert.assertEquals(ref, f.and(a, b, b).optimize());
-        Assert.assertEquals(ref, f.and(b, a).optimize());
-        Assert.assertEquals(ref, f.and(b, f.and(a, b)).optimize());
+        Assert.assertEquals(ref, AndFilter.of(a, b, b).optimize());
+        Assert.assertEquals(ref, AndFilter.of(b, a).optimize());
+        Assert.assertEquals(ref, AndFilter.of(b, AndFilter.of(a, b)).optimize());
     }
 
     @Test
     public void optimizeOrTest() {
-        final Filter ref = f.or(a, b).optimize();
+        final Filter ref = OrFilter.of(a, b).optimize();
         Assert.assertTrue(ref instanceof Filter.MultiArgs);
         Assert.assertEquals(2, ((Filter.MultiArgs<?>) ref).terms().size());
-        Assert.assertEquals(ref, f.or(a, b, b).optimize());
-        Assert.assertEquals(ref, f.or(b, a).optimize());
-        Assert.assertEquals(ref, f.or(b, f.or(a, b)).optimize());
+        Assert.assertEquals(ref, OrFilter.of(a, b, b).optimize());
+        Assert.assertEquals(ref, OrFilter.of(b, a).optimize());
+        Assert.assertEquals(ref, OrFilter.of(b, OrFilter.of(a, b)).optimize());
     }
 
     @Test
@@ -63,17 +54,17 @@ public class FilterOptimizerTest {
 
     @Test
     public void testOrFlatten() {
-        Assert.assertEquals(f.or(a, b, c), f.or(a, f.or(b, c)).optimize());
+        Assert.assertEquals(OrFilter.of(a, b, c), OrFilter.of(a, OrFilter.of(b, c)).optimize());
     }
 
     @Test
     public void testAndFlatten() {
-        Assert.assertEquals(f.and(a, b, c), f.and(a, f.and(b, c)).optimize());
+        Assert.assertEquals(AndFilter.of(a, b, c), AndFilter.of(a, AndFilter.of(b, c)).optimize());
     }
 
     @Test
     public void optimizeNotNot() {
-        Assert.assertEquals(a, f.not(f.not(a)).optimize());
+        Assert.assertEquals(a, new NotFilter(new NotFilter(a)).optimize());
     }
 
     /**
@@ -81,7 +72,7 @@ public class FilterOptimizerTest {
      */
     @Test
     public void testAndContradiction1() throws Exception {
-        Assert.assertEquals(f.f(), f.and(a, f.not(a)).optimize());
+        Assert.assertEquals(FalseFilter.get(), AndFilter.of(a, new NotFilter(a)).optimize());
     }
 
     /**
@@ -89,7 +80,7 @@ public class FilterOptimizerTest {
      */
     @Test
     public void testAndContradiction2() throws Exception {
-        Assert.assertEquals(f.f(), f.and(tag1a, tag1b).optimize());
+        Assert.assertEquals(FalseFilter.get(), AndFilter.of(tag1a, tag1b).optimize());
     }
 
     /**
@@ -97,16 +88,16 @@ public class FilterOptimizerTest {
      */
     @Test
     public void testOrTautology1() throws Exception {
-        Assert.assertEquals(f.t(), f.or(a, f.not(a)).optimize());
+        Assert.assertEquals(TrueFilter.get(), OrFilter.of(a, new NotFilter(a)).optimize());
     }
 
     @Test
     public void testAndStartsWith() {
-        Assert.assertEquals(s1b, f.and(s1a, s1b).optimize());
+        Assert.assertEquals(s1b, AndFilter.of(s1a, s1b).optimize());
     }
 
     @Test
     public void testOrStartsWith() {
-        Assert.assertEquals(s1a, f.or(s1a, s1b).optimize());
+        Assert.assertEquals(s1a, OrFilter.of(s1a, s1b).optimize());
     }
 }

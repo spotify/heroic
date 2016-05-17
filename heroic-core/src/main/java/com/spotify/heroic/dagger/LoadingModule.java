@@ -37,10 +37,8 @@ import com.spotify.heroic.common.CoreJavaxRestFramework;
 import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Series_Serializer;
-import com.spotify.heroic.filter.CoreFilterFactory;
 import com.spotify.heroic.filter.CoreFilterModifier;
 import com.spotify.heroic.filter.CoreFilterRegistry;
-import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.filter.FilterModifier;
 import com.spotify.heroic.filter.FilterRegistry;
 import com.spotify.heroic.filter.FilterSerializer;
@@ -141,14 +139,8 @@ public class LoadingModule {
 
     @Provides
     @LoadingScope
-    FilterFactory coreFilterFactory() {
-        return new CoreFilterFactory();
-    }
-
-    @Provides
-    @LoadingScope
-    FilterModifier coreFilterModifier(final FilterFactory factory) {
-        return new CoreFilterModifier(factory);
+    FilterModifier coreFilterModifier() {
+        return new CoreFilterModifier();
     }
 
     @Provides

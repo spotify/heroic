@@ -34,12 +34,19 @@ public interface Filter extends Comparable<Filter> {
      */
     boolean apply(Series series);
 
+    <T> T visit(Visitor<T> visitor);
+
+    Filter optimize();
+
+    String operator();
+
+    String toDSL();
+
     interface MultiArgs<A> extends Filter {
         List<A> terms();
     }
 
     interface NoArg extends Filter {
-        Filter invert();
     }
 
     interface OneArg<A> extends Filter {
@@ -52,47 +59,51 @@ public interface Filter extends Comparable<Filter> {
         B second();
     }
 
-    /**
-     * Concrete interfaces for filters.
-     * <p>
-     * These are necessary when writing converters that typically check instance types.
-     **/
-    interface Or extends MultiArgs<Filter> {
+    interface Visitor<T> {
+        default T visitStartsWith(StartsWithFilter filter) {
+            return defaultAction(filter);
+        }
+
+        default T visitHasTag(HasTagFilter filter) {
+            return defaultAction(filter);
+        }
+
+        default T visitNot(NotFilter filter) {
+            return defaultAction(filter);
+        }
+
+        default T visitTrue(TrueFilter filter) {
+            return defaultAction(filter);
+        }
+
+        default T visitFalse(FalseFilter filter) {
+            return defaultAction(filter);
+        }
+
+        default T visitMatchTag(MatchTagFilter filter) {
+            return defaultAction(filter);
+        }
+
+        default T visitMatchKey(MatchKeyFilter filter) {
+            return defaultAction(filter);
+        }
+
+        default T visitAnd(AndFilter filter) {
+            return defaultAction(filter);
+        }
+
+        default T visitOr(OrFilter filter) {
+            return defaultAction(filter);
+        }
+
+        default T visitRaw(RawFilter filter) {
+            return defaultAction(filter);
+        }
+
+        default T visitRegex(RegexFilter filter) {
+            return defaultAction(filter);
+        }
+
+        T defaultAction(Filter filter);
     }
-
-    interface And extends MultiArgs<Filter> {
-    }
-
-    interface True extends NoArg {
-    }
-
-    interface False extends NoArg {
-    }
-
-    interface HasTag extends OneArg<String> {
-    }
-
-    interface MatchKey extends OneArg<String> {
-    }
-
-    interface MatchTag extends TwoArgs<String, String> {
-    }
-
-    interface Not extends OneArg<Filter> {
-    }
-
-    interface StartsWith extends TwoArgs<String, String> {
-    }
-
-    interface Regex extends TwoArgs<String, String> {
-    }
-
-    interface Raw extends OneArg<String> {
-    }
-
-    Filter optimize();
-
-    String operator();
-
-    String toDSL();
 }

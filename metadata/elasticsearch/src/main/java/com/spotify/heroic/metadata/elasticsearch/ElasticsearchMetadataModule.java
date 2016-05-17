@@ -35,7 +35,6 @@ import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.ModuleId;
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.elasticsearch.BackendType;
-import com.spotify.heroic.elasticsearch.BackendTypeFactory;
 import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.ConnectionModule;
 import com.spotify.heroic.elasticsearch.DefaultRateLimitedCache;
@@ -60,6 +59,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Optional.empty;
@@ -81,14 +81,13 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
     private final Double writesPerSecond;
     private final Long writeCacheDurationMinutes;
 
-    private static BackendTypeFactory<MetadataBackend> defaultSetup = MetadataBackendKV.factory();
+    private static Supplier<BackendType> defaultSetup = MetadataBackendKV::backendType;
 
-    private static final Map<String, BackendTypeFactory<MetadataBackend>> backendTypes =
-        new HashMap<>();
+    private static final Map<String, Supplier<BackendType>> backendTypes = new HashMap<>();
 
     static {
         backendTypes.put("kv", defaultSetup);
-        backendTypes.put("v1", MetadataBackendV1.factory());
+        backendTypes.put("v1", MetadataBackendV1::backendType);
     }
 
     public static List<String> types() {
@@ -96,7 +95,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
     }
 
     @JsonIgnore
-    private final BackendTypeFactory<MetadataBackend> backendTypeBuilder;
+    private final Supplier<BackendType> backendTypeBuilder;
 
     @JsonCreator
     public ElasticsearchMetadataModule(
@@ -125,7 +124,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
 
     @Override
     public Exposed module(final PrimaryComponent primary, final Depends depends, final String id) {
-        final BackendType<MetadataBackend> backendType = backendTypeBuilder.setup();
+        final BackendType backendType = backendTypeBuilder.get();
 
         return DaggerElasticsearchMetadataModule_C
             .builder()
@@ -154,7 +153,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
 
         private final Groups groups;
         private final String templateName;
-        private final BackendType<MetadataBackend> backendType;
+        private final BackendType backendType;
         private final Double writesPerSecond;
         private final Long writeCacheDurationMinutes;
 
@@ -167,7 +166,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
         @Provides
         @ElasticsearchScope
         public Managed<Connection> connection(ConnectionModule.Provider provider) {
-            return provider.construct(templateName, backendType.mappings());
+            return provider.construct(templateName, backendType);
         }
 
         @Provides
@@ -198,7 +197,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
         @Provides
         @ElasticsearchScope
         MetadataBackend backend(Lazy<MetadataBackendKV> kv, Lazy<MetadataBackendV1> v1) {
-            if (backendType.type().equals(MetadataBackendV1.class)) {
+            if (backendType.getType().equals(MetadataBackendV1.class)) {
                 return v1.get();
             }
 
@@ -210,7 +209,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
         LifeCycle life(
             LifeCycleManager manager, Lazy<MetadataBackendKV> kv, Lazy<MetadataBackendV1> v1
         ) {
-            if (backendType.type().equals(MetadataBackendV1.class)) {
+            if (backendType.getType().equals(MetadataBackendV1.class)) {
                 return manager.build(v1.get());
             }
 

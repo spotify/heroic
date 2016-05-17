@@ -19,33 +19,40 @@
  * under the License.
  */
 
-package com.spotify.heroic.filter.impl;
+package com.spotify.heroic.filter;
 
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.grammar.QueryParser;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 @Data
-@EqualsAndHashCode(of = {"OPERATOR", "value"}, doNotUseGetters = true)
-public class MatchKeyFilterImpl implements Filter.MatchKey {
-    public static final String OPERATOR = "key";
+@EqualsAndHashCode(of = {"OPERATOR"}, doNotUseGetters = true)
+public class TrueFilter implements Filter.NoArg {
+    public static final String OPERATOR = "true";
 
-    private final String value;
+    private static final TrueFilter instance = new TrueFilter();
+
+    public static TrueFilter get() {
+        return instance;
+    }
 
     @Override
     public boolean apply(Series series) {
-        return series.getKey().equals(value);
+        return true;
+    }
+
+    @Override
+    public <T> T visit(final Visitor<T> visitor) {
+        return visitor.visitTrue(this);
     }
 
     @Override
     public String toString() {
-        return "[" + OPERATOR + ", " + value + "]";
+        return "[" + OPERATOR + "]";
     }
 
     @Override
-    public MatchKeyFilterImpl optimize() {
+    public TrueFilter optimize() {
         return this;
     }
 
@@ -55,22 +62,16 @@ public class MatchKeyFilterImpl implements Filter.MatchKey {
     }
 
     @Override
-    public String first() {
-        return value;
-    }
-
-    @Override
     public int compareTo(Filter o) {
-        if (!Filter.MatchKey.class.isAssignableFrom(o.getClass())) {
+        if (!TrueFilter.class.equals(o.getClass())) {
             return operator().compareTo(o.operator());
         }
 
-        final Filter.MatchKey other = (Filter.MatchKey) o;
-        return FilterComparatorUtils.stringCompare(first(), other.first());
+        return 0;
     }
 
     @Override
     public String toDSL() {
-        return "$key = " + QueryParser.escapeString(value);
+        return "false";
     }
 }

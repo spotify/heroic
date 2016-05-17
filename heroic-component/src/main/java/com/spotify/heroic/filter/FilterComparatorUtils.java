@@ -19,7 +19,7 @@
  * under the License.
  */
 
-package com.spotify.heroic.filter.impl;
+package com.spotify.heroic.filter;
 
 import java.util.Iterator;
 import java.util.List;

@@ -27,7 +27,6 @@ import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.async.AsyncObserver;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.BackendKeyFilter;
@@ -70,7 +69,6 @@ public class DataMigrate implements ShellTask {
     public static final long ALLOWED_ERRORS = 5;
     public static final long ALLOWED_FAILED_KEYS = 100;
 
-    private final FilterFactory filters;
     private final QueryParser parser;
     private final MetricManager metric;
     private final AsyncFramework async;
@@ -78,10 +76,9 @@ public class DataMigrate implements ShellTask {
 
     @Inject
     public DataMigrate(
-        FilterFactory filters, QueryParser parser, MetricManager metric, AsyncFramework async,
+        QueryParser parser, MetricManager metric, AsyncFramework async,
         @Named("application/json") ObjectMapper mapper
     ) {
-        this.filters = filters;
         this.parser = parser;
         this.metric = metric;
         this.async = async;
@@ -101,7 +98,7 @@ public class DataMigrate implements ShellTask {
 
         params.fetchSize.ifPresent(options::fetchSize);
 
-        final Filter filter = Tasks.setupFilter(filters, parser, params);
+        final Filter filter = Tasks.setupFilter(parser, params);
         final MetricBackend from = metric.useOptionalGroup(params.from);
         final MetricBackend to = metric.useOptionalGroup(params.to);
 

@@ -19,12 +19,11 @@
  * under the License.
  */
 
-package com.spotify.heroic.filter.impl;
+package com.spotify.heroic.filter;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.filter.Filter;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.apache.commons.lang3.StringUtils;
@@ -38,7 +37,7 @@ import java.util.TreeSet;
 
 @Data
 @EqualsAndHashCode(of = {"OPERATOR", "statements"}, doNotUseGetters = true)
-public class OrFilterImpl implements Filter.Or {
+public class OrFilter implements Filter.MultiArgs<Filter> {
     public static final String OPERATOR = "or";
 
     private final List<Filter> statements;
@@ -46,6 +45,11 @@ public class OrFilterImpl implements Filter.Or {
     @Override
     public boolean apply(Series series) {
         return statements.stream().anyMatch(s -> s.apply(series));
+    }
+
+    @Override
+    public <T> T visit(final Visitor<T> visitor) {
+        return visitor.visitOr(this);
     }
 
     @Override
@@ -63,16 +67,16 @@ public class OrFilterImpl implements Filter.Or {
                 continue;
             }
 
-            if (o instanceof Filter.Or) {
-                result.addAll(((Filter.Or) o).terms());
+            if (o instanceof OrFilter) {
+                result.addAll(((OrFilter) o).terms());
                 continue;
             }
 
-            if (o instanceof Filter.Not) {
-                final Filter.Not not = (Filter.Not) o;
+            if (o instanceof NotFilter) {
+                final NotFilter not = (NotFilter) o;
 
-                if (not.first() instanceof Filter.And) {
-                    result.addAll(collapseNotAnd((Filter.And) not.first()));
+                if (not.first() instanceof AndFilter) {
+                    result.addAll(collapseNotAnd((AndFilter) not.first()));
                     continue;
                 }
             }
@@ -83,9 +87,9 @@ public class OrFilterImpl implements Filter.Or {
         return result;
     }
 
-    private static List<Filter> collapseNotAnd(Filter.And first) {
+    private static List<Filter> collapseNotAnd(AndFilter first) {
         return ImmutableList.copyOf(
-            first.terms().stream().map(t -> new NotFilterImpl(t).optimize()).iterator());
+            first.terms().stream().map(t -> new NotFilter(t).optimize()).iterator());
     }
 
     private static Filter optimize(SortedSet<Filter> statements) {
@@ -93,27 +97,27 @@ public class OrFilterImpl implements Filter.Or {
 
         root:
         for (final Filter f : statements) {
-            if (f instanceof Filter.Not) {
-                final Filter.Not not = (Filter.Not) f;
+            if (f instanceof NotFilter) {
+                final NotFilter not = (NotFilter) f;
 
                 if (statements.contains(not.first())) {
-                    return TrueFilterImpl.get();
+                    return TrueFilter.get();
                 }
 
                 result.add(f);
                 continue;
             }
 
-            if (f instanceof Filter.StartsWith) {
-                final Filter.StartsWith outer = (Filter.StartsWith) f;
+            if (f instanceof StartsWithFilter) {
+                final StartsWithFilter outer = (StartsWithFilter) f;
 
                 for (final Filter inner : statements) {
                     if (inner.equals(outer)) {
                         continue;
                     }
 
-                    if (inner instanceof Filter.StartsWith) {
-                        final Filter.StartsWith starts = (Filter.StartsWith) inner;
+                    if (inner instanceof StartsWithFilter) {
+                        final StartsWithFilter starts = (StartsWithFilter) inner;
 
                         if (!outer.first().equals(starts.first())) {
                             continue;
@@ -134,14 +138,14 @@ public class OrFilterImpl implements Filter.Or {
         }
 
         if (result.isEmpty()) {
-            return TrueFilterImpl.get();
+            return TrueFilter.get();
         }
 
         if (result.size() == 1) {
             return result.iterator().next();
         }
 
-        return new OrFilterImpl(new ArrayList<>(result));
+        return new OrFilter(new ArrayList<>(result));
     }
 
     @Override
@@ -171,16 +175,16 @@ public class OrFilterImpl implements Filter.Or {
     }
 
     public static Filter of(Filter... filters) {
-        return new OrFilterImpl(Arrays.asList(filters));
+        return new OrFilter(Arrays.asList(filters));
     }
 
     @Override
     public int compareTo(Filter o) {
-        if (!Filter.Or.class.isAssignableFrom(o.getClass())) {
+        if (!OrFilter.class.equals(o.getClass())) {
             return operator().compareTo(o.operator());
         }
 
-        final Filter.Or other = (Filter.Or) o;
+        final OrFilter other = (OrFilter) o;
         return FilterComparatorUtils.compareLists(terms(), other.terms());
     }
 

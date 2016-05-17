@@ -29,7 +29,7 @@ import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.FilterFactory;
+import com.spotify.heroic.filter.TrueFilter;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
@@ -50,17 +50,14 @@ import java.util.function.Supplier;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class MetadataResource {
-    private final FilterFactory filters;
     private final JavaxRestFramework httpAsync;
     private final ClusterManager cluster;
     private final MetadataResourceCache cache;
 
     @Inject
     public MetadataResource(
-        FilterFactory filters, JavaxRestFramework httpAsync, ClusterManager cluster,
-        MetadataResourceCache cache
+        JavaxRestFramework httpAsync, ClusterManager cluster, MetadataResourceCache cache
     ) {
-        this.filters = filters;
         this.httpAsync = httpAsync;
         this.cluster = cluster;
         this.cache = cache;
@@ -187,7 +184,7 @@ public class MetadataResource {
         final Supplier<Optional<QueryDateRange>> optionalRange, final Supplier<OptionalLimit> limit
     ) {
         final long now = System.currentTimeMillis();
-        final Filter filter = optionalFilter.get().orElseGet(filters::t);
+        final Filter filter = optionalFilter.get().orElseGet(TrueFilter::get);
         final DateRange range =
             optionalRange.get().map(r -> r.buildDateRange(now)).orElseGet(() -> {
                 return new DateRange(now - TimeUnit.MILLISECONDS.convert(7, TimeUnit.DAYS), now);

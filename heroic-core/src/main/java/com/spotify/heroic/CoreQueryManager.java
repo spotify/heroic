@@ -36,7 +36,7 @@ import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.FilterFactory;
+import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.grammar.DefaultScope;
 import com.spotify.heroic.grammar.Expression;
 import com.spotify.heroic.grammar.FunctionExpression;
@@ -74,7 +74,6 @@ public class CoreQueryManager implements QueryManager {
     private final Set<String> features;
     private final AsyncFramework async;
     private final ClusterManager cluster;
-    private final FilterFactory filters;
     private final QueryParser parser;
     private final QueryCache queryCache;
     private final AggregationFactory aggregations;
@@ -82,13 +81,12 @@ public class CoreQueryManager implements QueryManager {
     @Inject
     public CoreQueryManager(
         @Named("features") final Set<String> features, final AsyncFramework async,
-        final ClusterManager cluster, final FilterFactory filters, final QueryParser parser,
+        final ClusterManager cluster, final QueryParser parser,
         final QueryCache queryCache, final AggregationFactory aggregations
     ) {
         this.features = features;
         this.async = async;
         this.cluster = cluster;
-        this.filters = filters;
         this.parser = parser;
         this.queryCache = queryCache;
         this.aggregations = aggregations;
@@ -123,7 +121,7 @@ public class CoreQueryManager implements QueryManager {
 
     @Override
     public QueryBuilder newQuery() {
-        return new QueryBuilder(filters);
+        return new QueryBuilder();
     }
 
     @Override
@@ -196,7 +194,7 @@ public class CoreQueryManager implements QueryManager {
             final long now = System.currentTimeMillis();
             final DateRange range = buildShiftedRange(rawRange, cadence.toMilliseconds(), now);
 
-            final Filter filter = q.getFilter().orElseGet(filters::t);
+            final Filter filter = q.getFilter().orElseGet(TrueFilter::get);
 
             final AggregationContext context = new DefaultAggregationContext(cadence);
             final AggregationInstance root = aggregation.apply(context);

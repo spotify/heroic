@@ -23,12 +23,12 @@
       <artifactId>heroic-parser</artifactId>
     </dependency>
     <dependency>
-      <groupId>eu.toolchain.async</groupId>
-      <artifactId>tiny-async-core</artifactId>
-    </dependency>
-    <dependency>
       <groupId>eu.toolchain.serializer</groupId>
       <artifactId>tiny-serializer-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>eu.toolchain.async</groupId>
+      <artifactId>tiny-async-core</artifactId>
     </dependency>
     <dependency>
       <groupId>org.projectlombok</groupId>

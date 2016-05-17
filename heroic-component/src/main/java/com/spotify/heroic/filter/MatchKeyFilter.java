@@ -19,35 +19,37 @@
  * under the License.
  */
 
-package com.spotify.heroic.filter.impl;
+package com.spotify.heroic.filter;
 
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 @Data
-@EqualsAndHashCode(of = {"OPERATOR", "tag", "value"}, doNotUseGetters = true)
-public class MatchTagFilterImpl implements Filter.MatchTag {
-    public static final String OPERATOR = "=";
+@EqualsAndHashCode(of = {"OPERATOR", "value"}, doNotUseGetters = true)
+public class MatchKeyFilter implements Filter.OneArg<String> {
+    public static final String OPERATOR = "key";
 
-    private final String tag;
     private final String value;
 
     @Override
     public boolean apply(Series series) {
-        final String value;
-        return (value = series.getTags().get(tag)) != null && value.equals(this.value);
+        return series.getKey().equals(value);
+    }
+
+    @Override
+    public <T> T visit(final Visitor<T> visitor) {
+        return visitor.visitMatchKey(this);
     }
 
     @Override
     public String toString() {
-        return "[" + OPERATOR + ", " + tag + ", " + value + "]";
+        return "[" + OPERATOR + ", " + value + "]";
     }
 
     @Override
-    public MatchTagFilterImpl optimize() {
+    public MatchKeyFilter optimize() {
         return this;
     }
 
@@ -58,32 +60,21 @@ public class MatchTagFilterImpl implements Filter.MatchTag {
 
     @Override
     public String first() {
-        return tag;
-    }
-
-    @Override
-    public String second() {
         return value;
     }
 
     @Override
     public int compareTo(Filter o) {
-        if (!Filter.MatchTag.class.isAssignableFrom(o.getClass())) {
+        if (!MatchKeyFilter.class.equals(o.getClass())) {
             return operator().compareTo(o.operator());
         }
 
-        final Filter.MatchTag other = (Filter.MatchTag) o;
-        final int first = FilterComparatorUtils.stringCompare(first(), other.first());
-
-        if (first != 0) {
-            return first;
-        }
-
-        return FilterComparatorUtils.stringCompare(second(), other.second());
+        final MatchKeyFilter other = (MatchKeyFilter) o;
+        return FilterComparatorUtils.stringCompare(first(), other.first());
     }
 
     @Override
     public String toDSL() {
-        return QueryParser.escapeString(tag) + " = " + QueryParser.escapeString(value);
+        return "$key = " + QueryParser.escapeString(value);
     }
 }

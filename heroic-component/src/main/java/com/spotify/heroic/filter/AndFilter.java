@@ -19,12 +19,11 @@
  * under the License.
  */
 
-package com.spotify.heroic.filter.impl;
+package com.spotify.heroic.filter;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.filter.Filter;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.apache.commons.lang3.StringUtils;
@@ -38,7 +37,7 @@ import java.util.TreeSet;
 
 @Data
 @EqualsAndHashCode(of = {"OPERATOR", "statements"}, doNotUseGetters = true)
-public class AndFilterImpl implements Filter.And {
+public class AndFilter implements Filter.MultiArgs<Filter> {
     public static final String OPERATOR = "and";
 
     private final List<Filter> statements;
@@ -46,6 +45,11 @@ public class AndFilterImpl implements Filter.And {
     @Override
     public boolean apply(Series series) {
         return statements.stream().allMatch(s -> s.apply(series));
+    }
+
+    @Override
+    public <T> T visit(final Visitor<T> visitor) {
+        return visitor.visitAnd(this);
     }
 
     @Override
@@ -79,16 +83,16 @@ public class AndFilterImpl implements Filter.And {
                 continue;
             }
 
-            if (o instanceof Filter.And) {
-                result.addAll(((Filter.And) o).terms());
+            if (o instanceof AndFilter) {
+                result.addAll(((AndFilter) o).terms());
                 continue;
             }
 
-            if (o instanceof Filter.Not) {
-                final Filter.Not not = (Filter.Not) o;
+            if (o instanceof NotFilter) {
+                final NotFilter not = (NotFilter) o;
 
-                if (not.first() instanceof Filter.Or) {
-                    result.addAll(collapseNotOr((Filter.Or) not.first()));
+                if (not.first() instanceof OrFilter) {
+                    result.addAll(collapseNotOr((OrFilter) not.first()));
                     continue;
                 }
             }
@@ -99,9 +103,9 @@ public class AndFilterImpl implements Filter.And {
         return result;
     }
 
-    private static List<Filter> collapseNotOr(Filter.Or first) {
+    private static List<Filter> collapseNotOr(OrFilter first) {
         return ImmutableList.copyOf(
-            first.terms().stream().map(t -> new NotFilterImpl(t).optimize()).iterator());
+            first.terms().stream().map(t -> new NotFilter(t).optimize()).iterator());
     }
 
     private static Filter optimize(SortedSet<Filter> statements) {
@@ -109,11 +113,11 @@ public class AndFilterImpl implements Filter.And {
 
         root:
         for (final Filter f : statements) {
-            if (f instanceof Filter.Not) {
-                final Filter.Not not = (Filter.Not) f;
+            if (f instanceof NotFilter) {
+                final NotFilter not = (NotFilter) f;
 
                 if (statements.contains(not.first())) {
-                    return FalseFilterImpl.get();
+                    return FalseFilter.get();
                 }
 
                 result.add(f);
@@ -123,23 +127,23 @@ public class AndFilterImpl implements Filter.And {
             /**
              * If there exists two MatchTag statements, but they check for different values.
              */
-            if (f instanceof Filter.MatchTag) {
-                final Filter.MatchTag outer = (Filter.MatchTag) f;
+            if (f instanceof MatchTagFilter) {
+                final MatchTagFilter outer = (MatchTagFilter) f;
 
                 for (final Filter inner : statements) {
                     if (inner.equals(outer)) {
                         continue;
                     }
 
-                    if (inner instanceof Filter.MatchTag) {
-                        final Filter.MatchTag matchTag = (Filter.MatchTag) inner;
+                    if (inner instanceof MatchTagFilter) {
+                        final MatchTagFilter matchTag = (MatchTagFilter) inner;
 
                         if (!outer.first().equals(matchTag.first())) {
                             continue;
                         }
 
                         if (!FilterComparatorUtils.isEqual(outer.second(), matchTag.second())) {
-                            return FalseFilterImpl.get();
+                            return FalseFilter.get();
                         }
                     }
                 }
@@ -148,23 +152,23 @@ public class AndFilterImpl implements Filter.And {
                 continue;
             }
 
-            if (f instanceof Filter.MatchTag) {
-                final Filter.MatchTag outer = (Filter.MatchTag) f;
+            if (f instanceof MatchTagFilter) {
+                final MatchTagFilter outer = (MatchTagFilter) f;
 
                 for (final Filter inner : statements) {
                     if (inner.equals(outer)) {
                         continue;
                     }
 
-                    if (inner instanceof Filter.MatchTag) {
-                        final Filter.MatchTag tag = (Filter.MatchTag) inner;
+                    if (inner instanceof MatchTagFilter) {
+                        final MatchTagFilter tag = (MatchTagFilter) inner;
 
                         if (!outer.first().equals(tag.first())) {
                             continue;
                         }
 
                         if (!FilterComparatorUtils.isEqual(outer.second(), tag.second())) {
-                            return FalseFilterImpl.get();
+                            return FalseFilter.get();
                         }
                     }
                 }
@@ -175,16 +179,16 @@ public class AndFilterImpl implements Filter.And {
 
             // optimize away prefixes which encompass eachother.
             // Example: foo ^ hello and foo ^ helloworld -> foo ^ helloworld
-            if (f instanceof Filter.StartsWith) {
-                final Filter.StartsWith outer = (Filter.StartsWith) f;
+            if (f instanceof StartsWithFilter) {
+                final StartsWithFilter outer = (StartsWithFilter) f;
 
                 for (final Filter inner : statements) {
                     if (inner.equals(outer)) {
                         continue;
                     }
 
-                    if (inner instanceof Filter.StartsWith) {
-                        final Filter.StartsWith starts = (Filter.StartsWith) inner;
+                    if (inner instanceof StartsWithFilter) {
+                        final StartsWithFilter starts = (StartsWithFilter) inner;
 
                         if (!outer.first().equals(starts.first())) {
                             continue;
@@ -205,14 +209,14 @@ public class AndFilterImpl implements Filter.And {
         }
 
         if (result.isEmpty()) {
-            return FalseFilterImpl.get();
+            return FalseFilter.get();
         }
 
         if (result.size() == 1) {
             return result.iterator().next();
         }
 
-        return new AndFilterImpl(new ArrayList<>(result));
+        return new AndFilter(new ArrayList<>(result));
     }
 
     @Override
@@ -226,16 +230,16 @@ public class AndFilterImpl implements Filter.And {
     }
 
     public static Filter of(Filter... filters) {
-        return new AndFilterImpl(Arrays.asList(filters));
+        return new AndFilter(Arrays.asList(filters));
     }
 
     @Override
     public int compareTo(Filter o) {
-        if (!Filter.And.class.isAssignableFrom(o.getClass())) {
+        if (!AndFilter.class.equals(o.getClass())) {
             return operator().compareTo(o.operator());
         }
 
-        final Filter.And other = (Filter.And) o;
+        final AndFilter other = (AndFilter) o;
         return FilterComparatorUtils.compareLists(terms(), other.terms());
     }
 

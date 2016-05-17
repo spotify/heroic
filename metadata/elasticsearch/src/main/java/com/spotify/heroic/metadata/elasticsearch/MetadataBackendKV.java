@@ -31,11 +31,19 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.elasticsearch.AbstractElasticsearchMetadataBackend;
 import com.spotify.heroic.elasticsearch.BackendType;
-import com.spotify.heroic.elasticsearch.BackendTypeFactory;
 import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
 import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
+import com.spotify.heroic.filter.AndFilter;
+import com.spotify.heroic.filter.FalseFilter;
 import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.filter.HasTagFilter;
+import com.spotify.heroic.filter.MatchKeyFilter;
+import com.spotify.heroic.filter.MatchTagFilter;
+import com.spotify.heroic.filter.NotFilter;
+import com.spotify.heroic.filter.OrFilter;
+import com.spotify.heroic.filter.StartsWithFilter;
+import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.metadata.CountSeries;
@@ -205,10 +213,6 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
             final FilterBuilder f = filter(filter.getFilter());
 
-            if (f == null) {
-                return async.resolved(CountSeries.EMPTY);
-            }
-
             final CountRequestBuilder request;
 
             try {
@@ -236,10 +240,6 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
             final FilterBuilder f = filter(filter.getFilter());
 
-            if (f == null) {
-                return async.resolved(FindSeries.EMPTY);
-            }
-
             final SearchRequestBuilder request;
 
             try {
@@ -264,10 +264,6 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         return doto(c -> {
             final FilterBuilder f = filter(filter.getFilter());
 
-            if (f == null) {
-                return async.resolved(DeleteSeries.EMPTY);
-            }
-
             final DeleteByQueryRequestBuilder request;
 
             try {
@@ -286,10 +282,6 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     public AsyncFuture<FindKeys> findKeys(final RangeFilter filter) {
         return doto(c -> {
             final FilterBuilder f = filter(filter.getFilter());
-
-            if (f == null) {
-                return async.resolved(FindKeys.EMPTY);
-            }
 
             final SearchRequestBuilder request;
 
@@ -344,7 +336,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         return connection.doto(action);
     }
 
-    private AsyncFuture<Void> start() {
+    AsyncFuture<Void> start() {
         AsyncFuture<Void> future = connection.start();
 
         if (!configure) {
@@ -354,7 +346,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         return future.lazyTransform(v -> configure());
     }
 
-    private AsyncFuture<Void> stop() {
+    AsyncFuture<Void> stop() {
         return connection.stop();
     }
 
@@ -390,68 +382,74 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         b.endArray();
     }
 
+    private static final Filter.Visitor<FilterBuilder> FILTER_CONVERTER =
+        new Filter.Visitor<FilterBuilder>() {
+            @Override
+            public FilterBuilder visitTrue(final TrueFilter filter) {
+                return matchAllFilter();
+            }
+
+            @Override
+            public FilterBuilder visitFalse(final FalseFilter filter) {
+                return notFilter(matchAllFilter());
+            }
+
+            @Override
+            public FilterBuilder visitAnd(final AndFilter and) {
+                final List<FilterBuilder> filters = new ArrayList<>(and.terms().size());
+
+                for (final Filter stmt : and.terms()) {
+                    filters.add(stmt.visit(this));
+                }
+
+                return andFilter(filters.toArray(new FilterBuilder[0]));
+            }
+
+            @Override
+            public FilterBuilder visitOr(final OrFilter or) {
+                final List<FilterBuilder> filters = new ArrayList<>(or.terms().size());
+
+                for (final Filter stmt : or.terms()) {
+                    filters.add(stmt.visit(this));
+                }
+
+                return orFilter(filters.toArray(new FilterBuilder[0]));
+            }
+
+            @Override
+            public FilterBuilder visitNot(final NotFilter not) {
+                return notFilter(not.first().visit(this));
+            }
+
+            @Override
+            public FilterBuilder visitMatchTag(final MatchTagFilter matchTag) {
+                return termFilter(TAGS, matchTag.first() + '\0' + matchTag.second());
+            }
+
+            @Override
+            public FilterBuilder visitStartsWith(final StartsWithFilter startsWith) {
+                return prefixFilter(TAGS, startsWith.first() + '\0' + startsWith.second());
+            }
+
+            @Override
+            public FilterBuilder visitHasTag(final HasTagFilter hasTag) {
+                return termFilter(TAG_KEYS, hasTag.first());
+            }
+
+            @Override
+            public FilterBuilder visitMatchKey(final MatchKeyFilter matchKey) {
+                return termFilter(KEY, matchKey.first());
+            }
+
+            @Override
+            public FilterBuilder defaultAction(final Filter filter) {
+                throw new IllegalArgumentException("Unsupported filter statement: " + filter);
+            }
+        };
+
     @Override
     protected FilterBuilder filter(final Filter filter) {
-        if (filter instanceof Filter.True) {
-            return matchAllFilter();
-        }
-
-        if (filter instanceof Filter.False) {
-            return notFilter(matchAllFilter());
-        }
-
-        if (filter instanceof Filter.And) {
-            final Filter.And and = (Filter.And) filter;
-            final List<FilterBuilder> filters = new ArrayList<>(and.terms().size());
-
-            for (final Filter stmt : and.terms()) {
-                filters.add(filter(stmt));
-            }
-
-            return andFilter(filters.toArray(new FilterBuilder[0]));
-        }
-
-        if (filter instanceof Filter.Or) {
-            final Filter.Or or = (Filter.Or) filter;
-            final List<FilterBuilder> filters = new ArrayList<>(or.terms().size());
-
-            for (final Filter stmt : or.terms()) {
-                filters.add(filter(stmt));
-            }
-
-            return orFilter(filters.toArray(new FilterBuilder[0]));
-        }
-
-        if (filter instanceof Filter.Not) {
-            final Filter.Not not = (Filter.Not) filter;
-            return notFilter(filter(not.first()));
-        }
-
-        if (filter instanceof Filter.MatchTag) {
-            final Filter.MatchTag matchTag = (Filter.MatchTag) filter;
-            return termFilter(TAGS, matchTag.first() + '\0' + matchTag.second());
-        }
-
-        if (filter instanceof Filter.StartsWith) {
-            final Filter.StartsWith startsWith = (Filter.StartsWith) filter;
-            return prefixFilter(TAGS, startsWith.first() + '\0' + startsWith.second());
-        }
-
-        if (filter instanceof Filter.Regex) {
-            throw new IllegalArgumentException("regex not supported");
-        }
-
-        if (filter instanceof Filter.HasTag) {
-            final Filter.HasTag hasTag = (Filter.HasTag) filter;
-            return termFilter(TAG_KEYS, hasTag.first());
-        }
-
-        if (filter instanceof Filter.MatchKey) {
-            final Filter.MatchKey matchKey = (Filter.MatchKey) filter;
-            return termFilter(KEY, matchKey.first());
-        }
-
-        throw new IllegalArgumentException("Invalid filter statement: " + filter);
+        return filter.visit(FILTER_CONVERTER);
     }
 
     @Override
@@ -459,30 +457,9 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         return Statistics.of(WRITE_CACHE_SIZE, writeCache.size());
     }
 
-    public static BackendTypeFactory<MetadataBackend> factory() {
-        return new BackendTypeFactory<MetadataBackend>() {
-            @Override
-            public BackendType<MetadataBackend> setup() {
-                return new BackendType<MetadataBackend>() {
-                    @Override
-                    public Map<String, Map<String, Object>> mappings() {
-                        final Map<String, Map<String, Object>> mappings = new HashMap<>();
-                        mappings.put("metadata",
-                            ElasticsearchMetadataUtils.loadJsonResource("kv/metadata.json"));
-                        return mappings;
-                    }
-
-                    @Override
-                    public Map<String, Object> settings() {
-                        return ImmutableMap.of();
-                    }
-
-                    @Override
-                    public Class<? extends MetadataBackend> type() {
-                        return MetadataBackendKV.class;
-                    }
-                };
-            }
-        };
+    public static BackendType backendType() {
+        final Map<String, Map<String, Object>> mappings = new HashMap<>();
+        mappings.put("metadata", ElasticsearchMetadataUtils.loadJsonResource("kv/metadata.json"));
+        return new BackendType(mappings, ImmutableMap.of(), MetadataBackendKV.class);
     }
 }

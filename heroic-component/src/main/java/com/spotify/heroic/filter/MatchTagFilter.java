@@ -19,18 +19,17 @@
  * under the License.
  */
 
-package com.spotify.heroic.filter.impl;
+package com.spotify.heroic.filter;
 
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(of = {"OPERATOR", "tag", "value"}, doNotUseGetters = true)
-public class StartsWithFilterImpl implements Filter.StartsWith {
-    public static final String OPERATOR = "^";
+public class MatchTagFilter implements Filter.TwoArgs<String, String> {
+    public static final String OPERATOR = "=";
 
     private final String tag;
     private final String value;
@@ -38,7 +37,12 @@ public class StartsWithFilterImpl implements Filter.StartsWith {
     @Override
     public boolean apply(Series series) {
         final String value;
-        return (value = series.getTags().get(tag)) != null && value.startsWith(this.value);
+        return (value = series.getTags().get(tag)) != null && value.equals(this.value);
+    }
+
+    @Override
+    public <T> T visit(final Visitor<T> visitor) {
+        return visitor.visitMatchTag(this);
     }
 
     @Override
@@ -47,7 +51,7 @@ public class StartsWithFilterImpl implements Filter.StartsWith {
     }
 
     @Override
-    public StartsWithFilterImpl optimize() {
+    public MatchTagFilter optimize() {
         return this;
     }
 
@@ -68,11 +72,11 @@ public class StartsWithFilterImpl implements Filter.StartsWith {
 
     @Override
     public int compareTo(Filter o) {
-        if (!Filter.StartsWith.class.isAssignableFrom(o.getClass())) {
+        if (!MatchTagFilter.class.isAssignableFrom(o.getClass())) {
             return operator().compareTo(o.operator());
         }
 
-        final Filter.StartsWith other = (Filter.StartsWith) o;
+        final MatchTagFilter other = (MatchTagFilter) o;
         final int first = FilterComparatorUtils.stringCompare(first(), other.first());
 
         if (first != 0) {
@@ -84,6 +88,6 @@ public class StartsWithFilterImpl implements Filter.StartsWith {
 
     @Override
     public String toDSL() {
-        return QueryParser.escapeString(tag) + " ^ " + QueryParser.escapeString(value);
+        return QueryParser.escapeString(tag) + " = " + QueryParser.escapeString(value);
     }
 }

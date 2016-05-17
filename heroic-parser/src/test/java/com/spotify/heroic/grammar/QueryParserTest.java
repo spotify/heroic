@@ -3,8 +3,17 @@ package com.spotify.heroic.grammar;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.aggregation.AggregationFactory;
+import com.spotify.heroic.filter.AndFilter;
+import com.spotify.heroic.filter.FalseFilter;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.FilterFactory;
+import com.spotify.heroic.filter.HasTagFilter;
+import com.spotify.heroic.filter.MatchKeyFilter;
+import com.spotify.heroic.filter.MatchTagFilter;
+import com.spotify.heroic.filter.NotFilter;
+import com.spotify.heroic.filter.OrFilter;
+import com.spotify.heroic.filter.RegexFilter;
+import com.spotify.heroic.filter.StartsWithFilter;
+import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.grammar.CoreQueryParser.FromDSL;
 import com.spotify.heroic.metric.MetricType;
 import org.junit.Before;
@@ -12,7 +21,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 
@@ -36,7 +44,6 @@ import static java.util.Optional.empty;
 import static java.util.Optional.of;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyList;
 
 @RunWith(MockitoJUnitRunner.class)
 public class QueryParserTest {
@@ -44,37 +51,14 @@ public class QueryParserTest {
     public final ExpectedException exception = ExpectedException.none();
 
     private CoreQueryParser parser;
-    private FilterFactory filters;
     private AggregationFactory aggregations;
-
-    @Mock
-    Filter.MatchTag matchTag;
-    @Mock
-    Filter.And and;
-    @Mock
-    Filter.Or or;
-    @Mock
-    Filter optimized;
 
     Expression.Scope scope;
 
     @Before
     public void setupFilters() {
-        filters = Mockito.mock(FilterFactory.class);
         aggregations = Mockito.mock(AggregationFactory.class);
-
-        Mockito
-            .when(filters.matchTag(Mockito.any(String.class), Mockito.any(String.class)))
-            .thenReturn(matchTag);
-        Mockito.when(filters.and(anyFilter(), anyFilter())).thenReturn(and);
-        Mockito.when(filters.or(anyFilter(), anyFilter())).thenReturn(or);
-        Mockito.when(filters.and((List<Filter>) anyList())).thenReturn(and);
-        Mockito.when(filters.or((List<Filter>) anyList())).thenReturn(or);
-        Mockito.when(or.optimize()).thenReturn(optimized);
-        Mockito.when(and.optimize()).thenReturn(optimized);
-
-        parser = new CoreQueryParser(filters);
-
+        parser = new CoreQueryParser();
         scope = new DefaultScope(10000);
     }
 
@@ -157,27 +141,24 @@ public class QueryParserTest {
     }
 
     @Test
-    public void testFilter1() {
-        assertEquals(optimized,
-            parser.parse(CoreQueryParser.FILTER, "a=b and c=d and d in {foo, bar}"));
+    public void testFilter() {
+        final MatchTagFilter f1 = new MatchTagFilter("a", "a");
+        final MatchTagFilter f2 = new MatchTagFilter("a", "b");
+        final MatchTagFilter f3 = new MatchTagFilter("a", "c");
+        final MatchTagFilter f4 = new MatchTagFilter("b", "b");
 
-        Mockito
-            .verify(filters, Mockito.times(4))
-            .matchTag(Mockito.any(String.class), Mockito.any(String.class));
-        Mockito.verify(filters, Mockito.times(2)).and(anyFilter(), anyFilter());
-        Mockito.verify(and).optimize();
-    }
-
-    @Test
-    public void testFilter2() {
-        assertEquals(optimized,
-            parser.parse(CoreQueryParser.FILTER, "a=b and c=d and d in [foo, bar]"));
-
-        Mockito
-            .verify(filters, Mockito.times(4))
-            .matchTag(Mockito.any(String.class), Mockito.any(String.class));
-        Mockito.verify(filters, Mockito.times(2)).and(anyFilter(), anyFilter());
-        Mockito.verify(and).optimize();
+        assertEquals(f1, parseFilter("a = a"));
+        assertEquals(OrFilter.of(f1, f2, f3), parseFilter("a in [a, b, c]"));
+        assertEquals(AndFilter.of(f1, f4), parseFilter("a = a and b = b"));
+        assertEquals(OrFilter.of(f1, f4), parseFilter("a = a or b = b"));
+        assertEquals(new RegexFilter("a", "b"), parseFilter("a ~ b"));
+        assertEquals(new NotFilter(f1), parseFilter("a != a"));
+        assertEquals(new NotFilter(f1), parseFilter("!(a = a)"));
+        assertEquals(new StartsWithFilter("a", "a"), parseFilter("a ^ a"));
+        assertEquals(new HasTagFilter("a"), parseFilter("+a"));
+        assertEquals(new MatchKeyFilter("a"), parseFilter("$key = a"));
+        assertEquals(TrueFilter.get(), parseFilter("true"));
+        assertEquals(FalseFilter.get(), parseFilter("false"));
     }
 
     @Test
@@ -273,5 +254,9 @@ public class QueryParserTest {
 
     FromDSL from(String input) {
         return parser.parse(CoreQueryParser.FROM, input);
+    }
+
+    private Filter parseFilter(final String input) {
+        return parser.parse(CoreQueryParser.FILTER, input);
     }
 }

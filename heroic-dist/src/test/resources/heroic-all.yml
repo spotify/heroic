@@ -9,14 +9,10 @@ metadata:
   backends:
     - type: memory
     - type: elasticsearch
-      backendType: v1
-    - type: elasticsearch
       backendType: kv
 
 suggest:
   backends:
-    - type: elasticsearch
-      backendType: v1
     - type: elasticsearch
       backendType: kv
 

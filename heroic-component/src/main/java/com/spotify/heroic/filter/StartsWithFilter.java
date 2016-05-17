@@ -19,32 +19,39 @@
  * under the License.
  */
 
-package com.spotify.heroic.filter.impl;
+package com.spotify.heroic.filter;
 
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.grammar.QueryParser;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 @Data
-@EqualsAndHashCode(of = {"OPERATOR", "filter"}, doNotUseGetters = true)
-public class RawFilterImpl implements Filter.Raw {
-    public static final String OPERATOR = "q";
+@EqualsAndHashCode(of = {"OPERATOR", "tag", "value"}, doNotUseGetters = true)
+public class StartsWithFilter implements Filter.TwoArgs<String, String> {
+    public static final String OPERATOR = "^";
 
-    private final String filter;
+    private final String tag;
+    private final String value;
 
     @Override
     public boolean apply(Series series) {
-        throw new RuntimeException("Not supported");
+        final String value;
+        return (value = series.getTags().get(tag)) != null && value.startsWith(this.value);
+    }
+
+    @Override
+    public <T> T visit(final Visitor<T> visitor) {
+        return visitor.visitStartsWith(this);
     }
 
     @Override
     public String toString() {
-        return "[" + OPERATOR + ", " + filter + "]";
+        return "[" + OPERATOR + ", " + tag + ", " + value + "]";
     }
 
     @Override
-    public RawFilterImpl optimize() {
+    public StartsWithFilter optimize() {
         return this;
     }
 
@@ -55,21 +62,32 @@ public class RawFilterImpl implements Filter.Raw {
 
     @Override
     public String first() {
-        return filter;
+        return tag;
+    }
+
+    @Override
+    public String second() {
+        return value;
     }
 
     @Override
     public int compareTo(Filter o) {
-        if (!Filter.Raw.class.isAssignableFrom(o.getClass())) {
+        if (!StartsWithFilter.class.equals(o.getClass())) {
             return operator().compareTo(o.operator());
         }
 
-        final Filter.Raw other = (Filter.Raw) o;
-        return filter.compareTo(other.first());
+        final StartsWithFilter other = (StartsWithFilter) o;
+        final int first = FilterComparatorUtils.stringCompare(first(), other.first());
+
+        if (first != 0) {
+            return first;
+        }
+
+        return FilterComparatorUtils.stringCompare(second(), other.second());
     }
 
     @Override
     public String toDSL() {
-        throw new RuntimeException("raw filter cannot be converted to DSL");
+        return QueryParser.escapeString(tag) + " ^ " + QueryParser.escapeString(value);
     }
 }

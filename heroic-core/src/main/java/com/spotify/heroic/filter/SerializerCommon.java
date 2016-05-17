@@ -19,10 +19,7 @@
  * under the License.
  */
 
-package com.spotify.heroic.filter.impl;
-
-import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.FilterJsonSerialization;
+package com.spotify.heroic.filter;
 
 import java.io.IOException;
 

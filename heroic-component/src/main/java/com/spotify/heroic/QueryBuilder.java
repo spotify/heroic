@@ -23,8 +23,10 @@ package com.spotify.heroic;
 
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.filter.AndFilter;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.FilterFactory;
+import com.spotify.heroic.filter.MatchKeyFilter;
+import com.spotify.heroic.filter.MatchTagFilter;
 import com.spotify.heroic.metric.MetricType;
 import lombok.RequiredArgsConstructor;
 
@@ -39,8 +41,6 @@ import static com.spotify.heroic.common.Optionals.pickOptional;
 
 @RequiredArgsConstructor
 public class QueryBuilder {
-    private final FilterFactory filters;
-
     private Optional<MetricType> source = Optional.empty();
     private Optional<Map<String, String>> tags = Optional.empty();
     private Optional<String> key = Optional.empty();
@@ -55,7 +55,7 @@ public class QueryBuilder {
      * Specify a set of tags that has to match.
      *
      * @deprecated Use {@link #filter(Filter)} with the appropriate filter instead. These can be
-     * built using {@link FilterFactory#matchKey(String)}.
+     * built using {@link com.spotify.heroic.filter.MatchKeyFilter(String)}.
      */
     public QueryBuilder key(Optional<String> key) {
         this.key = key;
@@ -66,7 +66,7 @@ public class QueryBuilder {
      * Specify a set of tags that has to match.
      *
      * @deprecated Use {@link #filter(Filter)} with the appropriate filter instead. These can be
-     * built using {@link FilterFactory#matchTag(String, String)}.
+     * built using {@link com.spotify.heroic.filter.MatchTagFilter(String, String)}.
      */
     public QueryBuilder tags(Optional<Map<String, String>> tags) {
         checkNotNull(tags, "tags must not be null");
@@ -167,12 +167,12 @@ public class QueryBuilder {
 
         if (tags.isPresent()) {
             for (final Map.Entry<String, String> entry : tags.get().entrySet()) {
-                statements.add(filters.matchTag(entry.getKey(), entry.getValue()));
+                statements.add(new MatchTagFilter(entry.getKey(), entry.getValue()));
             }
         }
 
         if (key.isPresent()) {
-            statements.add(filters.matchKey(key.get()));
+            statements.add(new MatchKeyFilter(key.get()));
         }
 
         if (statements.isEmpty()) {
@@ -183,6 +183,6 @@ public class QueryBuilder {
             return Optional.of(statements.get(0).optimize());
         }
 
-        return Optional.of(filters.and(statements).optimize());
+        return Optional.of(new AndFilter(statements).optimize());
     }
 }

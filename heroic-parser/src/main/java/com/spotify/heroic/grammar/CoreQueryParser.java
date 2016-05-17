@@ -22,7 +22,6 @@
 package com.spotify.heroic.grammar;
 
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.metric.MetricType;
 import lombok.Data;
 import org.antlr.v4.runtime.ANTLRInputStream;
@@ -111,11 +110,8 @@ public class CoreQueryParser implements QueryParser {
         }
     };
 
-    private final FilterFactory filters;
-
     @Inject
-    public CoreQueryParser(FilterFactory filters) {
-        this.filters = filters;
+    public CoreQueryParser() {
     }
 
     @Override
@@ -149,7 +145,7 @@ public class CoreQueryParser implements QueryParser {
             throw toParseException((RecognitionException) e.getCause());
         }
 
-        final QueryListener listener = new QueryListener(filters);
+        final QueryListener listener = new QueryListener();
 
         ParseTreeWalker.DEFAULT.walk(listener, context);
 

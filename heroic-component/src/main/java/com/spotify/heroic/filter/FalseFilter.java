@@ -19,27 +19,27 @@
  * under the License.
  */
 
-package com.spotify.heroic.filter.impl;
+package com.spotify.heroic.filter;
 
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.filter.Filter;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(of = {"OPERATOR"}, doNotUseGetters = true)
-public class TrueFilterImpl implements Filter.True {
-    public static final String OPERATOR = "true";
+public class FalseFilter implements Filter.NoArg {
+    public static final String OPERATOR = "false";
 
-    private static final Filter.True instance = new TrueFilterImpl();
-
-    public static Filter.True get() {
-        return instance;
-    }
+    private static final FalseFilter instance = new FalseFilter();
 
     @Override
     public boolean apply(Series series) {
-        return true;
+        return false;
+    }
+
+    @Override
+    public <T> T visit(final Visitor<T> visitor) {
+        return visitor.visitFalse(this);
     }
 
     @Override
@@ -48,7 +48,7 @@ public class TrueFilterImpl implements Filter.True {
     }
 
     @Override
-    public TrueFilterImpl optimize() {
+    public FalseFilter optimize() {
         return this;
     }
 
@@ -58,13 +58,8 @@ public class TrueFilterImpl implements Filter.True {
     }
 
     @Override
-    public Filter invert() {
-        return FalseFilterImpl.get();
-    }
-
-    @Override
     public int compareTo(Filter o) {
-        if (!Filter.True.class.isAssignableFrom(o.getClass())) {
+        if (!FalseFilter.class.equals(o.getClass())) {
             return operator().compareTo(o.operator());
         }
 
@@ -74,5 +69,9 @@ public class TrueFilterImpl implements Filter.True {
     @Override
     public String toDSL() {
         return "false";
+    }
+
+    public static FalseFilter get() {
+        return instance;
     }
 }

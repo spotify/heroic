@@ -21,76 +21,70 @@
 
 package com.spotify.heroic.filter;
 
-import com.spotify.heroic.filter.impl.HasTagFilterImpl;
-import com.spotify.heroic.filter.impl.MatchTagFilterImpl;
-import com.spotify.heroic.filter.impl.OrFilterImpl;
-
 import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
 
 public final class CoreFilterModifier implements FilterModifier {
-    private final FilterFactory filters;
-
     @Inject
-    public CoreFilterModifier(final FilterFactory filters) {
-        this.filters = filters;
+    public CoreFilterModifier() {
     }
 
     @Override
     public Filter removeTag(Filter filter, String tag) {
-        if (filter instanceof Filter.And) {
-            final Filter.And and = (Filter.And) filter;
+        return filter.visit(new Filter.Visitor<Filter>() {
+            @Override
+            public Filter visitAnd(final AndFilter and) {
+                final List<Filter> statements = new ArrayList<Filter>();
 
-            final List<Filter> statements = new ArrayList<Filter>();
+                for (final Filter f : and.terms()) {
+                    statements.add(removeTag(f, tag));
+                }
 
-            for (final Filter f : and.terms()) {
-                statements.add(removeTag(f, tag));
+                if (statements.isEmpty()) {
+                    return TrueFilter.get();
+                }
+
+                return new AndFilter(statements).optimize();
             }
 
-            if (statements.isEmpty()) {
-                return filters.t();
+            @Override
+            public Filter visitOr(final OrFilter or) {
+                final List<Filter> statements = new ArrayList<Filter>();
+
+                for (final Filter f : or.getStatements()) {
+                    statements.add(removeTag(f, tag));
+                }
+
+                if (statements.isEmpty()) {
+                    return TrueFilter.get();
+                }
+
+                return new OrFilter(statements).optimize();
             }
 
-            return filters.and(statements).optimize();
-        }
+            @Override
+            public Filter visitMatchTag(final MatchTagFilter matchTag) {
+                if (matchTag.getTag().equals(tag)) {
+                    return TrueFilter.get();
+                }
 
-        if (filter instanceof OrFilterImpl) {
-            final OrFilterImpl or = (OrFilterImpl) filter;
-
-            final List<Filter> statements = new ArrayList<Filter>();
-
-            for (final Filter f : or.getStatements()) {
-                statements.add(removeTag(f, tag));
+                return matchTag;
             }
 
-            if (statements.isEmpty()) {
-                return filters.t();
+            @Override
+            public Filter visitHasTag(final HasTagFilter hasTag) {
+                if (hasTag.getTag().equals(tag)) {
+                    return TrueFilter.get();
+                }
+
+                return hasTag;
             }
 
-            return new OrFilterImpl(statements).optimize();
-        }
-
-        if (filter instanceof MatchTagFilterImpl) {
-            final MatchTagFilterImpl matchTag = (MatchTagFilterImpl) filter;
-
-            if (matchTag.getTag().equals(tag)) {
-                return filters.t();
+            @Override
+            public Filter defaultAction(final Filter filter) {
+                return filter;
             }
-
-            return matchTag;
-        }
-
-        if (filter instanceof HasTagFilterImpl) {
-            final HasTagFilterImpl hasTag = (HasTagFilterImpl) filter;
-
-            if (hasTag.getTag().equals(tag)) {
-                return filters.t();
-            }
-
-            return hasTag;
-        }
-
-        return filter;
+        });
     }
 }

@@ -21,12 +21,13 @@
 
 package com.spotify.heroic.elasticsearch;
 
+import lombok.Data;
+
 import java.util.Map;
 
-public interface BackendType<T> {
-    Map<String, Map<String, Object>> mappings();
-
-    Map<String, Object> settings();
-
-    Class<? extends T> type();
+@Data
+public class BackendType {
+    private final Map<String, Map<String, Object>> mappings;
+    private final Map<String, Object> settings;
+    private final Class<?> type;
 }
