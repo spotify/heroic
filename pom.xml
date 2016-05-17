@@ -65,6 +65,91 @@
 
   <profiles>
     <profile>
+      <id>checkstyle</id>
+
+      <activation>
+        <property>
+          <name>environment</name>
+          <value>test</value>
+        </property>
+      </activation>
+
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-checkstyle-plugin</artifactId>
+            <version>2.13</version>
+            <configuration>
+              <configLocation>checkstyle.xml</configLocation>
+              <consoleOutput>true</consoleOutput>
+              <failOnViolation>true</failOnViolation>
+              <failsOnError>true</failsOnError>
+              <maxAllowedViolations>0</maxAllowedViolations>
+              <propertyExpansion>basedir=${user.dir}</propertyExpansion>
+            </configuration>
+            <executions>
+              <execution>
+                <id>validate</id>
+                <phase>validate</phase>
+                <goals>
+                  <goal>check</goal>
+                </goals>
+                <configuration>
+                  <failOnViolation>true</failOnViolation>
+                  <failsOnError>true</failsOnError>
+                </configuration>
+              </execution>
+            </executions>
+            <dependencies>
+              <dependency>
+                <groupId>com.puppycrawl.tools</groupId>
+                <artifactId>checkstyle</artifactId>
+                <version>6.13</version>
+              </dependency>
+            </dependencies>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>findbugs</id>
+
+      <activation>
+        <property>
+          <name>environment</name>
+          <value>test</value>
+        </property>
+      </activation>
+
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>findbugs-maven-plugin</artifactId>
+            <version>3.0.3</version>
+            <configuration>
+              <failOnError>true</failOnError>
+              <effort>Max</effort>
+              <threshold>High</threshold>
+              <xmlOutput>true</xmlOutput>
+            </configuration>
+            <executions>
+              <execution>
+                <id>analyze-compile</id>
+                <phase>compile</phase>
+                <goals>
+                  <goal>check</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
       <id>repackaged</id>
 
       <modules>
@@ -537,39 +622,6 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>2.13</version>
-        <configuration>
-          <configLocation>checkstyle.xml</configLocation>
-          <consoleOutput>true</consoleOutput>
-          <failOnViolation>true</failOnViolation>
-          <failsOnError>true</failsOnError>
-          <maxAllowedViolations>0</maxAllowedViolations>
-          <propertyExpansion>basedir=${user.dir}</propertyExpansion>
-        </configuration>
-        <executions>
-          <execution>
-            <id>validate</id>
-            <phase>validate</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-            <configuration>
-              <failOnViolation>true</failOnViolation>
-              <failsOnError>true</failsOnError>
-            </configuration>
-          </execution>
-        </executions>
-        <dependencies>
-          <dependency>
-            <groupId>com.puppycrawl.tools</groupId>
-            <artifactId>checkstyle</artifactId>
-            <version>6.13</version>
-          </dependency>
-        </dependencies>
-      </plugin>
-      <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.1</version>
         <configuration>
@@ -577,10 +629,6 @@
           <target>1.8</target>
           <showWarnings>true</showWarnings>
         </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
       </plugin>
       <plugin>
         <groupId>org.bsc.maven</groupId>
@@ -643,27 +691,6 @@
           <groupId>org.bsc.maven</groupId>
           <artifactId>maven-processor-plugin</artifactId>
           <version>3.1.0-beta1</version>
-        </plugin>
-
-        <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>findbugs-maven-plugin</artifactId>
-          <version>3.0.3</version>
-          <configuration>
-            <failOnError>true</failOnError>
-            <effort>Max</effort>
-            <threshold>High</threshold>
-            <xmlOutput>true</xmlOutput>
-          </configuration>
-          <executions>
-            <execution>
-              <id>analyze-compile</id>
-              <phase>compile</phase>
-              <goals>
-                <goal>check</goal>
-              </goals>
-            </execution>
-          </executions>
         </plugin>
       </plugins>
     </pluginManagement>

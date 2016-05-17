@@ -69,10 +69,7 @@ def main(program, args):
             raise Exception("no such file: {}".format(pom_xml))
 
         with in_dir(build_root):
-            sp.call(["mvn", "clean", "package",
-                     "-D", "maven.test.skip=true",
-                     "-D", "findbugs.skip=true",
-                     "-D", "checkstyle.skip=true"])
+            sp.call(["mvn", "package", "-D", "maven.test.skip=true"])
 
     if not os.path.isfile(heroic_jar):
         raise Exception("no such jar: {}".format(pom_xml))

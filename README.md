@@ -22,34 +22,42 @@ this by running `tools/install-repackaged`.
 ```bash
 $ tools/install-repackaged
 Installing repackaged/x
-Installing repackaged/y
+...
 ```
-
-These are dependencies that include packages that would otherwise conflict with
-packages used directly by Heroic.
-Notable examples include Netty (`io.netty`), gRPC (`io.grpc`), and Guava
-(`com.google.common`). See [Repackaged Dependencies](#repackaged-dependencies)
-for more details.
 
 After this, the project is built using Maven:
 
 ```bash
-$ mvn clean package
+$ mvn package
 ```
 
 This will cause the `heroic-dist` module to produce a shaded jar that contains
 all required dependencies.
+
+#### Running Tests
+
+A more comprehensive test suite is enabled with the `environment=test`
+property.
+
+```
+$ mvn test -D environment=test
+```
+
+This adds:
+
+* [Checkstyle](http://checkstyle.sourceforge.net/)
+* [FindBugs](http://findbugs.sourceforge.net/)
+
+It is strongly recommended that you run through findbugs and checkstyle before
+setting up a pull request, otherwise it will be rejected by Travis.
 
 #### Speedy Building
 
 For a speedy build without tests and checks, you can run:
 
 ```bash
-$ mvn clean package -D findbugs.skip=true -D checkstyle.skip=true -D maven.test.skip=true
+$ mvn package -D maven.test.skip=true
 ```
-
-It is strongly recommended that you run through findbugs and checkstyle before
-setting up a pull request.
 
 #### Building a Debian Package
 
@@ -196,7 +204,7 @@ The easiest way to do this, is to build the project and look at the warnings
 for the shaded jar.
 
 ```
-$> mvn clean package -D findbugs.skip=true -D checkstyle.skip=true -D maven.test.skip=true
+$> mvn clean package -D maven.test.skip=true
 ...
 [WARNING] foo-3.5.jar, foo-4.5.jar define 10 overlapping classes: 
 [WARNING]   - com.foo.ConflictingClass
