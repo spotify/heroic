@@ -52,7 +52,7 @@
     <datastax.version>2.1.9</datastax.version>
     <semantic-metrics.version>0.2.3</semantic-metrics.version>
     <netty.version>4.1.0.CR3</netty.version>
-    <tiny-async.version>1.7.1-SNAPSHOT</tiny-async.version>
+    <tiny-async.version>1.8.0</tiny-async.version>
     <tiny-serializer.version>1.4.4</tiny-serializer.version>
     <antlr.version>4.5</antlr.version>
     <log4j.version>2.2</log4j.version>
