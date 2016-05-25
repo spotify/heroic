@@ -36,35 +36,44 @@ $ mvn package
 This will cause the `heroic-dist` module to produce a shaded jar that contains
 all required dependencies.
 
-#### Coverage
-
-[![Coverage](https://codecov.io/gh/spotify/heroic/branch/master/graphs/icicle.svg)](https://codecov.io/gh/spotify/heroic/branch/master)
-
-There's an ongoing project to improve test coverage. Clicking the above graph will bring you to [codecov.io](https://codecov.io/gh/spotify/heroic/branches/master), where you can find areas to focus on.
-
 #### Running Tests
+
+You can run unit tests with MAven:
+
+```
+$ mvn test
+```
 
 A more comprehensive test suite is enabled with the `environment=test`
 property.
 
 ```
-$ mvn test -D environment=test
+$ mvn -D environment=test integration-test
 ```
 
 This adds:
 
 * [Checkstyle](http://checkstyle.sourceforge.net/)
 * [FindBugs](http://findbugs.sourceforge.net/)
+* [Integration Tests with Maven Failsafe Plugin](http://maven.apache.org/surefire/maven-failsafe-plugin/)
+* [Coverage Reporting with Jacoco](http://eclemma.org/jacoco/)
 
-It is strongly recommended that you run through findbugs and checkstyle before
-setting up a pull request, otherwise it will be rejected by Travis.
+It is strongly recommended that you run the full test suite before setting up a
+pull request, otherwise it will be rejected by Travis.
+
+#### Coverage
+
+[![Coverage](https://codecov.io/gh/spotify/heroic/branch/master/graphs/icicle.svg)](https://codecov.io/gh/spotify/heroic/branch/master)
+
+There's an ongoing project to improve test coverage.
+Clicking the above graph will bring you to [codecov.io](https://codecov.io/gh/spotify/heroic/branches/master), where you can find areas to focus on.
 
 #### Speedy Building
 
 For a speedy build without tests and checks, you can run:
 
 ```bash
-$ mvn package -D maven.test.skip=true
+$ mvn -D maven.test.skip=true package
 ```
 
 #### Building a Debian Package
