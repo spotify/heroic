@@ -28,7 +28,7 @@ import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(of = {"OPERATOR", "value"}, doNotUseGetters = true)
-public class MatchKeyFilter implements Filter.OneArg<String> {
+public class MatchKeyFilter implements Filter {
     public static final String OPERATOR = "key";
 
     private final String value;
@@ -59,18 +59,13 @@ public class MatchKeyFilter implements Filter.OneArg<String> {
     }
 
     @Override
-    public String first() {
-        return value;
-    }
-
-    @Override
     public int compareTo(Filter o) {
         if (!MatchKeyFilter.class.equals(o.getClass())) {
             return operator().compareTo(o.operator());
         }
 
         final MatchKeyFilter other = (MatchKeyFilter) o;
-        return FilterComparatorUtils.stringCompare(first(), other.first());
+        return value.compareTo(other.value);
     }
 
     @Override

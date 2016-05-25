@@ -37,7 +37,7 @@ import java.util.stream.Stream;
 
 @Data
 @EqualsAndHashCode(of = {"OPERATOR", "statements"}, doNotUseGetters = true)
-public class OrFilter implements Filter.MultiArgs<Filter> {
+public class OrFilter implements Filter {
     public static final String OPERATOR = "or";
 
     private final List<Filter> statements;
@@ -69,7 +69,7 @@ public class OrFilter implements Filter.MultiArgs<Filter> {
             @Override
             public Stream<Filter> visitNot(final NotFilter not) {
                 // check for De Morgan's
-                return not.first().visit(new Filter.Visitor<Stream<Filter>>() {
+                return not.getFilter().visit(new Filter.Visitor<Stream<Filter>>() {
                     @Override
                     public Stream<Filter> visitAnd(final AndFilter and) {
                         return and.terms().stream().map(f -> NotFilter.of(f).optimize());
@@ -99,7 +99,7 @@ public class OrFilter implements Filter.MultiArgs<Filter> {
             if (f instanceof NotFilter) {
                 final NotFilter not = (NotFilter) f;
 
-                if (statements.contains(not.first())) {
+                if (statements.contains(not.getFilter())) {
                     return TrueFilter.get();
                 }
 
@@ -108,24 +108,10 @@ public class OrFilter implements Filter.MultiArgs<Filter> {
             }
 
             if (f instanceof StartsWithFilter) {
-                final StartsWithFilter outer = (StartsWithFilter) f;
-
-                for (final Filter inner : statements) {
-                    if (inner.equals(outer)) {
-                        continue;
-                    }
-
-                    if (inner instanceof StartsWithFilter) {
-                        final StartsWithFilter starts = (StartsWithFilter) inner;
-
-                        if (!outer.first().equals(starts.first())) {
-                            continue;
-                        }
-
-                        if (FilterComparatorUtils.prefixedWith(outer.second(), starts.second())) {
-                            continue root;
-                        }
-                    }
+                if (FilterUtils.containsPrefixedWith(statements, (StartsWithFilter) f,
+                    (inner, outer) -> FilterUtils.prefixedWith(outer.getValue(),
+                        inner.getValue()))) {
+                    continue;
                 }
 
                 result.add(f);
@@ -149,15 +135,11 @@ public class OrFilter implements Filter.MultiArgs<Filter> {
 
     @Override
     public String toString() {
-        final List<String> parts = new ArrayList<String>(statements.size() + 1);
+        final List<String> parts = new ArrayList<>(statements.size() + 1);
         parts.add(OPERATOR);
 
         for (final Filter statement : statements) {
-            if (statement == null) {
-                parts.add("<null>");
-            } else {
-                parts.add(statement.toString());
-            }
+            parts.add(statement.toString());
         }
 
         return "[" + StringUtils.join(parts, ", ") + "]";
@@ -168,7 +150,6 @@ public class OrFilter implements Filter.MultiArgs<Filter> {
         return OPERATOR;
     }
 
-    @Override
     public List<Filter> terms() {
         return statements;
     }
@@ -184,7 +165,7 @@ public class OrFilter implements Filter.MultiArgs<Filter> {
         }
 
         final OrFilter other = (OrFilter) o;
-        return FilterComparatorUtils.compareLists(terms(), other.terms());
+        return FilterUtils.compareLists(terms(), other.terms());
     }
 
     private final Joiner or = Joiner.on(" or ");

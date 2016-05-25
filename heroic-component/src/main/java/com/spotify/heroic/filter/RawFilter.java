@@ -27,7 +27,7 @@ import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(of = {"OPERATOR", "filter"}, doNotUseGetters = true)
-public class RawFilter implements Filter.OneArg<String> {
+public class RawFilter implements Filter {
     public static final String OPERATOR = "q";
 
     private final String filter;
@@ -58,18 +58,13 @@ public class RawFilter implements Filter.OneArg<String> {
     }
 
     @Override
-    public String first() {
-        return filter;
-    }
-
-    @Override
     public int compareTo(Filter o) {
         if (!RawFilter.class.isAssignableFrom(o.getClass())) {
             return operator().compareTo(o.operator());
         }
 
         final RawFilter other = (RawFilter) o;
-        return filter.compareTo(other.first());
+        return filter.compareTo(other.getFilter());
     }
 
     @Override

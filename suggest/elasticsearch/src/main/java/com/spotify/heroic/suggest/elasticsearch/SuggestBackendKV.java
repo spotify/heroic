@@ -682,27 +682,27 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
             @Override
             public FilterBuilder visitNot(final NotFilter not) {
-                return notFilter(filter(not.first()));
+                return notFilter(filter(not.getFilter()));
             }
 
             @Override
             public FilterBuilder visitMatchTag(final MatchTagFilter matchTag) {
-                return termFilter(TAGS, matchTag.first() + '\0' + matchTag.second());
+                return termFilter(TAGS, matchTag.getTag() + '\0' + matchTag.getValue());
             }
 
             @Override
             public FilterBuilder visitStartsWith(final StartsWithFilter startsWith) {
-                return prefixFilter(TAGS, startsWith.first() + '\0' + startsWith.second());
+                return prefixFilter(TAGS, startsWith.getTag() + '\0' + startsWith.getValue());
             }
 
             @Override
             public FilterBuilder visitHasTag(final HasTagFilter hasTag) {
-                return termFilter(TAG_KEYS, hasTag.first());
+                return termFilter(TAG_KEYS, hasTag.getTag());
             }
 
             @Override
             public FilterBuilder visitMatchKey(final MatchKeyFilter matchKey) {
-                return termFilter(KEY, matchKey.first());
+                return termFilter(KEY, matchKey.getValue());
             }
 
             @Override

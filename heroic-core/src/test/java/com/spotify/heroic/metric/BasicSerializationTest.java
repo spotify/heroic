@@ -1,13 +1,13 @@
 package com.spotify.heroic.metric;
 
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.HeroicMappers;
 import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.grammar.QueryParser;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,7 +17,7 @@ import java.util.List;
 import static org.junit.Assert.assertEquals;
 
 public class BasicSerializationTest {
-    private ObjectMapper mapper = HeroicMappers.json();
+    private ObjectMapper mapper = HeroicMappers.json(Mockito.mock(QueryParser.class));
 
     @Test
     public void testEvent() throws Exception {
@@ -59,7 +59,7 @@ public class BasicSerializationTest {
     }
 
     private <T> void assertSerialization(final String json, final T expected, final Class<T> type)
-        throws IOException, JsonParseException, JsonMappingException {
+        throws IOException {
         // verify that it is equal to the local file.
         try (InputStream in = openResource(json)) {
             assertEquals(expected, mapper.readValue(in, type));

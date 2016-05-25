@@ -19,8 +19,10 @@
  * under the License.
  */
 
-package com.spotify.heroic.filter;
+package com.spotify.heroic.common;
 
-public interface OneArgumentFilterBuilder<T extends Filter.OneArg<O>, O> {
-    public T build(O first);
+import java.io.IOException;
+
+public interface BiConsumerIO<A, B> {
+    void accept(A a, B b) throws IOException;
 }

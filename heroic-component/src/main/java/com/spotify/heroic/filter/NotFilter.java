@@ -27,7 +27,7 @@ import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(of = {"OPERATOR", "filter"}, doNotUseGetters = true)
-public class NotFilter implements Filter.OneArg<Filter> {
+public class NotFilter implements Filter {
     public static final String OPERATOR = "not";
 
     private final Filter filter;
@@ -52,7 +52,7 @@ public class NotFilter implements Filter.OneArg<Filter> {
         return filter.visit(new Visitor<Filter>() {
             @Override
             public Filter visitNot(final NotFilter not) {
-                return not.first().optimize();
+                return not.getFilter().optimize();
             }
 
             @Override
@@ -65,11 +65,6 @@ public class NotFilter implements Filter.OneArg<Filter> {
     @Override
     public String operator() {
         return OPERATOR;
-    }
-
-    @Override
-    public Filter first() {
-        return filter;
     }
 
     @Override

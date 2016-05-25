@@ -28,7 +28,7 @@ import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(of = {"OPERATOR", "tag"}, doNotUseGetters = true)
-public class HasTagFilter implements Filter.OneArg<String> {
+public class HasTagFilter implements Filter {
     public static final String OPERATOR = "+";
 
     private final String tag;
@@ -59,26 +59,21 @@ public class HasTagFilter implements Filter.OneArg<String> {
     }
 
     @Override
-    public String first() {
-        return tag;
-    }
-
-    public static Filter of(String tag) {
-        return new HasTagFilter(tag);
-    }
-
-    @Override
     public int compareTo(Filter o) {
         if (!HasTagFilter.class.isAssignableFrom(o.getClass())) {
             return operator().compareTo(o.operator());
         }
 
         final HasTagFilter other = (HasTagFilter) o;
-        return FilterComparatorUtils.stringCompare(this.tag, other.first());
+        return tag.compareTo(other.tag);
     }
 
     @Override
     public String toDSL() {
         return "+" + QueryParser.escapeString(tag);
+    }
+
+    public static Filter of(String tag) {
+        return new HasTagFilter(tag);
     }
 }

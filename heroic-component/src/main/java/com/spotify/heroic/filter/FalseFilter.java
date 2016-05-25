@@ -27,7 +27,7 @@ import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(of = {"OPERATOR"}, doNotUseGetters = true)
-public class FalseFilter implements Filter.NoArg {
+public class FalseFilter implements Filter {
     public static final String OPERATOR = "false";
 
     private static final FalseFilter instance = new FalseFilter();

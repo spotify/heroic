@@ -21,56 +21,44 @@
 
 package com.spotify.heroic.filter;
 
-import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.BiConsumerIO;
 import com.spotify.heroic.common.FunctionIO;
 import lombok.RequiredArgsConstructor;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 
 @RequiredArgsConstructor
-public class MultiArgumentsFilterBase<T extends Filter, A> implements FilterEncoding<T> {
-    private final Function<List<A>, T> builder;
-    private final Function<T, List<A>> argument;
+public class OneArgumentFilterEncoding<T extends Filter, A> implements FilterEncoding<T> {
+    private final Function<A, T> builder;
+    private final Function<T, A> firstArgument;
 
-    private final FunctionIO<Decoder, Optional<A>> decode;
-    private final BiConsumerIO<Encoder, A> encode;
+    private final FunctionIO<Decoder, Optional<A>> decodeFirst;
+    private final BiConsumerIO<Encoder, A> encodeFirst;
 
-    public MultiArgumentsFilterBase(
-        final Function<List<A>, T> builder, final Function<T, List<A>> argument,
-        final FilterEncodingComponent<A> encoding
+    public OneArgumentFilterEncoding(
+        final Function<A, T> builder, final Function<T, A> firstArgument,
+        final FilterEncodingComponent<A> first
     ) {
-        this.argument = argument;
+        this.firstArgument = firstArgument;
         this.builder = builder;
 
-        this.decode = encoding.getDecoder();
-        this.encode = encoding.getEncoder();
+        this.decodeFirst = first.getDecoder();
+        this.encodeFirst = first.getEncoder();
     }
 
     @Override
     public T deserialize(Decoder decoder) throws IOException {
-        final ImmutableList.Builder<A> terms = ImmutableList.builder();
+        final A first = decodeFirst
+            .apply(decoder)
+            .orElseThrow(() -> new IllegalStateException("Expected one argument"));
 
-        while (true) {
-            final Optional<A> arg = decode.apply(decoder);
-
-            if (!arg.isPresent()) {
-                break;
-            }
-
-            terms.add(arg.get());
-        }
-
-        return builder.apply(terms.build());
+        return builder.apply(first);
     }
 
     @Override
     public void serialize(Encoder encoder, T filter) throws IOException {
-        for (final A term : argument.apply(filter)) {
-            encode.accept(encoder, term);
-        }
+        encodeFirst.accept(encoder, firstArgument.apply(filter));
     }
 }

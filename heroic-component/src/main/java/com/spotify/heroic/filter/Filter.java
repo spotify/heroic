@@ -21,9 +21,8 @@
 
 package com.spotify.heroic.filter;
 
+import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.Series;
-
-import java.util.List;
 
 public interface Filter extends Comparable<Filter> {
     /**
@@ -42,21 +41,36 @@ public interface Filter extends Comparable<Filter> {
 
     String toDSL();
 
-    interface MultiArgs<A> extends Filter {
-        List<A> terms();
+    static MatchTagFilter matchTag(String tag, String value) {
+        return new MatchTagFilter(tag, value);
     }
 
-    interface NoArg extends Filter {
+    static StartsWithFilter startsWith(String tag, String value) {
+        return new StartsWithFilter(tag, value);
     }
 
-    interface OneArg<A> extends Filter {
-        A first();
+    static HasTagFilter hasTag(String tag) {
+        return new HasTagFilter(tag);
     }
 
-    interface TwoArgs<A, B> extends Filter {
-        A first();
+    static MatchKeyFilter matchKey(String value) {
+        return new MatchKeyFilter(value);
+    }
 
-        B second();
+    static RegexFilter regex(String tag, String value) {
+        return new RegexFilter(tag, value);
+    }
+
+    static AndFilter and(Filter... filters) {
+        return new AndFilter(ImmutableList.copyOf(filters));
+    }
+
+    static OrFilter or(Filter... filters) {
+        return new OrFilter(ImmutableList.copyOf(filters));
+    }
+
+    static NotFilter not(Filter filter) {
+        return new NotFilter(filter);
     }
 
     interface Visitor<T> {

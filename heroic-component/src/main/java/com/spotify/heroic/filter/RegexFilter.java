@@ -30,7 +30,7 @@ import java.util.regex.Pattern;
 
 @Data
 @EqualsAndHashCode(of = {"OPERATOR", "tag", "value"}, doNotUseGetters = true)
-public class RegexFilter implements Filter.TwoArgs<String, String> {
+public class RegexFilter implements Filter {
     public static final String OPERATOR = "~";
 
     private final String tag;
@@ -64,29 +64,19 @@ public class RegexFilter implements Filter.TwoArgs<String, String> {
     }
 
     @Override
-    public String first() {
-        return tag;
-    }
-
-    @Override
-    public String second() {
-        return value;
-    }
-
-    @Override
     public int compareTo(Filter o) {
         if (!RegexFilter.class.isAssignableFrom(o.getClass())) {
             return operator().compareTo(o.operator());
         }
 
         final RegexFilter other = (RegexFilter) o;
-        final int first = FilterComparatorUtils.stringCompare(first(), other.first());
+        final int first = tag.compareTo(other.tag);
 
         if (first != 0) {
             return first;
         }
 
-        return FilterComparatorUtils.stringCompare(second(), other.second());
+        return value.compareTo(other.value);
     }
 
     @Override

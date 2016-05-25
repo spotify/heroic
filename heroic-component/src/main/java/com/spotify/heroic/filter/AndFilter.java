@@ -37,7 +37,7 @@ import java.util.stream.Stream;
 
 @Data
 @EqualsAndHashCode(of = {"OPERATOR", "statements"}, doNotUseGetters = true)
-public class AndFilter implements Filter.MultiArgs<Filter> {
+public class AndFilter implements Filter {
     public static final String OPERATOR = "and";
 
     private final List<Filter> statements;
@@ -54,15 +54,11 @@ public class AndFilter implements Filter.MultiArgs<Filter> {
 
     @Override
     public String toString() {
-        final List<String> parts = new ArrayList<String>(statements.size() + 1);
+        final List<String> parts = new ArrayList<>(statements.size() + 1);
         parts.add(OPERATOR);
 
         for (final Filter statement : statements) {
-            if (statement == null) {
-                parts.add("<null>");
-            } else {
-                parts.add(statement.toString());
-            }
+            parts.add(statement.toString());
         }
 
         return "[" + StringUtils.join(parts, ", ") + "]";
@@ -85,7 +81,7 @@ public class AndFilter implements Filter.MultiArgs<Filter> {
             @Override
             public Stream<Filter> visitNot(final NotFilter not) {
                 // check for De Morgan's
-                return not.first().visit(new Filter.Visitor<Stream<Filter>>() {
+                return not.getFilter().visit(new Filter.Visitor<Stream<Filter>>() {
                     @Override
                     public Stream<Filter> visitOr(final OrFilter or) {
                         return or.terms().stream().map(f -> NotFilter.of(f).optimize());
@@ -116,7 +112,7 @@ public class AndFilter implements Filter.MultiArgs<Filter> {
                 final NotFilter not = (NotFilter) f;
 
                 // always false
-                if (statements.contains(not.first())) {
+                if (statements.contains(not.getFilter())) {
                     return FalseFilter.get();
                 }
 
@@ -138,12 +134,12 @@ public class AndFilter implements Filter.MultiArgs<Filter> {
                     if (inner instanceof MatchTagFilter) {
                         final MatchTagFilter matchTag = (MatchTagFilter) inner;
 
-                        if (!outer.first().equals(matchTag.first())) {
+                        if (!outer.getTag().equals(matchTag.getTag())) {
                             continue;
                         }
 
                         // always false
-                        if (!FilterComparatorUtils.isEqual(outer.second(), matchTag.second())) {
+                        if (!outer.getValue().equals(matchTag.getValue())) {
                             return FalseFilter.get();
                         }
                     }
@@ -156,24 +152,10 @@ public class AndFilter implements Filter.MultiArgs<Filter> {
             // optimize away prefixes which encompass eachother.
             // Example: foo ^ hello and foo ^ helloworld -> foo ^ helloworld
             if (f instanceof StartsWithFilter) {
-                final StartsWithFilter outer = (StartsWithFilter) f;
-
-                for (final Filter inner : statements) {
-                    if (inner.equals(outer)) {
-                        continue;
-                    }
-
-                    if (inner instanceof StartsWithFilter) {
-                        final StartsWithFilter starts = (StartsWithFilter) inner;
-
-                        if (!outer.first().equals(starts.first())) {
-                            continue;
-                        }
-
-                        if (FilterComparatorUtils.prefixedWith(starts.second(), outer.second())) {
-                            continue root;
-                        }
-                    }
+                if (FilterUtils.containsPrefixedWith(statements, (StartsWithFilter) f,
+                    (inner, outer) -> FilterUtils.prefixedWith(inner.getValue(),
+                        outer.getValue()))) {
+                    continue;
                 }
 
                 result.add(f);
@@ -200,13 +182,8 @@ public class AndFilter implements Filter.MultiArgs<Filter> {
         return OPERATOR;
     }
 
-    @Override
     public List<Filter> terms() {
         return statements;
-    }
-
-    public static Filter of(Filter... filters) {
-        return new AndFilter(Arrays.asList(filters));
     }
 
     @Override
@@ -216,7 +193,7 @@ public class AndFilter implements Filter.MultiArgs<Filter> {
         }
 
         final AndFilter other = (AndFilter) o;
-        return FilterComparatorUtils.compareLists(terms(), other.terms());
+        return FilterUtils.compareLists(terms(), other.terms());
     }
 
     private final Joiner and = Joiner.on(" and ");
@@ -224,5 +201,9 @@ public class AndFilter implements Filter.MultiArgs<Filter> {
     @Override
     public String toDSL() {
         return "(" + and.join(statements.stream().map(Filter::toDSL).iterator()) + ")";
+    }
+
+    public static Filter of(Filter... filters) {
+        return new AndFilter(Arrays.asList(filters));
     }
 }

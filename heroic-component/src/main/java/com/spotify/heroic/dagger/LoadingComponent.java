@@ -31,8 +31,6 @@ import com.spotify.heroic.aggregation.AggregationRegistry;
 import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.FilterModifier;
-import com.spotify.heroic.filter.FilterRegistry;
-import com.spotify.heroic.filter.FilterSerializer;
 import com.spotify.heroic.scheduler.Scheduler;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.serializer.Serializer;
@@ -54,10 +52,6 @@ public interface LoadingComponent {
 
     @Named("common")
     SerializerFramework serializer();
-
-    FilterRegistry filterRegistry();
-
-    FilterSerializer filterSerializer();
 
     AggregationRegistry aggregationRegistry();
 

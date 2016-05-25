@@ -39,10 +39,7 @@ import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Series_Serializer;
 import com.spotify.heroic.filter.CoreFilterModifier;
-import com.spotify.heroic.filter.CoreFilterRegistry;
 import com.spotify.heroic.filter.FilterModifier;
-import com.spotify.heroic.filter.FilterRegistry;
-import com.spotify.heroic.filter.FilterSerializer;
 import com.spotify.heroic.scheduler.DefaultScheduler;
 import com.spotify.heroic.scheduler.Scheduler;
 import dagger.Module;
@@ -83,18 +80,6 @@ public class LoadingModule {
     @LoadingScope
     SerializerFramework serializer() {
         return TinySerializer.builder().build();
-    }
-
-    @Provides
-    @LoadingScope
-    FilterRegistry filterRegistry(@Named("common") SerializerFramework s) {
-        return new CoreFilterRegistry(s, s.fixedInteger(), s.string());
-    }
-
-    @Provides
-    @LoadingScope
-    FilterSerializer filterSerializer(FilterRegistry filterRegistry) {
-        return filterRegistry.newFilterSerializer();
     }
 
     @Provides

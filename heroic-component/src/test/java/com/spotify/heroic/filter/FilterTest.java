@@ -9,17 +9,23 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeSet;
 
+import static com.spotify.heroic.filter.Filter.and;
+import static com.spotify.heroic.filter.Filter.hasTag;
+import static com.spotify.heroic.filter.Filter.matchTag;
+import static com.spotify.heroic.filter.Filter.not;
+import static com.spotify.heroic.filter.Filter.or;
+import static com.spotify.heroic.filter.Filter.startsWith;
 import static org.junit.Assert.assertEquals;
 
 public class FilterTest {
-    private final Filter a = new HasTagFilter("a");
-    private final Filter b = new HasTagFilter("b");
-    private final Filter c = new HasTagFilter("c");
-    private final Filter tag1a = new MatchTagFilter("foo", "a");
-    private final Filter tag1b = new MatchTagFilter("foo", "b");
+    private final Filter a = hasTag("a");
+    private final Filter b = hasTag("b");
+    private final Filter c = hasTag("c");
+    private final Filter tag1a = matchTag("foo", "a");
+    private final Filter tag1b = matchTag("foo", "b");
 
-    private final Filter s1a = new StartsWithFilter("foo", "abc");
-    private final Filter s1b = new StartsWithFilter("foo", "abcdef");
+    private final Filter s1a = startsWith("foo", "abc");
+    private final Filter s1b = startsWith("foo", "abcdef");
 
     /**
      * {@link com.spotify.heroic.filter.Filter.Visitor} methods should all defer to {@link
@@ -28,7 +34,6 @@ public class FilterTest {
     @Test
     public void visitorDefaultActionTest() {
         final Object ref = new Object();
-
         final Filter.Visitor<Object> v = filter -> ref;
 
         assertEquals(ref, v.visitStartsWith(Mockito.mock(StartsWithFilter.class)));
@@ -46,22 +51,22 @@ public class FilterTest {
 
     @Test
     public void optimizeAndTest() {
-        final Filter ref = AndFilter.of(a, b).optimize();
-        Assert.assertTrue(ref instanceof Filter.MultiArgs);
-        assertEquals(2, ((Filter.MultiArgs<?>) ref).terms().size());
-        assertEquals(ref, AndFilter.of(a, b, b).optimize());
-        assertEquals(ref, AndFilter.of(b, a).optimize());
-        assertEquals(ref, AndFilter.of(b, AndFilter.of(a, b)).optimize());
+        final Filter ref = and(a, b).optimize();
+        Assert.assertTrue(ref instanceof AndFilter);
+        assertEquals(2, ((AndFilter) ref).terms().size());
+        assertEquals(ref, and(a, b, b).optimize());
+        assertEquals(ref, and(b, a).optimize());
+        assertEquals(ref, and(b, and(a, b)).optimize());
     }
 
     @Test
     public void optimizeOrTest() {
-        final Filter ref = OrFilter.of(a, b).optimize();
-        Assert.assertTrue(ref instanceof Filter.MultiArgs);
-        assertEquals(2, ((Filter.MultiArgs<?>) ref).terms().size());
-        assertEquals(ref, OrFilter.of(a, b, b).optimize());
-        assertEquals(ref, OrFilter.of(b, a).optimize());
-        assertEquals(ref, OrFilter.of(b, OrFilter.of(a, b)).optimize());
+        final Filter ref = or(a, b).optimize();
+        Assert.assertTrue(ref instanceof OrFilter);
+        assertEquals(2, ((OrFilter) ref).terms().size());
+        assertEquals(ref, or(a, b, b).optimize());
+        assertEquals(ref, or(b, a).optimize());
+        assertEquals(ref, or(b, or(a, b)).optimize());
     }
 
     @Test
@@ -80,31 +85,21 @@ public class FilterTest {
 
     @Test
     public void testOrFlatten() {
-        assertEquals(OrFilter.of(a, b, c), OrFilter.of(a, OrFilter.of(b, c)).optimize());
-
-        assertEquals(OrFilter.of(a, b, c),
-            OrFilter.of(a, OrFilter.of(b, OrFilter.of(c))).optimize());
-
-        assertEquals(OrFilter.of(a, b, c), OrFilter
-            .of(a, NotFilter.of(AndFilter.of(NotFilter.of(b), NotFilter.of(c))))
-            .optimize());
+        assertEquals(or(a, b, c), or(a, or(b, c)).optimize());
+        assertEquals(or(a, b, c), or(a, or(b, or(c))).optimize());
+        assertEquals(or(a, b, c), or(a, not(and(not(b), not(c)))).optimize());
     }
 
     @Test
     public void testAndFlatten() {
-        assertEquals(AndFilter.of(a, b, c), AndFilter.of(a, AndFilter.of(b, c)).optimize());
-
-        assertEquals(AndFilter.of(a, b, c),
-            AndFilter.of(a, AndFilter.of(b, AndFilter.of(c))).optimize());
-
-        assertEquals(AndFilter.of(a, b, c), AndFilter
-            .of(a, NotFilter.of(OrFilter.of(NotFilter.of(b), NotFilter.of(c))))
-            .optimize());
+        assertEquals(and(a, b, c), and(a, and(b, c)).optimize());
+        assertEquals(and(a, b, c), and(a, and(b, and(c))).optimize());
+        assertEquals(and(a, b, c), and(a, not(or(not(b), not(c)))).optimize());
     }
 
     @Test
     public void optimizeNotNot() {
-        assertEquals(a, new NotFilter(new NotFilter(a)).optimize());
+        assertEquals(a, not(not(a)).optimize());
     }
 
     /**
@@ -113,9 +108,9 @@ public class FilterTest {
     @Test
     public void testAndContradiction() throws Exception {
         // same filter inverted
-        assertEquals(FalseFilter.get(), AndFilter.of(a, new NotFilter(a)).optimize());
+        assertEquals(FalseFilter.get(), and(a, not(a)).optimize());
         // same tag with different values
-        assertEquals(FalseFilter.get(), AndFilter.of(tag1a, tag1b).optimize());
+        assertEquals(FalseFilter.get(), and(tag1a, tag1b).optimize());
     }
 
     /**
@@ -123,18 +118,18 @@ public class FilterTest {
      */
     @Test
     public void testOrTautology() throws Exception {
-        assertEquals(TrueFilter.get(), OrFilter.of(a, new NotFilter(a)).optimize());
+        assertEquals(TrueFilter.get(), or(a, not(a)).optimize());
     }
 
     @Test
     public void testAndStartsWith() {
-        assertEquals(s1b, AndFilter.of(s1a, s1b).optimize());
-        assertEquals(s1b, AndFilter.of(s1b, s1a).optimize());
+        assertEquals(s1b, and(s1a, s1b).optimize());
+        assertEquals(s1b, and(s1b, s1a).optimize());
     }
 
     @Test
     public void testOrStartsWith() {
-        assertEquals(s1a, OrFilter.of(s1a, s1b).optimize());
-        assertEquals(s1a, OrFilter.of(s1b, s1a).optimize());
+        assertEquals(s1a, or(s1a, s1b).optimize());
+        assertEquals(s1a, or(s1b, s1a).optimize());
     }
 }

@@ -134,7 +134,6 @@ public class HeroicCore implements HeroicConfiguration {
     // @formatter:off
     private static final HeroicModule[] BUILTIN_MODULES = new HeroicModule[] {
         new com.spotify.heroic.aggregation.Module(),
-        new com.spotify.heroic.filter.Module(),
         new com.spotify.heroic.http.Module(),
         new com.spotify.heroic.jetty.Module(),
         new com.spotify.heroic.ws.Module(),

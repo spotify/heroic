@@ -1,10 +1,10 @@
 package com.spotify.heroic.common;
 
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.HeroicMappers;
+import com.spotify.heroic.grammar.QueryParser;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -12,11 +12,10 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.assertEquals;
 
 public class DurationTest {
-    private ObjectMapper mapper = HeroicMappers.json();
+    private ObjectMapper mapper = HeroicMappers.json(Mockito.mock(QueryParser.class));
 
     @Test
-    public void testShorthandDurationSerializer()
-        throws JsonParseException, JsonMappingException, IOException {
+    public void testShorthandDurationSerializer() throws IOException {
         assertEquals(Duration.of(1, TimeUnit.MILLISECONDS),
             mapper.readValue("\"1ms\"", Duration.class));
         assertEquals(Duration.of(2, TimeUnit.MILLISECONDS),
@@ -32,8 +31,7 @@ public class DurationTest {
     }
 
     @Test
-    public void testFallbackDurationSerializer()
-        throws JsonParseException, JsonMappingException, IOException {
+    public void testFallbackDurationSerializer() throws IOException {
         final Duration reference = Duration.of(1, TimeUnit.MICROSECONDS);
         final String value = mapper.writeValueAsString(reference);
         assertEquals(reference, mapper.readValue(value, Duration.class));

@@ -33,7 +33,6 @@ import com.spotify.heroic.HeroicServer;
 import com.spotify.heroic.QueryManager;
 import com.spotify.heroic.ShellTasks;
 import com.spotify.heroic.aggregation.AggregationRegistry;
-import com.spotify.heroic.filter.FilterRegistry;
 import com.spotify.heroic.grammar.CoreQueryParser;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.jetty.JettyServerConnector;
@@ -137,12 +136,11 @@ public class PrimaryModule {
     @Named(HeroicCore.APPLICATION_JSON_INTERNAL)
     @PrimaryScope
     ObjectMapper internalMapper(
-        FilterRegistry filterRegistry, QueryParser parser, AggregationRegistry aggregation
+        QueryParser parser, AggregationRegistry aggregation
     ) {
-        final ObjectMapper m = HeroicMappers.json();
+        final ObjectMapper m = HeroicMappers.json(parser);
 
         /* configuration determined at runtime, unsuitable for testing */
-        m.registerModule(filterRegistry.module(parser));
         m.registerModule(aggregation.module());
 
         return m;

@@ -19,8 +19,10 @@
  * under the License.
  */
 
-package com.spotify.heroic.filter;
+package com.spotify.heroic.common;
 
-public interface MultiArgumentsFilter<T extends Filter.MultiArgs<A>, A>
-    extends MultiArgumentsFilterBuilder<T, A>, FilterJsonSerialization<T> {
+import java.io.IOException;
+
+public interface FunctionIO<A, B> {
+    B apply(A input) throws IOException;
 }

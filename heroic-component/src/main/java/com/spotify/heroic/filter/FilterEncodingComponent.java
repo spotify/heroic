@@ -21,6 +21,22 @@
 
 package com.spotify.heroic.filter;
 
-public interface NoArgumentFilterBuilder<T extends Filter.NoArg> {
-    T build();
+import com.spotify.heroic.common.BiConsumerIO;
+import com.spotify.heroic.common.FunctionIO;
+import lombok.Data;
+
+import java.util.Optional;
+
+@Data
+class FilterEncodingComponent<T> {
+    FunctionIO<FilterEncoding.Decoder, Optional<T>> decoder;
+    BiConsumerIO<FilterEncoding.Encoder, T> encoder;
+
+    public FilterEncodingComponent(
+        FunctionIO<FilterEncoding.Decoder, Optional<T>> decoder,
+        BiConsumerIO<FilterEncoding.Encoder, T> encoder
+    ) {
+        this.decoder = decoder;
+        this.encoder = encoder;
+    }
 }

@@ -22,21 +22,22 @@
 package com.spotify.heroic.filter;
 
 import java.io.IOException;
+import java.util.Optional;
 
-public interface FilterJsonSerialization<T> {
-    interface Deserializer {
+public interface FilterEncoding<T> {
+    interface Decoder {
         /**
          * read next item as a string.
          */
-        String string() throws IOException;
+        Optional<String> string() throws IOException;
 
         /**
          * read next item as a filter.
          */
-        Filter filter() throws IOException;
+        Optional<Filter> filter() throws IOException;
     }
 
-    interface Serializer {
+    interface Encoder {
         /**
          * Serialize next item as a string.
          */
@@ -48,7 +49,20 @@ public interface FilterJsonSerialization<T> {
         void filter(Filter filter) throws IOException;
     }
 
-    T deserialize(Deserializer deserializer) throws IOException;
+    T deserialize(Decoder decoder) throws IOException;
 
-    void serialize(Serializer serializer, T filter) throws IOException;
+    void serialize(Encoder encoder, T filter) throws IOException;
+
+    FilterEncodingComponent<String> STRING =
+        new FilterEncodingComponent<>(Decoder::string, Encoder::string);
+    FilterEncodingComponent<Filter> FILTER =
+        new FilterEncodingComponent<>(Decoder::filter, Encoder::filter);
+
+    static FilterEncodingComponent<String> string() {
+        return STRING;
+    }
+
+    static FilterEncodingComponent<Filter> filter() {
+        return FILTER;
+    }
 }

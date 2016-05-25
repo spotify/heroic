@@ -23,42 +23,20 @@ package com.spotify.heroic.filter;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.SortedSet;
+import java.util.function.BiFunction;
 
-public class FilterComparatorUtils {
-    public static boolean isEqual(String a, String b) {
-        return stringCompare(a, b) == 0;
-    }
-
+public class FilterUtils {
     /**
      * Return true of both a and b are non-null, and b is a prefix (but not equal to) a.
      */
     public static boolean prefixedWith(String a, String b) {
-        if (a == null || b == null) {
-            return false;
-        }
-
-        // strictly prefixes only.
+        // strict prefixes only.
         if (a.equals(b)) {
             return false;
         }
 
         return a.startsWith(b);
-    }
-
-    public static int stringCompare(String a, String b) {
-        if (a == null) {
-            if (b != null) {
-                return 1;
-            }
-
-            return 0;
-        }
-
-        if (b == null) {
-            return -1;
-        }
-
-        return a.compareTo(b);
     }
 
     /**
@@ -88,5 +66,20 @@ public class FilterComparatorUtils {
         }
 
         return 0;
+    }
+
+    public static boolean containsPrefixedWith(
+        final SortedSet<Filter> statements, final StartsWithFilter outer,
+        final BiFunction<StartsWithFilter, StartsWithFilter, Boolean> check
+    ) {
+        return statements
+            .stream()
+            .filter(inner -> inner instanceof StartsWithFilter)
+            .map(StartsWithFilter.class::cast)
+            .filter(statements::contains)
+            .filter(inner -> outer.getTag().equals(inner.getTag()))
+            .filter(inner -> check.apply(inner, outer))
+            .findFirst()
+            .isPresent();
     }
 }

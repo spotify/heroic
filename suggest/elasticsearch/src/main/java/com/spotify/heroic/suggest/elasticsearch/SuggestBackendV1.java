@@ -808,42 +808,42 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
 
                     @Override
                     public FilterBuilder visitNot(final NotFilter not) {
-                        return notFilter(filter(not.first()));
+                        return notFilter(filter(not.getFilter()));
                     }
 
                     @Override
                     public FilterBuilder visitMatchTag(final MatchTagFilter matchTag) {
                         final BoolFilterBuilder nested = boolFilter();
-                        nested.must(termFilter(tagsKey, matchTag.first()));
-                        nested.must(termFilter(tagsValue, matchTag.second()));
+                        nested.must(termFilter(tagsKey, matchTag.getTag()));
+                        nested.must(termFilter(tagsValue, matchTag.getValue()));
                         return nestedFilter(tags, nested);
                     }
 
                     @Override
                     public FilterBuilder visitStartsWith(final StartsWithFilter startsWith) {
                         final BoolFilterBuilder nested = boolFilter();
-                        nested.must(termFilter(tagsKey, startsWith.first()));
-                        nested.must(prefixFilter(tagsValue, startsWith.second()));
+                        nested.must(termFilter(tagsKey, startsWith.getTag()));
+                        nested.must(prefixFilter(tagsValue, startsWith.getValue()));
                         return nestedFilter(tags, nested);
                     }
 
                     @Override
                     public FilterBuilder visitRegex(final RegexFilter regex) {
                         final BoolFilterBuilder nested = boolFilter();
-                        nested.must(termFilter(tagsKey, regex.first()));
-                        nested.must(regexpFilter(tagsValue, regex.second()));
+                        nested.must(termFilter(tagsKey, regex.getTag()));
+                        nested.must(regexpFilter(tagsValue, regex.getValue()));
                         return nestedFilter(tags, nested);
                     }
 
                     @Override
                     public FilterBuilder visitHasTag(final HasTagFilter hasTag) {
-                        final TermFilterBuilder nested = termFilter(tagsKey, hasTag.first());
+                        final TermFilterBuilder nested = termFilter(tagsKey, hasTag.getTag());
                         return nestedFilter(tags, nested);
                     }
 
                     @Override
                     public FilterBuilder visitMatchKey(final MatchKeyFilter matchKey) {
-                        return termFilter(seriesKey, matchKey.first());
+                        return termFilter(seriesKey, matchKey.getValue());
                     }
 
                     @Override
