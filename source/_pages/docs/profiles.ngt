@@ -11,7 +11,7 @@
 </p>
 
 <codeblock language="bash">
-tools/heroic-shell --server -P memory -X elasticsearch.configure
+$> tools/heroic-shell --server -P memory
 </codeblock>
 
 <p>
@@ -27,7 +27,17 @@ tools/heroic-shell --server -P memory -X elasticsearch.configure
 <h3>Playing with the <code>memory</code> profile</h3>
 
 <p>
-  You can write some data into the the instance:
+  Using the <code>load-generated</code> command, you can generate some random
+  data for the last week to play around with.
+</p>
+
+<codeblock language="bash">
+heroic&gt; load-generated
+...
+</codeblock>
+
+<p>
+  You can also manually write some data into the the local instance:
 </p>
 
 <codeblock language="bash">
@@ -48,6 +58,6 @@ heroic&gt; fetch --series '{"key": "test", "tags": {"host": "a", "what": "bar"}}
 </p>
 
 <codeblock language="bash">
-heroic&gt; query average() from points(1d) where $key = test;
-heroic&gt; query average() from points(1d) where $key = test and what=bar;
+heroic&gt; query average from points(1d) where $key = test;
+heroic&gt; query average from points(1d) where $key = test and what=bar;
 </codeblock>
