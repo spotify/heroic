@@ -17,4 +17,4 @@ install:
   - tools/install-repackaged
 
 script:
-  - mvn -D environment=test test
+  - mvn -D environment=test integration-test
