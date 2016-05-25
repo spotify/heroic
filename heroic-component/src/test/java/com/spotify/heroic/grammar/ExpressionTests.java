@@ -28,4 +28,24 @@ public abstract class ExpressionTests {
 
         assertEquals(r, expected.context());
     }
+
+    static <E extends Expression> void uniFuncTest(
+        Function<Context, E> a, Function<Context, E> e, Function<E, E> op
+    ) {
+        final Context c = Mockito.mock(Context.class);
+
+        final E expected = e.apply(c);
+        final E result = op.apply(a.apply(c));
+
+        assertEquals(expected, result);
+        assertEquals(c, expected.context());
+    }
+
+    static <E extends Expression> void visitorTest(
+        E expr, BiFunction<Expression.Visitor<Void>, E, Void> verify
+    ) {
+        final Expression.Visitor<Void> visitor = Mockito.mock(Expression.Visitor.class);
+        expr.visit(visitor);
+        verify.apply(verify(visitor), expr);
+    }
 }

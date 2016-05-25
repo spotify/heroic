@@ -5,6 +5,8 @@ import org.junit.Test;
 import java.util.concurrent.TimeUnit;
 
 import static com.spotify.heroic.grammar.ExpressionTests.biFuncTest;
+import static com.spotify.heroic.grammar.ExpressionTests.uniFuncTest;
+import static com.spotify.heroic.grammar.ExpressionTests.visitorTest;
 import static org.junit.Assert.assertEquals;
 
 public class DoubleExpressionTest {
@@ -19,7 +21,7 @@ public class DoubleExpressionTest {
     }
 
     @Test
-    public void testOps() {
+    public void operationsTest() {
         biFuncTest(a -> new DoubleExpression(a, 21D), b -> new DoubleExpression(b, 21D),
             r -> new DoubleExpression(r, 42D), DoubleExpression::add);
 
@@ -31,5 +33,13 @@ public class DoubleExpressionTest {
 
         biFuncTest(a -> new DoubleExpression(a, 10D), b -> new DoubleExpression(b, 20D),
             r -> new DoubleExpression(r, 200D), DoubleExpression::multiply);
+
+        uniFuncTest(a -> new DoubleExpression(a, 10D), r -> new DoubleExpression(r, -10D),
+            DoubleExpression::negate);
+    }
+
+    @Test
+    public void visitTest() {
+        visitorTest(d, Expression.Visitor::visitDouble);
     }
 }

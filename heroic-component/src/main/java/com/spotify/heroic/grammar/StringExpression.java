@@ -31,6 +31,9 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * An expression representing a String.
+ */
 @Data
 @EqualsAndHashCode(exclude = {"ctx"})
 @JsonTypeName("string")

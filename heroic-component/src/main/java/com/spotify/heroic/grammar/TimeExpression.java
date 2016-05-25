@@ -40,6 +40,13 @@ import java.time.temporal.TemporalAccessor;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Expression representing a given time of day, like 12:00:00.
+ * <p>
+ * This does <em>not</em> contain timezone or day information, and when evaluated using {@link
+ * #eval(com.spotify.heroic.grammar.Expression.Scope)} is converted to an {@link
+ * com.spotify.heroic.grammar.InstantExpression} using the information available in the scope.
+ */
 @Data
 @EqualsAndHashCode(exclude = {"ctx"})
 @JsonTypeName("time")

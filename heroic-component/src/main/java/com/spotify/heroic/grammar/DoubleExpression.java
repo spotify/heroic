@@ -93,10 +93,6 @@ public final class DoubleExpression implements Expression {
         return new DoubleExpression(ctx, -value);
     }
 
-    public String toString() {
-        return String.format("<%f>", value);
-    }
-
     @SuppressWarnings("unchecked")
     @Override
     public <T extends Expression> T cast(Class<T> to) {
@@ -113,5 +109,10 @@ public final class DoubleExpression implements Expression {
         }
 
         throw ctx.castError(this, to);
+    }
+
+    @Override
+    public String toString() {
+        return String.format("<%f>", value);
     }
 }

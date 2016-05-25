@@ -185,6 +185,7 @@ public class LocalMetricManager implements MetricManager {
                     return async.resolved(ResultGroups.empty(QUERY));
                 }
 
+                // TODO: distinguish these errors somehow so that they don't trigger a retry.
                 if (result.getSize() >= seriesLimit) {
                     throw new IllegalArgumentException(
                         "The total number of series fetched exceeds the allowed limit of " +

@@ -65,17 +65,17 @@ public class DurationExpression implements Expression {
     }
 
     @Override
-    public Expression sub(Expression other) {
+    public DurationExpression sub(Expression other) {
         return operate(SUB, other);
     }
 
     @Override
-    public Expression add(Expression other) {
+    public DurationExpression add(Expression other) {
         return operate(ADD, other);
     }
 
     @Override
-    public Expression divide(final Expression other) {
+    public DurationExpression divide(final Expression other) {
         final long den = other.cast(IntegerExpression.class).getValue();
 
         long value = this.value;
@@ -111,11 +111,11 @@ public class DurationExpression implements Expression {
     }
 
     @Override
-    public Expression negate() {
+    public DurationExpression negate() {
         return new DurationExpression(ctx, unit, -value);
     }
 
-    private Expression operate(BinaryOperation op, Expression other) {
+    private DurationExpression operate(BinaryOperation op, Expression other) {
         final DurationExpression o = other.cast(DurationExpression.class);
 
         final Context c = ctx.join(other.context());

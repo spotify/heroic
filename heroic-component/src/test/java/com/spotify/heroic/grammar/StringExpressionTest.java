@@ -3,6 +3,7 @@ package com.spotify.heroic.grammar;
 import org.junit.Test;
 
 import static com.spotify.heroic.grammar.ExpressionTests.biFuncTest;
+import static com.spotify.heroic.grammar.ExpressionTests.visitorTest;
 import static org.junit.Assert.assertEquals;
 
 public class StringExpressionTest {
@@ -16,8 +17,13 @@ public class StringExpressionTest {
     }
 
     @Test
-    public void addTest() {
+    public void operationsTest() {
         biFuncTest(a -> new StringExpression(a, "foo"), b -> new StringExpression(b, "bar"),
             r -> new StringExpression(r, "foobar"), StringExpression::add);
+    }
+
+    @Test
+    public void visitTest() {
+        visitorTest(str, Expression.Visitor::visitString);
     }
 }

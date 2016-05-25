@@ -67,7 +67,7 @@ public final class ListExpression implements Expression {
     }
 
     @Override
-    public Expression add(Expression other) {
+    public ListExpression add(Expression other) {
         final ListExpression o = other.cast(ListExpression.class);
         final ArrayList<Expression> list = new ArrayList<Expression>();
         list.addAll(this.list);

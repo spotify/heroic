@@ -5,10 +5,17 @@ import org.junit.Test;
 import java.util.concurrent.TimeUnit;
 
 import static com.spotify.heroic.grammar.ExpressionTests.biFuncTest;
+import static com.spotify.heroic.grammar.ExpressionTests.uniFuncTest;
+import static com.spotify.heroic.grammar.ExpressionTests.visitorTest;
 import static org.junit.Assert.assertEquals;
 
 public class IntegerExpressionTest {
     private final IntegerExpression integer = Expression.integer(42);
+
+    @Test
+    public void testAccessors() {
+        assertEquals(42, integer.getValue());
+    }
 
     @Test
     public void castTest() {
@@ -19,7 +26,7 @@ public class IntegerExpressionTest {
     }
 
     @Test
-    public void testOps() {
+    public void operationsTest() {
         biFuncTest(a -> new IntegerExpression(a, 21), b -> new IntegerExpression(b, 21),
             r -> new IntegerExpression(r, 42), IntegerExpression::add);
 
@@ -31,5 +38,13 @@ public class IntegerExpressionTest {
 
         biFuncTest(a -> new IntegerExpression(a, 10), b -> new IntegerExpression(b, 20),
             r -> new IntegerExpression(r, 200), IntegerExpression::multiply);
+
+        uniFuncTest(a -> new IntegerExpression(a, 10), b -> new IntegerExpression(b, -10),
+            IntegerExpression::negate);
+    }
+
+    @Test
+    public void visitTest() {
+        visitorTest(integer, Expression.Visitor::visitInteger);
     }
 }

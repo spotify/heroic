@@ -111,6 +111,7 @@ public final class IntegerExpression implements Expression {
         throw ctx.castError(this, to);
     }
 
+    @Override
     public String toString() {
         return String.format("<%d>", value);
     }

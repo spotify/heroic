@@ -30,6 +30,11 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Representation of a let expression.
+ * <p>
+ * These take the form: {@code let &lt;reference&gt; = &lt;expression&gt;}
+ */
 @Data
 @EqualsAndHashCode(exclude = {"ctx"})
 @JsonTypeName("let")

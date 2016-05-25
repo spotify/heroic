@@ -30,6 +30,9 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * An expression representing a Reference ($name).
+ */
 @Data
 @EqualsAndHashCode(exclude = {"ctx"})
 @JsonTypeName("reference")
