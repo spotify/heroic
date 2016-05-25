@@ -57,15 +57,9 @@ public class Context {
             line, col, lineEnd, colEnd);
     }
 
-    public ParseException castError(final Object from, final Object to) {
-        return new ParseException(
-            String.format("%s cannot be cast to a compatible type of %s", from, to), null, line,
-            col, lineEnd, colEnd);
-    }
-
     public ParseException scopeLookupError(final String name) {
         return new ParseException(
-            String.format("cannot find reference %s in the current scope", name), null, line, col,
+            String.format("cannot find reference (%s) in the current scope", name), null, line, col,
             lineEnd, colEnd);
     }
 
