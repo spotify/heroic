@@ -13,11 +13,11 @@
   <artifactId>heroic-metric-bigtable</artifactId>
   <packaging>jar</packaging>
 
-  <name>Heroic: BitTable Backend</name>
+  <name>Heroic: Bigtable Backend</name>
 
   <description>
     Metric Backend for Heroic to store and fetch time series data from
-    Google BigTable.
+    Google Cloud Bigtable.
   </description>
 
   <properties>
