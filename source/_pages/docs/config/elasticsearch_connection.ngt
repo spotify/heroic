@@ -65,7 +65,7 @@
 <h3 id="elasticsearch-rotating">Rotating Index Mapping</h3>
 
 <codeblock language="yaml">
-type: single
+type: rotating
 pattern: metadata-%s
 interval: 1w
 maxReadIndices: 2
