@@ -93,5 +93,11 @@
       <groupId>com.spotify.heroic.rpc</groupId>
       <artifactId>heroic-rpc-grpc</artifactId>
     </dependency>
+
+    <!-- statistics -->
+    <dependency>
+      <groupId>com.spotify.heroic.statistics</groupId>
+      <artifactId>heroic-statistics-semantic</artifactId>
+    </dependency>
   </dependencies>
 </project>
