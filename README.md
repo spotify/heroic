@@ -36,6 +36,12 @@ $ mvn package
 This will cause the `heroic-dist` module to produce a shaded jar that contains
 all required dependencies.
 
+#### Coverage
+
+[![Coverage](https://codecov.io/gh/spotify/heroic/branch/master/graphs/icicle.svg)](https://codecov.io/gh/spotify/heroic/branch/master)
+
+There's an ongoing project to improve test coverage. Clicking the above graph will bring you to [codecov.io](https://codecov.io/gh/spotify/heroic/branches/master), where you can find areas to focus on.
+
 #### Running Tests
 
 A more comprehensive test suite is enabled with the `environment=test`
