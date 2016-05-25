@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.metadata.memory;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.DateRange;
@@ -37,7 +38,6 @@ import com.spotify.heroic.metric.WriteResult;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.ToString;
-import org.elasticsearch.common.collect.ImmutableList;
 
 import javax.inject.Inject;
 import javax.inject.Named;

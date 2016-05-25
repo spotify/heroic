@@ -33,11 +33,6 @@
       <scope>provided</scope>
     </dependency>
 
-    <dependency>
-      <groupId>org.elasticsearch</groupId>
-      <artifactId>elasticsearch</artifactId>
-    </dependency>
-
     <!-- testing -->
     <dependency>
       <groupId>junit</groupId>
