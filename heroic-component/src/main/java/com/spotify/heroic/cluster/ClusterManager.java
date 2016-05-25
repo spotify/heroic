@@ -64,7 +64,7 @@ public interface ClusterManager extends UsableGroupManager<ClusterNodeGroup>, In
      */
     AsyncFuture<Void> addStaticNode(URI node);
 
-    List<NodeRegistryEntry> getNodes();
+    List<ClusterNode> getNodes();
 
     AsyncFuture<Void> refresh();
 

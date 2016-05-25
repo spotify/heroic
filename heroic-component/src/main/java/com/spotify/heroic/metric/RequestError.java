@@ -27,7 +27,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 @JsonSubTypes({
     @JsonSubTypes.Type(
-        value = NodeError.class, name = "node")
+        value = NodeError.class, name = "node"), @JsonSubTypes.Type(
+    value = ShardError.class, name = "shard")
 })
 public interface RequestError {
 

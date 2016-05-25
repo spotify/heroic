@@ -38,7 +38,6 @@ import eu.toolchain.async.ResolvableFuture;
 import eu.toolchain.async.Transform;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 
 import javax.inject.Inject;
@@ -166,7 +165,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
     }
 
     @Override
-    public List<NodeRegistryEntry> getNodes() {
+    public List<ClusterNode> getNodes() {
         final NodeRegistry registry = this.registry.get();
 
         if (registry == null) {
@@ -232,20 +231,20 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
             }
 
             return async.collect(nodes).lazyTransform(newNodes -> {
-                final Set<NodeRegistryEntry> entries = new HashSet<>();
+                final Set<ClusterNode> entries = new HashSet<>();
                 final List<Throwable> failures = new ArrayList<>();
 
                 for (final MaybeError<ClusterNode> maybe : newNodes) {
                     if (maybe.isError()) {
                         failures.add(maybe.getError());
                     } else {
-                        entries.add(createRegistryEntry(maybe.getJust()));
+                        entries.add(maybe.getJust());
                     }
                 }
 
                 if (entries.isEmpty() && useLocal) {
                     log.info("[refresh] no nodes discovered, including local node");
-                    entries.add(createRegistryEntry(local));
+                    entries.add(local);
                 }
 
                 final Set<Map<String, String>> knownShards = extractKnownShards(entries);
@@ -305,13 +304,14 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
 
     @Override
     public ClusterNodeGroup useOptionalGroup(Optional<String> group) {
-        final List<ClusterNode.Group> groups = new ArrayList<>();
+        final List<ClusterShardGroup> shards = new ArrayList<>();
 
-        for (final NodeRegistryEntry e : findAllShards(null)) {
-            groups.add(e.getClusterNode().useOptionalGroup(group));
+        for (final Pair<Map<String, String>, List<ClusterNode>> e : findManyFromAllShards(null)) {
+            shards.add(new ClusterShardGroup(async, e.getKey(), ImmutableList.copyOf(
+                e.getValue().stream().map(c -> c.useOptionalGroup(group)).iterator())));
         }
 
-        return new CoreClusterNodeGroup(async, groups);
+        return new CoreClusterNodeGroup(async, shards);
     }
 
     @Override
@@ -350,56 +350,49 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
             clients.values().stream().map(ClusterNode::close).collect(Collectors.toList()));
     }
 
-    private List<Map<String, String>> topologyOf(Collection<NodeRegistryEntry> entries) {
+    private List<Map<String, String>> topologyOf(Collection<ClusterNode> entries) {
         final List<Map<String, String>> shards = new ArrayList<>();
 
-        for (final NodeRegistryEntry e : entries) {
-            shards.add(e.getMetadata().getTags());
+        for (final ClusterNode e : entries) {
+            shards.add(e.metadata().getTags());
         }
 
         return shards;
     }
 
-    private Collection<NodeRegistryEntry> findAllShards(NodeCapability capability) {
+    private List<Pair<Map<String, String>, List<ClusterNode>>> findManyFromAllShards(
+        NodeCapability capability
+    ) {
         final NodeRegistry registry = this.registry.get();
 
         if (registry == null) {
             throw new IllegalStateException("Registry not ready");
         }
 
-        final Collection<NodeRegistryEntry> all = registry.findAllShards(capability);
-
-        if (!topology.isEmpty()) {
-            int found = 0;
-
-            for (final NodeRegistryEntry entry : all) {
-                if (topology.contains(entry.getMetadata().getTags())) {
-                    found += 1;
-                }
-            }
-
-            if (found != topology.size()) {
-                throw new IllegalStateException(
-                    String.format("Could not find %s nodes for the whole topology (%s), found (%s)",
-                        capability, StringUtils.join(topology, ", "),
-                        StringUtils.join(topologyOf(all), ", ")));
-            }
-        }
-
-        return all;
+        return registry.findManyFromAllShards(capability, Integer.MAX_VALUE);
     }
 
-    private Set<Map<String, String>> extractKnownShards(Set<NodeRegistryEntry> entries) {
+    private Collection<ClusterNode> findAllShards(NodeCapability capability) {
+        final NodeRegistry registry = this.registry.get();
+
+        if (registry == null) {
+            throw new IllegalStateException("Registry not ready");
+        }
+
+        return registry.findAllShards(capability);
+    }
+
+    private Set<Map<String, String>> extractKnownShards(Set<ClusterNode> entries) {
         final Set<Map<String, String>> knownShards = new HashSet<>();
 
-        for (final NodeRegistryEntry e : entries) {
-            knownShards.add(e.getMetadata().getTags());
+        for (final ClusterNode e : entries) {
+            knownShards.add(e.metadata().getTags());
         }
 
         return knownShards;
     }
 
-    private Transform<Throwable, MaybeError<NodeRegistryEntry>> handleError(final URI uri) {
+    private Transform<Throwable, MaybeError<ClusterNode>> handleError(final URI uri) {
         return error -> {
             log.error("Failed to connect {}", uri, error);
             return MaybeError.error(error);
@@ -441,9 +434,5 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
         }
 
         return protocol.connect(uri);
-    }
-
-    private NodeRegistryEntry createRegistryEntry(final ClusterNode node) {
-        return new NodeRegistryEntry(node, node.metadata());
     }
 }

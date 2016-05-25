@@ -23,8 +23,7 @@ package com.spotify.heroic.metric;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.cluster.ClusterNode;
-import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.cluster.ClusterShardGroup;
 import eu.toolchain.async.Transform;
 import lombok.Data;
 
@@ -60,16 +59,19 @@ public class QueryResultPart {
     private final QueryTrace queryTrace;
 
     public static Transform<ResultGroups, QueryResultPart> fromResultGroup(
-        final DateRange range, final ClusterNode c
+        final ClusterShardGroup shard
     ) {
         final Stopwatch w = Stopwatch.createStarted();
 
         return result -> {
-            final ImmutableList<ShardedResultGroup> groups = ImmutableList.copyOf(
-                result.getGroups().stream().map(ResultGroup.toShardedResultGroup(c)).iterator());
+            final ImmutableList<ShardedResultGroup> groups = ImmutableList.copyOf(result
+                .getGroups()
+                .stream()
+                .map(ResultGroup.toShardedResultGroup(shard))
+                .iterator());
 
             final ShardTrace shardTrace =
-                ShardTrace.of(c.toString(), c.metadata(), w.elapsed(TimeUnit.MILLISECONDS),
+                ShardTrace.of(shard.getShard(), w.elapsed(TimeUnit.MILLISECONDS),
                     result.getStatistics(), Optional.empty());
 
             return new QueryResultPart(groups, result.getErrors(), shardTrace, result.getTrace());

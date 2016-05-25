@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.http.query;
 
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.Query;
 import com.spotify.heroic.QueryBuilder;
@@ -35,19 +33,15 @@ import lombok.Data;
 import org.apache.commons.lang3.tuple.Pair;
 
 import javax.inject.Inject;
-import javax.ws.rs.BadRequestException;
 import javax.ws.rs.Consumes;
-import javax.ws.rs.NotFoundException;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.MediaType;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -68,53 +62,6 @@ public class QueryResource {
         this.httpAsync = httpAsync;
         this.query = query;
         this.async = async;
-    }
-
-    private final Cache<UUID, StreamQuery> streamQueries =
-        CacheBuilder.newBuilder().expireAfterWrite(10, TimeUnit.MINUTES).<UUID, StreamQuery>build();
-
-    @POST
-    @Path("metrics/stream")
-    public List<StreamId> metricsStream(
-        @QueryParam("backend") String group, QueryMetrics query
-    ) {
-        final Query request = setupQuery(query).build();
-
-        final Collection<? extends QueryManager.Group> groups =
-            this.query.useGroupPerNode(Optional.ofNullable(group));
-        final List<StreamId> ids = new ArrayList<>();
-
-        for (QueryManager.Group g : groups) {
-            final UUID id = UUID.randomUUID();
-            streamQueries.put(id, new StreamQuery(g, request));
-            ids.add(new StreamId(g.first().node().metadata().getTags(), id));
-        }
-
-        return ids;
-    }
-
-    @POST
-    @Path("metrics/stream/{id}")
-    public void metricsStreamId(
-        @Suspended final AsyncResponse response, @PathParam("id") final UUID id
-    ) {
-        if (id == null) {
-            throw new BadRequestException("Id must be a valid UUID");
-        }
-
-        final StreamQuery streamQuery = streamQueries.getIfPresent(id);
-
-        if (streamQuery == null) {
-            throw new NotFoundException("Stream query not found with id: " + id);
-        }
-
-        final Query q = streamQuery.getQuery();
-        final QueryManager.Group group = streamQuery.getGroup();
-        final AsyncFuture<QueryResult> callback = group.query(q);
-
-        callback.onResolved(r -> streamQueries.invalidate(id));
-
-        bindMetricsResponse(response, callback);
     }
 
     @POST

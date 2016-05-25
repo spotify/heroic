@@ -32,7 +32,7 @@ import com.spotify.heroic.aggregation.DefaultAggregationContext;
 import com.spotify.heroic.aggregation.Empty;
 import com.spotify.heroic.cache.QueryCache;
 import com.spotify.heroic.cluster.ClusterManager;
-import com.spotify.heroic.cluster.ClusterNode;
+import com.spotify.heroic.cluster.ClusterShardGroup;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.filter.Filter;
@@ -57,7 +57,6 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -81,8 +80,8 @@ public class CoreQueryManager implements QueryManager {
     @Inject
     public CoreQueryManager(
         @Named("features") final Set<String> features, final AsyncFramework async,
-        final ClusterManager cluster, final QueryParser parser,
-        final QueryCache queryCache, final AggregationFactory aggregations
+        final ClusterManager cluster, final QueryParser parser, final QueryCache queryCache,
+        final AggregationFactory aggregations
     ) {
         this.features = features;
         this.async = async;
@@ -94,15 +93,15 @@ public class CoreQueryManager implements QueryManager {
 
     @Override
     public QueryManager.Group useOptionalGroup(final Optional<String> group) {
-        return new Group(cluster.useOptionalGroup(group));
+        return new Group(cluster.useOptionalGroup(group).shards());
     }
 
     @Override
     public Collection<Group> useGroupPerNode(final Optional<String> group) {
         final List<Group> result = new ArrayList<>();
 
-        for (ClusterNode.Group g : cluster.useOptionalGroup(group)) {
-            result.add(new Group(ImmutableList.of(g)));
+        for (final ClusterShardGroup shard : cluster.useOptionalGroup(group).shards()) {
+            result.add(new Group(ImmutableList.of(shard)));
         }
 
         return result;
@@ -112,8 +111,8 @@ public class CoreQueryManager implements QueryManager {
     public Collection<Group> useDefaultGroupPerNode() {
         final List<Group> result = new ArrayList<>();
 
-        for (ClusterNode.Group g : cluster.useDefaultGroup()) {
-            result.add(new Group(ImmutableList.of(g)));
+        for (ClusterShardGroup shard : cluster.useDefaultGroup().shards()) {
+            result.add(new Group(ImmutableList.of(shard)));
         }
 
         return result;
@@ -178,7 +177,7 @@ public class CoreQueryManager implements QueryManager {
 
     @RequiredArgsConstructor
     public class Group implements QueryManager.Group {
-        private final Iterable<ClusterNode.Group> groups;
+        private final List<ClusterShardGroup> shards;
 
         @Override
         public AsyncFuture<QueryResult> query(Query q) {
@@ -212,19 +211,22 @@ public class CoreQueryManager implements QueryManager {
             }
 
             return queryCache.load(source, filter, range, aggregationInstance, options, () -> {
-                for (ClusterNode.Group group : groups) {
-                    final ClusterNode c = group.node();
-
-                    final AsyncFuture<QueryResultPart> queryPart = group
-                        .query(source, filter, range, aggregationInstance, options)
-                        .catchFailed(ResultGroups.nodeError(QUERY_NODE, group))
-                        .directTransform(QueryResultPart.fromResultGroup(range, c));
+                for (final ClusterShardGroup shard : shards) {
+                    final AsyncFuture<QueryResultPart> queryPart = shard
+                        .apply(g -> g.query(source, filter, range, aggregationInstance, options))
+                        .catchFailed(ResultGroups.shardError(QUERY_NODE, shard))
+                        .directTransform(QueryResultPart.fromResultGroup(shard));
 
                     futures.add(queryPart);
                 }
 
                 return async.collect(futures, QueryResult.collectParts(QUERY, range, combiner));
             });
+        }
+
+        @Override
+        public List<ClusterShardGroup> shards() {
+            return shards;
         }
 
         private Duration buildCadence(final Aggregation aggregation, final DateRange rawRange) {
@@ -241,16 +243,6 @@ public class CoreQueryManager implements QueryManager {
                 .getRange()
                 .map(r -> r.buildDateRange(now))
                 .orElseThrow(() -> new QueryStateException("Range must be present"));
-        }
-
-        @Override
-        public ClusterNode.Group first() {
-            return groups.iterator().next();
-        }
-
-        @Override
-        public Iterator<ClusterNode.Group> iterator() {
-            return groups.iterator();
         }
     }
 

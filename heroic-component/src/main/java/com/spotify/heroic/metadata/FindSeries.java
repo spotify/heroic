@@ -26,13 +26,11 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.spotify.heroic.cluster.ClusterNode;
-import com.spotify.heroic.cluster.NodeMetadata;
-import com.spotify.heroic.cluster.NodeRegistryEntry;
+import com.spotify.heroic.cluster.ClusterShardGroup;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.metric.NodeError;
 import com.spotify.heroic.metric.RequestError;
+import com.spotify.heroic.metric.ShardError;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
 import lombok.Data;
@@ -97,26 +95,11 @@ public class FindSeries {
         this(ImmutableList.of(), series, size, duplicates);
     }
 
-    public static Transform<Throwable, ? extends FindSeries> nodeError(
-        final NodeRegistryEntry node
+    public static Transform<Throwable, ? extends FindSeries> shardError(
+        final ClusterShardGroup shard
     ) {
-        return e -> {
-            final NodeMetadata m = node.getMetadata();
-            final ClusterNode c = node.getClusterNode();
-            final List<RequestError> errors = ImmutableList.<RequestError>of(
-                NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e));
-            return new FindSeries(errors, ImmutableSet.of(), 0, 0);
-        };
-    }
-
-    public static Transform<Throwable, ? extends FindSeries> nodeError(
-        final ClusterNode.Group group
-    ) {
-        return e -> {
-            final List<RequestError> errors =
-                ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
-            return new FindSeries(errors, ImmutableSet.of(), 0, 0);
-        };
+        return e -> new FindSeries(ImmutableList.of(ShardError.fromThrowable(shard, e)),
+            ImmutableSet.of(), 0, 0);
     }
 
     @JsonIgnore

@@ -26,7 +26,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.cluster.ClusterNode;
+import com.spotify.heroic.cluster.ClusterShardGroup;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.QueryTrace.Identifier;
 import eu.toolchain.async.Collector;
@@ -89,30 +89,11 @@ public final class ResultGroups {
         };
     }
 
-    public static final Transform<ResultGroups, ResultGroups> identity =
-        new Transform<ResultGroups, ResultGroups>() {
-            @Override
-            public ResultGroups transform(ResultGroups result) throws Exception {
-                return result;
-            }
-        };
-
-    public static Transform<ResultGroups, ResultGroups> identity() {
-        return identity;
-    }
-
-    public static Transform<Throwable, ResultGroups> nodeError(
-        final QueryTrace.Identifier what, final ClusterNode.Group group
+    public static Transform<Throwable, ResultGroups> shardError(
+        final QueryTrace.Identifier what, final ClusterShardGroup c
     ) {
-        return new Transform<Throwable, ResultGroups>() {
-            @Override
-            public ResultGroups transform(Throwable e) throws Exception {
-                final List<RequestError> errors =
-                    ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
-                return new ResultGroups(EMPTY_GROUPS, errors, Statistics.empty(),
-                    new QueryTrace(what));
-            }
-        };
+        return e -> new ResultGroups(EMPTY_GROUPS, ImmutableList.of(ShardError.fromThrowable(c, e)),
+            Statistics.empty(), new QueryTrace(what));
     }
 
     public static Transform<ResultGroups, ResultGroups> trace(final Identifier what) {

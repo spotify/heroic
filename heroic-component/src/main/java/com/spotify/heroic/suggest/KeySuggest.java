@@ -24,12 +24,10 @@ package com.spotify.heroic.suggest;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.cluster.ClusterNode;
-import com.spotify.heroic.cluster.NodeMetadata;
-import com.spotify.heroic.cluster.NodeRegistryEntry;
+import com.spotify.heroic.cluster.ClusterShardGroup;
 import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.metric.NodeError;
 import com.spotify.heroic.metric.RequestError;
+import com.spotify.heroic.metric.ShardError;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
 import lombok.Data;
@@ -93,18 +91,6 @@ public class KeySuggest {
         };
     }
 
-    public static Transform<Throwable, ? extends KeySuggest> nodeError(
-        final NodeRegistryEntry node
-    ) {
-        return e -> {
-            final NodeMetadata m = node.getMetadata();
-            final ClusterNode c = node.getClusterNode();
-            return new KeySuggest(ImmutableList.<RequestError>of(
-                NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
-                EMPTY_SUGGESTIONS);
-        };
-    }
-
     @Data
     public static final class Suggestion {
         private final float score;
@@ -146,16 +132,10 @@ public class KeySuggest {
         };
     }
 
-    public static Transform<Throwable, ? extends KeySuggest> nodeError(
-        final ClusterNode.Group group
+    public static Transform<Throwable, KeySuggest> shardError(
+        final ClusterShardGroup shard
     ) {
-        return new Transform<Throwable, KeySuggest>() {
-            @Override
-            public KeySuggest transform(Throwable e) throws Exception {
-                final List<RequestError> errors =
-                    ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
-                return new KeySuggest(errors, EMPTY_SUGGESTIONS);
-            }
-        };
+        return e -> new KeySuggest(ImmutableList.of(ShardError.fromThrowable(shard, e)),
+            EMPTY_SUGGESTIONS);
     }
 }
