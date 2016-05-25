@@ -21,13 +21,11 @@
 
 package com.spotify.heroic.scheduler;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -36,8 +34,7 @@ import java.util.concurrent.TimeUnit;
 public class DefaultScheduler implements Scheduler {
     private static final String UNKNOWN = "unknown";
 
-    private final ScheduledExecutorService scheduler = new ScheduledThreadPoolExecutor(10,
-        new ThreadFactoryBuilder().setNameFormat("heroic-scheduler#%d").build());
+    private final ScheduledExecutorService scheduler;
 
     @Override
     public void periodically(long value, final TimeUnit unit, final Task task) {

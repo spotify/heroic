@@ -21,12 +21,13 @@
 
 package com.spotify.heroic;
 
-import com.spotify.heroic.cluster.ClusterNode;
+import com.spotify.heroic.cluster.ClusterShardGroup;
 import com.spotify.heroic.common.UsableGroupManager;
 import com.spotify.heroic.metric.QueryResult;
 import eu.toolchain.async.AsyncFuture;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public interface QueryManager extends UsableGroupManager<QueryManager.Group> {
@@ -40,9 +41,9 @@ public interface QueryManager extends UsableGroupManager<QueryManager.Group> {
 
     AsyncFuture<Void> initialized();
 
-    interface Group extends Iterable<ClusterNode.Group> {
+    interface Group {
         AsyncFuture<QueryResult> query(Query query);
 
-        ClusterNode.Group first();
+        List<ClusterShardGroup> shards();
     }
 }

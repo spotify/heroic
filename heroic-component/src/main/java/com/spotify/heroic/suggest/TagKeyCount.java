@@ -24,12 +24,10 @@ package com.spotify.heroic.suggest;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.cluster.ClusterNode;
-import com.spotify.heroic.cluster.NodeMetadata;
-import com.spotify.heroic.cluster.NodeRegistryEntry;
+import com.spotify.heroic.cluster.ClusterShardGroup;
 import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.metric.NodeError;
 import com.spotify.heroic.metric.RequestError;
+import com.spotify.heroic.metric.ShardError;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
 import lombok.Data;
@@ -97,18 +95,6 @@ public class TagKeyCount {
         };
     }
 
-    public static Transform<Throwable, ? extends TagKeyCount> nodeError(
-        final NodeRegistryEntry node
-    ) {
-        return e -> {
-            final NodeMetadata m = node.getMetadata();
-            final ClusterNode c = node.getClusterNode();
-            return new TagKeyCount(ImmutableList.<RequestError>of(
-                NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
-                EMPTY_SUGGESTIONS, false);
-        };
-    }
-
     @Data
     @EqualsAndHashCode(of = {"key"})
     public static final class Suggestion {
@@ -152,16 +138,10 @@ public class TagKeyCount {
         };
     }
 
-    public static Transform<Throwable, ? extends TagKeyCount> nodeError(
-        final ClusterNode.Group group
+    public static Transform<Throwable, ? extends TagKeyCount> shardError(
+        final ClusterShardGroup shard
     ) {
-        return new Transform<Throwable, TagKeyCount>() {
-            @Override
-            public TagKeyCount transform(Throwable e) throws Exception {
-                final List<RequestError> errors =
-                    ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
-                return new TagKeyCount(errors, EMPTY_SUGGESTIONS, false);
-            }
-        };
+        return e -> new TagKeyCount(ImmutableList.of(ShardError.fromThrowable(shard, e)),
+            EMPTY_SUGGESTIONS, false);
     }
 }

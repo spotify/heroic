@@ -24,7 +24,7 @@ package com.spotify.heroic.metric;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.cluster.ClusterNode;
+import com.spotify.heroic.cluster.ClusterShardGroup;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
 import lombok.Data;
@@ -92,14 +92,8 @@ public class WriteResult {
         return collector;
     }
 
-    public static Transform<Throwable, WriteResult> nodeError(final ClusterNode.Group group) {
-        return new Transform<Throwable, WriteResult>() {
-            @Override
-            public WriteResult transform(Throwable e) throws Exception {
-                final List<RequestError> errors =
-                    ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
-                return new WriteResult(errors, EMPTY_TIMES);
-            }
-        };
+    public static Transform<Throwable, WriteResult> shardError(final ClusterShardGroup shard) {
+        return e -> new WriteResult(ImmutableList.of(ShardError.fromThrowable(shard, e)),
+            EMPTY_TIMES);
     }
 }

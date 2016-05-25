@@ -25,11 +25,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.cluster.ClusterNode;
-import com.spotify.heroic.cluster.NodeMetadata;
-import com.spotify.heroic.cluster.NodeRegistryEntry;
-import com.spotify.heroic.metric.NodeError;
+import com.spotify.heroic.cluster.ClusterShardGroup;
 import com.spotify.heroic.metric.RequestError;
+import com.spotify.heroic.metric.ShardError;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
 import lombok.Data;
@@ -98,29 +96,10 @@ public class FindKeys {
         this(EMPTY_ERRORS, keys, size, duplicates);
     }
 
-    public static Transform<Throwable, ? extends FindKeys> nodeError(final NodeRegistryEntry node) {
-        return new Transform<Throwable, FindKeys>() {
-            @Override
-            public FindKeys transform(Throwable e) throws Exception {
-                final NodeMetadata m = node.getMetadata();
-                final ClusterNode c = node.getClusterNode();
-                return new FindKeys(ImmutableList.<RequestError>of(
-                    NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)), EMPTY_KEYS,
-                    0, 0);
-            }
-        };
-    }
-
-    public static Transform<Throwable, ? extends FindKeys> nodeError(
-        final ClusterNode.Group group
+    public static Transform<Throwable, ? extends FindKeys> shardError(
+        final ClusterShardGroup shard
     ) {
-        return new Transform<Throwable, FindKeys>() {
-            @Override
-            public FindKeys transform(Throwable e) throws Exception {
-                final List<RequestError> errors =
-                    ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
-                return new FindKeys(errors, EMPTY_KEYS, 0, 0);
-            }
-        };
+        return e -> new FindKeys(ImmutableList.of(ShardError.fromThrowable(shard, e)), EMPTY_KEYS,
+            0, 0);
     }
 }

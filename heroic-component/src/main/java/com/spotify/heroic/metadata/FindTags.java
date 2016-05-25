@@ -26,10 +26,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.cluster.ClusterNode;
-import com.spotify.heroic.cluster.NodeMetadata;
-import com.spotify.heroic.cluster.NodeRegistryEntry;
+import com.spotify.heroic.cluster.ClusterShardGroup;
 import com.spotify.heroic.metric.NodeError;
 import com.spotify.heroic.metric.RequestError;
+import com.spotify.heroic.metric.ShardError;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
 import lombok.Data;
@@ -109,16 +109,13 @@ public class FindTags {
         this(EMPTY_ERRORS, tags, size);
     }
 
-    public static Transform<Throwable, ? extends FindTags> nodeError(final NodeRegistryEntry node) {
-        return e -> {
-            final NodeMetadata m = node.getMetadata();
-            final ClusterNode c = node.getClusterNode();
-            return new FindTags(ImmutableList.<RequestError>of(
-                NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)), EMPTY_TAGS, 0);
-        };
+    public static Transform<Throwable, ? extends FindTags> shardError(
+        final ClusterShardGroup c
+    ) {
+        return e -> new FindTags(ImmutableList.of(ShardError.fromThrowable(c, e)), EMPTY_TAGS, 0);
     }
 
-    public static Transform<Throwable, ? extends FindTags> nodeError(
+    public static Transform<Throwable, ? extends FindTags> shardError(
         final ClusterNode.Group group
     ) {
         return e -> {

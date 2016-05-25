@@ -25,11 +25,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.cluster.ClusterNode;
-import com.spotify.heroic.cluster.NodeMetadata;
-import com.spotify.heroic.cluster.NodeRegistryEntry;
-import com.spotify.heroic.metric.NodeError;
+import com.spotify.heroic.cluster.ClusterShardGroup;
 import com.spotify.heroic.metric.RequestError;
+import com.spotify.heroic.metric.ShardError;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
 import lombok.Data;
@@ -84,24 +82,9 @@ public class CountSeries {
         this(EMPTY_ERRORS, count, limited);
     }
 
-    public static Transform<Throwable, ? extends CountSeries> nodeError(
-        final NodeRegistryEntry node
+    public static Transform<Throwable, CountSeries> shardError(
+        final ClusterShardGroup shard
     ) {
-        return e -> {
-            final NodeMetadata m = node.getMetadata();
-            final ClusterNode c = node.getClusterNode();
-            return new CountSeries(ImmutableList.<RequestError>of(
-                NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)), 0, false);
-        };
-    }
-
-    public static Transform<Throwable, ? extends CountSeries> nodeError(
-        final ClusterNode.Group group
-    ) {
-        return e -> {
-            final List<RequestError> errors1 =
-                ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
-            return new CountSeries(errors1, 0, false);
-        };
+        return e -> new CountSeries(ImmutableList.of(ShardError.fromThrowable(shard, e)), 0, false);
     }
 }

@@ -24,9 +24,9 @@ package com.spotify.heroic.metadata;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.cluster.ClusterNode;
-import com.spotify.heroic.metric.NodeError;
+import com.spotify.heroic.cluster.ClusterShardGroup;
 import com.spotify.heroic.metric.RequestError;
+import com.spotify.heroic.metric.ShardError;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
 import lombok.Data;
@@ -82,14 +82,7 @@ public class DeleteSeries {
         return reducer;
     }
 
-    public static Transform<Throwable, DeleteSeries> nodeError(final ClusterNode.Group group) {
-        return new Transform<Throwable, DeleteSeries>() {
-            @Override
-            public DeleteSeries transform(Throwable e) throws Exception {
-                final List<RequestError> errors =
-                    ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
-                return new DeleteSeries(errors, 0, 0);
-            }
-        };
+    public static Transform<Throwable, DeleteSeries> shardError(final ClusterShardGroup shard) {
+        return e -> new DeleteSeries(ImmutableList.of(ShardError.fromThrowable(shard, e)), 0, 0);
     }
 }

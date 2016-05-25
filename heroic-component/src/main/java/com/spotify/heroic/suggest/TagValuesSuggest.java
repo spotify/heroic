@@ -24,12 +24,10 @@ package com.spotify.heroic.suggest;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.cluster.ClusterNode;
-import com.spotify.heroic.cluster.NodeMetadata;
-import com.spotify.heroic.cluster.NodeRegistryEntry;
+import com.spotify.heroic.cluster.ClusterShardGroup;
 import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.metric.NodeError;
 import com.spotify.heroic.metric.RequestError;
+import com.spotify.heroic.metric.ShardError;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
 import lombok.Data;
@@ -107,18 +105,6 @@ public class TagValuesSuggest {
         };
     }
 
-    public static Transform<Throwable, ? extends TagValuesSuggest> nodeError(
-        final NodeRegistryEntry node
-    ) {
-        return e -> {
-            final NodeMetadata m = node.getMetadata();
-            final ClusterNode c = node.getClusterNode();
-            return new TagValuesSuggest(ImmutableList.<RequestError>of(
-                NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
-                EMPTY_SUGGESTIONS, false);
-        };
-    }
-
     @Data
     public static final class Suggestion {
         private final String key;
@@ -171,13 +157,10 @@ public class TagValuesSuggest {
         private boolean limited;
     }
 
-    public static Transform<Throwable, ? extends TagValuesSuggest> nodeError(
-        final ClusterNode.Group group
+    public static Transform<Throwable, TagValuesSuggest> shardError(
+        final ClusterShardGroup shard
     ) {
-        return e -> {
-            final List<RequestError> errors1 =
-                ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
-            return new TagValuesSuggest(errors1, EMPTY_SUGGESTIONS, false);
-        };
+        return e -> new TagValuesSuggest(ImmutableList.of(ShardError.fromThrowable(shard, e)),
+            EMPTY_SUGGESTIONS, false);
     }
 }

@@ -22,6 +22,7 @@
 package com.spotify.heroic.dagger;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.spotify.heroic.CoreHeroicConfigurationContext;
 import com.spotify.heroic.CoreHeroicLifeCycle;
 import com.spotify.heroic.ExtraParameters;
@@ -55,6 +56,8 @@ import lombok.RequiredArgsConstructor;
 
 import javax.inject.Named;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 @RequiredArgsConstructor
 @Module
@@ -114,8 +117,8 @@ public class LoadingModule {
 
     @Provides
     @LoadingScope
-    AsyncFramework async(ExecutorService executor) {
-        return TinyAsync.builder().executor(executor).build();
+    AsyncFramework async(ExecutorService executor, ScheduledExecutorService scheduler) {
+        return TinyAsync.builder().executor(executor).scheduler(scheduler).build();
     }
 
     @Provides
@@ -127,8 +130,15 @@ public class LoadingModule {
 
     @Provides
     @LoadingScope
-    Scheduler scheduler() {
-        return new DefaultScheduler();
+    ScheduledExecutorService scheduledExecutorService() {
+        return new ScheduledThreadPoolExecutor(10,
+            new ThreadFactoryBuilder().setNameFormat("heroic-scheduler#%d").build());
+    }
+
+    @Provides
+    @LoadingScope
+    Scheduler scheduler(final ScheduledExecutorService scheduler) {
+        return new DefaultScheduler(scheduler);
     }
 
     @Provides
