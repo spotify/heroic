@@ -96,8 +96,8 @@ public class QueryParserTest {
 
     @Test
     public void testByAll() {
-        final FunctionExpression reference = Expression.aggregation("group",
-            Expression.list(Expression.empty(), Expression.aggregation("average")));
+        final FunctionExpression reference = Expression.function("group",
+            Expression.list(Expression.empty(), Expression.function("average")));
         assertEquals(reference, parser.parse(CoreQueryParser.AGGREGATION, "average by *"));
     }
 
@@ -229,7 +229,7 @@ public class QueryParserTest {
     }
 
     public static FunctionExpression a(final String name, final Expression... expressions) {
-        return Expression.aggregation(name,
+        return Expression.function(name,
             new ListExpression(Context.empty(), ImmutableList.copyOf(expressions)));
     }
 

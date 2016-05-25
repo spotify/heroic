@@ -95,15 +95,15 @@ public interface Expression {
         return Optional.of(this);
     }
 
-    static FunctionExpression aggregation(String name) {
-        return aggregation(name, list(), ImmutableMap.of());
+    static FunctionExpression function(String name) {
+        return function(name, list(), ImmutableMap.of());
     }
 
-    static FunctionExpression aggregation(String name, ListExpression arguments) {
-        return aggregation(name, arguments, ImmutableMap.of());
+    static FunctionExpression function(String name, ListExpression arguments) {
+        return function(name, arguments, ImmutableMap.of());
     }
 
-    static FunctionExpression aggregation(
+    static FunctionExpression function(
         String name, ListExpression arguments, Map<String, Expression> keywords
     ) {
         return new FunctionExpression(Context.empty(), name, arguments, keywords);
