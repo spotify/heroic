@@ -22,7 +22,6 @@
 package com.spotify.heroic.filter;
 
 import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.Series;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -34,6 +33,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.stream.Stream;
 
 @Data
 @EqualsAndHashCode(of = {"OPERATOR", "statements"}, doNotUseGetters = true)
@@ -73,42 +73,41 @@ public class AndFilter implements Filter.MultiArgs<Filter> {
         return optimize(flatten(this.statements));
     }
 
-    private static SortedSet<Filter> flatten(final Collection<Filter> statements) {
+    static SortedSet<Filter> flatten(final Collection<Filter> statements) {
         final SortedSet<Filter> result = new TreeSet<>();
 
-        for (final Filter f : statements) {
-            final Filter o = f.optimize();
-
-            if (o == null) {
-                continue;
+        statements.stream().flatMap(f -> f.optimize().visit(new Filter.Visitor<Stream<Filter>>() {
+            @Override
+            public Stream<Filter> visitAnd(final AndFilter and) {
+                return and.terms().stream().map(Filter::optimize);
             }
 
-            if (o instanceof AndFilter) {
-                result.addAll(((AndFilter) o).terms());
-                continue;
+            @Override
+            public Stream<Filter> visitNot(final NotFilter not) {
+                // check for De Morgan's
+                return not.first().visit(new Filter.Visitor<Stream<Filter>>() {
+                    @Override
+                    public Stream<Filter> visitOr(final OrFilter or) {
+                        return or.terms().stream().map(f -> NotFilter.of(f).optimize());
+                    }
+
+                    @Override
+                    public Stream<Filter> defaultAction(final Filter filter) {
+                        return Stream.of(not.optimize());
+                    }
+                });
             }
 
-            if (o instanceof NotFilter) {
-                final NotFilter not = (NotFilter) o;
-
-                if (not.first() instanceof OrFilter) {
-                    result.addAll(collapseNotOr((OrFilter) not.first()));
-                    continue;
-                }
+            @Override
+            public Stream<Filter> defaultAction(final Filter filter) {
+                return Stream.of(filter.optimize());
             }
-
-            result.add(o);
-        }
+        })).forEach(result::add);
 
         return result;
     }
 
-    private static List<Filter> collapseNotOr(OrFilter first) {
-        return ImmutableList.copyOf(
-            first.terms().stream().map(t -> new NotFilter(t).optimize()).iterator());
-    }
-
-    private static Filter optimize(SortedSet<Filter> statements) {
+    static Filter optimize(final SortedSet<Filter> statements) {
         final SortedSet<Filter> result = new TreeSet<>();
 
         root:
@@ -116,6 +115,7 @@ public class AndFilter implements Filter.MultiArgs<Filter> {
             if (f instanceof NotFilter) {
                 final NotFilter not = (NotFilter) f;
 
+                // always false
                 if (statements.contains(not.first())) {
                     return FalseFilter.get();
                 }
@@ -142,32 +142,8 @@ public class AndFilter implements Filter.MultiArgs<Filter> {
                             continue;
                         }
 
+                        // always false
                         if (!FilterComparatorUtils.isEqual(outer.second(), matchTag.second())) {
-                            return FalseFilter.get();
-                        }
-                    }
-                }
-
-                result.add(f);
-                continue;
-            }
-
-            if (f instanceof MatchTagFilter) {
-                final MatchTagFilter outer = (MatchTagFilter) f;
-
-                for (final Filter inner : statements) {
-                    if (inner.equals(outer)) {
-                        continue;
-                    }
-
-                    if (inner instanceof MatchTagFilter) {
-                        final MatchTagFilter tag = (MatchTagFilter) inner;
-
-                        if (!outer.first().equals(tag.first())) {
-                            continue;
-                        }
-
-                        if (!FilterComparatorUtils.isEqual(outer.second(), tag.second())) {
                             return FalseFilter.get();
                         }
                     }

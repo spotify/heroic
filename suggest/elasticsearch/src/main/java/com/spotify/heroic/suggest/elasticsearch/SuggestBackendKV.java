@@ -649,12 +649,12 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     private static final Filter.Visitor<FilterBuilder> FILTER_CONVERTER =
         new Filter.Visitor<FilterBuilder>() {
             @Override
-            public FilterBuilder visitTrue(final TrueFilter filter) {
+            public FilterBuilder visitTrue(final TrueFilter t) {
                 return matchAllFilter();
             }
 
             @Override
-            public FilterBuilder visitFalse(final FalseFilter filter) {
+            public FilterBuilder visitFalse(final FalseFilter f) {
                 return notFilter(matchAllFilter());
             }
 

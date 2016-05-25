@@ -554,12 +554,12 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
             public FilterBuilder filter(final Filter filter) {
                 return filter.visit(new Filter.Visitor<FilterBuilder>() {
                     @Override
-                    public FilterBuilder visitTrue(final TrueFilter filter) {
+                    public FilterBuilder visitTrue(final TrueFilter t) {
                         return matchAllFilter();
                     }
 
                     @Override
-                    public FilterBuilder visitFalse(final FalseFilter filter) {
+                    public FilterBuilder visitFalse(final FalseFilter f) {
                         return notFilter(matchAllFilter());
                     }
 
@@ -575,10 +575,10 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
                     }
 
                     @Override
-                    public FilterBuilder visitOr(final OrFilter and) {
-                        final List<FilterBuilder> filters = new ArrayList<>(and.terms().size());
+                    public FilterBuilder visitOr(final OrFilter or) {
+                        final List<FilterBuilder> filters = new ArrayList<>(or.terms().size());
 
-                        for (final Filter stmt : and.terms()) {
+                        for (final Filter stmt : or.terms()) {
                             filters.add(filter(stmt));
                         }
 

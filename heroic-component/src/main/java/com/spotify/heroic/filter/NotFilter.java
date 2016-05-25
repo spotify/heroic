@@ -49,11 +49,17 @@ public class NotFilter implements Filter.OneArg<Filter> {
 
     @Override
     public Filter optimize() {
-        if (filter instanceof NotFilter) {
-            return ((NotFilter) filter).first().optimize();
-        }
+        return filter.visit(new Visitor<Filter>() {
+            @Override
+            public Filter visitNot(final NotFilter not) {
+                return not.first().optimize();
+            }
 
-        return new NotFilter(filter.optimize());
+            @Override
+            public Filter defaultAction(final Filter filter) {
+                return new NotFilter(filter.optimize());
+            }
+        });
     }
 
     @Override
@@ -78,5 +84,9 @@ public class NotFilter implements Filter.OneArg<Filter> {
     @Override
     public String toDSL() {
         return "!(" + filter.toDSL() + ")";
+    }
+
+    public static NotFilter of(final Filter filter) {
+        return new NotFilter(filter);
     }
 }

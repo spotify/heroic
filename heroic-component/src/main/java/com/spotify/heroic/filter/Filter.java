@@ -60,48 +60,48 @@ public interface Filter extends Comparable<Filter> {
     }
 
     interface Visitor<T> {
-        default T visitStartsWith(StartsWithFilter filter) {
-            return defaultAction(filter);
+        default T visitStartsWith(StartsWithFilter startsWith) {
+            return defaultAction(startsWith);
         }
 
-        default T visitHasTag(HasTagFilter filter) {
-            return defaultAction(filter);
+        default T visitHasTag(HasTagFilter hasTag) {
+            return defaultAction(hasTag);
         }
 
-        default T visitNot(NotFilter filter) {
-            return defaultAction(filter);
+        default T visitNot(NotFilter not) {
+            return defaultAction(not);
         }
 
-        default T visitTrue(TrueFilter filter) {
-            return defaultAction(filter);
+        default T visitTrue(TrueFilter t) {
+            return defaultAction(t);
         }
 
-        default T visitFalse(FalseFilter filter) {
-            return defaultAction(filter);
+        default T visitFalse(FalseFilter f) {
+            return defaultAction(f);
         }
 
-        default T visitMatchTag(MatchTagFilter filter) {
-            return defaultAction(filter);
+        default T visitMatchTag(MatchTagFilter matchTag) {
+            return defaultAction(matchTag);
         }
 
-        default T visitMatchKey(MatchKeyFilter filter) {
-            return defaultAction(filter);
+        default T visitMatchKey(MatchKeyFilter matchKey) {
+            return defaultAction(matchKey);
         }
 
-        default T visitAnd(AndFilter filter) {
-            return defaultAction(filter);
+        default T visitAnd(AndFilter and) {
+            return defaultAction(and);
         }
 
-        default T visitOr(OrFilter filter) {
-            return defaultAction(filter);
+        default T visitOr(OrFilter or) {
+            return defaultAction(or);
         }
 
-        default T visitRaw(RawFilter filter) {
-            return defaultAction(filter);
+        default T visitRaw(RawFilter raw) {
+            return defaultAction(raw);
         }
 
-        default T visitRegex(RegexFilter filter) {
-            return defaultAction(filter);
+        default T visitRegex(RegexFilter regex) {
+            return defaultAction(regex);
         }
 
         T defaultAction(Filter filter);

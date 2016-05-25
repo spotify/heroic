@@ -775,12 +775,12 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
             public FilterBuilder filter(final Filter filter) {
                 return filter.visit(new Filter.Visitor<FilterBuilder>() {
                     @Override
-                    public FilterBuilder visitTrue(final TrueFilter filter) {
+                    public FilterBuilder visitTrue(final TrueFilter t) {
                         return matchAllFilter();
                     }
 
                     @Override
-                    public FilterBuilder visitFalse(final FalseFilter filter) {
+                    public FilterBuilder visitFalse(final FalseFilter f) {
                         return notFilter(matchAllFilter());
                     }
 
