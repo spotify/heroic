@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.ingestion;
 
+import com.spotify.heroic.common.Collected;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Groups;
@@ -57,23 +58,10 @@ public class CoreIngestionGroup implements IngestionGroup {
     private final Optional<SuggestBackend> suggest;
 
     @Override
-    public Groups getGroups() {
-        return Groups.combine(metric.map(Grouped::getGroups).orElseGet(Groups::empty),
-            metadata.map(Grouped::getGroups).orElseGet(Groups::empty),
-            suggest.map(Grouped::getGroups).orElseGet(Groups::empty));
-    }
-
-    @Override
-    public int size() {
-        return metric.map(Grouped::size).orElse(0) + metadata.map(Grouped::size).orElse(0) +
-            suggest.map(Grouped::size).orElse(0);
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return metric.map(Grouped::isEmpty).orElse(true) &&
-            metadata.map(Grouped::isEmpty).orElse(true) &&
-            suggest.map(Grouped::isEmpty).orElse(true);
+    public Groups groups() {
+        return Groups.combine(metric.map(Grouped::groups).orElseGet(Groups::empty),
+            metadata.map(Grouped::groups).orElseGet(Groups::empty),
+            suggest.map(Grouped::groups).orElseGet(Groups::empty));
     }
 
     @Override
@@ -84,6 +72,13 @@ public class CoreIngestionGroup implements IngestionGroup {
 
         ingested.increment();
         return syncWrite(write);
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return metric.map(Collected::isEmpty).orElse(true) &&
+            metadata.map(Collected::isEmpty).orElse(true) &&
+            suggest.map(Collected::isEmpty).orElse(true);
     }
 
     protected AsyncFuture<WriteResult> syncWrite(final WriteMetric write) {

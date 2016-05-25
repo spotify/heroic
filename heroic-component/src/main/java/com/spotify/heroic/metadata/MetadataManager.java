@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.metadata;
 
-import com.spotify.heroic.common.MemberManager;
+import com.spotify.heroic.common.GroupSet;
 import com.spotify.heroic.common.UsableGroupManager;
 
-public interface MetadataManager
-    extends MemberManager<MetadataBackend>, UsableGroupManager<MetadataBackend> {
+public interface MetadataManager extends UsableGroupManager<MetadataBackend> {
+    GroupSet<MetadataBackend> groupSet();
 }

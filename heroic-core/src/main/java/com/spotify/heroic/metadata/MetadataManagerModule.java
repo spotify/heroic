@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.spotify.heroic.common.BackendGroups;
+import com.spotify.heroic.common.GroupSet;
 import com.spotify.heroic.common.ModuleIdBuilder;
 import com.spotify.heroic.dagger.CorePrimaryComponent;
 import com.spotify.heroic.dagger.PrimaryComponent;
@@ -113,10 +113,10 @@ public class MetadataManagerModule {
         }
 
         @Provides
-        @Named("backends")
+        @Named("groupSet")
         @MetadataScope
-        public BackendGroups<MetadataBackend> defaultBackends(Set<MetadataBackend> configured) {
-            return BackendGroups.build(configured, defaultBackends);
+        public GroupSet<MetadataBackend> groupSet(Set<MetadataBackend> configured) {
+            return GroupSet.build(configured, defaultBackends);
         }
 
         @Provides

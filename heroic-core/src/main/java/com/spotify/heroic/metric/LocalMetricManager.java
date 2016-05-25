@@ -33,9 +33,8 @@ import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.aggregation.AggregationState;
 import com.spotify.heroic.aggregation.AggregationTraversal;
 import com.spotify.heroic.async.AsyncObservable;
-import com.spotify.heroic.common.BackendGroups;
 import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.GroupMember;
+import com.spotify.heroic.common.GroupSet;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RangeFilter;
@@ -107,7 +106,7 @@ public class LocalMetricManager implements MetricManager {
     private final int fetchParallelism;
 
     private final AsyncFramework async;
-    private final BackendGroups<MetricBackend> backends;
+    private final GroupSet<MetricBackend> groupSet;
     private final MetadataManager metadata;
     private final MetricBackendReporter reporter;
 
@@ -122,7 +121,7 @@ public class LocalMetricManager implements MetricManager {
     public LocalMetricManager(
         final int groupLimit, final long seriesLimit, final long aggregationLimit,
         final long dataLimit, final int fetchParallelism, final AsyncFramework async,
-        final BackendGroups<MetricBackend> backends, final MetadataManager metadata,
+        final GroupSet<MetricBackend> groupSet, final MetadataManager metadata,
         final MetricBackendReporter reporter
     ) {
         this.groupLimit = groupLimit;
@@ -131,34 +130,19 @@ public class LocalMetricManager implements MetricManager {
         this.dataLimit = dataLimit;
         this.fetchParallelism = fetchParallelism;
         this.async = async;
-        this.backends = backends;
+        this.groupSet = groupSet;
         this.metadata = metadata;
         this.reporter = reporter;
     }
 
     @Override
-    public List<MetricBackend> allMembers() {
-        return backends.allMembers();
-    }
-
-    @Override
-    public List<MetricBackend> useMembers(String group) {
-        return backends.useGroup(group).getMembers();
-    }
-
-    @Override
-    public List<MetricBackend> useDefaultMembers() {
-        return backends.useDefaultGroup().getMembers();
-    }
-
-    @Override
-    public List<GroupMember<MetricBackend>> getMembers() {
-        return backends.all();
+    public GroupSet<MetricBackend> groupSet() {
+        return groupSet;
     }
 
     @Override
     public MetricBackendGroup useOptionalGroup(final Optional<String> group) {
-        return new Group(backends.useOptionalGroup(group), metadata.useDefaultGroup());
+        return new Group(groupSet.useOptionalGroup(group), metadata.useDefaultGroup());
     }
 
     @ToString
@@ -173,18 +157,13 @@ public class LocalMetricManager implements MetricManager {
         }
 
         @Override
-        public Groups getGroups() {
-            return backends.getGroups();
+        public Groups groups() {
+            return backends.groups();
         }
 
         @Override
         public boolean isEmpty() {
             return backends.isEmpty();
-        }
-
-        @Override
-        public int size() {
-            return backends.size();
         }
 
         @Override

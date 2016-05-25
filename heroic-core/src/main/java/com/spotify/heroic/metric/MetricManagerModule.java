@@ -27,7 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.analytics.AnalyticsComponent;
 import com.spotify.heroic.analytics.MetricAnalytics;
-import com.spotify.heroic.common.BackendGroups;
+import com.spotify.heroic.common.GroupSet;
 import com.spotify.heroic.common.ModuleIdBuilder;
 import com.spotify.heroic.dagger.CorePrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
@@ -140,10 +140,10 @@ public class MetricManagerModule {
 
         @Provides
         @MetricScope
-        public BackendGroups<MetricBackend> defaultBackends(
+        public GroupSet<MetricBackend> defaultBackends(
             Set<MetricBackend> configured, MetricAnalytics analytics
         ) {
-            return BackendGroups.build(
+            return GroupSet.build(
                 ImmutableSet.copyOf(configured.stream().map(analytics::wrap).iterator()),
                 defaultBackends);
         }
@@ -187,7 +187,7 @@ public class MetricManagerModule {
         @Provides
         @MetricScope
         public MetricManager metricManager(
-            final AsyncFramework async, final BackendGroups<MetricBackend> backends,
+            final AsyncFramework async, final GroupSet<MetricBackend> backends,
             final MetadataManager metadata, final MetricBackendReporter reporter
         ) {
             return new LocalMetricManager(groupLimit, seriesLimit, aggregationLimit, dataLimit,

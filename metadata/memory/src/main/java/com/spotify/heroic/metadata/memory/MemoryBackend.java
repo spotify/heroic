@@ -65,7 +65,7 @@ public class MemoryBackend implements MetadataBackend {
     }
 
     @Override
-    public Groups getGroups() {
+    public Groups groups() {
         return groups;
     }
 

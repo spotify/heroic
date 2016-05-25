@@ -23,6 +23,7 @@ package com.spotify.heroic.metric;
 
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.async.AsyncObservable;
+import com.spotify.heroic.common.Collected;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Initializing;
@@ -33,7 +34,7 @@ import eu.toolchain.async.AsyncFuture;
 import java.util.Collection;
 import java.util.List;
 
-public interface MetricBackend extends Initializing, Grouped {
+public interface MetricBackend extends Initializing, Grouped, Collected {
     Statistics getStatistics();
 
     /**
@@ -51,17 +52,14 @@ public interface MetricBackend extends Initializing, Grouped {
      *
      * @param write
      * @return
-     * @throws MetricBackendException If the write cannot be performed.
      */
     AsyncFuture<WriteResult> write(WriteMetric write);
 
     /**
      * Write a collection of datapoints for a specific time series.
      *
-     * @param series Time serie to write to.
-     * @param data Datapoints to write.
+     * @param writes List of writes to perform.
      * @return A callback indicating if the write was successful or not.
-     * @throws MetricBackendException If the write cannot be performed.
      */
     AsyncFuture<WriteResult> write(Collection<WriteMetric> writes);
 
@@ -85,7 +83,6 @@ public interface MetricBackend extends Initializing, Grouped {
      * This will be incredibly slow.
      *
      * @return An iterator over all found time series.
-     * @throws MetricBackendException If listing of entries cannot be performed.
      */
     Iterable<BackendEntry> listEntries();
 

@@ -74,7 +74,7 @@ public class GeneratedBackend extends AbstractMetricBackend {
     }
 
     @Override
-    public Groups getGroups() {
+    public Groups groups() {
         return groups;
     }
 

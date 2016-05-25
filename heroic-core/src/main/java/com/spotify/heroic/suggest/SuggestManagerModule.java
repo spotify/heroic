@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.spotify.heroic.common.BackendGroups;
+import com.spotify.heroic.common.GroupSet;
 import com.spotify.heroic.common.ModuleIdBuilder;
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
@@ -86,10 +86,10 @@ public class SuggestManagerModule {
         }
 
         @Provides
-        @Named("backends")
+        @Named("groupSet")
         @SuggestScope
-        public BackendGroups<SuggestBackend> defaultBackends(Set<SuggestBackend> configured) {
-            return BackendGroups.build(configured, defaultBackends);
+        public GroupSet<SuggestBackend> groupSet(Set<SuggestBackend> configured) {
+            return GroupSet.build(configured, defaultBackends);
         }
 
         @Provides

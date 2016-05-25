@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.suggest;
 
-import com.spotify.heroic.common.MemberManager;
+import com.spotify.heroic.common.GroupSet;
 import com.spotify.heroic.common.UsableGroupManager;
 
 /**
@@ -31,6 +31,6 @@ import com.spotify.heroic.common.UsableGroupManager;
  * clean separation of concerns, and deployments where suggestions _may_ be broken independently of
  * metadata.
  */
-public interface SuggestManager
-    extends MemberManager<SuggestBackend>, UsableGroupManager<SuggestBackend> {
+public interface SuggestManager extends UsableGroupManager<SuggestBackend> {
+    GroupSet<SuggestBackend> groupSet();
 }

@@ -21,50 +21,33 @@
 
 package com.spotify.heroic.suggest;
 
-import com.spotify.heroic.common.BackendGroups;
-import com.spotify.heroic.common.GroupMember;
+import com.spotify.heroic.common.GroupSet;
 import eu.toolchain.async.AsyncFramework;
 
 import javax.inject.Inject;
 import javax.inject.Named;
-import java.util.List;
 import java.util.Optional;
 
 @SuggestScope
 public class LocalSuggestManager implements SuggestManager {
     private final AsyncFramework async;
-    private final BackendGroups<SuggestBackend> backends;
+    private final GroupSet<SuggestBackend> groupSet;
 
     @Inject
     public LocalSuggestManager(
-        final AsyncFramework async, @Named("backends") final BackendGroups<SuggestBackend> backends
+        final AsyncFramework async, @Named("groupSet") final GroupSet<SuggestBackend> groupSet
     ) {
         this.async = async;
-        this.backends = backends;
+        this.groupSet = groupSet;
     }
 
     @Override
-    public List<SuggestBackend> allMembers() {
-        return backends.allMembers();
-    }
-
-    @Override
-    public List<SuggestBackend> useMembers(String group) {
-        return backends.useGroup(group).getMembers();
-    }
-
-    @Override
-    public List<SuggestBackend> useDefaultMembers() {
-        return backends.useDefaultGroup().getMembers();
-    }
-
-    @Override
-    public List<GroupMember<SuggestBackend>> getMembers() {
-        return backends.all();
+    public GroupSet<SuggestBackend> groupSet() {
+        return groupSet;
     }
 
     @Override
     public SuggestBackend useOptionalGroup(final Optional<String> group) {
-        return new SuggestBackendGroup(async, backends.useOptionalGroup(group));
+        return new SuggestBackendGroup(async, groupSet.useOptionalGroup(group));
     }
 }

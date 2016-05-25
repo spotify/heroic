@@ -21,50 +21,33 @@
 
 package com.spotify.heroic.metadata;
 
-import com.spotify.heroic.common.BackendGroups;
-import com.spotify.heroic.common.GroupMember;
+import com.spotify.heroic.common.GroupSet;
 import eu.toolchain.async.AsyncFramework;
 
 import javax.inject.Inject;
 import javax.inject.Named;
-import java.util.List;
 import java.util.Optional;
 
 @MetadataScope
 public class LocalMetadataManager implements MetadataManager {
     private final AsyncFramework async;
-    private final BackendGroups<MetadataBackend> backends;
+    private final GroupSet<MetadataBackend> groupSet;
 
     @Inject
     public LocalMetadataManager(
-        final AsyncFramework async, @Named("backends") final BackendGroups<MetadataBackend> backends
+        final AsyncFramework async, @Named("groupSet") final GroupSet<MetadataBackend> groupSet
     ) {
         this.async = async;
-        this.backends = backends;
-    }
-
-    @Override
-    public List<MetadataBackend> useMembers(final String group) {
-        return backends.useGroup(group).getMembers();
-    }
-
-    @Override
-    public List<MetadataBackend> useDefaultMembers() {
-        return backends.useDefaultGroup().getMembers();
-    }
-
-    @Override
-    public List<MetadataBackend> allMembers() {
-        return backends.allMembers();
-    }
-
-    @Override
-    public List<GroupMember<MetadataBackend>> getMembers() {
-        return backends.all();
+        this.groupSet = groupSet;
     }
 
     @Override
     public MetadataBackend useOptionalGroup(Optional<String> group) {
-        return new MetadataBackendGroup(backends.useOptionalGroup(group), async);
+        return new MetadataBackendGroup(groupSet.useOptionalGroup(group), async);
+    }
+
+    @Override
+    public GroupSet<MetadataBackend> groupSet() {
+        return groupSet;
     }
 }

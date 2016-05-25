@@ -105,18 +105,13 @@ public class SuggestBackendGroup implements SuggestBackend {
     }
 
     @Override
-    public Groups getGroups() {
-        return backends.getGroups();
+    public Groups groups() {
+        return backends.groups();
     }
 
     @Override
     public boolean isEmpty() {
         return backends.isEmpty();
-    }
-
-    @Override
-    public int size() {
-        return backends.size();
     }
 
     @Override

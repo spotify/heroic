@@ -186,7 +186,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     }
 
     @Override
-    public Groups getGroups() {
+    public Groups groups() {
         return groups;
     }
 

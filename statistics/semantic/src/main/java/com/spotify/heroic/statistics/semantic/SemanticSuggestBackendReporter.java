@@ -153,18 +153,8 @@ public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
         }
 
         @Override
-        public Groups getGroups() {
-            return delegate.getGroups();
-        }
-
-        @Override
-        public int size() {
-            return delegate.size();
-        }
-
-        @Override
-        public boolean isEmpty() {
-            return delegate.isEmpty();
+        public Groups groups() {
+            return delegate.groups();
         }
 
         @Override

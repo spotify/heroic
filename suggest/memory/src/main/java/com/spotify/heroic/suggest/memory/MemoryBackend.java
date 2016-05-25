@@ -287,7 +287,7 @@ public class MemoryBackend implements SuggestBackend, Grouped {
     }
 
     @Override
-    public Groups getGroups() {
+    public Groups groups() {
         return groups;
     }
 

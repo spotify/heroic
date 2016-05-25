@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.suggest;
 
+import com.spotify.heroic.common.Collected;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Initializing;
@@ -34,7 +35,7 @@ import eu.toolchain.async.AsyncFuture;
 import java.util.List;
 import java.util.Optional;
 
-public interface SuggestBackend extends Grouped, Initializing {
+public interface SuggestBackend extends Grouped, Initializing, Collected {
     AsyncFuture<Void> configure();
 
     /**

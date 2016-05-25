@@ -58,8 +58,8 @@ class BigtableAnalyticsMetricBackend implements MetricBackend {
     }
 
     @Override
-    public Groups getGroups() {
-        return backend.getGroups();
+    public Groups groups() {
+        return backend.groups();
     }
 
     @Override

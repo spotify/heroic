@@ -21,19 +21,41 @@
 
 package com.spotify.heroic.common;
 
-import java.util.List;
-import java.util.Optional;
+import com.google.common.collect.ImmutableSet;
+import lombok.RequiredArgsConstructor;
 
-public interface MemberManager<T extends Grouped> {
-    List<T> allMembers();
+import java.util.Iterator;
+import java.util.Set;
 
-    List<T> useMembers(String group);
+@RequiredArgsConstructor
+public class SelectedGroup<T extends Grouped> implements Grouped, Iterable<T> {
+    private final Set<T> members;
 
-    List<T> useDefaultMembers();
+    public Set<T> getMembers() {
+        return members;
+    }
 
-    List<GroupMember<T>> getMembers();
+    @Override
+    public Iterator<T> iterator() {
+        return members.iterator();
+    }
 
-    default List<T> useOptionalMembers(Optional<String> group) {
-        return group.map(this::useMembers).orElseGet(this::useDefaultMembers);
+    public boolean isEmpty() {
+        return members.isEmpty();
+    }
+
+    @Override
+    public Groups groups() {
+        final ImmutableSet.Builder<String> groups = ImmutableSet.builder();
+
+        for (final T member : members) {
+            groups.addAll(member.groups());
+        }
+
+        return new Groups(groups.build());
+    }
+
+    public int size() {
+        return members.size();
     }
 }

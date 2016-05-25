@@ -21,41 +21,19 @@
 
 package com.spotify.heroic.common;
 
-import com.google.common.collect.ImmutableSet;
-import lombok.RequiredArgsConstructor;
-
-import java.util.Iterator;
-import java.util.List;
-
-@RequiredArgsConstructor
-public class SelectedGroup<T extends Grouped> implements Grouped, Iterable<T> {
-    private final List<T> members;
-
-    public List<T> getMembers() {
-        return members;
-    }
-
-    @Override
-    public Iterator<T> iterator() {
-        return members.iterator();
-    }
-
-    public boolean isEmpty() {
-        return members.isEmpty();
-    }
-
-    @Override
-    public Groups getGroups() {
-        final ImmutableSet.Builder<String> groups = ImmutableSet.builder();
-
-        for (final T member : members) {
-            groups.addAll(member.getGroups());
-        }
-
-        return new Groups(groups.build());
-    }
-
-    public int size() {
-        return members.size();
+/**
+ * Interface for objects which merge the functionality of other objects.
+ * <p>
+ * An empty collected object tends to behave like a null-object, calling methods on them has no
+ * effect.
+ */
+public interface Collected {
+    /**
+     * Indicate if this collected object is empty or not.
+     *
+     * @return {@code true} if this collected object is empty.
+     */
+    default boolean isEmpty() {
+        return false;
     }
 }

@@ -22,6 +22,7 @@
 package com.spotify.heroic.metadata;
 
 import com.spotify.heroic.async.AsyncObservable;
+import com.spotify.heroic.common.Collected;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Initializing;
@@ -33,7 +34,7 @@ import eu.toolchain.async.AsyncFuture;
 
 import java.util.List;
 
-public interface MetadataBackend extends Grouped, Initializing {
+public interface MetadataBackend extends Grouped, Initializing, Collected {
     AsyncFuture<Void> configure();
 
     /**

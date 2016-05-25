@@ -23,6 +23,7 @@ package com.spotify.heroic.shell.task;
 
 import com.spotify.heroic.analytics.MetricAnalytics;
 import com.spotify.heroic.common.Grouped;
+import com.spotify.heroic.common.SelectedGroup;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.metadata.MetadataManager;
@@ -42,7 +43,6 @@ import org.kohsuke.args4j.Option;
 
 import javax.inject.Inject;
 import java.io.PrintWriter;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -78,9 +78,9 @@ public class ListBackends implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        printBackends(io.out(), "metric", metrics.useOptionalMembers(params.group));
-        printBackends(io.out(), "metadata", metadata.useOptionalMembers(params.group));
-        printBackends(io.out(), "suggest", suggest.useOptionalMembers(params.group));
+        printBackends(io.out(), "metric", metrics.groupSet().useOptionalGroup(params.group));
+        printBackends(io.out(), "metadata", metadata.groupSet().useOptionalGroup(params.group));
+        printBackends(io.out(), "suggest", suggest.groupSet().useOptionalGroup(params.group));
         printConsumers(io.out(), "consumers", consumers);
 
         io.out().println(String.format("metric-analytics: %s", metricAnalytics));
@@ -102,7 +102,7 @@ public class ListBackends implements ShellTask {
     }
 
     private void printBackends(
-        PrintWriter out, String title, List<? extends Grouped> group
+        PrintWriter out, String title, SelectedGroup<? extends Grouped> group
     ) {
         if (group.isEmpty()) {
             out.println(String.format("%s: (empty)", title));
@@ -111,8 +111,8 @@ public class ListBackends implements ShellTask {
 
         out.println(String.format("%s:", title));
 
-        for (final Grouped grouped : group) {
-            out.println(String.format("  %s %s", grouped.getGroups(), grouped));
+        for (final Grouped grouped : group.getMembers()) {
+            out.println(String.format("  %s %s", grouped.groups(), grouped));
         }
     }
 
