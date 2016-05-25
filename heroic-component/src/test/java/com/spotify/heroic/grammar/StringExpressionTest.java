@@ -1,11 +1,9 @@
 package com.spotify.heroic.grammar;
 
 import org.junit.Test;
-import org.mockito.Mockito;
 
+import static com.spotify.heroic.grammar.ExpressionTests.biFuncTest;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.verify;
 
 public class StringExpressionTest {
     private final StringExpression str = Expression.string("hello");
@@ -19,18 +17,7 @@ public class StringExpressionTest {
 
     @Test
     public void addTest() {
-        final Context c = Mockito.mock(Context.class);
-        final Context r = Mockito.mock(Context.class);
-        final StringExpression a = new StringExpression(c, "a");
-        final StringExpression b = new StringExpression(c, "b");
-
-        doReturn(r).when(c).join(c);
-
-        final Expression added = a.add(b);
-
-        assertEquals(Expression.string("ab"), added);
-        verify(c).join(c);
-
-        assertEquals(r, added.context());
+        biFuncTest(a -> new StringExpression(a, "foo"), b -> new StringExpression(b, "bar"),
+            r -> new StringExpression(r, "foobar"), StringExpression::add);
     }
 }

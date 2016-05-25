@@ -157,7 +157,7 @@ public interface Expression {
         return new EmptyExpression(Context.empty());
     }
 
-    static Expression integer(final long value) {
+    static IntegerExpression integer(final long value) {
         return new IntegerExpression(Context.empty(), value);
     }
 

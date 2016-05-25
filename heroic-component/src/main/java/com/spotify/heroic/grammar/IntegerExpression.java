@@ -65,31 +65,31 @@ public final class IntegerExpression implements Expression {
     }
 
     @Override
-    public Expression multiply(Expression other) {
+    public IntegerExpression multiply(Expression other) {
         return new IntegerExpression(ctx.join(other.context()),
             value * other.cast(IntegerExpression.class).value);
     }
 
     @Override
-    public Expression divide(Expression other) {
+    public IntegerExpression divide(Expression other) {
         return new IntegerExpression(ctx.join(other.context()),
             value / other.cast(IntegerExpression.class).value);
     }
 
     @Override
-    public Expression sub(Expression other) {
+    public IntegerExpression sub(Expression other) {
         return new IntegerExpression(ctx.join(other.context()),
             value - other.cast(IntegerExpression.class).value);
     }
 
     @Override
-    public Expression add(Expression other) {
+    public IntegerExpression add(Expression other) {
         return new IntegerExpression(ctx.join(other.context()),
             value + other.cast(IntegerExpression.class).value);
     }
 
     @Override
-    public Expression negate() {
+    public IntegerExpression negate() {
         return new IntegerExpression(ctx, -value);
     }
 

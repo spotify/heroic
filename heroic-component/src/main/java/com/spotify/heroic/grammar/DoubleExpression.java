@@ -65,31 +65,31 @@ public final class DoubleExpression implements Expression {
     }
 
     @Override
-    public Expression multiply(Expression other) {
+    public DoubleExpression multiply(Expression other) {
         return new DoubleExpression(ctx.join(other.context()),
             value * other.cast(DoubleExpression.class).value);
     }
 
     @Override
-    public Expression divide(Expression other) {
+    public DoubleExpression divide(Expression other) {
         return new DoubleExpression(ctx.join(other.context()),
             value / other.cast(DoubleExpression.class).value);
     }
 
     @Override
-    public Expression sub(Expression other) {
+    public DoubleExpression sub(Expression other) {
         return new DoubleExpression(ctx.join(other.context()),
             value - other.cast(DoubleExpression.class).value);
     }
 
     @Override
-    public Expression add(Expression other) {
+    public DoubleExpression add(Expression other) {
         return new DoubleExpression(ctx.join(other.context()),
             value + other.cast(DoubleExpression.class).value);
     }
 
     @Override
-    public Expression negate() {
+    public DoubleExpression negate() {
         return new DoubleExpression(ctx, -value);
     }
 
@@ -104,7 +104,7 @@ public final class DoubleExpression implements Expression {
             return (T) this;
         }
 
-        if (to.isAssignableFrom(Long.class)) {
+        if (to.isAssignableFrom(IntegerExpression.class)) {
             return (T) new IntegerExpression(((Double) value).longValue());
         }
 

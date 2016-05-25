@@ -57,7 +57,7 @@ public final class StringExpression implements Expression {
     }
 
     @Override
-    public Expression add(Expression other) {
+    public StringExpression add(Expression other) {
         final StringExpression o = other.cast(StringExpression.class);
         return new StringExpression(ctx.join(o.ctx), string + o.string);
     }
