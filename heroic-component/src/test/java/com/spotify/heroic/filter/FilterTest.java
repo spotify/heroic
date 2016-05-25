@@ -3,7 +3,10 @@ package com.spotify.heroic.filter;
 import com.google.common.collect.ImmutableList;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.runners.MockitoJUnitRunner;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,13 +14,22 @@ import java.util.TreeSet;
 
 import static com.spotify.heroic.filter.Filter.and;
 import static com.spotify.heroic.filter.Filter.hasTag;
+import static com.spotify.heroic.filter.Filter.matchKey;
 import static com.spotify.heroic.filter.Filter.matchTag;
 import static com.spotify.heroic.filter.Filter.not;
 import static com.spotify.heroic.filter.Filter.or;
+import static com.spotify.heroic.filter.Filter.regex;
 import static com.spotify.heroic.filter.Filter.startsWith;
 import static org.junit.Assert.assertEquals;
 
+@RunWith(MockitoJUnitRunner.class)
 public class FilterTest {
+    @Mock
+    Filter f1;
+
+    @Mock
+    Filter f2;
+
     private final Filter a = hasTag("a");
     private final Filter b = hasTag("b");
     private final Filter c = hasTag("c");
@@ -26,6 +38,9 @@ public class FilterTest {
 
     private final Filter s1a = startsWith("foo", "abc");
     private final Filter s1b = startsWith("foo", "abcdef");
+
+    private final String tag = "tag";
+    private final String value = "value";
 
     /**
      * {@link com.spotify.heroic.filter.Filter.Visitor} methods should all defer to {@link
@@ -131,5 +146,17 @@ public class FilterTest {
     public void testOrStartsWith() {
         assertEquals(s1a, or(s1a, s1b).optimize());
         assertEquals(s1a, or(s1b, s1a).optimize());
+    }
+
+    @Test
+    public void factoryMethodTest() {
+        assertEquals(new MatchTagFilter(tag, value), matchTag(tag, value));
+        assertEquals(new StartsWithFilter(tag, value), startsWith(tag, value));
+        assertEquals(new HasTagFilter(tag), hasTag(tag));
+        assertEquals(new MatchKeyFilter(value), matchKey(value));
+        assertEquals(new RegexFilter(tag, value), regex(tag, value));
+        assertEquals(new AndFilter(ImmutableList.of(f1, f2)), and(f1, f2));
+        assertEquals(new OrFilter(ImmutableList.of(f1, f2)), or(f1, f2));
+        assertEquals(new NotFilter(f1), not(f1));
     }
 }
