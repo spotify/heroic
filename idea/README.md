@@ -22,6 +22,8 @@ generate certain sources.
 Create a new `Application` run configuration where you use the following
 parameters:
 
+| Option                       | Value                                  |
+|------------------------------|----------------------------------------|
 | **Name**:                    | `HeroicShell` (or per your preference) |
 | **Main class:**              | `com.spotify.heroic.HeroicShell`       |
 | **Program arguments:**       | `-P memory --server`                   |
