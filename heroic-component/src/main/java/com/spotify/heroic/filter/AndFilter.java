@@ -22,6 +22,7 @@
 package com.spotify.heroic.filter;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.Series;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -106,63 +107,39 @@ public class AndFilter implements Filter {
     static Filter optimize(final SortedSet<Filter> statements) {
         final SortedSet<Filter> result = new TreeSet<>();
 
-        root:
         for (final Filter f : statements) {
             if (f instanceof NotFilter) {
-                final NotFilter not = (NotFilter) f;
+                // Optimize away expressions which are always false.
+                // Example: foo = bar and !(foo = bar)
 
-                // always false
-                if (statements.contains(not.getFilter())) {
+                if (statements.contains(((NotFilter) f).getFilter())) {
                     return FalseFilter.get();
                 }
+            } else if (f instanceof StartsWithFilter) {
+                // Optimize away prefixes which encompass each other.
+                // Example: foo ^ hello and foo ^ helloworld -> foo ^ helloworld
 
-                result.add(f);
-                continue;
-            }
-
-            /**
-             * If there exists two MatchTag statements, but they check for different values.
-             */
-            if (f instanceof MatchTagFilter) {
-                final MatchTagFilter outer = (MatchTagFilter) f;
-
-                for (final Filter inner : statements) {
-                    if (inner.equals(outer)) {
-                        continue;
-                    }
-
-                    if (inner instanceof MatchTagFilter) {
-                        final MatchTagFilter matchTag = (MatchTagFilter) inner;
-
-                        if (!outer.getTag().equals(matchTag.getTag())) {
-                            continue;
-                        }
-
-                        // always false
-                        if (!outer.getValue().equals(matchTag.getValue())) {
-                            return FalseFilter.get();
-                        }
-                    }
-                }
-
-                result.add(f);
-                continue;
-            }
-
-            // optimize away prefixes which encompass eachother.
-            // Example: foo ^ hello and foo ^ helloworld -> foo ^ helloworld
-            if (f instanceof StartsWithFilter) {
                 if (FilterUtils.containsPrefixedWith(statements, (StartsWithFilter) f,
                     (inner, outer) -> FilterUtils.prefixedWith(inner.getValue(),
                         outer.getValue()))) {
                     continue;
                 }
+            } else if (f instanceof MatchTagFilter) {
+                // Optimize matchTag expressions which are always false.
+                // Example: foo = bar and foo = baz
 
-                result.add(f);
-                continue;
+                if (FilterUtils.containsConflictingMatchTag(statements, (MatchTagFilter) f)) {
+                    return FalseFilter.get();
+                }
+            } else if (f instanceof MatchKeyFilter) {
+                // Optimize matchTag expressions which are always false.
+                // Example: $key = bar and $key = baz
+
+                if (FilterUtils.containsConflictingMatchKey(statements, (MatchKeyFilter) f)) {
+                    return FalseFilter.get();
+                }
             }
 
-            // all ok!
             result.add(f);
         }
 
@@ -174,7 +151,7 @@ public class AndFilter implements Filter {
             return result.iterator().next();
         }
 
-        return new AndFilter(new ArrayList<>(result));
+        return new AndFilter(ImmutableList.copyOf(result));
     }
 
     @Override

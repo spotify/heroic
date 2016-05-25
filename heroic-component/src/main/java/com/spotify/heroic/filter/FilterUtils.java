@@ -82,4 +82,49 @@ public class FilterUtils {
             .findFirst()
             .isPresent();
     }
+
+    public static boolean containsConflictingMatchTag(
+        final SortedSet<Filter> statements, final MatchTagFilter outer
+    ) {
+        for (final Filter inner : statements) {
+            if (inner.equals(outer)) {
+                continue;
+            }
+
+            if (inner instanceof MatchTagFilter) {
+                final MatchTagFilter matchTag = (MatchTagFilter) inner;
+
+                if (!outer.getTag().equals(matchTag.getTag())) {
+                    continue;
+                }
+
+                // always false
+                if (!outer.getValue().equals(matchTag.getValue())) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    public static boolean containsConflictingMatchKey(
+        final SortedSet<Filter> statements, final MatchKeyFilter outer
+    ) {
+        for (final Filter inner : statements) {
+            if (inner.equals(outer)) {
+                continue;
+            }
+
+            if (inner instanceof MatchKeyFilter) {
+                final MatchKeyFilter matchKey = (MatchKeyFilter) inner;
+
+                if (!outer.getValue().equals(matchKey.getValue())) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
 }

@@ -22,6 +22,7 @@
 package com.spotify.heroic.filter;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.Series;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -94,31 +95,25 @@ public class OrFilter implements Filter {
     static Filter optimize(final SortedSet<Filter> statements) {
         final SortedSet<Filter> result = new TreeSet<>();
 
-        root:
         for (final Filter f : statements) {
             if (f instanceof NotFilter) {
-                final NotFilter not = (NotFilter) f;
+                // Optimize away expressions which are always true.
+                // Example: foo = bar or !(foo = bar)
 
-                if (statements.contains(not.getFilter())) {
+                if (statements.contains(((NotFilter) f).getFilter())) {
                     return TrueFilter.get();
                 }
+            } else if (f instanceof StartsWithFilter) {
+                // Optimize away prefixes which encompass each other.
+                // Example: foo ^ hello or foo ^ helloworld -> foo ^ hello
 
-                result.add(f);
-                continue;
-            }
-
-            if (f instanceof StartsWithFilter) {
                 if (FilterUtils.containsPrefixedWith(statements, (StartsWithFilter) f,
                     (inner, outer) -> FilterUtils.prefixedWith(outer.getValue(),
                         inner.getValue()))) {
                     continue;
                 }
-
-                result.add(f);
-                continue;
             }
 
-            // all ok!
             result.add(f);
         }
 
@@ -130,7 +125,7 @@ public class OrFilter implements Filter {
             return result.iterator().next();
         }
 
-        return new OrFilter(new ArrayList<>(result));
+        return new OrFilter(ImmutableList.copyOf(result));
     }
 
     @Override
