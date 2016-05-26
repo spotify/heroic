@@ -21,14 +21,8 @@
 
 package com.spotify.heroic.grammar;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
 import java.util.concurrent.TimeUnit;
 
@@ -38,21 +32,10 @@ import java.util.concurrent.TimeUnit;
  * @author udoprog
  */
 @Data
-@EqualsAndHashCode(exclude = {"ctx"})
 @JsonTypeName("double")
-@RequiredArgsConstructor
 public final class DoubleExpression implements Expression {
-    @Getter(AccessLevel.NONE)
-    private final Context ctx;
-
+    private final Context context;
     private final double value;
-
-    @JsonCreator
-    public DoubleExpression(
-        @JsonProperty("value") final double value
-    ) {
-        this(Context.empty(), value);
-    }
 
     @Override
     public <R> R visit(final Visitor<R> visitor) {
@@ -60,37 +43,32 @@ public final class DoubleExpression implements Expression {
     }
 
     @Override
-    public Context context() {
-        return ctx;
-    }
-
-    @Override
     public DoubleExpression multiply(Expression other) {
-        return new DoubleExpression(ctx.join(other.context()),
+        return new DoubleExpression(context.join(other.getContext()),
             value * other.cast(DoubleExpression.class).value);
     }
 
     @Override
     public DoubleExpression divide(Expression other) {
-        return new DoubleExpression(ctx.join(other.context()),
+        return new DoubleExpression(context.join(other.getContext()),
             value / other.cast(DoubleExpression.class).value);
     }
 
     @Override
     public DoubleExpression sub(Expression other) {
-        return new DoubleExpression(ctx.join(other.context()),
+        return new DoubleExpression(context.join(other.getContext()),
             value - other.cast(DoubleExpression.class).value);
     }
 
     @Override
     public DoubleExpression add(Expression other) {
-        return new DoubleExpression(ctx.join(other.context()),
+        return new DoubleExpression(context.join(other.getContext()),
             value + other.cast(DoubleExpression.class).value);
     }
 
     @Override
     public DoubleExpression negate() {
-        return new DoubleExpression(ctx, -value);
+        return new DoubleExpression(context, -value);
     }
 
     @SuppressWarnings("unchecked")
@@ -101,18 +79,23 @@ public final class DoubleExpression implements Expression {
         }
 
         if (to.isAssignableFrom(IntegerExpression.class)) {
-            return (T) new IntegerExpression(((Double) value).longValue());
+            return (T) new IntegerExpression(context, ((Double) value).longValue());
         }
 
         if (to.isAssignableFrom(DurationExpression.class)) {
-            return (T) new DurationExpression(ctx, TimeUnit.MILLISECONDS, (long) value);
+            return (T) new DurationExpression(context, TimeUnit.MILLISECONDS, (long) value);
         }
 
-        throw ctx.castError(this, to);
+        throw context.castError(this, to);
+    }
+
+    @Override
+    public String toRepr() {
+        return Double.toString(value);
     }
 
     @Override
     public String toString() {
-        return String.format("<%f>", value);
+        return "<" + toRepr() + " " + context + ">";
     }
 }

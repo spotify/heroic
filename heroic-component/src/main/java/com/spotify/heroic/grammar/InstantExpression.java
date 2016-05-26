@@ -22,36 +22,22 @@
 package com.spotify.heroic.grammar;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
-import java.beans.ConstructorProperties;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 
 @Data
-@EqualsAndHashCode(exclude = {"ctx"})
 @JsonTypeName("instant")
-@RequiredArgsConstructor
 public class InstantExpression implements Expression {
-    @Getter(AccessLevel.NONE)
-    private final Context ctx;
-
+    private final Context context;
     private final Instant instant;
-
-    @ConstructorProperties({"instant"})
-    public InstantExpression(final Instant instant) {
-        this(Context.empty(), instant);
-    }
 
     @Override
     public Expression add(final Expression other) {
         final long o = other.cast(InstantExpression.class).getInstant().toEpochMilli();
         final long m = instant.toEpochMilli() + o;
-        return new InstantExpression(ctx.join(other.context()), Instant.ofEpochMilli(m));
+        return new InstantExpression(context.join(other.getContext()), Instant.ofEpochMilli(m));
     }
 
     @SuppressWarnings("unchecked")
@@ -62,18 +48,19 @@ public class InstantExpression implements Expression {
         }
 
         if (to.isAssignableFrom(IntegerExpression.class)) {
-            return (T) new IntegerExpression(ctx, instant.toEpochMilli());
+            return (T) new IntegerExpression(context, instant.toEpochMilli());
         }
 
         if (to.isAssignableFrom(DoubleExpression.class)) {
-            return (T) new DoubleExpression(ctx, instant.toEpochMilli());
+            return (T) new DoubleExpression(context, instant.toEpochMilli());
         }
 
         if (to.isAssignableFrom(DurationExpression.class)) {
-            return (T) new DurationExpression(ctx, TimeUnit.MILLISECONDS, instant.toEpochMilli());
+            return (T) new DurationExpression(context, TimeUnit.MILLISECONDS,
+                instant.toEpochMilli());
         }
 
-        throw ctx.castError(this, to);
+        throw context.castError(this, to);
     }
 
     @Override
@@ -82,12 +69,7 @@ public class InstantExpression implements Expression {
     }
 
     @Override
-    public Context context() {
-        return ctx;
-    }
-
-    @Override
-    public String toString() {
-        return String.format("{%s}", instant.toString());
+    public String toRepr() {
+        return "{" + instant + "}";
     }
 }

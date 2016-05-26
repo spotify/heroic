@@ -24,28 +24,30 @@ package com.spotify.heroic.grammar;
 import com.google.common.collect.ImmutableMap;
 
 import java.util.Map;
+import java.util.function.Function;
 
 public class DefaultScope implements Expression.Scope {
-    final Map<String, Expression> scope;
+    final Map<String, Function<Context, Expression>> scope;
 
     public DefaultScope(final long now) {
         this.scope = buildScope(now);
     }
 
-    private Map<String, Expression> buildScope(final long now) {
-        final ImmutableMap.Builder<String, Expression> scope = ImmutableMap.builder();
-        scope.put(Expression.NOW, Expression.integer(now));
+    private Map<String, Function<Context, Expression>> buildScope(final long now) {
+        final ImmutableMap.Builder<String, Function<Context, Expression>> scope =
+            ImmutableMap.builder();
+        scope.put(Expression.NOW, c -> new IntegerExpression(c, now));
         return scope.build();
     }
 
     @Override
     public Expression lookup(final Context c, final String name) {
-        final Expression variable = scope.get(name);
+        final Function<Context, Expression> variable = scope.get(name);
 
         if (variable == null) {
             throw c.scopeLookupError(name);
         }
 
-        return variable;
+        return variable.apply(c);
     }
 }

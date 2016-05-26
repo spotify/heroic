@@ -25,8 +25,6 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.metric.MetricType;
 
 import java.util.List;
 import java.util.Map;
@@ -62,23 +60,23 @@ public interface Expression {
     }
 
     default Expression negate() {
-        throw context().error(String.format("%s: unsupported unary operator: -", this));
+        throw getContext().error(String.format("%s: unsupported unary operator: -", this));
     }
 
     default Expression multiply(Expression other) {
-        throw context().error(String.format("%s: unsupported binary operator: *", this));
+        throw getContext().error(String.format("%s: unsupported binary operator: *", this));
     }
 
     default Expression divide(Expression other) {
-        throw context().error(String.format("%s: unsupported binary operator: /", this));
+        throw getContext().error(String.format("%s: unsupported binary operator: /", this));
     }
 
     default Expression sub(Expression other) {
-        throw context().error(String.format("%s: unsupported binary operator: -", this));
+        throw getContext().error(String.format("%s: unsupported binary operator: -", this));
     }
 
     default Expression add(Expression other) {
-        throw context().error(String.format("%s: unsupported binary operator: +", this));
+        throw getContext().error(String.format("%s: unsupported binary operator: +", this));
     }
 
     default <T extends Expression> T cast(Class<T> to) {
@@ -86,83 +84,44 @@ public interface Expression {
             return (T) this;
         }
 
-        throw context().castError(this, to);
+        throw getContext().castError(this, to);
     }
 
-    Context context();
+    String toRepr();
+
+    Context getContext();
 
     default Optional<Expression> toOptional() {
         return Optional.of(this);
     }
 
-    static FunctionExpression function(String name) {
-        return function(name, list(), ImmutableMap.of());
+    static IntegerExpression integer(Context ctx, long value) {
+        return new IntegerExpression(ctx, value);
     }
 
-    static FunctionExpression function(String name, ListExpression arguments) {
-        return function(name, arguments, ImmutableMap.of());
+    static EmptyExpression empty(Context ctx) {
+        return new EmptyExpression(ctx);
     }
 
-    static FunctionExpression function(
-        String name, ListExpression arguments, Map<String, Expression> keywords
-    ) {
-        return new FunctionExpression(Context.empty(), name, arguments, keywords);
+    static ListExpression list(Context ctx, Expression... expressions) {
+        return new ListExpression(ctx, ImmutableList.copyOf(expressions));
     }
 
-    static ListExpression list(Expression... expressions) {
-        return list(ImmutableList.copyOf(expressions));
+    static FunctionExpression function(Context ctx, String name, Expression... arguments) {
+        return new FunctionExpression(ctx, name, ImmutableList.copyOf(arguments),
+            ImmutableMap.of());
     }
 
-    static ListExpression list(List<Expression> expressions) {
-        return new ListExpression(Context.empty(), ImmutableList.copyOf(expressions));
+    static DurationExpression duration(final Context ctx, final TimeUnit unit, final long value) {
+        return new DurationExpression(ctx, unit, value);
     }
 
-    static DurationExpression duration(TimeUnit unit, long value) {
-        return new DurationExpression(Context.empty(), unit, value);
+    static StringExpression string(Context ctx, String value) {
+        return new StringExpression(ctx, value);
     }
 
-    static StringExpression string(String string) {
-        return new StringExpression(Context.empty(), string);
-    }
-
-    static IntegerExpression number(long value) {
-        return new IntegerExpression(Context.empty(), value);
-    }
-
-    static ReferenceExpression reference(final String name) {
-        return new ReferenceExpression(Context.empty(), name);
-    }
-
-    static PlusExpression plus(final Expression left, final Expression right) {
-        return new PlusExpression(Context.empty(), left, right);
-    }
-
-    static MinusExpression minus(final Expression left, final Expression right) {
-        return new MinusExpression(Context.empty(), left, right);
-    }
-
-    static LetExpression let(final ReferenceExpression reference, final Expression expression) {
-        return new LetExpression(Context.empty(), reference, expression);
-    }
-
-    static QueryExpression query(
-        final Optional<Expression> select, final Optional<MetricType> source,
-        final Optional<RangeExpression> range, final Optional<Filter> filter,
-        final Map<String, Expression> with, final Map<String, Expression> as
-    ) {
-        return new QueryExpression(Context.empty(), select, source, range, filter, with, as);
-    }
-
-    static Expression empty() {
-        return new EmptyExpression(Context.empty());
-    }
-
-    static IntegerExpression integer(final long value) {
-        return new IntegerExpression(Context.empty(), value);
-    }
-
-    static RangeExpression range(final Expression start, final Expression end) {
-        return new RangeExpression(Context.empty(), start, end);
+    static RangeExpression range(Context ctx, Expression start, Expression end) {
+        return new RangeExpression(ctx, start, end);
     }
 
     static Map<String, Expression> evalMap(Map<String, Expression> input, Scope scope) {
@@ -268,10 +227,6 @@ public interface Expression {
     }
 
     interface Scope {
-        default Expression lookup(final String name) {
-            return lookup(Context.empty(), name);
-        }
-
         Expression lookup(final Context c, final String name);
     }
 }

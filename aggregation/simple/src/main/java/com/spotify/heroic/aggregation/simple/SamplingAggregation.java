@@ -22,15 +22,12 @@
 package com.spotify.heroic.aggregation.simple;
 
 import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationContext;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.common.Duration;
 import lombok.Data;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -58,23 +55,6 @@ public abstract class SamplingAggregation implements Aggregation {
     @Override
     public Optional<Long> extent() {
         return extent.map(Duration::toMilliseconds);
-    }
-
-    protected String samplingDSL(final String name) {
-        return samplingDSL(name, ImmutableList.of());
-    }
-
-    protected String samplingDSL(final String name, final List<String> extra) {
-        final List<String> arguments = new ArrayList<>();
-        size.map(Duration::toDSL).ifPresent(arguments::add);
-        extent.map(Duration::toDSL).ifPresent(arguments::add);
-        arguments.addAll(extra);
-
-        if (arguments.isEmpty()) {
-            return name;
-        }
-
-        return String.format("%s(%s)", name, params.join(arguments));
     }
 
     protected abstract AggregationInstance apply(

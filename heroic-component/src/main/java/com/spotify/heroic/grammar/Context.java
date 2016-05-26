@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.grammar;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import lombok.Data;
 
@@ -33,17 +31,6 @@ public class Context {
     private final int lineEnd;
     private final int colEnd;
 
-    @JsonCreator
-    public Context(
-        @JsonProperty("line") final int line, @JsonProperty("col") final int col,
-        @JsonProperty("lineEnd") final int lineEnd, @JsonProperty("colEnd") final int colEnd
-    ) {
-        this.line = line;
-        this.col = col;
-        this.lineEnd = lineEnd;
-        this.colEnd = colEnd;
-    }
-
     public ParseException error(final String message) {
         return new ParseException(message, null, line, col, lineEnd, colEnd);
     }
@@ -52,9 +39,9 @@ public class Context {
         return new ParseException(cause.getMessage(), cause, line, col, lineEnd, colEnd);
     }
 
-    public ParseException castError(final Object from, final Class<?> to) {
-        return new ParseException(String.format("%s cannot be cast to %s", from, name(to)), null,
-            line, col, lineEnd, colEnd);
+    public ParseException castError(final Expression from, final Class<?> to) {
+        return new ParseException(String.format("%s cannot be cast to %s", from.toRepr(), name(to)),
+            null, line, col, lineEnd, colEnd);
     }
 
     public ParseException scopeLookupError(final String name) {
@@ -68,10 +55,6 @@ public class Context {
             Math.max(getLineEnd(), o.getLineEnd()), Math.max(getColEnd(), o.getColEnd()));
     }
 
-    public static Context empty() {
-        return new Context(-1, -1, -1, -1);
-    }
-
     static String name(Class<?> type) {
         final JsonTypeName name = type.getAnnotation(JsonTypeName.class);
 
@@ -80,5 +63,26 @@ public class Context {
         }
 
         return type.getSimpleName();
+    }
+
+    @Override
+    public String toString() {
+        return toStringLine() + ":" + toStringCol();
+    }
+
+    public String toStringLine() {
+        if (line != lineEnd) {
+            return line + "-" + lineEnd;
+        }
+
+        return Integer.toString(line);
+    }
+
+    public String toStringCol() {
+        if (col != colEnd) {
+            return col + "-" + colEnd;
+        }
+
+        return Integer.toString(col);
     }
 }

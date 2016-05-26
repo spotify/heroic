@@ -2,8 +2,10 @@ package com.spotify.heroic.grammar;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.doReturn;
 
 public class ContextTest {
     private final Context c1 = new Context(0, 0, 10, 10);
@@ -47,12 +49,8 @@ public class ContextTest {
 
     @Test
     public void castErrorTest() {
-        final Object o = new Object() {
-            @Override
-            public String toString() {
-                return "object";
-            }
-        };
+        final Expression o = Mockito.mock(Expression.class);
+        doReturn("object").when(o).toRepr();
 
         final ParseException p = c1.castError(o, A.class);
 
@@ -74,11 +72,6 @@ public class ContextTest {
         assertEquals(0, p.getCol());
         assertEquals(10, p.getLineEnd());
         assertEquals(10, p.getColEnd());
-    }
-
-    @Test
-    public void emptyTest() {
-        assertEquals(new Context(-1, -1, -1, -1), Context.empty());
     }
 
     @JsonTypeName("a")

@@ -50,6 +50,9 @@ public abstract class AbstractExpressionTest<E extends Expression> {
         doReturn("a").when(a).toString();
         doReturn("b").when(b).toString();
 
+        doReturn("a").when(a).toRepr();
+        doReturn("b").when(b).toRepr();
+
         doReturn(e).when(ctx).castError(anyObject(), any(Class.class));
     }
 
@@ -74,7 +77,7 @@ public abstract class AbstractExpressionTest<E extends Expression> {
     @Test
     public void getContextTest() {
         final E expr = build();
-        assertEquals(ctx, expr.context());
+        assertEquals(ctx, expr.getContext());
     }
 
     @Test

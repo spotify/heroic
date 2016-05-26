@@ -5,16 +5,12 @@ import org.junit.runner.RunWith;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import java.time.LocalDateTime;
-import java.time.Month;
 import java.util.function.BiFunction;
 
 import static org.junit.Assert.assertEquals;
 
 @RunWith(MockitoJUnitRunner.class)
 public class DateTimeExpressionTest extends AbstractExpressionTest<DateTimeExpression> {
-    private final DateTimeExpression d =
-        new DateTimeExpression(LocalDateTime.of(2000, Month.JANUARY, 1, 0, 0));
-
     private final LocalDateTime localDate = LocalDateTime.of(2000, 1, 1, 0, 0, 0, 0);
     private final String dateString = "2000-01-01 00:00:00.000";
 
@@ -45,7 +41,7 @@ public class DateTimeExpressionTest extends AbstractExpressionTest<DateTimeExpre
     }
 
     @Test
-    public void toStringTest() {
-        assertEquals("{2000-01-01 00:00:00.000}", build().toString());
+    public void toReprTest() {
+        assertEquals("{2000-01-01 00:00:00.000}", build().toRepr());
     }
 }

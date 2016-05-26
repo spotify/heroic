@@ -21,36 +21,19 @@
 
 package com.spotify.heroic.grammar;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
 @Data
-@EqualsAndHashCode(exclude = {"ctx"})
 @JsonTypeName("range")
-@RequiredArgsConstructor
 public class RangeExpression implements Expression {
-    @Getter(AccessLevel.NONE)
-    private final Context ctx;
-
+    private final Context context;
     private final Expression start;
     private final Expression end;
 
-    @JsonCreator
-    public RangeExpression(
-        @JsonProperty("start") final Expression start, @JsonProperty("end") final Expression end
-    ) {
-        this(Context.empty(), start, end);
-    }
-
     @Override
     public RangeExpression eval(final Scope scope) {
-        return new RangeExpression(ctx, start.eval(scope), end.eval(scope));
+        return new RangeExpression(context, start.eval(scope), end.eval(scope));
     }
 
     @Override
@@ -59,12 +42,12 @@ public class RangeExpression implements Expression {
     }
 
     @Override
-    public Context context() {
-        return ctx;
+    public Context getContext() {
+        return context;
     }
 
     @Override
-    public String toString() {
-        return String.format("%s -> %s", start, end);
+    public String toRepr() {
+        return String.format("%s -> %s", start.toRepr(), end.toRepr());
     }
 }

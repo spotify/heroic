@@ -22,21 +22,25 @@
 package com.spotify.heroic.common;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.BinaryOperator;
 
 public final class Optionals {
     public static <T> Optional<List<T>> mergeOptionalList(
         final Optional<List<T>> a, Optional<List<T>> b
     ) {
-        if (a.isPresent() && b.isPresent()) {
-            return Optional.of(ImmutableList.copyOf(Iterables.concat(a.get(), b.get())));
-        }
+        return mergeOptional(a, b, (al, bl) -> ImmutableList.copyOf(Iterables.concat(al, bl)));
+    }
 
-        return pickOptional(a, b);
+    public static <T> Optional<Set<T>> mergeOptionalSet(
+        final Optional<Set<T>> a, Optional<Set<T>> b
+    ) {
+        return mergeOptional(a, b, (al, bl) -> ImmutableSet.copyOf(Iterables.concat(al, bl)));
     }
 
     public static <T> Optional<T> mergeOptional(

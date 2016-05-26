@@ -21,32 +21,15 @@
 
 package com.spotify.heroic.grammar;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
 @Data
-@EqualsAndHashCode(exclude = {"ctx"})
 @JsonTypeName("plus")
-@RequiredArgsConstructor
 public class PlusExpression implements Expression {
-    @Getter(AccessLevel.NONE)
-    private final Context ctx;
-
+    private final Context context;
     private final Expression left;
     private final Expression right;
-
-    @JsonCreator
-    public PlusExpression(
-        @JsonProperty("left") final Expression left, @JsonProperty("right") final Expression right
-    ) {
-        this(Context.empty(), left, right);
-    }
 
     @Override
     public Expression eval(Scope scope) {
@@ -59,11 +42,7 @@ public class PlusExpression implements Expression {
     }
 
     @Override
-    public Context context() {
-        return ctx;
-    }
-
-    public String toString() {
-        return String.format("<%s + %s>", left, right);
+    public String toRepr() {
+        return String.format("%s + %s", left.toRepr(), right.toRepr());
     }
 }

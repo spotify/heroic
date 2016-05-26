@@ -26,7 +26,7 @@ public abstract class ExpressionTests {
         assertEquals(expected, result);
         verify(ac).join(bc);
 
-        assertEquals(r, expected.context());
+        assertEquals(r, expected.getContext());
     }
 
     static <E extends Expression> void uniFuncTest(
@@ -38,7 +38,7 @@ public abstract class ExpressionTests {
         final E result = op.apply(a.apply(c));
 
         assertEquals(expected, result);
-        assertEquals(c, expected.context());
+        assertEquals(c, expected.getContext());
     }
 
     static <E extends Expression> void visitorTest(

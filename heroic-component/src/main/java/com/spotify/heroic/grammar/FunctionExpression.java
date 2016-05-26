@@ -21,48 +21,29 @@
 
 package com.spotify.heroic.grammar;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Iterators;
 import com.spotify.heroic.aggregation.AggregationArguments;
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 @Data
-@EqualsAndHashCode(exclude = {"ctx"})
 @JsonTypeName("function")
-@RequiredArgsConstructor
 public class FunctionExpression implements Expression {
-    @Getter(AccessLevel.NONE)
-    private final Context ctx;
-
+    private final Context context;
     private final String name;
-    private final ListExpression arguments;
+    private final List<Expression> arguments;
     private final Map<String, Expression> keywords;
-
-    @JsonCreator
-    public FunctionExpression(
-        @JsonProperty("name") final String name,
-        @JsonProperty("arguments") final ListExpression arguments,
-        @JsonProperty("keywords") final Map<String, Expression> keywords
-    ) {
-        this(Context.empty(), name, arguments, keywords);
-    }
 
     @Override
     public Expression eval(final Scope scope) {
-        final Map<String, Expression> keywordArguments =
-            Expression.evalMap(this.keywords, scope);
-
-        return new FunctionExpression(ctx, name, arguments.eval(scope), keywordArguments);
+        final List<Expression> evaledArguments = Expression.evalList(arguments, scope);
+        final Map<String, Expression> evaledKeywords = Expression.evalMap(keywords, scope);
+        return new FunctionExpression(context, name, evaledArguments, evaledKeywords);
     }
 
     @Override
@@ -71,24 +52,21 @@ public class FunctionExpression implements Expression {
     }
 
     @Override
-    public Context context() {
-        return ctx;
-    }
-
-    @Override
-    public String toString() {
+    public String toRepr() {
         final Joiner args = Joiner.on(", ");
-        final Iterator<String> a =
-            this.arguments.getList().stream().map(v -> v.toString()).iterator();
+
+        final Iterator<String> a = arguments.stream().map(Expression::toRepr).iterator();
+
         final Iterator<String> k = keywords
             .entrySet()
             .stream()
-            .map(e -> e.getKey() + "=" + e.getValue())
+            .map(e -> e.getKey() + "=" + e.getValue().toRepr())
             .iterator();
-        return "" + name + "(" + args.join(Iterators.concat(a, k)) + ")";
+
+        return name + "(" + args.join(Iterators.concat(a, k)) + ")";
     }
 
     public AggregationArguments arguments() {
-        return new AggregationArguments(getArguments().getList(), getKeywords());
+        return new AggregationArguments(getArguments(), getKeywords());
     }
 }

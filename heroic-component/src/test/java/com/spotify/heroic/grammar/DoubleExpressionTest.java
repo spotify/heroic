@@ -24,8 +24,9 @@ public class DoubleExpressionTest extends AbstractExpressionTest<DoubleExpressio
     public void castTest() {
         final DoubleExpression d = build();
 
-        assertEquals(new IntegerExpression((long) d.getValue()), d.cast(IntegerExpression.class));
-        assertEquals(Expression.duration(TimeUnit.MILLISECONDS, (int) d.getValue()),
+        assertEquals(new IntegerExpression(ctx, (long) d.getValue()),
+            d.cast(IntegerExpression.class));
+        assertEquals(new DurationExpression(ctx, TimeUnit.MILLISECONDS, (int) d.getValue()),
             d.cast(DurationExpression.class));
     }
 

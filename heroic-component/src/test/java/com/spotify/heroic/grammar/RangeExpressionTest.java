@@ -37,8 +37,8 @@ public class RangeExpressionTest extends AbstractExpressionTest<RangeExpression>
     }
 
     @Test
-    public void toStringTest() {
+    public void toReprTest() {
         final RangeExpression e = build();
-        assertEquals("a -> b", e.toString());
+        assertEquals("a -> b", e.toRepr());
     }
 }

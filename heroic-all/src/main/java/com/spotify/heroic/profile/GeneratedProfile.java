@@ -40,7 +40,7 @@ public class GeneratedProfile extends HeroicProfileBase {
             .cluster(
                 ClusterManagerModule.builder()
             )
-            .metric(
+            .metrics(
                 MetricManagerModule.builder()
                     .backends(ImmutableList.<MetricModule>of(
                         GeneratedMetricModule.builder()

@@ -21,29 +21,18 @@
 
 package com.spotify.heroic.grammar;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.MetricType;
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 @Data
-@EqualsAndHashCode(exclude = {"ctx"})
 @JsonTypeName("query")
-@RequiredArgsConstructor
 public class QueryExpression implements Expression {
-    @Getter(AccessLevel.NONE)
-    private final Context ctx;
-
+    private final Context context;
     private final Optional<Expression> select;
     private final Optional<MetricType> source;
     private final Optional<RangeExpression> range;
@@ -51,25 +40,12 @@ public class QueryExpression implements Expression {
     private final Map<String, Expression> with;
     private final Map<String, Expression> as;
 
-    @JsonCreator
-    public QueryExpression(
-        @JsonProperty("select") final Optional<Expression> select,
-        @JsonProperty("source") final Optional<MetricType> source,
-        @JsonProperty("range") final Optional<RangeExpression> range,
-        @JsonProperty("filter") final Optional<Filter> filter,
-        @JsonProperty("with") final Map<String, Expression> with,
-        @JsonProperty("as") final Map<String, Expression> as
-    ) {
-        this(Context.empty(), select, source, range, filter, Objects.requireNonNull(with),
-            Objects.requireNonNull(as));
-    }
-
     @Override
     public Expression eval(final Scope scope) {
         final Map<String, Expression> with = Expression.evalMap(this.with, scope);
         final Map<String, Expression> as = Expression.evalMap(this.as, scope);
 
-        return new QueryExpression(ctx, select.map(s -> s.eval(scope)), source,
+        return new QueryExpression(context, select.map(s -> s.eval(scope)), source,
             range.map(r -> r.eval(scope)), filter, with, as);
     }
 
@@ -79,12 +55,7 @@ public class QueryExpression implements Expression {
     }
 
     @Override
-    public Context context() {
-        return ctx;
-    }
-
-    @Override
-    public String toString() {
+    public String toRepr() {
         return String.format("{select: %s source: %s, range: %s, filter: %s, with: %s, as: %s}",
             select, source, range, filter, with, as);
     }

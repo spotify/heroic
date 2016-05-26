@@ -21,31 +21,14 @@
 
 package com.spotify.heroic.grammar;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
 @Data
-@EqualsAndHashCode(exclude = {"ctx"})
 @JsonTypeName("negate")
-@RequiredArgsConstructor
 public class NegateExpression implements Expression {
-    @Getter(AccessLevel.NONE)
-    private final Context ctx;
-
+    private final Context context;
     private final Expression expression;
-
-    @JsonCreator
-    public NegateExpression(
-        @JsonProperty("expression") final Expression expression
-    ) {
-        this(Context.empty(), expression);
-    }
 
     @SuppressWarnings("unchecked")
     @Override
@@ -54,7 +37,7 @@ public class NegateExpression implements Expression {
             return (T) this;
         }
 
-        throw context().castError(this, to);
+        throw getContext().castError(this, to);
     }
 
     @Override
@@ -73,12 +56,7 @@ public class NegateExpression implements Expression {
     }
 
     @Override
-    public Context context() {
-        return ctx;
-    }
-
-    @Override
-    public String toString() {
-        return String.format("<-%s>", expression);
+    public String toRepr() {
+        return "-" + expression.toRepr();
     }
 }

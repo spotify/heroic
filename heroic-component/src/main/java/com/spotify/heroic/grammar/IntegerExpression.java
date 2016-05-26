@@ -21,14 +21,8 @@
 
 package com.spotify.heroic.grammar;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
 import java.util.concurrent.TimeUnit;
 
@@ -38,21 +32,10 @@ import java.util.concurrent.TimeUnit;
  * @author udoprog
  */
 @Data
-@EqualsAndHashCode(exclude = {"ctx"})
 @JsonTypeName("integer")
-@RequiredArgsConstructor
 public final class IntegerExpression implements Expression {
-    @Getter(AccessLevel.NONE)
-    private final Context ctx;
-
+    private final Context context;
     private final long value;
-
-    @JsonCreator
-    public IntegerExpression(
-        @JsonProperty("value") final long value
-    ) {
-        this(Context.empty(), value);
-    }
 
     @Override
     public <R> R visit(final Visitor<R> visitor) {
@@ -60,37 +43,32 @@ public final class IntegerExpression implements Expression {
     }
 
     @Override
-    public Context context() {
-        return ctx;
-    }
-
-    @Override
     public IntegerExpression multiply(Expression other) {
-        return new IntegerExpression(ctx.join(other.context()),
+        return new IntegerExpression(context.join(other.getContext()),
             value * other.cast(IntegerExpression.class).value);
     }
 
     @Override
     public IntegerExpression divide(Expression other) {
-        return new IntegerExpression(ctx.join(other.context()),
+        return new IntegerExpression(context.join(other.getContext()),
             value / other.cast(IntegerExpression.class).value);
     }
 
     @Override
     public IntegerExpression sub(Expression other) {
-        return new IntegerExpression(ctx.join(other.context()),
+        return new IntegerExpression(context.join(other.getContext()),
             value - other.cast(IntegerExpression.class).value);
     }
 
     @Override
     public IntegerExpression add(Expression other) {
-        return new IntegerExpression(ctx.join(other.context()),
+        return new IntegerExpression(context.join(other.getContext()),
             value + other.cast(IntegerExpression.class).value);
     }
 
     @Override
     public IntegerExpression negate() {
-        return new IntegerExpression(ctx, -value);
+        return new IntegerExpression(context, -value);
     }
 
     @SuppressWarnings("unchecked")
@@ -101,18 +79,18 @@ public final class IntegerExpression implements Expression {
         }
 
         if (to.isAssignableFrom(DurationExpression.class)) {
-            return (T) new DurationExpression(ctx, TimeUnit.MILLISECONDS, value);
+            return (T) new DurationExpression(context, TimeUnit.MILLISECONDS, value);
         }
 
         if (to.isAssignableFrom(DoubleExpression.class)) {
-            return (T) new DoubleExpression(ctx, ((Long) value).doubleValue());
+            return (T) new DoubleExpression(context, ((Long) value).doubleValue());
         }
 
-        throw ctx.castError(this, to);
+        throw context.castError(this, to);
     }
 
     @Override
-    public String toString() {
-        return String.format("<%d>", value);
+    public String toRepr() {
+        return Long.toString(value);
     }
 }

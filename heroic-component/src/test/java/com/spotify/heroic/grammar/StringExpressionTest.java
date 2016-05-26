@@ -4,6 +4,8 @@ import org.junit.Test;
 
 import java.util.function.BiFunction;
 
+import static com.spotify.heroic.grammar.Expression.function;
+import static com.spotify.heroic.grammar.Expression.list;
 import static com.spotify.heroic.grammar.ExpressionTests.biFuncTest;
 import static org.junit.Assert.assertEquals;
 
@@ -24,8 +26,8 @@ public class StringExpressionTest extends AbstractExpressionTest<StringExpressio
     public void castTest() {
         final StringExpression str = build();
 
-        assertEquals(Expression.list(str), str.cast(ListExpression.class));
-        assertEquals(Expression.function(str.getString()), str.cast(FunctionExpression.class));
+        assertEquals(list(ctx, str), str.cast(ListExpression.class));
+        assertEquals(function(ctx, str.getString()), str.cast(FunctionExpression.class));
     }
 
     @Test

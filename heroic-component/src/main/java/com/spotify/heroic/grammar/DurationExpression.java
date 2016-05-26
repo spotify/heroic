@@ -21,47 +21,25 @@
 
 package com.spotify.heroic.grammar;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.spotify.heroic.common.Duration;
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
 import java.util.concurrent.TimeUnit;
 
 @Data
-@EqualsAndHashCode(exclude = {"ctx"})
 @JsonTypeName("duration")
-@RequiredArgsConstructor
 public class DurationExpression implements Expression {
     private static final BinaryOperation ADD = (long a, long b) -> a + b;
     private static final BinaryOperation SUB = (long a, long b) -> a - b;
 
-    @Getter(AccessLevel.NONE)
-    private final Context ctx;
-
+    private final Context context;
     private final TimeUnit unit;
     private final long value;
-
-    @JsonCreator
-    public DurationExpression(
-        @JsonProperty("unit") final TimeUnit unit, @JsonProperty("value") final long value
-    ) {
-        this(Context.empty(), unit, value);
-    }
 
     @Override
     public <R> R visit(final Visitor<R> visitor) {
         return visitor.visitDuration(this);
-    }
-
-    @Override
-    public Context context() {
-        return ctx;
     }
 
     @Override
@@ -92,7 +70,7 @@ public class DurationExpression implements Expression {
             unit = next;
         }
 
-        return new DurationExpression(ctx, unit, value / den);
+        return new DurationExpression(context, unit, value / den);
     }
 
     private TimeUnit nextSmallerUnit(final TimeUnit unit) {
@@ -112,13 +90,13 @@ public class DurationExpression implements Expression {
 
     @Override
     public DurationExpression negate() {
-        return new DurationExpression(ctx, unit, -value);
+        return new DurationExpression(context, unit, -value);
     }
 
     private DurationExpression operate(BinaryOperation op, Expression other) {
         final DurationExpression o = other.cast(DurationExpression.class);
 
-        final Context c = ctx.join(other.context());
+        final Context c = context.join(other.getContext());
 
         if (unit == o.unit) {
             return new DurationExpression(c, unit, op.calculate(value, o.value));
@@ -143,10 +121,10 @@ public class DurationExpression implements Expression {
         }
 
         if (to.isAssignableFrom(IntegerExpression.class)) {
-            return (T) new IntegerExpression(ctx, this.toMilliseconds());
+            return (T) new IntegerExpression(context, this.toMilliseconds());
         }
 
-        throw ctx.castError(this, to);
+        throw context.castError(this, to);
     }
 
     public Duration toDuration() {
@@ -158,7 +136,7 @@ public class DurationExpression implements Expression {
     }
 
     @Override
-    public String toString() {
+    public String toRepr() {
         return String.format("<%d%s>", value, Duration.unitSuffix(unit));
     }
 

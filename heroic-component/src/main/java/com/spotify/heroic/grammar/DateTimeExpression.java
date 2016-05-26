@@ -21,16 +21,10 @@
 
 package com.spotify.heroic.grammar;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.ImmutableList;
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
-import java.beans.ConstructorProperties;
 import java.time.DateTimeException;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -40,9 +34,7 @@ import java.time.temporal.TemporalAccessor;
 import java.util.List;
 
 @Data
-@EqualsAndHashCode(exclude = {"ctx"})
 @JsonTypeName("date-time")
-@RequiredArgsConstructor
 public class DateTimeExpression implements Expression {
     public static final DateTimeFormatter STRING_FORMAT =
         DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
@@ -56,34 +48,22 @@ public class DateTimeExpression implements Expression {
     );
     // @formatter:On
 
-    @Getter(AccessLevel.NONE)
-    private final Context ctx;
-
+    private final Context context;
     private final LocalDateTime dateTime;
-
-    @ConstructorProperties({"dateTime"})
-    public DateTimeExpression(@JsonProperty("dateTime") final LocalDateTime dateTime) {
-        this(Context.empty(), dateTime);
-    }
 
     @Override
     public <R> R visit(final Visitor<R> visitor) {
         return visitor.visitDateTime(this);
     }
 
-    @Override
-    public Context context() {
-        return ctx;
-    }
-
     // TODO: support other time-zones fetched from the scope.
     @Override
     public Expression eval(final Scope scope) {
-        return new InstantExpression(ctx, dateTime.toInstant(ZoneOffset.UTC));
+        return new InstantExpression(context, dateTime.toInstant(ZoneOffset.UTC));
     }
 
     @Override
-    public String toString() {
+    public String toRepr() {
         return String.format("{%s}", STRING_FORMAT.format(dateTime));
     }
 

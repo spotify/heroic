@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.metric;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.analytics.AnalyticsComponent;
@@ -54,7 +52,6 @@ import static com.spotify.heroic.common.Optionals.mergeOptionalList;
 import static com.spotify.heroic.common.Optionals.pickOptional;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
-import static java.util.Optional.ofNullable;
 
 @RequiredArgsConstructor
 public class MetricManagerModule {
@@ -200,7 +197,7 @@ public class MetricManagerModule {
     }
 
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
-    @AllArgsConstructor(access = AccessLevel.PRIVATE)
+    @AllArgsConstructor
     public static class Builder {
         private Optional<List<MetricModule>> backends = empty();
         private Optional<List<String>> defaultBackends = empty();
@@ -209,25 +206,6 @@ public class MetricManagerModule {
         private Optional<Long> aggregationLimit = empty();
         private Optional<Long> dataLimit = empty();
         private Optional<Integer> fetchParallelism = empty();
-
-        @JsonCreator
-        public Builder(
-            @JsonProperty("backends") List<MetricModule> backends,
-            @JsonProperty("defaultBackends") List<String> defaultBackends,
-            @JsonProperty("groupLimit") Integer groupLimit,
-            @JsonProperty("seriesLimit") Long seriesLimit,
-            @JsonProperty("aggregationLimit") Long aggregationLimit,
-            @JsonProperty("dataLimit") Long dataLimit,
-            @JsonProperty("fetchParallelism") Integer fetchParallelism
-        ) {
-            this.backends = ofNullable(backends);
-            this.defaultBackends = ofNullable(defaultBackends);
-            this.groupLimit = ofNullable(groupLimit);
-            this.seriesLimit = ofNullable(seriesLimit);
-            this.aggregationLimit = ofNullable(aggregationLimit);
-            this.dataLimit = ofNullable(dataLimit);
-            this.fetchParallelism = ofNullable(fetchParallelism);
-        }
 
         public Builder backends(List<MetricModule> backends) {
             this.backends = of(backends);

@@ -25,7 +25,7 @@ public class ExpressionTest {
     @Before
     public void setup() {
         e = Mockito.mock(Expression.class, Mockito.CALLS_REAL_METHODS);
-        doReturn(ctx).when(e).context();
+        doReturn(ctx).when(e).getContext();
         doReturn(parseException).when(ctx).error(anyString());
     }
 

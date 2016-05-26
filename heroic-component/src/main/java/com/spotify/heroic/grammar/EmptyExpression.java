@@ -21,37 +21,19 @@
 
 package com.spotify.heroic.grammar;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
 import java.util.Optional;
 
 @Data
-@EqualsAndHashCode(exclude = {"ctx"})
 @JsonTypeName("empty")
-@RequiredArgsConstructor
 public class EmptyExpression implements Expression {
-    @Getter(AccessLevel.NONE)
-    private final Context ctx;
-
-    @JsonCreator
-    public EmptyExpression() {
-        this(Context.empty());
-    }
+    private final Context context;
 
     @Override
     public <R> R visit(final Visitor<R> visitor) {
         return visitor.visitEmpty(this);
-    }
-
-    @Override
-    public Context context() {
-        return ctx;
     }
 
     @Override
@@ -60,7 +42,7 @@ public class EmptyExpression implements Expression {
             return (T) this;
         }
 
-        throw ctx.castError(this, to);
+        throw context.castError(this, to);
     }
 
     @Override
@@ -69,7 +51,7 @@ public class EmptyExpression implements Expression {
     }
 
     @Override
-    public String toString() {
-        return "<empty>";
+    public String toRepr() {
+        return "empty";
     }
 }

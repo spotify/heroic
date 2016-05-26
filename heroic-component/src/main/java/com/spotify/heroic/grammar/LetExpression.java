@@ -21,14 +21,8 @@
 
 package com.spotify.heroic.grammar;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
 /**
  * Representation of a let expression.
@@ -36,23 +30,11 @@ import lombok.RequiredArgsConstructor;
  * These take the form: {@code let &lt;reference&gt; = &lt;expression&gt;}
  */
 @Data
-@EqualsAndHashCode(exclude = {"ctx"})
 @JsonTypeName("let")
-@RequiredArgsConstructor
 public class LetExpression implements Expression {
-    @Getter(AccessLevel.NONE)
-    private final Context ctx;
-
+    private final Context context;
     private final ReferenceExpression reference;
     private final Expression expression;
-
-    @JsonCreator
-    public LetExpression(
-        @JsonProperty("reference") final ReferenceExpression reference,
-        @JsonProperty("expression") final Expression expression
-    ) {
-        this(Context.empty(), reference, expression);
-    }
 
     @Override
     public <R> R visit(final Visitor<R> visitor) {
@@ -60,12 +42,12 @@ public class LetExpression implements Expression {
     }
 
     @Override
-    public Context context() {
-        return ctx;
+    public Context getContext() {
+        return context;
     }
 
     @Override
-    public String toString() {
-        return String.format("let %s = %s", reference, expression);
+    public String toRepr() {
+        return String.format("let %s = %s", reference.toRepr(), expression.toRepr());
     }
 }

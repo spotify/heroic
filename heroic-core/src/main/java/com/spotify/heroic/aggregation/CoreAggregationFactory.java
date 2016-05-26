@@ -22,9 +22,9 @@
 package com.spotify.heroic.aggregation;
 
 import com.spotify.heroic.grammar.Expression;
-import com.spotify.heroic.grammar.ListExpression;
 import lombok.RequiredArgsConstructor;
 
+import java.util.List;
 import java.util.Map;
 
 @RequiredArgsConstructor
@@ -32,14 +32,14 @@ public class CoreAggregationFactory implements AggregationFactory {
     final Map<String, AggregationDSL> builderMap;
 
     @Override
-    public Aggregation build(String name, ListExpression args, Map<String, Expression> keywords) {
+    public Aggregation build(String name, List<Expression> args, Map<String, Expression> keywords) {
         final AggregationDSL builder = builderMap.get(name);
 
         if (builder == null) {
             throw new MissingAggregation(name);
         }
 
-        final AggregationArguments a = new AggregationArguments(args.getList(), keywords);
+        final AggregationArguments a = new AggregationArguments(args, keywords);
 
         final Aggregation aggregation;
 

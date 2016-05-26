@@ -21,39 +21,24 @@
 
 package com.spotify.heroic.grammar;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import lombok.AccessLevel;
+import com.google.common.base.Joiner;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 @Data
-@EqualsAndHashCode(exclude = {"ctx"})
 @JsonTypeName("list")
-@RequiredArgsConstructor
 public final class ListExpression implements Expression {
-    @Getter(AccessLevel.NONE)
-    private final Context ctx;
-
+    private final Context context;
     private final List<Expression> list;
-
-    @JsonCreator
-    public ListExpression(
-        @JsonProperty("list") final List<Expression> list
-    ) {
-        this(Context.empty(), list);
-    }
 
     @Override
     public ListExpression eval(final Scope scope) {
         final List<Expression> list = Expression.evalList(this.list, scope);
-        return new ListExpression(ctx, list);
+        return new ListExpression(context, list);
     }
 
     @Override
@@ -62,21 +47,18 @@ public final class ListExpression implements Expression {
     }
 
     @Override
-    public Context context() {
-        return ctx;
-    }
-
-    @Override
     public ListExpression add(Expression other) {
         final ListExpression o = other.cast(ListExpression.class);
         final ArrayList<Expression> list = new ArrayList<Expression>();
         list.addAll(this.list);
         list.addAll(o.list);
-        return new ListExpression(ctx.join(other.context()), list);
+        return new ListExpression(context.join(other.getContext()), list);
     }
 
     @Override
-    public String toString() {
-        return list.toString();
+    public String toRepr() {
+        final Joiner arg = Joiner.on(", ");
+        final Iterator<String> args = list.stream().map(Expression::toRepr).iterator();
+        return "[" + arg.join(args) + "]";
     }
 }

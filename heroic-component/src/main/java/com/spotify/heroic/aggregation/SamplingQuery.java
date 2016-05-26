@@ -21,14 +21,13 @@
 
 package com.spotify.heroic.aggregation;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.Optionals;
 import com.spotify.heroic.common.TimeUtils;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
+import java.beans.ConstructorProperties;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -38,11 +37,8 @@ public class SamplingQuery {
     private final Optional<Duration> size;
     private final Optional<Duration> extent;
 
-    @JsonCreator
-    public SamplingQuery(
-        @JsonProperty("unit") String unit, @JsonProperty("value") Duration size,
-        @JsonProperty("extent") Duration extent
-    ) {
+    @ConstructorProperties({"unit", "value", "extent"})
+    public SamplingQuery(String unit, Duration size, Duration extent) {
         final Optional<TimeUnit> u = TimeUtils.parseTimeUnit(unit);
 
         // XXX: prefer proper durations over unit override.

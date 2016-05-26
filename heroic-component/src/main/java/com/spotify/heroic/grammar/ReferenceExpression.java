@@ -21,36 +21,21 @@
 
 package com.spotify.heroic.grammar;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
 /**
  * An expression representing a Reference ($name).
  */
 @Data
-@EqualsAndHashCode(exclude = {"ctx"})
 @JsonTypeName("reference")
-@RequiredArgsConstructor
 public class ReferenceExpression implements Expression {
-    @Getter(AccessLevel.NONE)
-    private final Context ctx;
-
+    private final Context context;
     private final String name;
-
-    @JsonCreator
-    public ReferenceExpression(@JsonProperty("name") final String name) {
-        this(Context.empty(), name);
-    }
 
     @Override
     public Expression eval(final Scope scope) {
-        return scope.lookup(ctx, name).eval(scope);
+        return scope.lookup(context, name).eval(scope);
     }
 
     @Override
@@ -59,12 +44,7 @@ public class ReferenceExpression implements Expression {
     }
 
     @Override
-    public Context context() {
-        return ctx;
-    }
-
-    @Override
-    public String toString() {
-        return String.format("$%s", name);
+    public String toRepr() {
+        return "$" + name;
     }
 }

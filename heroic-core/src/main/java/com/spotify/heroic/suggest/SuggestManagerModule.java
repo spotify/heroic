@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.suggest;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.GroupSet;
@@ -48,7 +46,6 @@ import java.util.Set;
 import static com.spotify.heroic.common.Optionals.mergeOptionalList;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
-import static java.util.Optional.ofNullable;
 
 @RequiredArgsConstructor
 public class SuggestManagerModule {
@@ -134,19 +131,10 @@ public class SuggestManagerModule {
     }
 
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
-    @AllArgsConstructor(access = AccessLevel.PRIVATE)
+    @AllArgsConstructor
     public static class Builder {
         private Optional<List<SuggestModule>> backends = empty();
         private Optional<List<String>> defaultBackends = empty();
-
-        @JsonCreator
-        public Builder(
-            @JsonProperty("backends") List<SuggestModule> backends,
-            @JsonProperty("defaultBackends") List<String> defaultBackends
-        ) {
-            this.backends = ofNullable(backends);
-            this.defaultBackends = ofNullable(defaultBackends);
-        }
 
         public Builder backends(List<SuggestModule> backends) {
             this.backends = of(backends);

@@ -332,9 +332,7 @@ public class QueryListener extends HeroicQueryBaseListener {
 
         stack.pop();
 
-        push(
-            new FunctionExpression(c, name, new ListExpression(c, Lists.reverse(arguments.build())),
-                keywords.build()));
+        push(new FunctionExpression(c, name, Lists.reverse(arguments.build()), keywords.build()));
     }
 
     @Override
@@ -550,10 +548,10 @@ public class QueryListener extends HeroicQueryBaseListener {
     public void exitAggregationBy(final AggregationByContext ctx) {
         final Context c = context(ctx);
 
-        final ListExpression group = pop(c, Expression.class).cast(ListExpression.class);
+        final Expression group = pop(c, Expression.class);
         final FunctionExpression left = pop(c, Expression.class).cast(FunctionExpression.class);
 
-        push(new FunctionExpression(c, GROUP, Expression.list(group, left), ImmutableMap.of()));
+        push(new FunctionExpression(c, GROUP, ImmutableList.of(group, left), ImmutableMap.of()));
     }
 
     @Override
@@ -562,7 +560,7 @@ public class QueryListener extends HeroicQueryBaseListener {
 
         final FunctionExpression left = pop(c, Expression.class).cast(FunctionExpression.class);
 
-        push(new FunctionExpression(c, GROUP, Expression.list(new EmptyExpression(c), left),
+        push(new FunctionExpression(c, GROUP, ImmutableList.of(new EmptyExpression(c), left),
             ImmutableMap.of()));
     }
 
@@ -576,7 +574,7 @@ public class QueryListener extends HeroicQueryBaseListener {
         final Context c = context(ctx);
         final List<Expression> values =
             ImmutableList.copyOf(popUntil(c, PIPE_MARK, Expression.class).stream().iterator());
-        push(new FunctionExpression(c, CHAIN, new ListExpression(c, values), ImmutableMap.of()));
+        push(new FunctionExpression(c, CHAIN, values, ImmutableMap.of()));
     }
 
     @Override
@@ -758,10 +756,10 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     private static Context context(final ParserRuleContext source) {
-        int line = source.getStart().getLine();
-        int col = source.getStart().getCharPositionInLine();
-        int lineEnd = source.getStop().getLine();
-        int colEnd = source.getStop().getCharPositionInLine();
+        int line = source.getStart().getLine() - 1;
+        int col = source.getStart().getStartIndex();
+        int lineEnd = source.getStop().getLine() - 1;
+        int colEnd = source.getStop().getStopIndex();
         return new Context(line, col, lineEnd, colEnd);
     }
 

@@ -24,7 +24,8 @@ public class DurationExpressionTest extends AbstractExpressionTest<DurationExpre
     public void castTest() {
         final DurationExpression dur = build();
 
-        assertEquals(Expression.integer(dur.toMilliseconds()), dur.cast(IntegerExpression.class));
+        assertEquals(new IntegerExpression(ctx, dur.toMilliseconds()),
+            dur.cast(IntegerExpression.class));
     }
 
     @Test

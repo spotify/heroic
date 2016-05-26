@@ -23,13 +23,8 @@ package com.spotify.heroic.grammar;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.ImmutableList;
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
-import java.beans.ConstructorProperties;
 import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -48,9 +43,7 @@ import java.util.Optional;
  * com.spotify.heroic.grammar.InstantExpression} using the information available in the scope.
  */
 @Data
-@EqualsAndHashCode(exclude = {"ctx"})
 @JsonTypeName("time")
-@RequiredArgsConstructor
 public class TimeExpression implements Expression {
     // @formatter:off
     public static final List<DateTimeFormatter> FORMATTERS = ImmutableList.of(
@@ -60,20 +53,11 @@ public class TimeExpression implements Expression {
     );
     // @formatter:On
 
-    @Getter(AccessLevel.NONE)
-    private final Context ctx;
-
+    private final Context context;
     private final int hours;
     private final int minutes;
     private final int seconds;
     private final int milliSeconds;
-
-    @ConstructorProperties({"hours", "minutes", "seconds", "milliSeconds"})
-    public TimeExpression(
-        final int hours, final int minutes, final int seconds, final int milliSeconds
-    ) {
-        this(Context.empty(), hours, minutes, seconds, milliSeconds);
-    }
 
     @Override
     public <R> R visit(final Visitor<R> visitor) {
@@ -81,14 +65,15 @@ public class TimeExpression implements Expression {
     }
 
     @Override
-    public Context context() {
-        return ctx;
+    public Context getContext() {
+        return context;
     }
 
     // TODO: support other time-zones fetched from the scope.
     @Override
     public Expression eval(final Scope scope) {
-        final long now = scope.lookup(ctx, Expression.NOW).cast(IntegerExpression.class).getValue();
+        final long now =
+            scope.lookup(context, Expression.NOW).cast(IntegerExpression.class).getValue();
         final Instant nowInstant = Instant.ofEpochMilli(now);
         final LocalDateTime local = LocalDateTime.ofInstant(nowInstant, ZoneOffset.UTC);
 
@@ -100,11 +85,11 @@ public class TimeExpression implements Expression {
             .of(year, month, dayOfMonth, hours, minutes, seconds, milliSeconds * 1000000)
             .toInstant(ZoneOffset.UTC);
 
-        return new InstantExpression(ctx, instant);
+        return new InstantExpression(context, instant);
     }
 
     @Override
-    public String toString() {
+    public String toRepr() {
         return String.format("{{%02d:%02d:%02d.%03d}}", hours, minutes, seconds, milliSeconds);
     }
 

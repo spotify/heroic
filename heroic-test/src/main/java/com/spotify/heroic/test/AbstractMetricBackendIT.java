@@ -63,7 +63,7 @@ public abstract class AbstractMetricBackendIT {
         final MetricManagerModule.Builder metric =
             MetricManagerModule.builder().backends(ImmutableList.of(module.get()));
 
-        final HeroicConfig.Builder fragment = HeroicConfig.builder().metric(metric);
+        final HeroicConfig.Builder fragment = HeroicConfig.builder().metrics(metric);
 
         core = HeroicCore.builder().configFragment(fragment).build().newInstance();
 

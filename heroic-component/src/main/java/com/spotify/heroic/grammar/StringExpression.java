@@ -21,33 +21,19 @@
 
 package com.spotify.heroic.grammar;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
 /**
  * An expression representing a String.
  */
 @Data
-@EqualsAndHashCode(exclude = {"ctx"})
 @JsonTypeName("string")
-@RequiredArgsConstructor
 public final class StringExpression implements Expression {
-    @Getter(AccessLevel.NONE)
-    private final Context ctx;
-
+    private final Context context;
     private final String string;
-
-    @JsonCreator
-    public StringExpression(@JsonProperty("string") final String string) {
-        this(Context.empty(), string);
-    }
 
     @Override
     public <R> R visit(final Visitor<R> visitor) {
@@ -55,14 +41,9 @@ public final class StringExpression implements Expression {
     }
 
     @Override
-    public Context context() {
-        return ctx;
-    }
-
-    @Override
     public StringExpression add(Expression other) {
         final StringExpression o = other.cast(StringExpression.class);
-        return new StringExpression(ctx.join(o.ctx), string + o.string);
+        return new StringExpression(context.join(o.context), string + o.string);
     }
 
     @SuppressWarnings("unchecked")
@@ -73,18 +54,19 @@ public final class StringExpression implements Expression {
         }
 
         if (to.isAssignableFrom(ListExpression.class)) {
-            return (T) Expression.list(this);
+            return (T) Expression.list(context, this);
         }
 
         if (to.isAssignableFrom(FunctionExpression.class)) {
-            return (T) new FunctionExpression(ctx, string, Expression.list(), ImmutableMap.of());
+            return (T) new FunctionExpression(context, string, ImmutableList.of(),
+                ImmutableMap.of());
         }
 
-        throw ctx.castError(this, to);
+        throw context.castError(this, to);
     }
 
     @Override
-    public String toString() {
+    public String toRepr() {
         return QueryParser.escapeString(string);
     }
 }

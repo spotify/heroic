@@ -22,8 +22,8 @@
 package com.spotify.heroic.aggregation;
 
 import com.spotify.heroic.grammar.Expression;
-import com.spotify.heroic.grammar.ListExpression;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -43,5 +43,5 @@ public interface AggregationFactory {
      * @return The built aggregation.
      * @throws MissingAggregation If the given name does not reflect an available aggregation.
      */
-    Aggregation build(String name, ListExpression args, Map<String, Expression> keywords);
+    Aggregation build(String name, List<Expression> args, Map<String, Expression> keywords);
 }
