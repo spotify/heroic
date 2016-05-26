@@ -21,7 +21,7 @@ fi
 if [[ -d $dist ]]; then
     if [[ ! -f $dist_jar ]]; then
         $root/tools/install-repackaged
-        (cd $root && $MVN $MVN_OPTS clean package)
+        (cd $root && $MVN $MVN_OPTS -D maven.test.skip=true clean package)
     fi
 
     if [[ ! -f $dist_jar ]]; then
