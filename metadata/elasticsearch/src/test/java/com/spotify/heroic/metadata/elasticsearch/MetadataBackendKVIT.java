@@ -92,18 +92,18 @@ public class MetadataBackendKVIT {
     private final DateRange range = new DateRange(0L, 0L);
 
     private ClientSetup setupClient() throws IOException {
-        final String remote = System.getProperty("elasticsearch.test.remote");
+        final String remote = System.getProperty("it.elasticsearch.remote");
 
         if (remote != null) {
             final TransportClientSetup.Builder builder = TransportClientSetup.builder();
 
             Optional
-                .ofNullable(System.getProperty("elasticsearch.test.seed"))
+                .ofNullable(System.getProperty("it.elasticsearch.seed"))
                 .map(ImmutableList::of)
                 .ifPresent(builder::seeds);
 
             Optional
-                .ofNullable(System.getProperty("elasticsearch.test.clusterName"))
+                .ofNullable(System.getProperty("it.elasticsearch.clusterName"))
                 .ifPresent(builder::clusterName);
 
             return builder.build();

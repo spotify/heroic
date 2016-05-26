@@ -61,6 +61,27 @@ This adds:
 It is strongly recommended that you run the full test suite before setting up a
 pull request, otherwise it will be rejected by Travis.
 
+#### Remote Integration Tests
+
+Integration tests are configured to run remotely depending on a set of system
+properties.
+
+| Property                                            | Description                                            |
+|-----------------------------------------------------|--------------------------------------------------------|
+| -D elasticsearch.version=&lt;version&gt;            | Use the given client version when building the project |
+| -D it.elasticsearch.remote=true                     | Run Elasticsearch tests against a remote database      |
+| -D it.elasticsearch.seed=&lt;seed&gt;               | Use the given seed (default: `localhost`)              |
+| -D it.elasticsearch.clusterName=&lt;clusterName&gt; | Use the given cluster name (default: `elasticsearch`)  |
+
+The following is an example Elasticsearch remote integration test:
+
+```
+$> mvn -P integration-tests \
+    -D elasticsearch.version=1.7.5 \
+    -D it.elasticsearch.remote=true \
+    clean integration-test
+```
+
 #### Coverage
 
 [![Coverage](https://codecov.io/gh/spotify/heroic/branch/master/graphs/icicle.svg)](https://codecov.io/gh/spotify/heroic/branch/master)
