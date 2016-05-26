@@ -16,9 +16,9 @@ public class HeroicConfigurationTest {
     public void testAll() throws Exception {
         // @formatter:off
         final List<String> referenceStarters = ImmutableList.of(
-            "com.spotify.heroic.HeroicServer",
             "com.spotify.heroic.analytics.bigtable.BigtableMetricAnalytics",
             "com.spotify.heroic.cluster.CoreClusterManager",
+            "com.spotify.heroic.http.HttpServer",
             "com.spotify.heroic.metadata.elasticsearch.MetadataBackendKV",
             "com.spotify.heroic.metric.bigtable.BigtableBackend",
             "com.spotify.heroic.metric.datastax.DatastaxBackend",
@@ -31,9 +31,9 @@ public class HeroicConfigurationTest {
 
         // @formatter:off
         final List<String> referenceStoppers = ImmutableList.of(
-            "com.spotify.heroic.HeroicServer",
             "com.spotify.heroic.analytics.bigtable.BigtableMetricAnalytics",
             "com.spotify.heroic.cluster.CoreClusterManager",
+            "com.spotify.heroic.http.HttpServer",
             "com.spotify.heroic.metadata.elasticsearch.MetadataBackendKV",
             "com.spotify.heroic.metric.bigtable.BigtableBackend",
             "com.spotify.heroic.metric.datastax.DatastaxBackend",

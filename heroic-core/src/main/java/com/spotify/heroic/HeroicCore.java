@@ -49,6 +49,10 @@ import com.spotify.heroic.dagger.PrimaryModule;
 import com.spotify.heroic.dagger.StartupPingerComponent;
 import com.spotify.heroic.dagger.StartupPingerModule;
 import com.spotify.heroic.generator.GeneratorComponent;
+import com.spotify.heroic.http.DaggerHttpServerComponent;
+import com.spotify.heroic.http.HttpServer;
+import com.spotify.heroic.http.HttpServerComponent;
+import com.spotify.heroic.http.HttpServerModule;
 import com.spotify.heroic.ingestion.IngestionComponent;
 import com.spotify.heroic.lifecycle.CoreLifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycle;
@@ -338,20 +342,31 @@ public class HeroicCore implements HeroicConfiguration {
 
         final HeroicReporter reporter = statistics.reporter();
 
-        final InetSocketAddress bindAddress = setupBindAddress(config);
-
         // Register root components.
         final CorePrimaryComponent primary = DaggerCorePrimaryComponent
             .builder()
             .coreEarlyComponent(early)
-            .primaryModule(new PrimaryModule(instance, bindAddress, config.isEnableCors(),
-                config.getCorsAllowOrigin(), config.getFeatures(), config.getConnectors(),
-                reporter))
+            .primaryModule(new PrimaryModule(instance, config.getFeatures(), reporter))
             .build();
 
+        final Optional<HttpServer> server;
+
         if (setupService) {
+            final InetSocketAddress bindAddress = setupBindAddress(config);
+
+            final HttpServerComponent serverComponent = DaggerHttpServerComponent
+                .builder()
+                .primaryComponent(primary)
+                .httpServerModule(new HttpServerModule(bindAddress, config.isEnableCors(),
+                    config.getCorsAllowOrigin(), config.getConnectors()))
+                .build();
+
             // Trigger life cycle registration
-            life.add(primary.heroicServerLife());
+            life.add(serverComponent.life());
+
+            server = Optional.of(serverComponent.server());
+        } else {
+            server = Optional.empty();
         }
 
         final CacheComponent cache = config.getCache().module(primary);
@@ -388,7 +403,8 @@ public class HeroicCore implements HeroicConfiguration {
                 .builder()
                 .corePrimaryComponent(primary)
                 .clusterComponent(cluster)
-                .startupPingerModule(new StartupPingerModule(startupPing.get(), startupId.get()))
+                .startupPingerModule(
+                    new StartupPingerModule(startupPing.get(), startupId.get(), server))
                 .build();
 
             life.add(pinger.startupPingerLife());

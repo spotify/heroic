@@ -19,13 +19,13 @@
  * under the License.
  */
 
-package com.spotify.heroic;
+package com.spotify.heroic.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.HeroicConfigurationContext;
+import com.spotify.heroic.HeroicCoreInstance;
 import com.spotify.heroic.dagger.CoreComponent;
-import com.spotify.heroic.dagger.PrimaryScope;
-import com.spotify.heroic.http.CorsResponseFilter;
 import com.spotify.heroic.jetty.JettyJSONErrorHandler;
 import com.spotify.heroic.jetty.JettyServerConnector;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
@@ -60,10 +60,10 @@ import java.util.concurrent.Callable;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-@PrimaryScope
+@HttpServerScope
 @Slf4j
 @ToString(of = {"address"})
-public class HeroicServer implements LifeCycles {
+public class HttpServer implements LifeCycles {
     public static final String DEFAULT_CORS_ALLOW_ORIGIN = "*";
 
     private final InetSocketAddress address;
@@ -80,8 +80,8 @@ public class HeroicServer implements LifeCycles {
     private final Object lock = new Object();
 
     @Inject
-    public HeroicServer(
-        @Named("bindAddress") final InetSocketAddress address, final HeroicCoreInstance instance,
+    public HttpServer(
+        @Named("bind") final InetSocketAddress address, final HeroicCoreInstance instance,
         final HeroicConfigurationContext config,
         @Named(MediaType.APPLICATION_JSON) final ObjectMapper mapper, final AsyncFramework async,
         @Named("enableCors") final boolean enableCors,
@@ -163,25 +163,22 @@ public class HeroicServer implements LifeCycles {
     }
 
     private AsyncFuture<Void> stop() {
-        return async.call(new Callable<Void>() {
-            @Override
-            public Void call() throws Exception {
-                final Server s;
+        return async.call((Callable<Void>) () -> {
+            final Server s;
 
-                synchronized (lock) {
-                    if (server == null) {
-                        throw new IllegalStateException("Server has not been started");
-                    }
-
-                    s = server;
-                    server = null;
+            synchronized (lock) {
+                if (server == null) {
+                    throw new IllegalStateException("Server has not been started");
                 }
 
-                log.info("Stopping http server");
-                s.stop();
-                s.join();
-                return null;
+                s = server;
+                server = null;
             }
+
+            log.info("Stopping http server");
+            s.stop();
+            s.join();
+            return null;
         });
     }
 

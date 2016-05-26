@@ -19,51 +19,58 @@
  * under the License.
  */
 
-package com.spotify.heroic.dagger;
+package com.spotify.heroic.http;
 
-import com.spotify.heroic.HeroicStartupPinger;
-import com.spotify.heroic.http.HttpServer;
+import com.spotify.heroic.jetty.JettyServerConnector;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
-import dagger.Module;
 import dagger.Provides;
 import lombok.RequiredArgsConstructor;
 
 import javax.inject.Named;
-import java.net.URI;
+import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.Optional;
 
 @RequiredArgsConstructor
-@Module
-public class StartupPingerModule {
-    private final URI ping;
-    private final String id;
-    private final Optional<HttpServer> server;
+@dagger.Module
+public class HttpServerModule {
+    private final InetSocketAddress bind;
+    private final boolean enableCors;
+    private final Optional<String> corsAllowOrigin;
+    private final List<JettyServerConnector> connectors;
 
     @Provides
-    @StartupPingerScope
-    Optional<HttpServer> server() {
-        return server;
+    @Named("bind")
+    @HttpServerScope
+    InetSocketAddress bind() {
+        return bind;
     }
 
     @Provides
-    @StartupPingerScope
-    @Named("pingURI")
-    URI ping() {
-        return ping;
+    @Named("enableCors")
+    @HttpServerScope
+    boolean enableCors() {
+        return enableCors;
     }
 
     @Provides
-    @StartupPingerScope
-    @Named("pingId")
-    String id() {
-        return id;
+    @Named("corsAllowOrigin")
+    @HttpServerScope
+    Optional<String> corsAllowOrigin() {
+        return corsAllowOrigin;
     }
 
     @Provides
-    @StartupPingerScope
-    @Named("startupPinger")
-    LifeCycle startupPingerLife(LifeCycleManager manager, HeroicStartupPinger pinger) {
-        return manager.build(pinger);
+    @HttpServerScope
+    List<JettyServerConnector> connectors() {
+        return connectors;
+    }
+
+    @Provides
+    @HttpServerScope
+    @Named("heroicServer")
+    LifeCycle life(LifeCycleManager manager, HttpServer server) {
+        return manager.build(server);
     }
 }

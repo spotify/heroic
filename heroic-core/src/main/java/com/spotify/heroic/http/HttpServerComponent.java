@@ -19,38 +19,19 @@
  * under the License.
  */
 
-package com.spotify.heroic.dagger;
+package com.spotify.heroic.http;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.spotify.heroic.HeroicContext;
-import com.spotify.heroic.HeroicCoreInstance;
-import com.spotify.heroic.ShellTasks;
-import com.spotify.heroic.grammar.QueryParser;
-import com.spotify.heroic.lifecycle.LifeCycleManager;
-import com.spotify.heroic.statistics.HeroicReporter;
+import com.spotify.heroic.dagger.PrimaryComponent;
+import com.spotify.heroic.lifecycle.LifeCycle;
+import dagger.Component;
 
 import javax.inject.Named;
-import java.util.Set;
 
-public interface PrimaryComponent extends EarlyComponent {
-    HeroicCoreInstance instance();
+@HttpServerScope
+@Component(modules = HttpServerModule.class, dependencies = PrimaryComponent.class)
+public interface HttpServerComponent {
+    @Named("heroicServer")
+    LifeCycle life();
 
-    HeroicReporter reporter();
-
-    @Named("features")
-    Set<String> features();
-
-    @Named("application/json+internal")
-    ObjectMapper internalMapper();
-
-    @Named("application/json")
-    ObjectMapper jsonMapper();
-
-    QueryParser queryParser();
-
-    ShellTasks tasks();
-
-    LifeCycleManager lifeCycleManager();
-
-    HeroicContext context();
+    HttpServer server();
 }

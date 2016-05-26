@@ -19,11 +19,13 @@
  * under the License.
  */
 
-package com.spotify.heroic.dagger;
+package com.spotify.heroic.http;
 
-import dagger.Component;
+import javax.inject.Scope;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
-@PrimaryScope
-@Component(modules = PrimaryModule.class, dependencies = CoreEarlyComponent.class)
-public interface CorePrimaryComponent extends PrimaryComponent {
+@Scope
+@Retention(RetentionPolicy.RUNTIME)
+public @interface HttpServerScope {
 }
