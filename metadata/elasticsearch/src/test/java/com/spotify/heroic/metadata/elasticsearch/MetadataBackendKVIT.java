@@ -59,6 +59,9 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 import java.util.concurrent.Executors;
 
+import static com.spotify.heroic.filter.Filter.and;
+import static com.spotify.heroic.filter.Filter.matchKey;
+import static com.spotify.heroic.filter.Filter.startsWith;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doReturn;
@@ -125,11 +128,18 @@ public class MetadataBackendKVIT {
     }
 
     @Test
+    public void testFindSeriesComplex() throws Exception {
+        final RangeFilter f = new RangeFilter(and(matchKey("s2"), startsWith("role", "ba")), range,
+            OptionalLimit.empty());
+
+        assertEquals(ImmutableSet.of(s2), metadata.findSeries(f).get().getSeries());
+    }
+
+    @Test
     public void testFindSeries() throws Exception {
         final RangeFilter f = new RangeFilter(TrueFilter.get(), range, OptionalLimit.empty());
         final FindSeries result = metadata.findSeries(f).get();
 
-        assertEquals(3, result.getSeries().size());
         assertEquals(ImmutableSet.of(s1, s2, s3), result.getSeries());
     }
 
