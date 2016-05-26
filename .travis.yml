@@ -17,7 +17,7 @@ install:
   - tools/install-repackaged
 
 script:
-  - mvn -D environment=test integration-test
+  - mvn -D environment=test verify
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)

@@ -48,7 +48,7 @@ A more comprehensive test suite is enabled with the `environment=test`
 property.
 
 ```
-$ mvn -D environment=test integration-test
+$ mvn -D environment=test verify
 ```
 
 This adds:
@@ -79,7 +79,7 @@ The following is an example Elasticsearch remote integration test:
 $> mvn -P integration-tests \
     -D elasticsearch.version=1.7.5 \
     -D it.elasticsearch.remote=true \
-    clean integration-test
+    clean verify
 ```
 
 #### Coverage

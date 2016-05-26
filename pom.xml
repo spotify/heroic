@@ -89,8 +89,10 @@
                 </goals>
               </execution>
               <execution>
-                <id>report</id>
+                <id>report-coverage</id>
+
                 <phase>test</phase>
+
                 <goals>
                   <goal>report</goal>
                 </goals>
@@ -133,6 +135,7 @@
         </plugins>
       </build>
     </profile>
+
     <profile>
       <id>checkstyle</id>
 
@@ -159,8 +162,10 @@
             </configuration>
             <executions>
               <execution>
-                <id>validate</id>
+                <id>validate-checkstyle</id>
+
                 <phase>validate</phase>
+
                 <goals>
                   <goal>check</goal>
                 </goals>
@@ -206,8 +211,10 @@
             </configuration>
             <executions>
               <execution>
-                <id>analyze-compile</id>
+                <id>compile-findbugs-check</id>
+
                 <phase>compile</phase>
+
                 <goals>
                   <goal>check</goal>
                 </goals>
@@ -705,10 +712,6 @@
           <showWarnings>true</showWarnings>
         </configuration>
       </plugin>
-      <plugin>
-        <groupId>org.bsc.maven</groupId>
-        <artifactId>maven-processor-plugin</artifactId>
-      </plugin>
     </plugins>
 
     <pluginManagement>
@@ -719,10 +722,14 @@
           <version>2.4.3</version>
           <executions>
             <execution>
+              <id>package-shade</id>
+
               <phase>package</phase>
+
               <goals>
                 <goal>shade</goal>
               </goals>
+
               <configuration>
                 <shadedArtifactAttached>true</shadedArtifactAttached>
                 <shadedClassifierName>shaded</shadedClassifierName>
@@ -760,12 +767,6 @@
               </configuration>
             </execution>
           </executions>
-        </plugin>
-
-        <plugin>
-          <groupId>org.bsc.maven</groupId>
-          <artifactId>maven-processor-plugin</artifactId>
-          <version>3.1.0-beta1</version>
         </plugin>
       </plugins>
     </pluginManagement>
