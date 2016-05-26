@@ -35,6 +35,7 @@ import com.spotify.heroic.elasticsearch.ClientSetup;
 import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
 import com.spotify.heroic.elasticsearch.StandaloneClientSetup;
+import com.spotify.heroic.elasticsearch.TransportClientSetup;
 import com.spotify.heroic.elasticsearch.index.IndexMapping;
 import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
 import com.spotify.heroic.filter.MatchKeyFilter;
@@ -57,6 +58,9 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
+import java.io.IOException;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 
 import static com.spotify.heroic.filter.Filter.and;
@@ -68,6 +72,8 @@ import static org.mockito.Mockito.doReturn;
 
 @RunWith(MockitoJUnitRunner.class)
 public class MetadataBackendKVIT {
+    private final String testName = "heroic-it-" + UUID.randomUUID().toString();
+
     private MetadataBackendKV metadata;
 
     private Groups groups = Groups.of("test");
@@ -85,6 +91,27 @@ public class MetadataBackendKVIT {
 
     private final DateRange range = new DateRange(0L, 0L);
 
+    private ClientSetup setupClient() throws IOException {
+        final String remote = System.getProperty("elasticsearch.test.remote");
+
+        if (remote != null) {
+            final TransportClientSetup.Builder builder = TransportClientSetup.builder();
+
+            Optional
+                .ofNullable(System.getProperty("elasticsearch.test.seed"))
+                .map(ImmutableList::of)
+                .ifPresent(builder::seeds);
+
+            Optional
+                .ofNullable(System.getProperty("elasticsearch.test.clusterName"))
+                .ifPresent(builder::clusterName);
+
+            return builder.build();
+        }
+
+        return StandaloneClientSetup.builder().build();
+    }
+
     @Before
     public void setup() throws Exception {
         doReturn(true).when(writeCache).acquire(any());
@@ -95,14 +122,16 @@ public class MetadataBackendKVIT {
             .scheduler(Executors.newScheduledThreadPool(1))
             .build();
 
-        final IndexMapping index = RotatingIndexMapping.builder().build();
-        final ClientSetup setup = StandaloneClientSetup.builder().build();
+        final ClientSetup setup = setupClient();
+
+        final IndexMapping index = RotatingIndexMapping.builder().pattern(testName + "-%s").build();
+
         final BackendType type = MetadataBackendKV.backendType();
 
         final Managed<Connection> connection = async.managed(new ManagedSetup<Connection>() {
             @Override
             public AsyncFuture<Connection> construct() throws Exception {
-                return async.resolved(new Connection(async, index, setup.setup(), "heroic", type));
+                return async.resolved(new Connection(async, index, setup.setup(), testName, type));
             }
 
             @Override
@@ -114,6 +143,7 @@ public class MetadataBackendKVIT {
         });
 
         metadata = new MetadataBackendKV(groups, reporter, async, connection, writeCache, true);
+
         metadata
             .start()
             .lazyTransform(v -> async.collect(
