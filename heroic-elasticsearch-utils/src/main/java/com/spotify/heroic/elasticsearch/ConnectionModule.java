@@ -35,12 +35,9 @@ import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.elasticsearch.client.Client;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 
 import static java.util.Optional.ofNullable;
 
@@ -105,24 +102,13 @@ public class ConnectionModule {
             return async.managed(new ManagedSetup<Connection>() {
                 @Override
                 public AsyncFuture<Connection> construct() {
-                    return async.call(() -> {
-                        final Client client = clientSetup.setup();
-                        return new Connection(async, index, client, template, type);
-                    });
+                    return async.call(
+                        () -> new Connection(async, index, clientSetup.setup(), template, type));
                 }
 
                 @Override
                 public AsyncFuture<Void> destruct(Connection value) {
-                    final List<AsyncFuture<Void>> futures = new ArrayList<>();
-
-                    futures.add(async.call((Callable<Void>) () -> {
-                        clientSetup.stop();
-                        return null;
-                    }));
-
-                    futures.add(value.close());
-
-                    return async.collectAndDiscard(futures);
+                    return value.close();
                 }
             });
         }

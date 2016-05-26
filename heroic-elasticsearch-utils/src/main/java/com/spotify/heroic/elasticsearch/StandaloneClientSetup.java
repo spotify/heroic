@@ -27,7 +27,6 @@ import org.elasticsearch.client.Client;
 import org.elasticsearch.common.base.Optional;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeBuilder;
 
 import java.io.File;
@@ -36,16 +35,12 @@ import java.net.InetAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class StandaloneClientSetup implements ClientSetup {
     public static final String DEFAULT_CLUSTER_NAME = "heroic-standalone";
 
     private final String clusterName;
     private final Path root;
-
-    private final Object lock = new Object();
-    private final AtomicReference<Node> node = new AtomicReference<>();
 
     @JsonCreator
     public StandaloneClientSetup(
@@ -86,42 +81,24 @@ public class StandaloneClientSetup implements ClientSetup {
 
     @Override
     public Client setup() throws Exception {
-        synchronized (lock) {
-            if (StandaloneClientSetup.this.node.get() != null) {
-                throw new IllegalStateException("node already started");
-            }
+        final Settings settings = ImmutableSettings
+            .builder()
+            .put("path.logs", root.resolve("logs"))
+            .put("path.data", root.resolve("data"))
+            .put("node.name", InetAddress.getLocalHost().getHostName())
+            .put("script.inline", "on")
+            // .put("script.disable_dynamic", false)
+            // .put("script.groovy.sandbox.enabled",
+            // true)
+            .put("discovery.zen.ping.multicast.enabled", false)
+            .build();
 
-            final Settings settings = ImmutableSettings
-                .builder()
-                .put("path.logs", root.resolve("logs"))
-                .put("path.data", root.resolve("data"))
-                .put("node.name", InetAddress.getLocalHost().getHostName())
-                .put("script.inline", "on")
-                // .put("script.disable_dynamic", false)
-                // .put("script.groovy.sandbox.enabled",
-                // true)
-                .put("discovery.zen.ping.multicast.enabled", false)
-                .build();
-
-            final Node node =
-                NodeBuilder.nodeBuilder().settings(settings).clusterName(clusterName).node();
-
-            StandaloneClientSetup.this.node.set(node);
-            return node.client();
-        }
-    }
-
-    @Override
-    public void stop() throws Exception {
-        synchronized (lock) {
-            final Node node = StandaloneClientSetup.this.node.getAndSet(null);
-
-            if (node == null) {
-                throw new IllegalStateException("node not running");
-            }
-
-            node.stop();
-        }
+        return NodeBuilder
+            .nodeBuilder()
+            .settings(settings)
+            .clusterName(clusterName)
+            .node()
+            .client();
     }
 
     public static Builder builder() {
