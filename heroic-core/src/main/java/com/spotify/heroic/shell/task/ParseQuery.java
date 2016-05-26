@@ -28,7 +28,6 @@ import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.grammar.DefaultScope;
 import com.spotify.heroic.grammar.Expression;
 import com.spotify.heroic.grammar.QueryParser;
-import com.spotify.heroic.grammar.Statements;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
@@ -46,6 +45,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @TaskUsage("Parse a given expression as a query and print their structure")
 @TaskName("parse-query")
@@ -77,11 +77,11 @@ public class ParseQuery implements ShellTask {
             m.enable(SerializationFeature.INDENT_OUTPUT);
         }
 
-        Statements statements = parser.parse(Joiner.on(" ").join(params.query));
+        List<Expression> statements = parser.parse(Joiner.on(" ").join(params.query));
 
         if (params.eval) {
             final Expression.Scope scope = new DefaultScope(System.currentTimeMillis());
-            statements = statements.eval(scope);
+            statements = statements.stream().map(s -> s.eval(scope)).collect(Collectors.toList());
         }
 
         io.out().println(m.writeValueAsString(statements));

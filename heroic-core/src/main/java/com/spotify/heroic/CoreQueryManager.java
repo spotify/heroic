@@ -125,7 +125,7 @@ public class CoreQueryManager implements QueryManager {
 
     @Override
     public QueryBuilder newQueryFromString(final String queryString) {
-        final List<Expression> expressions = parser.parse(queryString).getExpressions();
+        final List<Expression> expressions = parser.parse(queryString);
 
         final Expression.Scope scope = new DefaultScope(System.currentTimeMillis());
 

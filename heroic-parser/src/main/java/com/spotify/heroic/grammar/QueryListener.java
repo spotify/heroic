@@ -113,7 +113,7 @@ public class QueryListener extends HeroicQueryBaseListener {
     public void exitStatements(final HeroicQueryParser.StatementsContext ctx) {
         final Context c = context(ctx);
         final List<Expression> expressions = popUntil(c, STATEMENTS_MARK, Expression.class);
-        push(new Statements(c, expressions));
+        push(new Statements(expressions));
     }
 
     @Override
@@ -773,6 +773,11 @@ public class QueryListener extends HeroicQueryBaseListener {
         }
 
         return "<" + name.value() + ">";
+    }
+
+    @Data
+    static final class Statements {
+        private final List<Expression> expressions;
     }
 
     @Data

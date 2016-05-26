@@ -23,6 +23,8 @@ package com.spotify.heroic.grammar;
 
 import com.spotify.heroic.filter.Filter;
 
+import java.util.List;
+
 public interface QueryParser {
     /**
      * Parse the given filter using the Heroic Query DSL.
@@ -40,7 +42,7 @@ public interface QueryParser {
      * @return The parsed statements.
      * @throws ParseException if unable to parse.
      */
-    Statements parse(String statements);
+    List<Expression> parse(String statements);
 
     static String escapeString(String input) {
         boolean quoted = false;

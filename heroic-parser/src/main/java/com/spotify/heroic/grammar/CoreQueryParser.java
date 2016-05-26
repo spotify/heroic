@@ -34,97 +34,44 @@ import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 import javax.inject.Inject;
+import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 
 public class CoreQueryParser implements QueryParser {
-    static final Operation<Statements> STATEMENTS = new Operation<Statements>() {
-        @Override
-        public ParserRuleContext context(HeroicQueryParser parser) {
-            return parser.statements();
-        }
-
-        public Statements convert(QueryListener listener) {
-            return listener.pop(Statements.class);
-        }
-    };
-
-    static final Operation<Expression> EXPRESSION = new Operation<Expression>() {
-        @Override
-        public ParserRuleContext context(HeroicQueryParser parser) {
-            return parser.expressionOnly();
-        }
-
-        public Expression convert(QueryListener listener) {
-            return listener.pop(Expression.class);
-        }
-    };
-
-    static final Operation<QueryExpression> QUERY = new Operation<QueryExpression>() {
-        @Override
-        public ParserRuleContext context(HeroicQueryParser parser) {
-            return parser.query();
-        }
-
-        @Override
-        public QueryExpression convert(QueryListener listener) {
-            return listener.pop(QueryExpression.class);
-        }
-    };
-
-    static final Operation<Filter> FILTER = new Operation<Filter>() {
-        @Override
-        public ParserRuleContext context(HeroicQueryParser parser) {
-            return parser.filterOnly();
-        }
-
-        @Override
-        public Filter convert(QueryListener listener) {
-            return listener.pop(Filter.class).optimize();
-        }
-    };
-
-    static final Operation<FunctionExpression> AGGREGATION = new Operation<FunctionExpression>() {
-        @Override
-        public ParserRuleContext context(HeroicQueryParser parser) {
-            return parser.expressionOnly();
-        }
-
-        @Override
-        public FunctionExpression convert(QueryListener listener) {
-            return listener.pop(FunctionExpression.class);
-        }
-    };
-
-    static final Operation<FromDSL> FROM = new Operation<FromDSL>() {
-        @Override
-        public ParserRuleContext context(HeroicQueryParser parser) {
-            return parser.from();
-        }
-
-        @Override
-        public FromDSL convert(QueryListener listener) {
-            listener.popMark(QueryListener.QueryMark.FROM);
-            final MetricType source = listener.pop(MetricType.class);
-            final Optional<RangeExpression> range = listener.popOptional(RangeExpression.class);
-            return new FromDSL(source, range);
-        }
-    };
-
     @Inject
     public CoreQueryParser() {
     }
 
     @Override
-    public Statements parse(String statements) {
-        return parse(STATEMENTS, statements);
+    public List<Expression> parse(String statements) {
+        return parse(HeroicQueryParser::statements, statements)
+            .pop(QueryListener.Statements.class)
+            .getExpressions();
     }
 
     @Override
     public Filter parseFilter(String filter) {
-        return parse(FILTER, filter);
+        return parse(HeroicQueryParser::filterOnly, filter).pop(Filter.class).optimize();
     }
 
-    public <T> T parse(Operation<T> op, String input) {
+    FromDSL parseFrom(final String input) {
+        final QueryListener listener = parse(HeroicQueryParser::from, input);
+        listener.popMark(QueryListener.QueryMark.FROM);
+        final MetricType source = listener.pop(MetricType.class);
+        final Optional<RangeExpression> range = listener.popOptional(RangeExpression.class);
+        return new FromDSL(source, range);
+    }
+
+    QueryExpression parseQuery(final String input) {
+        return parse(HeroicQueryParser::query, input).pop(QueryExpression.class);
+    }
+
+    Expression parseExpression(final String input) {
+        return parse(HeroicQueryParser::expressionOnly, input).pop(Expression.class);
+    }
+
+    private QueryListener parse(Function<HeroicQueryParser, ParserRuleContext> op, String input) {
         final HeroicQueryLexer lexer = new HeroicQueryLexer(new ANTLRInputStream(input));
 
         final CommonTokenStream tokens = new CommonTokenStream(lexer);
@@ -136,7 +83,7 @@ public class CoreQueryParser implements QueryParser {
         final ParserRuleContext context;
 
         try {
-            context = op.context(parser);
+            context = op.apply(parser);
         } catch (final ParseCancellationException e) {
             if (!(e.getCause() instanceof RecognitionException)) {
                 throw e;
@@ -157,7 +104,7 @@ public class CoreQueryParser implements QueryParser {
                 last.getLine(), last.getCharPositionInLine());
         }
 
-        return op.convert(listener);
+        return listener;
     }
 
     private ParseException toParseException(final RecognitionException e) {
