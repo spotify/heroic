@@ -120,7 +120,7 @@ public class ListBackends implements ShellTask {
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")
-        private Optional<String> group;
+        private Optional<String> group = Optional.empty();
     }
 
     public static ListBackends setup(final CoreComponent core) {
