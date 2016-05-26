@@ -1,14 +1,15 @@
 package com.spotify.heroic.grammar;
 
-import org.junit.Test;
+import java.util.function.BiFunction;
 
-import static com.spotify.heroic.grammar.ExpressionTests.visitorTest;
+public class EmptyExpressionTest extends AbstractExpressionTest<EmptyExpression> {
+    @Override
+    protected EmptyExpression build(final Context ctx) {
+        return new EmptyExpression(ctx);
+    }
 
-public class EmptyExpressionTest {
-    private EmptyExpression e = new EmptyExpression();
-
-    @Test
-    public void visitTest() {
-        visitorTest(e, Expression.Visitor::visitEmpty);
+    @Override
+    protected BiFunction<Expression.Visitor<Void>, EmptyExpression, Void> visitorMethod() {
+        return Expression.Visitor::visitEmpty;
     }
 }

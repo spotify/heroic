@@ -47,9 +47,14 @@ public class NegateExpression implements Expression {
         this(Context.empty(), expression);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public <T extends Expression> T cast(final Class<T> to) {
-        return expression.negate().cast(to);
+        if (to.isAssignableFrom(NegateExpression.class)) {
+            return (T) this;
+        }
+
+        throw context().castError(this, to);
     }
 
     @Override

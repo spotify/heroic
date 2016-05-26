@@ -1,50 +1,44 @@
 package com.spotify.heroic.grammar;
 
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
-import static com.spotify.heroic.grammar.ExpressionTests.visitorTest;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
+
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.doReturn;
 
 @RunWith(MockitoJUnitRunner.class)
-public class RangeExpressionTest {
-    @Mock
-    Expression start;
+public class RangeExpressionTest extends AbstractExpressionTest<RangeExpression> {
+    @Override
+    protected RangeExpression build(final Context ctx) {
+        return new RangeExpression(ctx, a, b);
+    }
 
-    @Mock
-    Expression end;
+    @Override
+    protected BiFunction<Expression.Visitor<Void>, RangeExpression, Void> visitorMethod() {
+        return Expression.Visitor::visitRange;
+    }
 
-    private RangeExpression e;
-
-    @Before
-    public void setup() {
-        e = new RangeExpression(start, end);
+    @Override
+    protected Stream<Consumer<RangeExpression>> accessors() {
+        return Stream.of(accessorTest(a, RangeExpression::getStart),
+            accessorTest(b, RangeExpression::getEnd));
     }
 
     @Test
     public void testAccessors() {
-        assertEquals(start, e.getStart());
-        assertEquals(end, e.getEnd());
-    }
+        final RangeExpression e = build();
 
-    @Test
-    public void castTest() {
-        assertEquals(e, e.cast(RangeExpression.class));
-    }
-
-    @Test
-    public void visitTest() {
-        visitorTest(e, Expression.Visitor::visitRange);
+        assertEquals(a, e.getStart());
+        assertEquals(b, e.getEnd());
     }
 
     @Test
     public void toStringTest() {
-        doReturn("start").when(start).toString();
-        doReturn("end").when(end).toString();
-        assertEquals("start -> end", e.toString());
+        final RangeExpression e = build();
+        assertEquals("a -> b", e.toString());
     }
 }

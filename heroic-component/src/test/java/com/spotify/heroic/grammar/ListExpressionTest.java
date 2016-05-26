@@ -1,58 +1,46 @@
 package com.spotify.heroic.grammar;
 
 import com.google.common.collect.ImmutableList;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
-import java.util.List;
-import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import static com.spotify.heroic.grammar.ExpressionTests.biFuncTest;
-import static com.spotify.heroic.grammar.ExpressionTests.visitorTest;
-import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.verify;
 
 @RunWith(MockitoJUnitRunner.class)
-public class ListExpressionTest {
-    @Mock
-    Expression a;
-
-    @Mock
-    Expression b;
-
-    @Mock
-    Expression c;
-
-    private List<Expression> list;
-    private ListExpression e;
-
-    @Before
-    public void setup() {
-        list = ImmutableList.of(a, b, c);
-        e = new ListExpression(list);
+public class ListExpressionTest extends AbstractExpressionTest<ListExpression> {
+    @Override
+    protected ListExpression build(final Context ctx) {
+        return new ListExpression(ctx, ImmutableList.of(a, b));
     }
 
-    @Test
-    public void testAccessors() {
-        assertEquals(list, e.getList());
+    @Override
+    protected BiFunction<Expression.Visitor<Void>, ListExpression, Void> visitorMethod() {
+        return Expression.Visitor::visitList;
     }
 
-    @Test
-    public void castTest() {
-        assertEquals(e, e.cast(ListExpression.class));
+    @Override
+    protected Stream<Consumer<ListExpression>> accessors() {
+        return Stream.of(accessorTest(ImmutableList.of(a, b), ListExpression::getList));
     }
 
     @Test
     public void operationsTest() {
-        biFuncTest(ca -> new ListExpression(ca, ImmutableList.of(a, b)),
-            cb -> new ListExpression(cb, ImmutableList.of(c)), cr -> new ListExpression(cr, list),
-            ListExpression::add);
+        biFuncTest(ca -> new ListExpression(ca, ImmutableList.of(a)),
+            cb -> new ListExpression(cb, ImmutableList.of(b)),
+            cr -> new ListExpression(cr, ImmutableList.of(a, b)), ListExpression::add);
     }
 
-    @Test
-    public void visitTest() {
-        visitorTest(e, Expression.Visitor::visitList);
+    @Override
+    public void evalTest() {
+        super.evalTest();
+
+        verify(a).eval(scope);
+        verify(b).eval(scope);
     }
 }

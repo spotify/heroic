@@ -55,16 +55,6 @@ public class EmptyExpression implements Expression {
     }
 
     @Override
-    public Expression sub(Expression other) {
-        throw new IllegalArgumentException("empty does not support subtraction");
-    }
-
-    @Override
-    public Expression add(Expression other) {
-        throw new IllegalArgumentException("empty does not support addition");
-    }
-
-    @Override
     public <T extends Expression> T cast(Class<T> to) {
         if (to.equals(Expression.class) || to.equals(EmptyExpression.class)) {
             return (T) this;

@@ -3,23 +3,32 @@ package com.spotify.heroic.grammar;
 import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 
 import static com.spotify.heroic.grammar.ExpressionTests.biFuncTest;
 import static com.spotify.heroic.grammar.ExpressionTests.uniFuncTest;
-import static com.spotify.heroic.grammar.ExpressionTests.visitorTest;
 import static org.junit.Assert.assertEquals;
 
-public class IntegerExpressionTest {
-    private final IntegerExpression integer = Expression.integer(42);
+public class IntegerExpressionTest extends AbstractExpressionTest<IntegerExpression> {
+    @Override
+    protected IntegerExpression build(final Context ctx) {
+        return new IntegerExpression(ctx, 42);
+    }
+
+    @Override
+    protected BiFunction<Expression.Visitor<Void>, IntegerExpression, Void> visitorMethod() {
+        return Expression.Visitor::visitInteger;
+    }
 
     @Test
     public void testAccessors() {
-        assertEquals(42, integer.getValue());
+        assertEquals(42, build().getValue());
     }
 
     @Test
     public void castTest() {
-        assertEquals(integer, integer.cast(IntegerExpression.class));
+        final IntegerExpression integer = build();
+
         assertEquals(Expression.duration(TimeUnit.MILLISECONDS, integer.getValue()),
             integer.cast(DurationExpression.class));
         assertEquals(new DoubleExpression(42D), integer.cast(DoubleExpression.class));
@@ -41,10 +50,5 @@ public class IntegerExpressionTest {
 
         uniFuncTest(a -> new IntegerExpression(a, 10), b -> new IntegerExpression(b, -10),
             IntegerExpression::negate);
-    }
-
-    @Test
-    public void visitTest() {
-        visitorTest(integer, Expression.Visitor::visitInteger);
     }
 }

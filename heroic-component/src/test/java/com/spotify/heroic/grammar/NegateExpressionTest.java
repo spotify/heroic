@@ -1,42 +1,35 @@
 package com.spotify.heroic.grammar;
 
 import org.junit.Before;
-import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 
-import static com.spotify.heroic.grammar.ExpressionTests.visitorTest;
+import java.util.function.BiFunction;
+
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 
 @RunWith(MockitoJUnitRunner.class)
-public class NegateExpressionTest {
-    @Mock
-    private Expression expr;
-
-    private NegateExpression e;
-
+public class NegateExpressionTest extends AbstractExpressionTest<NegateExpression> {
     @Before
-    public void setup() {
-        e = new NegateExpression(expr);
+    public void setupLocal() {
+        doReturn(a).when(a).negate();
+        doReturn(b).when(b).negate();
     }
 
-    @Test
-    public void castTest() {
-        final Expression negated = Mockito.mock(Expression.class);
-
-        doReturn(negated).when(expr).negate();
-
-        e.cast(IntegerExpression.class);
-
-        verify(expr).negate();
-        verify(negated).cast(IntegerExpression.class);
+    @Override
+    protected NegateExpression build(final Context ctx) {
+        return new NegateExpression(ctx, a);
     }
 
-    @Test
-    public void visitTest() {
-        visitorTest(e, Expression.Visitor::visitNegate);
+    @Override
+    protected BiFunction<Expression.Visitor<Void>, NegateExpression, Void> visitorMethod() {
+        return Expression.Visitor::visitNegate;
+    }
+
+    @Override
+    public void evalTest() {
+        super.evalTest();
+        verify(a).eval(scope);
     }
 }

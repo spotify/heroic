@@ -3,18 +3,27 @@ package com.spotify.heroic.grammar;
 import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 
 import static com.spotify.heroic.grammar.ExpressionTests.biFuncTest;
 import static com.spotify.heroic.grammar.ExpressionTests.uniFuncTest;
-import static com.spotify.heroic.grammar.ExpressionTests.visitorTest;
 import static org.junit.Assert.assertEquals;
 
-public class DoubleExpressionTest {
-    private final DoubleExpression d = new DoubleExpression(42D);
+public class DoubleExpressionTest extends AbstractExpressionTest<DoubleExpression> {
+    @Override
+    protected DoubleExpression build(final Context ctx) {
+        return new DoubleExpression(ctx, 42D);
+    }
+
+    @Override
+    protected BiFunction<Expression.Visitor<Void>, DoubleExpression, Void> visitorMethod() {
+        return Expression.Visitor::visitDouble;
+    }
 
     @Test
     public void castTest() {
-        assertEquals(d, d.cast(DoubleExpression.class));
+        final DoubleExpression d = build();
+
         assertEquals(new IntegerExpression((long) d.getValue()), d.cast(IntegerExpression.class));
         assertEquals(Expression.duration(TimeUnit.MILLISECONDS, (int) d.getValue()),
             d.cast(DurationExpression.class));
@@ -36,10 +45,5 @@ public class DoubleExpressionTest {
 
         uniFuncTest(a -> new DoubleExpression(a, 10D), r -> new DoubleExpression(r, -10D),
             DoubleExpression::negate);
-    }
-
-    @Test
-    public void visitTest() {
-        visitorTest(d, Expression.Visitor::visitDouble);
     }
 }

@@ -1,16 +1,17 @@
 package com.spotify.heroic.grammar;
 
 import com.google.common.collect.ImmutableMap;
-import org.junit.Test;
 
-import static com.spotify.heroic.grammar.ExpressionTests.visitorTest;
+import java.util.function.BiFunction;
 
-public class FunctionExpressionTest {
-    private FunctionExpression e =
-        new FunctionExpression("foo", Expression.list(), ImmutableMap.of());
+public class FunctionExpressionTest extends AbstractExpressionTest<FunctionExpression> {
+    @Override
+    protected FunctionExpression build(final Context ctx) {
+        return new FunctionExpression(ctx, "foo", Expression.list(), ImmutableMap.of());
+    }
 
-    @Test
-    public void visitTest() {
-        visitorTest(e, Expression.Visitor::visitFunction);
+    @Override
+    protected BiFunction<Expression.Visitor<Void>, FunctionExpression, Void> visitorMethod() {
+        return Expression.Visitor::visitFunction;
     }
 }

@@ -1,37 +1,34 @@
 package com.spotify.heroic.grammar;
 
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
-import static com.spotify.heroic.grammar.ExpressionTests.visitorTest;
+import java.util.function.BiFunction;
+
 import static org.junit.Assert.assertEquals;
 
 @RunWith(MockitoJUnitRunner.class)
-public class LetExpressionTest {
+public class LetExpressionTest extends AbstractExpressionTest<LetExpression> {
     @Mock
     ReferenceExpression ref;
 
-    @Mock
-    Expression expr;
+    @Override
+    protected LetExpression build(final Context ctx) {
+        return new LetExpression(ctx, ref, a);
+    }
 
-    private LetExpression e;
-
-    @Before
-    public void setup() {
-        e = new LetExpression(ref, expr);
+    @Override
+    protected BiFunction<Expression.Visitor<Void>, LetExpression, Void> visitorMethod() {
+        return Expression.Visitor::visitLet;
     }
 
     @Test
     public void testAccessors() {
-        assertEquals(ref, e.getReference());
-        assertEquals(expr, e.getExpression());
-    }
+        final LetExpression e = build();
 
-    @Test
-    public void visitTest() {
-        visitorTest(e, Expression.Visitor::visitLet);
+        assertEquals(ref, e.getReference());
+        assertEquals(a, e.getExpression());
     }
 }
