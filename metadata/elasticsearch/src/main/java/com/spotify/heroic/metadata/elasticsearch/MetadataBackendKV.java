@@ -337,7 +337,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     }
 
     AsyncFuture<Void> start() {
-        AsyncFuture<Void> future = connection.start();
+        final AsyncFuture<Void> future = connection.start();
 
         if (!configure) {
             return future;
@@ -396,24 +396,12 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
             @Override
             public FilterBuilder visitAnd(final AndFilter and) {
-                final List<FilterBuilder> filters = new ArrayList<>(and.terms().size());
-
-                for (final Filter stmt : and.terms()) {
-                    filters.add(stmt.visit(this));
-                }
-
-                return andFilter(filters.toArray(new FilterBuilder[0]));
+                return andFilter(convertTerms(and.terms()));
             }
 
             @Override
             public FilterBuilder visitOr(final OrFilter or) {
-                final List<FilterBuilder> filters = new ArrayList<>(or.terms().size());
-
-                for (final Filter stmt : or.terms()) {
-                    filters.add(stmt.visit(this));
-                }
-
-                return orFilter(filters.toArray(new FilterBuilder[0]));
+                return orFilter(convertTerms(or.terms()));
             }
 
             @Override
@@ -423,12 +411,13 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
             @Override
             public FilterBuilder visitMatchTag(final MatchTagFilter matchTag) {
-                return termFilter(TAGS, matchTag.getTag() + '\0' + matchTag.getValue());
+                return termFilter(TAGS, matchTag.getTag() + TAG_DELIMITER + matchTag.getValue());
             }
 
             @Override
             public FilterBuilder visitStartsWith(final StartsWithFilter startsWith) {
-                return prefixFilter(TAGS, startsWith.getTag() + '\0' + startsWith.getValue());
+                return prefixFilter(TAGS,
+                    startsWith.getTag() + TAG_DELIMITER + startsWith.getValue());
             }
 
             @Override
@@ -444,6 +433,17 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
             @Override
             public FilterBuilder defaultAction(final Filter filter) {
                 throw new IllegalArgumentException("Unsupported filter statement: " + filter);
+            }
+
+            private FilterBuilder[] convertTerms(final List<Filter> terms) {
+                final FilterBuilder[] filters = new FilterBuilder[terms.size()];
+                int i = 0;
+
+                for (final Filter stmt : terms) {
+                    filters[i++] = stmt.visit(this);
+                }
+
+                return filters;
             }
         };
 

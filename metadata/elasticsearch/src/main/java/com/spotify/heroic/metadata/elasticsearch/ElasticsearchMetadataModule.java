@@ -80,6 +80,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
     private final String templateName;
     private final Double writesPerSecond;
     private final Long writeCacheDurationMinutes;
+    private final boolean configure;
 
     private static Supplier<BackendType> defaultSetup = MetadataBackendKV::backendType;
 
@@ -104,7 +105,8 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
         @JsonProperty("writesPerSecond") Optional<Double> writesPerSecond,
         @JsonProperty("writeCacheDurationMinutes") Optional<Long> writeCacheDurationMinutes,
         @JsonProperty("templateName") Optional<String> templateName,
-        @JsonProperty("backendType") Optional<String> backendType
+        @JsonProperty("backendType") Optional<String> backendType,
+        @JsonProperty("configure") Optional<Boolean> configure
     ) {
         this.id = id;
         this.groups = groups.orElseGet(Groups::empty).or(DEFAULT_GROUP);
@@ -115,6 +117,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
         this.templateName = templateName.orElse(DEFAULT_TEMPLATE_NAME);
         this.backendTypeBuilder =
             backendType.flatMap(bt -> ofNullable(backendTypes.get(bt))).orElse(defaultSetup);
+        this.configure = configure.orElse(false);
     }
 
     @Override
@@ -173,7 +176,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
         @ElasticsearchScope
         @Named("configure")
         public boolean configure(ExtraParameters params) {
-            return params.contains(ExtraParameters.CONFIGURE) ||
+            return configure || params.contains(ExtraParameters.CONFIGURE) ||
                 params.contains(ELASTICSEARCH_CONFIGURE_PARAM);
         }
 
@@ -229,6 +232,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
         private Optional<Long> writeCacheDurationMinutes = empty();
         private Optional<String> templateName = empty();
         private Optional<String> backendType = empty();
+        private Optional<Boolean> configure = empty();
 
         public Builder id(final String id) {
             checkNotNull(id, "id");
@@ -272,9 +276,14 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
             return this;
         }
 
+        public Builder configure(final boolean configure) {
+            this.configure = of(configure);
+            return this;
+        }
+
         public ElasticsearchMetadataModule build() {
             return new ElasticsearchMetadataModule(id, groups, connection, writesPerSecond,
-                writeCacheDurationMinutes, templateName, backendType);
+                writeCacheDurationMinutes, templateName, backendType, configure);
         }
     }
 }

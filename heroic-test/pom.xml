@@ -6,17 +6,15 @@
     <groupId>com.spotify.heroic</groupId>
     <artifactId>heroic-parent</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <groupId>com.spotify.heroic.metric</groupId>
-  <artifactId>heroic-metric-memory</artifactId>
+  <artifactId>heroic-test</artifactId>
   <packaging>jar</packaging>
 
-  <name>Heroic: Memory Backend</name>
+  <name>Heroic: Test Project</name>
 
   <description>
-    A stateful metric backend that keeps everything in-memory.
+    A set of useful testing utilities for Heroic.
   </description>
 
   <dependencies>
@@ -28,13 +26,20 @@
 
     <dependency>
       <groupId>com.spotify.heroic</groupId>
-      <artifactId>heroic-component</artifactId>
+      <artifactId>heroic-core</artifactId>
+    </dependency>
+
+    <!-- testing -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>compile</scope>
     </dependency>
 
     <dependency>
-      <groupId>com.spotify.heroic</groupId>
-      <artifactId>heroic-test</artifactId>
-      <scope>test</scope>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <scope>compile</scope>
     </dependency>
   </dependencies>
 </project>

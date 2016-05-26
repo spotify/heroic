@@ -50,33 +50,38 @@ public class StandaloneClientSetup implements ClientSetup {
     @JsonCreator
     public StandaloneClientSetup(
         @JsonProperty("clusterName") String clusterName, @JsonProperty("root") String root
-    ) throws IOException {
+    ) {
         this.clusterName = Optional.fromNullable(clusterName).or(DEFAULT_CLUSTER_NAME);
         this.root = checkDataDirectory(
             Paths.get(Optional.fromNullable(root).or(temporaryDirectory())).toAbsolutePath());
     }
 
-    private Path checkDataDirectory(Path path) throws IOException {
+    private Path checkDataDirectory(Path path) {
         if (!Files.isDirectory(path)) {
-            throw new IOException("No such directory: " + path.toAbsolutePath());
+            throw new RuntimeException("No such directory: " + path.toAbsolutePath());
         }
 
         return path;
     }
 
-    private String temporaryDirectory() throws IOException {
-        final File temp =
-            File.createTempFile("heroic-elasticsearch", Long.toString(System.nanoTime()));
+    private String temporaryDirectory() {
+        try {
+            final File temp =
+                File.createTempFile("heroic-elasticsearch", Long.toString(System.nanoTime()));
 
-        if (!temp.delete()) {
-            throw new IOException("Could not delete temp file: " + temp.getAbsolutePath());
+            if (!temp.delete()) {
+                throw new RuntimeException("Could not delete temp file: " + temp.getAbsolutePath());
+            }
+
+            if (!temp.mkdir()) {
+                throw new RuntimeException(
+                    "Could not create temp directory: " + temp.getAbsolutePath());
+            }
+
+            return temp.getAbsolutePath();
+        } catch (final IOException e) {
+            throw new RuntimeException("Failed to create temporary directory", e);
         }
-
-        if (!temp.mkdir()) {
-            throw new IOException("Could not create temp directory: " + temp.getAbsolutePath());
-        }
-
-        return temp.getAbsolutePath();
     }
 
     @Override
@@ -137,7 +142,7 @@ public class StandaloneClientSetup implements ClientSetup {
             return this;
         }
 
-        public StandaloneClientSetup build() throws IOException {
+        public StandaloneClientSetup build() {
             return new StandaloneClientSetup(clusterName, root);
         }
     }

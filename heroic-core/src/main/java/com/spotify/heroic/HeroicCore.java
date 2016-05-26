@@ -168,6 +168,8 @@ public class HeroicCore implements HeroicConfiguration {
     private final List<HeroicBootstrap> early;
     private final List<HeroicBootstrap> late;
 
+    private final List<HeroicConfig.Builder> configFragments;
+
     @Override
     public boolean isDisableLocal() {
         return disableBackends;
@@ -528,6 +530,10 @@ public class HeroicCore implements HeroicConfiguration {
     private HeroicConfig config(LoadingComponent loading) throws Exception {
         HeroicConfig.Builder builder = HeroicConfig.builder();
 
+        for (final HeroicConfig.Builder fragment : configFragments) {
+            builder = builder.merge(fragment);
+        }
+
         for (final HeroicProfile profile : profiles) {
             log.info("Loading profile '{}' (params: {})", profile.description(), params);
             final ExtraParameters p = profile.scope().map(params::scope).orElse(params);
@@ -603,6 +609,10 @@ public class HeroicCore implements HeroicConfiguration {
         private final ImmutableList.Builder<HeroicBootstrap> early = ImmutableList.builder();
         private final ImmutableList.Builder<HeroicBootstrap> late = ImmutableList.builder();
 
+        /* configuration fragments */
+        private final ImmutableList.Builder<HeroicConfig.Builder> configFragments =
+            ImmutableList.builder();
+
         /**
          * Register a specific ID for this heroic instance.
          *
@@ -659,6 +669,18 @@ public class HeroicCore implements HeroicConfiguration {
             }
 
             this.configPath = of(configPath);
+            return this;
+        }
+
+        /**
+         * Programmatically add a configuration fragment.
+         *
+         * @param config Configuration fragment to add.
+         * @return This builder.
+         */
+        public Builder configFragment(final HeroicConfig.Builder config) {
+            checkNotNull(config, "config");
+            this.configFragments.add(config);
             return this;
         }
 
@@ -773,7 +795,9 @@ public class HeroicCore implements HeroicConfiguration {
                 modules.build(),
                 profiles.build(),
                 early.build(),
-                late.build()
+                late.build(),
+
+                configFragments.build()
             );
             // @formatter:on
         }

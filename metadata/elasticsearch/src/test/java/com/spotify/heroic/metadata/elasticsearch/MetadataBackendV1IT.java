@@ -25,9 +25,9 @@ import org.junit.runner.RunWith;
 import org.mockito.runners.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
-public class MetadataBackendKVIT extends AbstractElasticsearchMetadataBackendIT {
+public class MetadataBackendV1IT extends AbstractElasticsearchMetadataBackendIT {
     @Override
     protected String backendType() {
-        return "kv";
+        return "v1";
     }
 }

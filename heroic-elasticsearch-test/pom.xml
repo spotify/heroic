@@ -7,43 +7,32 @@
     <groupId>com.spotify.heroic</groupId>
     <artifactId>heroic-parent</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <groupId>com.spotify.heroic.metadata</groupId>
-  <artifactId>heroic-metadata-elasticsearch</artifactId>
+  <artifactId>heroic-elasticsearch-test</artifactId>
   <packaging>jar</packaging>
 
-  <name>Heroic: Elasticsearch Metadata</name>
+  <name>Heroic: Elasticsearch Test Project</name>
+
+  <description>
+    A set of useful testing utilities for testing Heroic with Elasticsearch.
+  </description>
 
   <dependencies>
-    <dependency>
-      <groupId>com.spotify.heroic</groupId>
-      <artifactId>heroic-component</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>com.spotify.heroic</groupId>
-      <artifactId>heroic-elasticsearch-utils</artifactId>
-    </dependency>
-
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
       <scope>provided</scope>
     </dependency>
 
-    <!-- testing -->
     <dependency>
       <groupId>com.spotify.heroic</groupId>
-      <artifactId>heroic-elasticsearch-test</artifactId>
-      <scope>test</scope>
+      <artifactId>heroic-test</artifactId>
     </dependency>
 
     <dependency>
-      <groupId>eu.toolchain.async</groupId>
-      <artifactId>tiny-async-core</artifactId>
-      <scope>test</scope>
+      <groupId>com.spotify.heroic</groupId>
+      <artifactId>heroic-elasticsearch-utils</artifactId>
     </dependency>
   </dependencies>
 </project>
