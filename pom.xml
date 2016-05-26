@@ -722,8 +722,6 @@
           <version>2.4.3</version>
           <executions>
             <execution>
-              <id>package-shade</id>
-
               <phase>package</phase>
 
               <goals>
