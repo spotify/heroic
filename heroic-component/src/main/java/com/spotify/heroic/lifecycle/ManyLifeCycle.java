@@ -22,24 +22,24 @@
 package com.spotify.heroic.lifecycle;
 
 import com.google.common.collect.ImmutableList;
-import lombok.RequiredArgsConstructor;
+import lombok.Data;
 
 import java.util.List;
 
-@RequiredArgsConstructor
+@Data
 public class ManyLifeCycle implements LifeCycle {
-    private final List<LifeCycle> many;
+    private final List<LifeCycle> lifeCycles;
 
     public static LifeCycle of(final Iterable<LifeCycle> many) {
         final ImmutableList.Builder<LifeCycle> flattened = ImmutableList.builder();
 
         for (final LifeCycle l : many) {
-            if (l instanceof EmptyLifeCycle) {
+            if (l.equals(LifeCycle.EMPTY)) {
                 continue;
             }
 
             if (l instanceof ManyLifeCycle) {
-                flattened.addAll(((ManyLifeCycle) l).many);
+                flattened.addAll(((ManyLifeCycle) l).lifeCycles);
                 continue;
             }
 
@@ -51,11 +51,11 @@ public class ManyLifeCycle implements LifeCycle {
 
     @Override
     public String toString() {
-        return "+" + many.toString();
+        return "+" + lifeCycles.toString();
     }
 
     @Override
     public void install() {
-        many.forEach(LifeCycle::install);
+        lifeCycles.forEach(LifeCycle::install);
     }
 }

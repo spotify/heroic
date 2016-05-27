@@ -28,7 +28,8 @@ import java.util.stream.Stream;
 public interface LifeCycle {
     void install();
 
-    static final LifeCycle EMPTY = new EmptyLifeCycle();
+    LifeCycle EMPTY = () -> {
+    };
 
     static LifeCycle empty() {
         return EMPTY;
