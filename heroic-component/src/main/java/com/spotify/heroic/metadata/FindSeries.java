@@ -21,9 +21,7 @@
 
 package com.spotify.heroic.metadata;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.cluster.ClusterShardGroup;
@@ -49,6 +47,10 @@ public class FindSeries {
     private final Set<Series> series;
     private final int size;
     private final int duplicates;
+
+    public static FindSeries of(final Set<Series> series, final int size, final int duplicates) {
+        return new FindSeries(ImmutableList.of(), series, size, duplicates);
+    }
 
     public static Collector<FindSeries, FindSeries> reduce(OptionalLimit limit) {
         return results -> {
@@ -77,22 +79,6 @@ public class FindSeries {
 
             return new FindSeries(errors, series, size, duplicates);
         };
-    }
-
-    @JsonCreator
-    public FindSeries(
-        @JsonProperty("errors") List<RequestError> errors,
-        @JsonProperty("series") Set<Series> series, @JsonProperty("size") int size,
-        @JsonProperty("duplicates") int duplicates
-    ) {
-        this.errors = errors;
-        this.series = series;
-        this.size = size;
-        this.duplicates = duplicates;
-    }
-
-    public FindSeries(Set<Series> series, int size, int duplicates) {
-        this(ImmutableList.of(), series, size, duplicates);
     }
 
     public static Transform<Throwable, ? extends FindSeries> shardError(

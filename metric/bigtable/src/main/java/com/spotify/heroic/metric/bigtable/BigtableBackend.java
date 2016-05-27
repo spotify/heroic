@@ -259,7 +259,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                             times.addAll(r.getTimes());
                         }
 
-                        future.resolve(new WriteResult(times));
+                        future.resolve(WriteResult.of(times));
                     }
                 });
             }
@@ -341,7 +341,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                 return writeBatch(EVENTS, series, client, g.getDataAs(Event.class),
                     BigtableBackend.this::serializeEvent);
             default:
-                return async.resolved(WriteResult.of());
+                return async.resolved(WriteResult.of(ImmutableList.of()));
         }
     }
 

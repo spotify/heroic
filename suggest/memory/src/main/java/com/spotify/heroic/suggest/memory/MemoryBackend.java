@@ -126,7 +126,7 @@ public class MemoryBackend implements SuggestBackend, Grouped {
                     false))
             .iterator());
 
-        return async.resolved(new TagValuesSuggest(suggestions, false));
+        return async.resolved(TagValuesSuggest.of(suggestions, false));
     }
 
     @Override
@@ -156,7 +156,7 @@ public class MemoryBackend implements SuggestBackend, Grouped {
             .map(e -> new TagKeyCount.Suggestion(e.getKey(), (long) e.getValue().size()))
             .iterator());
 
-        return async.resolved(new TagKeyCount(suggestions, false));
+        return async.resolved(TagKeyCount.of(suggestions, false));
     }
 
     @Override
@@ -167,8 +167,6 @@ public class MemoryBackend implements SuggestBackend, Grouped {
         final Optional<Set<String>> keys = key.map(MemoryBackend::analyze);
         final Optional<Set<String>> values = value.map(MemoryBackend::analyze);
 
-        final List<TagSuggest.Suggestion> suggestions;
-
         try (final Stream<TagDocument> docs = lookupTags(filter)) {
             final Set<TagId> ids = docs.map(TagDocument::getId).collect(Collectors.toSet());
 
@@ -178,16 +176,16 @@ public class MemoryBackend implements SuggestBackend, Grouped {
             values.ifPresent(parts -> parts.forEach(
                 k -> ids.retainAll(tagValues.getOrDefault(k, ImmutableSet.of()))));
 
-            suggestions = ImmutableList.copyOf(filter
+            final List<TagSuggest.Suggestion> suggestions = ImmutableList.copyOf(filter
                 .getLimit()
                 .limitStream(ids.stream())
                 .map(tagIndex::get)
                 .filter(v -> v != null)
                 .map(d -> new TagSuggest.Suggestion(SCORE, d.id.key, d.id.value))
                 .iterator());
-        }
 
-        return async.resolved(new TagSuggest(suggestions));
+            return async.resolved(TagSuggest.of(suggestions));
+        }
     }
 
     @Override
@@ -211,7 +209,7 @@ public class MemoryBackend implements SuggestBackend, Grouped {
             .map(d -> new KeySuggest.Suggestion(SCORE, d))
             .iterator());
 
-        return async.resolved(new KeySuggest(suggestions));
+        return async.resolved(KeySuggest.of(suggestions));
     }
 
     @Override
@@ -227,7 +225,7 @@ public class MemoryBackend implements SuggestBackend, Grouped {
                 .map(id -> id.value)
                 .collect(Collectors.toList());
 
-            return async.resolved(new TagValueSuggest(values, false));
+            return async.resolved(TagValueSuggest.of(values, false));
         }
     }
 

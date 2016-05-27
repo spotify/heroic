@@ -43,23 +43,11 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 @Data
 public class KeySuggest {
-    public static final List<RequestError> EMPTY_ERRORS = new ArrayList<>();
-    public static final List<Suggestion> EMPTY_SUGGESTIONS = new ArrayList<>();
-
     private final List<RequestError> errors;
     private final List<Suggestion> suggestions;
 
-    @JsonCreator
-    public KeySuggest(
-        @JsonProperty("errors") List<RequestError> errors,
-        @JsonProperty("suggestions") List<Suggestion> suggestions
-    ) {
-        this.errors = checkNotNull(errors, "errors");
-        this.suggestions = checkNotNull(suggestions, "suggestions");
-    }
-
-    public KeySuggest(List<Suggestion> suggestions) {
-        this(EMPTY_ERRORS, suggestions);
+    public static KeySuggest of(final List<Suggestion> suggestions) {
+        return new KeySuggest(ImmutableList.of(), suggestions);
     }
 
     public static Collector<KeySuggest, KeySuggest> reduce(final OptionalLimit limit) {
@@ -89,6 +77,13 @@ public class KeySuggest {
 
             return new KeySuggest(errors1, limit.limitList(list));
         };
+    }
+
+    public static Transform<Throwable, KeySuggest> shardError(
+        final ClusterShardGroup shard
+    ) {
+        return e -> new KeySuggest(ImmutableList.of(ShardError.fromThrowable(shard, e)),
+            ImmutableList.of());
     }
 
     @Data
@@ -130,12 +125,5 @@ public class KeySuggest {
                 return a.key.compareTo(b.key);
             }
         };
-    }
-
-    public static Transform<Throwable, KeySuggest> shardError(
-        final ClusterShardGroup shard
-    ) {
-        return e -> new KeySuggest(ImmutableList.of(ShardError.fromThrowable(shard, e)),
-            EMPTY_SUGGESTIONS);
     }
 }

@@ -43,36 +43,25 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 @Data
 public class TagValuesSuggest {
-    public static final List<RequestError> EMPTY_ERRORS = new ArrayList<>();
-    public static final List<Suggestion> EMPTY_SUGGESTIONS = new ArrayList<>();
-
     private final List<RequestError> errors;
     private final List<Suggestion> suggestions;
     private final boolean limited;
 
-    @JsonCreator
-    public TagValuesSuggest(
-        @JsonProperty("errors") List<RequestError> errors,
-        @JsonProperty("suggestions") List<Suggestion> suggestions,
-        @JsonProperty("limited") Boolean limited
-    ) {
-        this.errors = checkNotNull(errors, "errors");
-        this.suggestions = checkNotNull(suggestions, "suggestions");
-        this.limited = checkNotNull(limited, "limited");
-    }
-
-    public TagValuesSuggest(List<Suggestion> suggestions, boolean limited) {
-        this(EMPTY_ERRORS, suggestions, limited);
+    public static TagValuesSuggest of(List<Suggestion> suggestions, boolean limited) {
+        return new TagValuesSuggest(ImmutableList.of(), suggestions, limited);
     }
 
     public static Collector<TagValuesSuggest, TagValuesSuggest> reduce(
         final OptionalLimit limit, final OptionalLimit groupLimit
     ) {
         return groups -> {
+            final ImmutableList.Builder<RequestError> errors = ImmutableList.builder();
             final Map<String, MidFlight> midflights = new HashMap<>();
             boolean limited1 = false;
 
             for (final TagValuesSuggest g : groups) {
+                errors.addAll(g.getErrors());
+
                 for (final Suggestion s : g.suggestions) {
                     MidFlight m = midflights.get(s.key);
 
@@ -100,7 +89,7 @@ public class TagValuesSuggest {
                 suggestions1.add(new Suggestion(key, groupLimit.limitList(values), sLimited));
             }
 
-            return new TagValuesSuggest(limit.limitList(suggestions1),
+            return new TagValuesSuggest(errors.build(), limit.limitList(suggestions1),
                 limited1 || limit.isGreater(suggestions1.size()));
         };
     }
@@ -161,6 +150,6 @@ public class TagValuesSuggest {
         final ClusterShardGroup shard
     ) {
         return e -> new TagValuesSuggest(ImmutableList.of(ShardError.fromThrowable(shard, e)),
-            EMPTY_SUGGESTIONS, false);
+            ImmutableList.of(), false);
     }
 }

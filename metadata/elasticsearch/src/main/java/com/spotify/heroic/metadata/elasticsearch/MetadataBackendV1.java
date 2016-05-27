@@ -24,6 +24,7 @@ package com.spotify.heroic.metadata.elasticsearch;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.hash.HashCode;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
@@ -53,7 +54,6 @@ import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.DeleteSeries;
 import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindSeries;
-import com.spotify.heroic.metadata.FindTagKeys;
 import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metric.WriteResult;
@@ -63,6 +63,7 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import org.apache.commons.lang3.StringUtils;
@@ -243,13 +244,13 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
             final OptionalLimit limit = filter.getLimit();
 
             if (limit.isZero()) {
-                return async.resolved(CountSeries.EMPTY);
+                return async.resolved(CountSeries.of());
             }
 
             final FilterBuilder f = CTX.filter(filter.getFilter());
 
             if (f == null) {
-                return async.resolved(CountSeries.EMPTY);
+                return async.resolved(CountSeries.of());
             }
 
             final CountRequestBuilder request;
@@ -264,7 +265,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
             request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
             return bind(request.execute()).directTransform(
-                response -> new CountSeries(response.getCount(), false));
+                response -> CountSeries.of(response.getCount(), false));
         });
     }
 
@@ -308,7 +309,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
             final FilterBuilder f = CTX.filter(filter.getFilter());
 
             if (f == null) {
-                return async.resolved(DeleteSeries.EMPTY);
+                return async.resolved(DeleteSeries.of());
             }
 
             final DeleteByQueryRequestBuilder request;
@@ -321,7 +322,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
 
             request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-            return bind(request.execute()).directTransform(response -> new DeleteSeries(0, 0));
+            return bind(request.execute()).directTransform(response -> DeleteSeries.of());
         });
     }
 
@@ -330,7 +331,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
             final FilterBuilder f = CTX.filter(filter.getFilter());
 
             if (f == null) {
-                return async.resolved(FindTagKeys.EMPTY);
+                return async.resolved(new FindTagKeys(ImmutableSet.of(), 0));
             }
 
             final SearchRequestBuilder request;
@@ -379,7 +380,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
             final FilterBuilder f = CTX.filter(filter.getFilter());
 
             if (f == null) {
-                return async.resolved(FindKeys.EMPTY);
+                return async.resolved(FindKeys.of());
             }
 
             final SearchRequestBuilder request;
@@ -414,7 +415,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
                     }
                 }
 
-                return new FindKeys(keys, size, duplicates);
+                return FindKeys.of(keys, size, duplicates);
             });
         });
     }
@@ -677,7 +678,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
 
             final Map<String, Set<String>> result = new HashMap<String, Set<String>>();
             result.put(key, values);
-            return new FindTags(result, result.size());
+            return FindTags.of(result, result.size());
         });
     }
 
@@ -708,6 +709,12 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
             final FilterBuilder f = ctx.filter(filter);
             return findtags(setup, ctx, f, tag);
         }
+    }
+
+    @Data
+    static class FindTagKeys {
+        private final Set<String> keys;
+        private final int size;
     }
 
     public static BackendType backendType() {

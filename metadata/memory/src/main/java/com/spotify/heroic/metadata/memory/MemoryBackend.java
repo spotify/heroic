@@ -104,13 +104,13 @@ public class MemoryBackend implements MetadataBackend {
             }
         });
 
-        return async.resolved(new FindTags(tags, tags.size()));
+        return async.resolved(FindTags.of(tags, tags.size()));
     }
 
     @Override
     public AsyncFuture<FindSeries> findSeries(RangeFilter filter) {
         final Set<Series> s = ImmutableSet.copyOf(lookup(filter).iterator());
-        return async.resolved(new FindSeries(s, s.size(), 0));
+        return async.resolved(FindSeries.of(s, s.size(), 0));
     }
 
     @Override
@@ -122,13 +122,13 @@ public class MemoryBackend implements MetadataBackend {
     @Override
     public AsyncFuture<DeleteSeries> deleteSeries(RangeFilter filter) {
         final int deletes = (int) lookup(filter).map(storage::remove).filter(b -> b).count();
-        return async.resolved(new DeleteSeries(deletes, 0));
+        return async.resolved(DeleteSeries.of(deletes, 0));
     }
 
     @Override
     public AsyncFuture<FindKeys> findKeys(RangeFilter filter) {
         final Set<String> keys = ImmutableSet.copyOf(lookup(filter).map(Series::getKey).iterator());
-        return async.resolved(new FindKeys(keys, keys.size(), 0));
+        return async.resolved(FindKeys.of(keys, keys.size(), 0));
     }
 
     @Override

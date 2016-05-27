@@ -21,9 +21,6 @@
 
 package com.spotify.heroic.suggest;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.cluster.ClusterShardGroup;
 import com.spotify.heroic.common.OptionalLimit;
@@ -40,25 +37,12 @@ import java.util.TreeSet;
 
 @Data
 public class TagValueSuggest {
-    public static final List<RequestError> EMPTY_ERRORS = new ArrayList<RequestError>();
-    public static final List<String> EMPTY_VALUES = new ArrayList<String>();
-
     private final List<RequestError> errors;
     private final List<String> values;
     private final boolean limited;
 
-    @JsonCreator
-    public TagValueSuggest(
-        @JsonProperty("errors") List<RequestError> errors,
-        @JsonProperty("values") List<String> values, @JsonProperty("limited") Boolean limited
-    ) {
-        this.errors = Optional.fromNullable(errors).or(EMPTY_ERRORS);
-        this.values = Optional.fromNullable(values).or(EMPTY_VALUES);
-        this.limited = Optional.fromNullable(limited).or(false);
-    }
-
-    public TagValueSuggest(List<String> values, boolean limited) {
-        this(EMPTY_ERRORS, values, limited);
+    public static TagValueSuggest of(final List<String> values, final boolean limited) {
+        return new TagValueSuggest(ImmutableList.of(), values, limited);
     }
 
     public static Collector<TagValueSuggest, TagValueSuggest> reduce(final OptionalLimit limit) {
@@ -85,6 +69,6 @@ public class TagValueSuggest {
         final ClusterShardGroup shard
     ) {
         return e -> new TagValueSuggest(ImmutableList.of(ShardError.fromThrowable(shard, e)),
-            EMPTY_VALUES, false);
+            ImmutableList.of(), false);
     }
 }

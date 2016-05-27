@@ -43,26 +43,12 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 @Data
 public class TagKeyCount {
-    public static final List<RequestError> EMPTY_ERRORS = new ArrayList<>();
-    public static final List<Suggestion> EMPTY_SUGGESTIONS = new ArrayList<>();
-
     private final List<RequestError> errors;
     private final List<Suggestion> suggestions;
     private final boolean limited;
 
-    @JsonCreator
-    public TagKeyCount(
-        @JsonProperty("errors") List<RequestError> errors,
-        @JsonProperty("suggestions") List<Suggestion> suggestions,
-        @JsonProperty("limited") boolean limited
-    ) {
-        this.errors = checkNotNull(errors, "errors");
-        this.suggestions = checkNotNull(suggestions, "suggestions");
-        this.limited = checkNotNull(limited, "limited");
-    }
-
-    public TagKeyCount(List<Suggestion> suggestions, boolean limited) {
-        this(EMPTY_ERRORS, suggestions, limited);
+    public static TagKeyCount of(final List<Suggestion> suggestions, final boolean limited) {
+        return new TagKeyCount(ImmutableList.of(), suggestions, limited);
     }
 
     public static Collector<TagKeyCount, TagKeyCount> reduce(final OptionalLimit limit) {
@@ -142,6 +128,6 @@ public class TagKeyCount {
         final ClusterShardGroup shard
     ) {
         return e -> new TagKeyCount(ImmutableList.of(ShardError.fromThrowable(shard, e)),
-            EMPTY_SUGGESTIONS, false);
+            ImmutableList.of(), false);
     }
 }

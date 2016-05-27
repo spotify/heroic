@@ -21,10 +21,10 @@
 
 package com.spotify.heroic.suggest;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import lombok.Data;
+
+import java.beans.ConstructorProperties;
+import java.util.Optional;
 
 @Data
 public class MatchOptions {
@@ -38,19 +38,15 @@ public class MatchOptions {
     private final int fuzzyMaxExpansions;
     private final boolean tokenize;
 
-    @JsonCreator
+    @ConstructorProperties({"fuzzy", "fuzzyPrefixLength", "fuzzyMaxExpansions", "tokenize"})
     public MatchOptions(
-        @JsonProperty("fuzzy") boolean fuzzy,
-        @JsonProperty("fuzzyPrefixLength") Integer fuzzyPrefixLength,
-        @JsonProperty("fuzzyMaxExpansions") Integer fuzzyMaxExpansions,
-        @JsonProperty("tokenize") boolean tokenize
+        final Optional<Boolean> fuzzy, final Optional<Integer> fuzzyPrefixLength,
+        final Optional<Integer> fuzzyMaxExpansions, final Optional<Boolean> tokenize
     ) {
-        this.fuzzy = Optional.fromNullable(fuzzy).or(DEFAULT_FUZZY);
-        this.fuzzyPrefixLength =
-            Optional.fromNullable(fuzzyPrefixLength).or(DEFAULT_FUZZY_PREFIX_LENGTH);
-        this.fuzzyMaxExpansions =
-            Optional.fromNullable(fuzzyMaxExpansions).or(DEFAULT_FUZZY_MAX_EXPANSIONS);
-        this.tokenize = Optional.fromNullable(tokenize).or(DEFAULT_TOKENIZE);
+        this.fuzzy = fuzzy.orElse(DEFAULT_FUZZY);
+        this.fuzzyPrefixLength = fuzzyPrefixLength.orElse(DEFAULT_FUZZY_PREFIX_LENGTH);
+        this.fuzzyMaxExpansions = fuzzyMaxExpansions.orElse(DEFAULT_FUZZY_MAX_EXPANSIONS);
+        this.tokenize = tokenize.orElse(DEFAULT_TOKENIZE);
     }
 
     public static Builder builder() {
@@ -58,28 +54,28 @@ public class MatchOptions {
     }
 
     public static class Builder {
-        private boolean fuzzy = DEFAULT_FUZZY;
-        private int fuzzyPrefixLength = DEFAULT_FUZZY_PREFIX_LENGTH;
-        private int fuzzyMaxExpansions = DEFAULT_FUZZY_MAX_EXPANSIONS;
-        private boolean tokenize = DEFAULT_TOKENIZE;
+        private Optional<Boolean> fuzzy = Optional.empty();
+        private Optional<Integer> fuzzyPrefixLength = Optional.empty();
+        private Optional<Integer> fuzzyMaxExpansions = Optional.empty();
+        private Optional<Boolean> tokenize = Optional.empty();
 
         public Builder fuzzy(boolean fuzzy) {
-            this.fuzzy = fuzzy;
+            this.fuzzy = Optional.of(fuzzy);
             return this;
         }
 
         public Builder fuzzyPrefixLength(int fuzzyPrefixLength) {
-            this.fuzzyPrefixLength = fuzzyPrefixLength;
+            this.fuzzyPrefixLength = Optional.of(fuzzyPrefixLength);
             return this;
         }
 
         public Builder fuzzyMaxExpansions(int fuzzyMaxExpansions) {
-            this.fuzzyMaxExpansions = fuzzyMaxExpansions;
+            this.fuzzyMaxExpansions = Optional.of(fuzzyMaxExpansions);
             return this;
         }
 
         public Builder tokenize(boolean tokenize) {
-            this.tokenize = tokenize;
+            this.tokenize = Optional.of(tokenize);
             return this;
         }
 

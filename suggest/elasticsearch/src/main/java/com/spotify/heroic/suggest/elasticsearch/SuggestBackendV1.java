@@ -255,7 +255,7 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
                         new TagValuesSuggest.Suggestion(bucket.getKey(), values, limited));
                 }
 
-                return new TagValuesSuggest(new ArrayList<>(suggestions),
+                return TagValuesSuggest.of(ImmutableList.copyOf(suggestions),
                     limit.isGreater(suggestionBuckets.size()));
             });
         });
@@ -301,7 +301,7 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
             }
 
             return bind(request.execute()).directTransform((SearchResponse response) -> {
-                final List<String> suggestions = new ArrayList<>();
+                final ImmutableList.Builder<String> suggestions = ImmutableList.builder();
 
                 final Terms terms = response.getAggregations().get("values");
 
@@ -311,8 +311,7 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
                     suggestions.add(bucket.getKey());
                 }
 
-                return new TagValueSuggest(new ArrayList<>(suggestions),
-                    limit.isGreater(all.size()));
+                return TagValueSuggest.of(suggestions.build(), limit.isGreater(all.size()));
             });
         });
     }
@@ -361,7 +360,7 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
                         new TagKeyCount.Suggestion(bucket.getKey(), cardinality.getValue()));
                 }
 
-                return new TagKeyCount(new ArrayList<>(suggestions), false);
+                return TagKeyCount.of(ImmutableList.copyOf(suggestions), false);
             });
         });
     }
@@ -440,7 +439,7 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
                     suggestions.add(new Suggestion(hits.getMaxScore(), k, v));
                 }
 
-                return new TagSuggest(new ArrayList<>(suggestions));
+                return TagSuggest.of(ImmutableList.copyOf(suggestions));
             });
         });
     }
@@ -507,7 +506,7 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
                     suggestions.add(new KeySuggest.Suggestion(hits.getMaxScore(), bucket.getKey()));
                 }
 
-                return new KeySuggest(new ArrayList<>(suggestions));
+                return KeySuggest.of(ImmutableList.copyOf(suggestions));
             });
         });
     }

@@ -261,7 +261,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                         new TagValuesSuggest.Suggestion(bucket.getKey(), values, limited));
                 }
 
-                return new TagValuesSuggest(new ArrayList<>(suggestions),
+                return TagValuesSuggest.of(ImmutableList.copyOf(suggestions),
                     limit.isGreater(buckets.size()));
             });
         });
@@ -302,7 +302,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
             }
 
             return bind(request.execute()).directTransform((SearchResponse response) -> {
-                final List<String> suggestions = new ArrayList<>();
+                final ImmutableList.Builder<String> suggestions = ImmutableList.builder();
 
                 final Terms terms = response.getAggregations().get("values");
 
@@ -312,8 +312,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                     suggestions.add(bucket.getKey());
                 }
 
-                return new TagValueSuggest(new ArrayList<>(suggestions),
-                    limit.isGreater(buckets.size()));
+                return TagValueSuggest.of(suggestions.build(), limit.isGreater(buckets.size()));
             });
         });
     }
@@ -354,7 +353,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                         new TagKeyCount.Suggestion(bucket.getKey(), cardinality.getValue()));
                 }
 
-                return new TagKeyCount(new ArrayList<>(suggestions),
+                return TagKeyCount.of(ImmutableList.copyOf(suggestions),
                     limit.isGreater(buckets.size()));
             });
         });
@@ -422,7 +421,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 Aggregations aggregations = response.getAggregations();
 
                 if (aggregations == null) {
-                    return TagSuggest.empty();
+                    return TagSuggest.of();
                 }
 
                 final StringTerms terms = aggregations.get("terms");
@@ -439,7 +438,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                     suggestions.add(new Suggestion(hits.getMaxScore(), k, v));
                 }
 
-                return new TagSuggest(new ArrayList<>(suggestions));
+                return TagSuggest.of(ImmutableList.copyOf(suggestions));
             });
         });
     }
@@ -498,7 +497,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                     suggestions.add(new KeySuggest.Suggestion(hits.getMaxScore(), bucket.getKey()));
                 }
 
-                return new KeySuggest(new ArrayList<>(suggestions));
+                return KeySuggest.of(ImmutableList.copyOf(suggestions));
             });
         });
     }

@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.metric;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.cluster.ClusterShardGroup;
 import eu.toolchain.async.Collector;
@@ -35,65 +33,47 @@ import java.util.List;
 
 @Data
 public class WriteResult {
-    public static final List<RequestError> EMPTY_ERRORS = ImmutableList.of();
-    private static final List<Long> EMPTY_TIMES = ImmutableList.<Long>of();
-
-    public static final WriteResult EMPTY = new WriteResult(EMPTY_ERRORS, EMPTY_TIMES);
+    public static final WriteResult EMPTY = new WriteResult(ImmutableList.of(), ImmutableList.of());
 
     private final List<RequestError> errors;
     private final List<Long> times;
 
-    public WriteResult(List<Long> times) {
-        this.errors = EMPTY_ERRORS;
-        this.times = times;
+    public static WriteResult of(final List<Long> times) {
+        return new WriteResult(ImmutableList.of(), times);
     }
 
-    @JsonCreator
-    public WriteResult(
-        @JsonProperty("errors") List<RequestError> errors, @JsonProperty("times") List<Long> times
-    ) {
-        this.errors = errors;
-        this.times = times;
-    }
-
-    public static WriteResult of(Collection<Long> times) {
-        return new WriteResult(EMPTY_ERRORS, ImmutableList.copyOf(times));
+    public static WriteResult of(final Collection<Long> times) {
+        return new WriteResult(ImmutableList.of(), ImmutableList.copyOf(times));
     }
 
     public static WriteResult of(long duration) {
         return of(ImmutableList.of(duration));
     }
 
-    public static WriteResult of() {
-        return of(EMPTY_TIMES);
-    }
-
-    private static final Collector<WriteResult, WriteResult> collector = results -> {
-        if (results.isEmpty()) {
-            return WriteResult.EMPTY;
-        }
-
-        if (results.size() == 1) {
-            return results.iterator().next();
-        }
-
-        final List<RequestError> errors = new ArrayList<>();
-        final List<Long> times = new ArrayList<>();
-
-        for (final WriteResult r : results) {
-            errors.addAll(r.errors);
-            times.addAll(r.times);
-        }
-
-        return new WriteResult(errors, times);
-    };
-
     public static Collector<WriteResult, WriteResult> merger() {
-        return collector;
+        return results -> {
+            if (results.isEmpty()) {
+                return WriteResult.EMPTY;
+            }
+
+            if (results.size() == 1) {
+                return results.iterator().next();
+            }
+
+            final List<RequestError> errors = new ArrayList<>();
+            final List<Long> times = new ArrayList<>();
+
+            for (final WriteResult r : results) {
+                errors.addAll(r.errors);
+                times.addAll(r.times);
+            }
+
+            return new WriteResult(errors, times);
+        };
     }
 
     public static Transform<Throwable, WriteResult> shardError(final ClusterShardGroup shard) {
         return e -> new WriteResult(ImmutableList.of(ShardError.fromThrowable(shard, e)),
-            EMPTY_TIMES);
+            ImmutableList.of());
     }
 }

@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.ingestion;
 
+import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.Collected;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
@@ -67,7 +68,7 @@ public class CoreIngestionGroup implements IngestionGroup {
     @Override
     public AsyncFuture<WriteResult> write(final WriteMetric write) {
         if (write.isEmpty()) {
-            return async.resolved(WriteResult.of());
+            return async.resolved(WriteResult.of(ImmutableList.of()));
         }
 
         ingested.increment();
@@ -84,7 +85,7 @@ public class CoreIngestionGroup implements IngestionGroup {
     protected AsyncFuture<WriteResult> syncWrite(final WriteMetric write) {
         if (!filter.get().apply(write.getSeries())) {
             // XXX: report dropped-by-filter
-            return async.resolved(WriteResult.of());
+            return async.resolved(WriteResult.of(ImmutableList.of()));
         }
 
         try {

@@ -21,13 +21,8 @@
 
 package com.spotify.heroic.metadata;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.cluster.ClusterShardGroup;
-import com.spotify.heroic.metric.NodeError;
 import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.metric.ShardError;
 import eu.toolchain.async.Collector;
@@ -35,7 +30,6 @@ import eu.toolchain.async.Transform;
 import lombok.Data;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -47,11 +41,37 @@ public class FindTags {
     public static final List<RequestError> EMPTY_ERRORS = new ArrayList<>();
     public static final Map<String, Set<String>> EMPTY_TAGS = new HashMap<>();
 
-    public static final FindTags EMPTY = new FindTags(EMPTY_TAGS, 0);
+    public static final FindTags EMPTY = new FindTags(EMPTY_ERRORS, EMPTY_TAGS, 0);
 
     private final List<RequestError> errors;
     private final Map<String, Set<String>> tags;
     private final int size;
+
+    public static FindTags of(final Map<String, Set<String>> tags, final int size) {
+        return new FindTags(EMPTY_ERRORS, tags, size);
+    }
+
+    public static Collector<FindTags, FindTags> reduce() {
+        return results -> {
+            final List<RequestError> errors = new ArrayList<>();
+            final HashMap<String, Set<String>> tags = new HashMap<>();
+            int size = 0;
+
+            for (final FindTags r : results) {
+                errors.addAll(r.errors);
+                updateTags(tags, r.tags);
+                size += r.getSize();
+            }
+
+            return new FindTags(errors, tags, size);
+        };
+    }
+
+    public static Transform<Throwable, ? extends FindTags> shardError(
+        final ClusterShardGroup c
+    ) {
+        return e -> new FindTags(ImmutableList.of(ShardError.fromThrowable(c, e)), EMPTY_TAGS, 0);
+    }
 
     /**
      * Handle that tags is a deeply nested structure and copy it up until the closest immutable
@@ -70,58 +90,5 @@ public class FindTags {
 
             entries.addAll(entry.getValue());
         }
-    }
-
-    public static class SelfReducer implements Collector<FindTags, FindTags> {
-        @Override
-        public FindTags collect(Collection<FindTags> results) throws Exception {
-            final List<RequestError> errors = new ArrayList<>();
-            final HashMap<String, Set<String>> tags = new HashMap<String, Set<String>>();
-            int size = 0;
-
-            for (final FindTags r : results) {
-                errors.addAll(r.errors);
-                updateTags(tags, r.tags);
-                size += r.getSize();
-            }
-
-            return new FindTags(errors, tags, size);
-        }
-    }
-
-    private static final SelfReducer reducer = new SelfReducer();
-
-    public static Collector<FindTags, FindTags> reduce() {
-        return reducer;
-    }
-
-    @JsonCreator
-    public FindTags(
-        @JsonProperty("errors") List<RequestError> errors,
-        @JsonProperty("tags") Map<String, Set<String>> tags, @JsonProperty("size") int size
-    ) {
-        this.errors = Optional.fromNullable(errors).or(EMPTY_ERRORS);
-        this.tags = tags;
-        this.size = size;
-    }
-
-    public FindTags(Map<String, Set<String>> tags, int size) {
-        this(EMPTY_ERRORS, tags, size);
-    }
-
-    public static Transform<Throwable, ? extends FindTags> shardError(
-        final ClusterShardGroup c
-    ) {
-        return e -> new FindTags(ImmutableList.of(ShardError.fromThrowable(c, e)), EMPTY_TAGS, 0);
-    }
-
-    public static Transform<Throwable, ? extends FindTags> shardError(
-        final ClusterNode.Group group
-    ) {
-        return e -> {
-            final List<RequestError> errors1 =
-                ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
-            return new FindTags(errors1, EMPTY_TAGS, 0);
-        };
     }
 }

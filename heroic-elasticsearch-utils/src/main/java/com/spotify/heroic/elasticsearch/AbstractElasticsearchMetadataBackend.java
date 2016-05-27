@@ -113,7 +113,7 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
             }
 
             if (hits.length == 0 || limit.isGreaterOrEqual(size)) {
-                return async.resolved(new FindSeries(series, size, duplicates));
+                return async.resolved(FindSeries.of(series, size, duplicates));
             }
 
             return scroller.get().lazyTransform(this);

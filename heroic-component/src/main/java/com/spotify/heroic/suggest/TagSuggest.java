@@ -44,23 +44,15 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 @Data
 public class TagSuggest {
-    public static final List<RequestError> EMPTY_ERRORS = new ArrayList<>();
-    public static final List<Suggestion> EMPTY_SUGGESTIONS = new ArrayList<>();
-
     private final List<RequestError> errors;
     private final List<Suggestion> suggestions;
 
-    @JsonCreator
-    public TagSuggest(
-        @JsonProperty("errors") List<RequestError> errors,
-        @JsonProperty("suggestions") List<Suggestion> suggestions
-    ) {
-        this.errors = checkNotNull(errors, "errors");
-        this.suggestions = checkNotNull(suggestions, "suggestions");
+    public static TagSuggest of() {
+        return new TagSuggest(ImmutableList.of(), ImmutableList.of());
     }
 
-    public TagSuggest(List<Suggestion> suggestions) {
-        this(EMPTY_ERRORS, suggestions);
+    public static TagSuggest of(List<Suggestion> suggestions) {
+        return new TagSuggest(ImmutableList.of(), suggestions);
     }
 
     public static Collector<TagSuggest, TagSuggest> reduce(final OptionalLimit limit) {
@@ -146,12 +138,6 @@ public class TagSuggest {
         final ClusterShardGroup shard
     ) {
         return e -> new TagSuggest(ImmutableList.of(ShardError.fromThrowable(shard, e)),
-            EMPTY_SUGGESTIONS);
-    }
-
-    static final TagSuggest empty = new TagSuggest(EMPTY_SUGGESTIONS);
-
-    public static TagSuggest empty() {
-        return empty;
+            ImmutableList.of());
     }
 }

@@ -208,7 +208,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
             final OptionalLimit limit = filter.getLimit();
 
             if (limit.isZero()) {
-                return async.resolved(CountSeries.EMPTY);
+                return async.resolved(CountSeries.of());
             }
 
             final FilterBuilder f = filter(filter.getFilter());
@@ -225,7 +225,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
             request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
             return bind(request.execute()).directTransform(
-                response -> new CountSeries(response.getCount(), false));
+                response -> CountSeries.of(response.getCount(), false));
         });
     }
 
@@ -274,7 +274,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
             request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-            return bind(request.execute()).directTransform(response -> new DeleteSeries(0, 0));
+            return bind(request.execute()).directTransform(response -> DeleteSeries.of());
         });
     }
 
@@ -313,7 +313,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                     }
                 }
 
-                return new FindKeys(keys, size, duplicates);
+                return FindKeys.of(keys, size, duplicates);
             });
         });
     }
