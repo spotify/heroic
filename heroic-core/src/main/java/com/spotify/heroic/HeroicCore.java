@@ -420,6 +420,7 @@ public class HeroicCore implements HeroicConfiguration {
 
         final QueryComponent query = DaggerCoreQueryComponent
             .builder()
+            .queryModule(new QueryModule(config.getMetric().getGroupLimit()))
             .corePrimaryComponent(primary)
             .clusterComponent(cluster)
             .cacheComponent(cache)

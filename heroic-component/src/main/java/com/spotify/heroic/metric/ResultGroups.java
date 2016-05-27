@@ -21,85 +21,69 @@
 
 package com.spotify.heroic.metric;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.cluster.ClusterShardGroup;
 import com.spotify.heroic.common.Statistics;
-import com.spotify.heroic.metric.QueryTrace.Identifier;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Data
 public final class ResultGroups {
-    private static final List<ResultGroup> EMPTY_GROUPS = new ArrayList<>();
-    public static final List<RequestError> EMPTY_ERRORS = new ArrayList<>();
-
-    private final List<ResultGroup> groups;
-    private final List<RequestError> errors;
-    private final Statistics statistics;
     private final QueryTrace trace;
+    private final List<RequestError> errors;
+    private final List<ResultGroup> groups;
+    private final Statistics statistics;
+    private final ResultLimits limits;
 
-    @JsonCreator
-    public ResultGroups(
-        @JsonProperty("groups") List<ResultGroup> groups,
-        @JsonProperty("errors") List<RequestError> errors,
-        @JsonProperty("statistics") Statistics statistics, @JsonProperty("trace") QueryTrace trace
-    ) {
-        this.groups = groups;
-        this.errors = Optional.fromNullable(errors).or(EMPTY_ERRORS);
-        this.statistics = Objects.requireNonNull(statistics, "statistics");
-        this.trace = Objects.requireNonNull(trace, "trace");
+    public static ResultGroups error(final QueryTrace trace, final RequestError error) {
+        return new ResultGroups(trace, ImmutableList.of(error), ImmutableList.of(),
+            Statistics.empty(), ResultLimits.of());
     }
 
-    public static ResultGroups empty(final QueryTrace.Identifier what) {
-        return new ResultGroups(ImmutableList.of(), ImmutableList.of(), Statistics.empty(),
-            new QueryTrace(what));
+    public static ResultGroups empty(final QueryTrace trace) {
+        return new ResultGroups(trace, ImmutableList.of(), ImmutableList.of(), Statistics.empty(),
+            ResultLimits.of());
     }
 
     public static Collector<ResultGroups, ResultGroups> collect(final QueryTrace.Identifier what) {
-        final Stopwatch w = Stopwatch.createStarted();
+        final QueryTrace.NamedWatch w = QueryTrace.watch(what);
 
         return results -> {
-            final ImmutableList.Builder<ResultGroup> groups = ImmutableList.builder();
-            final ImmutableList.Builder<RequestError> errors = ImmutableList.builder();
             final ImmutableList.Builder<QueryTrace> traces = ImmutableList.builder();
-
+            final ImmutableList.Builder<RequestError> errors = ImmutableList.builder();
+            final ImmutableList.Builder<ResultGroup> groups = ImmutableList.builder();
             Statistics statistics = Statistics.empty();
+            final ImmutableSet.Builder<ResultLimit> limits = ImmutableSet.builder();
 
             for (final ResultGroups r : results) {
-                groups.addAll(r.groups);
-                errors.addAll(r.errors);
                 traces.add(r.trace);
+                errors.addAll(r.errors);
+                groups.addAll(r.groups);
                 statistics = statistics.merge(r.statistics);
+                limits.addAll(r.limits.getLimits());
             }
 
-            return new ResultGroups(groups.build(), errors.build(), statistics,
-                new QueryTrace(what, w.elapsed(TimeUnit.NANOSECONDS), traces.build()));
+            return new ResultGroups(w.end(traces.build()), errors.build(), groups.build(),
+                statistics, new ResultLimits(limits.build()));
         };
     }
 
     public static Transform<Throwable, ResultGroups> shardError(
         final QueryTrace.Identifier what, final ClusterShardGroup c
     ) {
-        return e -> new ResultGroups(EMPTY_GROUPS, ImmutableList.of(ShardError.fromThrowable(c, e)),
-            Statistics.empty(), new QueryTrace(what));
+        final QueryTrace.NamedWatch w = QueryTrace.watch(what);
+        return e -> new ResultGroups(w.end(), ImmutableList.of(ShardError.fromThrowable(c, e)),
+            ImmutableList.of(), Statistics.empty(), ResultLimits.of());
     }
 
-    public static Transform<ResultGroups, ResultGroups> trace(final Identifier what) {
-        final Stopwatch w = Stopwatch.createStarted();
-
-        return r -> new ResultGroups(r.groups, r.errors, r.statistics,
-            new QueryTrace(what, w.elapsed(TimeUnit.NANOSECONDS), ImmutableList.of(r.trace)));
+    public static Transform<ResultGroups, ResultGroups> trace(final QueryTrace.Identifier what) {
+        final QueryTrace.NamedWatch w = QueryTrace.watch(what);
+        return r -> new ResultGroups(w.end(r.trace), r.errors, r.groups, r.statistics, r.limits);
     }
 }

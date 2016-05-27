@@ -30,6 +30,7 @@ import lombok.EqualsAndHashCode;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -74,6 +75,11 @@ class EmptyOptionalLimit implements OptionalLimit {
     }
 
     @Override
+    public <T> Set<T> limitSet(final Set<T> input) {
+        return input;
+    }
+
+    @Override
     public <T> Stream<T> limitStream(final Stream<T> stream) {
         return stream;
     }
@@ -85,6 +91,11 @@ class EmptyOptionalLimit implements OptionalLimit {
     @Override
     public OptionalLimit add(final long size) {
         return this;
+    }
+
+    @Override
+    public OptionalLimit orElse(final OptionalLimit other) {
+        return other;
     }
 
     @Override

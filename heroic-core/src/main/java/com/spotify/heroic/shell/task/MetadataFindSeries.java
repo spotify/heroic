@@ -109,13 +109,14 @@ public class MetadataFindSeries implements ShellTask {
             };
         }
 
-        return group.countSeries(filter).lazyTransform(c -> {
-            return group.findSeries(filter).lazyTransform(series -> {
+        return group
+            .countSeries(filter)
+            .lazyTransform(c -> group.findSeries(filter).lazyTransform(series -> {
                 series.getSeries().forEach(printer);
-                io.out().println("found " + series.getSize() + " series");
+                io.out().println("Found " + series.getSeries().size() + " series (limited: " +
+                    series.isLimited() + ")");
                 return async.resolved();
-            });
-        });
+            }));
     }
 
     @ToString

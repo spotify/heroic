@@ -35,6 +35,7 @@ import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.ClusterShardGroup;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Duration;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.grammar.DefaultScope;
@@ -44,6 +45,7 @@ import com.spotify.heroic.grammar.IntegerExpression;
 import com.spotify.heroic.grammar.QueryExpression;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.grammar.RangeExpression;
+import com.spotify.heroic.grammar.StringExpression;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.QueryResultPart;
@@ -76,12 +78,13 @@ public class CoreQueryManager implements QueryManager {
     private final QueryParser parser;
     private final QueryCache queryCache;
     private final AggregationFactory aggregations;
+    private final OptionalLimit groupLimit;
 
     @Inject
     public CoreQueryManager(
         @Named("features") final Set<String> features, final AsyncFramework async,
         final ClusterManager cluster, final QueryParser parser, final QueryCache queryCache,
-        final AggregationFactory aggregations
+        final AggregationFactory aggregations, @Named("groupLimit") final OptionalLimit groupLimit
     ) {
         this.features = features;
         this.async = async;
@@ -89,6 +92,7 @@ public class CoreQueryManager implements QueryManager {
         this.parser = parser;
         this.queryCache = queryCache;
         this.aggregations = aggregations;
+        this.groupLimit = groupLimit;
     }
 
     @Override
@@ -157,6 +161,11 @@ public class CoreQueryManager implements QueryManager {
                             return aggregations.build(e.getName(), e.getArguments(),
                                 e.getKeywords());
                         }
+
+                        @Override
+                        public Aggregation visitString(final StringExpression e) {
+                            return visitFunction(e.cast(FunctionExpression.class));
+                        }
                     }));
 
                 final Optional<Filter> filter = e.getFilter();
@@ -220,7 +229,10 @@ public class CoreQueryManager implements QueryManager {
                     futures.add(queryPart);
                 }
 
-                return async.collect(futures, QueryResult.collectParts(QUERY, range, combiner));
+                final OptionalLimit limit = options.getGroupLimit().orElse(groupLimit);
+
+                return async.collect(futures,
+                    QueryResult.collectParts(QUERY, range, combiner, limit));
             });
         }
 

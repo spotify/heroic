@@ -25,12 +25,15 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import lombok.EqualsAndHashCode;
 import lombok.RequiredArgsConstructor;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -86,13 +89,25 @@ class ValueOptionalLimit implements OptionalLimit {
                 "Limit is larger than maximum possible integer (" + limit + ")");
         }
 
-        final int l = (int) limit;
-
-        if (input.size() < l) {
+        if (input.size() < limit) {
             return input;
         }
 
-        return input.subList(0, l);
+        return ImmutableList.copyOf(input.stream().limit(limit).iterator());
+    }
+
+    @Override
+    public <T> Set<T> limitSet(final Set<T> input) {
+        if (limit > Integer.MAX_VALUE) {
+            throw new IllegalStateException(
+                "Limit is larger than maximum possible integer (" + limit + ")");
+        }
+
+        if (input.size() < limit) {
+            return input;
+        }
+
+        return ImmutableSet.copyOf(input.stream().limit(limit).iterator());
     }
 
     @Override
@@ -108,6 +123,11 @@ class ValueOptionalLimit implements OptionalLimit {
     @Override
     public OptionalLimit add(final long size) {
         return new ValueOptionalLimit(limit + size);
+    }
+
+    @Override
+    public OptionalLimit orElse(final OptionalLimit other) {
+        return this;
     }
 
     @Override

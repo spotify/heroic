@@ -19,30 +19,40 @@
  * under the License.
  */
 
-package com.spotify.heroic.common;
+package com.spotify.heroic.metric;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.filter.Filter;
+import com.fasterxml.jackson.annotation.JsonValue;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import lombok.Data;
 
+import java.util.Set;
+
 @Data
-public class RangeFilter {
-    private final Filter filter;
-    private final DateRange range;
-    private final OptionalLimit limit;
+public class ResultLimits {
+    private final Set<ResultLimit> limits;
 
     @JsonCreator
-    public RangeFilter(
-        @JsonProperty("filter") Filter filter, @JsonProperty("range") DateRange range,
-        @JsonProperty("limit") OptionalLimit limit
-    ) {
-        this.filter = filter;
-        this.range = range;
-        this.limit = limit;
+    public static ResultLimits create(final Set<ResultLimit> limits) {
+        return new ResultLimits(limits);
     }
 
-    public RangeFilter incLimit() {
-        return new RangeFilter(filter, range, limit.add(1));
+    @JsonValue
+    public Set<ResultLimit> value() {
+        return limits;
+    }
+
+    public ResultLimits join(final ResultLimits other) {
+        return new ResultLimits(ImmutableSet.copyOf(Iterables.concat(limits, other.limits)));
+    }
+
+    public ResultLimits add(final ResultLimit limit) {
+        return new ResultLimits(
+            ImmutableSet.<ResultLimit>builder().add(limit).addAll(limits).build());
+    }
+
+    public static ResultLimits of(ResultLimit... limits) {
+        return new ResultLimits(ImmutableSet.copyOf(limits));
     }
 }

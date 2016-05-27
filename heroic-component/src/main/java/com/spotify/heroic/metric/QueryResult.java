@@ -21,16 +21,16 @@
 
 package com.spotify.heroic.metric;
 
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.aggregation.AggregationCombiner;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.OptionalLimit;
 import eu.toolchain.async.Collector;
 import lombok.Data;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 @Data
 public class QueryResult {
@@ -52,14 +52,11 @@ public class QueryResult {
     private final List<RequestError> errors;
 
     /**
-     * Improve shard latencies.
-     */
-    private final List<ShardTrace> traces;
-
-    /**
      * Query trace, if available.
      */
     private final QueryTrace trace;
+
+    private final ResultLimits limits;
 
     /**
      * Collect result parts into a complete result.
@@ -68,20 +65,21 @@ public class QueryResult {
      * @return A complete QueryResult.
      */
     public static Collector<QueryResultPart, QueryResult> collectParts(
-        final QueryTrace.Identifier what, final DateRange range, final AggregationCombiner combiner
+        final QueryTrace.Identifier what, final DateRange range, final AggregationCombiner combiner,
+        final OptionalLimit groupLimit
     ) {
-        final Stopwatch w = Stopwatch.createStarted();
+        final QueryTrace.NamedWatch w = QueryTrace.watch(what);
 
         return parts -> {
             final List<List<ShardedResultGroup>> all = new ArrayList<>();
             final List<RequestError> errors = new ArrayList<>();
-            final List<ShardTrace> traces = new ArrayList<>();
             final ImmutableList.Builder<QueryTrace> queryTraces = ImmutableList.builder();
+            final ImmutableSet.Builder<ResultLimit> limits = ImmutableSet.builder();
 
             for (final QueryResultPart part : parts) {
                 errors.addAll(part.getErrors());
-                traces.add(part.getTrace());
                 queryTraces.add(part.getQueryTrace());
+                limits.addAll(part.getLimits().getLimits());
 
                 if (part.isEmpty()) {
                     continue;
@@ -91,8 +89,14 @@ public class QueryResult {
             }
 
             final List<ShardedResultGroup> groups = combiner.combine(all);
-            return new QueryResult(range, groups, errors, traces,
-                new QueryTrace(what, w.elapsed(TimeUnit.NANOSECONDS), queryTraces.build()));
+            final QueryTrace trace = w.end(queryTraces.build());
+
+            if (groupLimit.isGreaterOrEqual(groups.size())) {
+                limits.add(ResultLimit.GROUP);
+            }
+
+            return new QueryResult(range, groupLimit.limitList(groups), errors, trace,
+                new ResultLimits(limits.build()));
         };
     }
 }

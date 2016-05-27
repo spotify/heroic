@@ -28,7 +28,6 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.utils.Bytes;
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.async.AsyncObservable;
@@ -136,9 +135,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
 
     @Override
     public AsyncFuture<WriteResult> write(final WriteMetric w) {
-        return connection.doto(c -> {
-            return doWrite(c, c.schema.writeSession(), w);
-        });
+        return connection.doto(c -> doWrite(c, c.schema.writeSession(), w));
     }
 
     @Override
@@ -263,10 +260,8 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
     public AsyncFuture<List<String>> serializeKeyToHex(final BackendKey key) {
         final MetricsRowKey rowKey = new MetricsRowKey(key.getSeries(), key.getBase());
 
-        return connection.doto(c -> {
-            return async.resolved(
-                ImmutableList.of(Bytes.toHexString(c.schema.rowKey().serialize(rowKey))));
-        });
+        return connection.doto(c -> async.resolved(
+            ImmutableList.of(Bytes.toHexString(c.schema.rowKey().serialize(rowKey)))));
     }
 
     @Override
@@ -285,9 +280,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
                 c.schema.rowKey().serialize(new MetricsRowKey(key.getSeries(), key.getBase()));
             return Async
                 .bind(async, c.session.executeAsync(c.schema.deleteKey(k)))
-                .directTransform(result -> {
-                    return null;
-                });
+                .directTransform(result -> null);
         });
     }
 
@@ -317,10 +310,8 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
 
             Async
                 .bind(async, c.session.executeAsync(f.fetch(Integer.MAX_VALUE)))
-                .onDone(
-                    new RowFetchHelper<Point, MetricCollection>(future, f.converter(), result -> {
-                        return async.resolved(MetricCollection.points(result.getData()));
-                    }));
+                .onDone(new RowFetchHelper<>(future, f.converter(),
+                    result -> async.resolved(MetricCollection.points(result.getData()))));
 
             return future;
         });
@@ -467,7 +458,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
     }
 
     private AsyncFuture<QueryTrace> buildTrace(
-        final Connection c, final QueryTrace.Identifier ident, final long elapsed,
+        final Connection c, final QueryTrace.Identifier what, final long elapsed,
         List<ExecutionInfo> info
     ) {
         final ImmutableList.Builder<AsyncFuture<QueryTrace>> traces = ImmutableList.builder();
@@ -486,7 +477,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
                 for (final Event e : events) {
                     final long eventElapsed =
                         TimeUnit.NANOSECONDS.convert(e.getSourceElapsed(), TimeUnit.MICROSECONDS);
-                    children.add(new QueryTrace(QueryTrace.identifier(e.getName()), eventElapsed));
+                    children.add(QueryTrace.of(QueryTrace.identifier(e.getName()), eventElapsed));
                 }
 
                 final QueryTrace.Identifier segment = QueryTrace.identifier(
@@ -495,13 +486,13 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
                 final long segmentElapsed =
                     TimeUnit.NANOSECONDS.convert(qt.getDurationMicros(), TimeUnit.MICROSECONDS);
 
-                return new QueryTrace(segment, segmentElapsed, children.build());
+                return QueryTrace.of(segment, segmentElapsed, children.build());
             }));
         }
 
-        return async.collect(traces.build()).directTransform(t -> {
-            return new QueryTrace(ident, elapsed, ImmutableList.copyOf(t));
-        });
+        return async
+            .collect(traces.build())
+            .directTransform(t -> QueryTrace.of(what, elapsed, ImmutableList.copyOf(t)));
     }
 
     private AsyncFuture<FetchData> fetchDataPoints(
@@ -511,7 +502,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
         final List<AsyncFuture<FetchData>> fetches = new ArrayList<>(prepared.size());
 
         for (final Schema.PreparedFetch p : prepared) {
-            final Stopwatch w = Stopwatch.createStarted();
+            final QueryTrace.Watch w = QueryTrace.watch();
 
             final Function<RowFetchResult<Point>, AsyncFuture<QueryTrace>> traceBuilder;
 
@@ -519,12 +510,12 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
 
             if (options.isTracing()) {
                 stmt = p.fetch(limit).enableTracing();
-                traceBuilder = result -> buildTrace(c, FETCH_SEGMENT.extend(p.toString()),
-                    w.elapsed(TimeUnit.NANOSECONDS), result.getInfo());
+                traceBuilder =
+                    result -> buildTrace(c, FETCH_SEGMENT.extend(p.toString()), w.elapsed(),
+                        result.getInfo());
             } else {
                 stmt = p.fetch(limit);
-                traceBuilder = result -> async.resolved(
-                    new QueryTrace(FETCH_SEGMENT, w.elapsed(TimeUnit.NANOSECONDS)));
+                traceBuilder = result -> async.resolved(w.end(FETCH_SEGMENT));
             }
 
             final ResolvableFuture<FetchData> future = async.future();
@@ -536,13 +527,13 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
                         final ImmutableList<Long> times = ImmutableList.of(trace.getElapsed());
                         final List<MetricCollection> groups =
                             ImmutableList.of(MetricCollection.points(result.getData()));
-                        return new FetchData(series, times, groups, trace);
+                        return new FetchData(trace, times, groups, false);
                     })));
 
             fetches.add(future);
         }
 
-        return async.collect(fetches, FetchData.collect(FETCH, series));
+        return async.collect(fetches, FetchData.collect(FETCH));
     }
 
     @RequiredArgsConstructor

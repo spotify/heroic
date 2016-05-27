@@ -23,11 +23,13 @@ package com.spotify.heroic.metric;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import lombok.Data;
 
 import java.io.PrintWriter;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Data
 public class QueryTrace {
@@ -35,23 +37,14 @@ public class QueryTrace {
     private final long elapsed;
     private final List<QueryTrace> children;
 
-    @JsonCreator
-    public QueryTrace(
-        @JsonProperty("what") final QueryTrace.Identifier what,
-        @JsonProperty("elapsed") final long elapsed,
-        @JsonProperty("children") final List<QueryTrace> children
+    public static QueryTrace of(final Identifier what, final long elapsed) {
+        return new QueryTrace(what, elapsed, ImmutableList.of());
+    }
+
+    public static QueryTrace of(
+        final Identifier what, final long elapsed, final List<QueryTrace> children
     ) {
-        this.what = what;
-        this.elapsed = elapsed;
-        this.children = children;
-    }
-
-    public QueryTrace(final QueryTrace.Identifier what) {
-        this(what, 0L, ImmutableList.of());
-    }
-
-    public QueryTrace(final QueryTrace.Identifier what, final long elapsed) {
-        this(what, elapsed, ImmutableList.of());
+        return new QueryTrace(what, elapsed, children);
     }
 
     public void formatTrace(PrintWriter out) {
@@ -92,6 +85,57 @@ public class QueryTrace {
         }
 
         return elapsed + "ns";
+    }
+
+    public static Watch watch() {
+        return new Watch(Stopwatch.createStarted());
+    }
+
+    public static NamedWatch watch(final Identifier what) {
+        return new NamedWatch(what, Stopwatch.createStarted());
+    }
+
+    @Data
+    public static class Watch {
+        private final Stopwatch w;
+
+        public QueryTrace end(final Identifier what) {
+            return new QueryTrace(what, elapsed(), ImmutableList.of());
+        }
+
+        public QueryTrace end(final Identifier what, final QueryTrace child) {
+            return new QueryTrace(what, elapsed(), ImmutableList.of(child));
+        }
+
+        public QueryTrace end(final Identifier what, final List<QueryTrace> children) {
+            return new QueryTrace(what, elapsed(), children);
+        }
+
+        public long elapsed() {
+            return w.elapsed(TimeUnit.MICROSECONDS);
+        }
+    }
+
+    @Data
+    public static class NamedWatch {
+        private final Identifier what;
+        private final Stopwatch w;
+
+        public QueryTrace end() {
+            return new QueryTrace(what, elapsed(), ImmutableList.of());
+        }
+
+        public QueryTrace end(final QueryTrace child) {
+            return new QueryTrace(what, elapsed(), ImmutableList.of(child));
+        }
+
+        public QueryTrace end(final List<QueryTrace> children) {
+            return new QueryTrace(what, elapsed(), children);
+        }
+
+        public long elapsed() {
+            return w.elapsed(TimeUnit.MICROSECONDS);
+        }
     }
 
     @Data

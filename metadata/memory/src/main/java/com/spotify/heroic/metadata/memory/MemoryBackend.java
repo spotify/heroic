@@ -109,8 +109,10 @@ public class MemoryBackend implements MetadataBackend {
 
     @Override
     public AsyncFuture<FindSeries> findSeries(RangeFilter filter) {
-        final Set<Series> s = ImmutableSet.copyOf(lookup(filter).iterator());
-        return async.resolved(FindSeries.of(s, s.size(), 0));
+        final Set<Series> s = ImmutableSet.copyOf(lookup(filter.incLimit()).iterator());
+
+        return async.resolved(
+            FindSeries.of(filter.getLimit().limitSet(s), filter.getLimit().isGreater(s.size())));
     }
 
     @Override

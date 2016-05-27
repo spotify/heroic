@@ -34,50 +34,37 @@ import eu.toolchain.async.Transform;
 import lombok.Data;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 @Data
 public class FindSeries {
-    public static final FindSeries EMPTY =
-        new FindSeries(ImmutableList.of(), ImmutableSet.of(), 0, 0);
-
     private final List<RequestError> errors;
     private final Set<Series> series;
-    private final int size;
-    private final int duplicates;
+    private final boolean limited;
 
-    public static FindSeries of(final Set<Series> series, final int size, final int duplicates) {
-        return new FindSeries(ImmutableList.of(), series, size, duplicates);
+    public static FindSeries of() {
+        return new FindSeries(ImmutableList.of(), ImmutableSet.of(), false);
     }
 
-    public static Collector<FindSeries, FindSeries> reduce(OptionalLimit limit) {
+    public static FindSeries of(final Set<Series> series, final boolean limited) {
+        return new FindSeries(ImmutableList.of(), series, limited);
+    }
+
+    public static Collector<FindSeries, FindSeries> reduce(final OptionalLimit limit) {
         return results -> {
             final List<RequestError> errors = new ArrayList<>();
-            final Set<Series> series = new HashSet<>();
-            int size = 0;
-            int duplicates = 0;
+            final ImmutableSet.Builder<Series> series = ImmutableSet.builder();
+            boolean limited = false;
 
-            outer:
             for (final FindSeries result : results) {
                 errors.addAll(result.errors);
-
-                duplicates += result.duplicates;
-                size += result.size;
-
-                for (final Series s : result.series) {
-                    if (series.add(s)) {
-                        duplicates += 1;
-                    }
-
-                    if (limit.isGreaterOrEqual(series.size())) {
-                        break outer;
-                    }
-                }
+                series.addAll(result.series);
+                limited |= result.limited;
             }
 
-            return new FindSeries(errors, series, size, duplicates);
+            final Set<Series> s = series.build();
+            return new FindSeries(errors, limit.limitSet(s), limited || limit.isGreater(s.size()));
         };
     }
 
@@ -85,7 +72,7 @@ public class FindSeries {
         final ClusterShardGroup shard
     ) {
         return e -> new FindSeries(ImmutableList.of(ShardError.fromThrowable(shard, e)),
-            ImmutableSet.of(), 0, 0);
+            ImmutableSet.of(), false);
     }
 
     @JsonIgnore

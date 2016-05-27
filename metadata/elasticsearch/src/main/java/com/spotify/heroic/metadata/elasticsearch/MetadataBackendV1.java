@@ -273,15 +273,10 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
     public AsyncFuture<FindSeries> findSeries(final RangeFilter filter) {
         return doto(c -> {
             final OptionalLimit limit = filter.getLimit();
-
-            if (limit.isZero()) {
-                return async.resolved(FindSeries.EMPTY);
-            }
-
             final FilterBuilder f = CTX.filter(filter.getFilter());
 
             if (f == null) {
-                return async.resolved(FindSeries.EMPTY);
+                return async.resolved(FindSeries.of());
             }
 
             final SearchRequestBuilder request;

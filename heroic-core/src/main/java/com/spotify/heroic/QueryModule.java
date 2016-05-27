@@ -21,16 +21,22 @@
 
 package com.spotify.heroic;
 
-import com.spotify.heroic.cache.CacheComponent;
-import com.spotify.heroic.cluster.ClusterComponent;
-import com.spotify.heroic.dagger.CorePrimaryComponent;
-import dagger.Component;
+import com.spotify.heroic.common.OptionalLimit;
+import dagger.Module;
+import dagger.Provides;
+import lombok.Data;
 
-@QueryScope
-@Component(
-    modules = QueryModule.class,
-    dependencies = {CorePrimaryComponent.class, ClusterComponent.class, CacheComponent.class})
-public interface CoreQueryComponent extends QueryComponent {
-    @Override
-    CoreQueryManager queryManager();
+import javax.inject.Named;
+
+@Module
+@Data
+public class QueryModule {
+    private final OptionalLimit groupLimit;
+
+    @Provides
+    @QueryScope
+    @Named("groupLimit")
+    public OptionalLimit groupLimit() {
+        return groupLimit;
+    }
 }

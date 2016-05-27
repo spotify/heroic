@@ -19,18 +19,15 @@
  * under the License.
  */
 
-package com.spotify.heroic;
+package com.spotify.heroic.metric;
 
-import com.spotify.heroic.cache.CacheComponent;
-import com.spotify.heroic.cluster.ClusterComponent;
-import com.spotify.heroic.dagger.CorePrimaryComponent;
-import dagger.Component;
+import lombok.Data;
 
-@QueryScope
-@Component(
-    modules = QueryModule.class,
-    dependencies = {CorePrimaryComponent.class, ClusterComponent.class, CacheComponent.class})
-public interface CoreQueryComponent extends QueryComponent {
-    @Override
-    CoreQueryManager queryManager();
+@Data
+public class QueryError implements RequestError {
+    private final String error;
+
+    public static RequestError fromMessage(final String message) {
+        return new QueryError(message);
+    }
 }

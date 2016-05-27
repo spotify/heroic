@@ -25,7 +25,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.protobuf.ByteString;
@@ -82,7 +81,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
@@ -453,12 +451,10 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                 return deserializer.apply(timestamp, cell.getValue());
             };
 
-            final Stopwatch w = Stopwatch.createStarted();
+            final QueryTrace.NamedWatch w = QueryTrace.watch(FETCH_SEGMENT);
 
             fetches.add(readRows.directTransform(result -> {
-                if (!watcher.readData(result.size())) {
-                    throw new RuntimeException("Quota limit violated");
-                }
+                watcher.readData(result.size());
 
                 final List<Iterable<T>> points = new ArrayList<>();
 
@@ -468,19 +464,18 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                     });
                 }
 
-                final QueryTrace trace =
-                    new QueryTrace(FETCH_SEGMENT, w.elapsed(TimeUnit.NANOSECONDS));
+                final QueryTrace trace = w.end();
                 final ImmutableList<Long> times = ImmutableList.of(trace.getElapsed());
                 final List<T> data =
                     ImmutableList.copyOf(Iterables.mergeSorted(points, type.comparator()));
                 final List<MetricCollection> groups =
                     ImmutableList.of(MetricCollection.build(type, data));
 
-                return new FetchData(series, times, groups, trace);
+                return FetchData.of(trace, times, groups);
             }));
         }
 
-        return async.collect(fetches, FetchData.collect(FETCH, series));
+        return async.collect(fetches, FetchData.collect(FETCH));
     }
 
     <T> ByteString serialize(T rowKey, Serializer<T> serializer) throws IOException {

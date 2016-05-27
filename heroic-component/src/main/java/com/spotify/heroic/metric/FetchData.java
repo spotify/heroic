@@ -21,35 +21,43 @@
 
 package com.spotify.heroic.metric;
 
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
-import com.spotify.heroic.common.Series;
 import eu.toolchain.async.Collector;
 import lombok.Data;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Data
 public class FetchData {
-    private final Series series;
+    private final QueryTrace trace;
     private final List<Long> times;
     private final List<MetricCollection> groups;
-    private final QueryTrace trace;
+    private final boolean limited;
+
+    public static FetchData limited(final QueryTrace trace) {
+        return new FetchData(trace, ImmutableList.of(), ImmutableList.of(), true);
+    }
+
+    public static FetchData of(
+        final QueryTrace trace, final List<Long> times, final List<MetricCollection> groups
+    ) {
+        return new FetchData(trace, times, groups, false);
+    }
 
     public static Collector<FetchData, FetchData> collect(
-        final QueryTrace.Identifier what, final Series series
+        final QueryTrace.Identifier what
     ) {
-        final Stopwatch w = Stopwatch.createStarted();
+        final QueryTrace.NamedWatch w = QueryTrace.watch(what);
 
         return results -> {
             final ImmutableList.Builder<Long> times = ImmutableList.builder();
             final Map<MetricType, ImmutableList.Builder<Metric>> fetchGroups = new HashMap<>();
             final ImmutableList.Builder<QueryTrace> traces = ImmutableList.builder();
+            boolean limited = false;
 
             for (final FetchData fetch : results) {
                 times.addAll(fetch.times);
@@ -65,6 +73,8 @@ public class FetchData {
 
                     data.addAll(g.data);
                 }
+
+                limited |= fetch.limited;
             }
 
             final List<MetricCollection> groups = fetchGroups
@@ -75,8 +85,7 @@ public class FetchData {
                     .immutableSortedCopy(e.getValue().build())))
                 .collect(Collectors.toList());
 
-            return new FetchData(series, times.build(), groups,
-                new QueryTrace(what, w.elapsed(TimeUnit.NANOSECONDS), traces.build()));
+            return new FetchData(w.end(traces.build()), times.build(), groups, limited);
         };
     }
 }

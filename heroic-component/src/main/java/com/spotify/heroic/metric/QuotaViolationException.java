@@ -19,18 +19,7 @@
  * under the License.
  */
 
-package com.spotify.heroic;
+package com.spotify.heroic.metric;
 
-import com.spotify.heroic.cache.CacheComponent;
-import com.spotify.heroic.cluster.ClusterComponent;
-import com.spotify.heroic.dagger.CorePrimaryComponent;
-import dagger.Component;
-
-@QueryScope
-@Component(
-    modules = QueryModule.class,
-    dependencies = {CorePrimaryComponent.class, ClusterComponent.class, CacheComponent.class})
-public interface CoreQueryComponent extends QueryComponent {
-    @Override
-    CoreQueryManager queryManager();
+public class QuotaViolationException extends RuntimeException {
 }

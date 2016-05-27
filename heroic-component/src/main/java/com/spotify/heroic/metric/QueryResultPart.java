@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.metric;
 
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.cluster.ClusterShardGroup;
 import eu.toolchain.async.Transform;
@@ -29,8 +28,6 @@ import lombok.Data;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
 @Data
 public class QueryResultPart {
@@ -49,20 +46,15 @@ public class QueryResultPart {
     private final List<RequestError> errors;
 
     /**
-     * Trace (replaces latency, eventually).
-     */
-    private final ShardTrace trace;
-
-    /**
      * Query trace.
      */
     private final QueryTrace queryTrace;
 
+    private final ResultLimits limits;
+
     public static Transform<ResultGroups, QueryResultPart> fromResultGroup(
         final ClusterShardGroup shard
     ) {
-        final Stopwatch w = Stopwatch.createStarted();
-
         return result -> {
             final ImmutableList<ShardedResultGroup> groups = ImmutableList.copyOf(result
                 .getGroups()
@@ -70,11 +62,8 @@ public class QueryResultPart {
                 .map(ResultGroup.toShardedResultGroup(shard))
                 .iterator());
 
-            final ShardTrace shardTrace =
-                ShardTrace.of(shard.getShard(), w.elapsed(TimeUnit.MILLISECONDS),
-                    result.getStatistics(), Optional.empty());
-
-            return new QueryResultPart(groups, result.getErrors(), shardTrace, result.getTrace());
+            return new QueryResultPart(groups, result.getErrors(), result.getTrace(),
+                result.getLimits());
         };
     }
 

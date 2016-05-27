@@ -27,18 +27,18 @@ import com.spotify.heroic.analytics.AnalyticsComponent;
 import com.spotify.heroic.analytics.MetricAnalytics;
 import com.spotify.heroic.common.GroupSet;
 import com.spotify.heroic.common.ModuleIdBuilder;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.dagger.CorePrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.metadata.MetadataComponent;
-import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
-import eu.toolchain.async.AsyncFramework;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 
@@ -53,12 +53,8 @@ import static com.spotify.heroic.common.Optionals.pickOptional;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
 
-@RequiredArgsConstructor
+@Data
 public class MetricManagerModule {
-    public static final int DEFAULT_GROUP_LIMIT = 500;
-    public static final long DEFAULT_SERIES_LIMIT = 10000;
-    public static final long DEFAULT_AGGREGATION_LIMIT = 10000;
-    public static final long DEFAULT_DATA_LIMIT = 30000000;
     public static final int DEFAULT_FETCH_PARALLELISM = 100;
 
     private final List<MetricModule> backends;
@@ -67,22 +63,22 @@ public class MetricManagerModule {
     /**
      * Limit in how many groups we are allowed to return.
      */
-    private final int groupLimit;
+    private final OptionalLimit groupLimit;
 
     /**
      * Limit in the number of series we may fetch from the metadata backend.
      */
-    private final long seriesLimit;
+    private final OptionalLimit seriesLimit;
 
     /**
      * Limit in how many datapoints a single aggregation is allowed to output.
      */
-    private final long aggregationLimit;
+    private final OptionalLimit aggregationLimit;
 
     /**
      * Limit in how many datapoints a session is allowed to fetch in total.
      */
-    private final long dataLimit;
+    private final OptionalLimit dataLimit;
 
     /**
      * How many data fetches are performed in parallel.
@@ -96,8 +92,7 @@ public class MetricManagerModule {
         return DaggerMetricManagerModule_C
             .builder()
             .corePrimaryComponent(primary)
-            .m(new M(backends, defaultBackends, groupLimit, seriesLimit, aggregationLimit,
-                dataLimit, fetchParallelism, primary))
+            .m(new M(primary))
             .metadataComponent(metadata)
             .analyticsComponent(analytics)
             .build();
@@ -110,7 +105,7 @@ public class MetricManagerModule {
         })
     interface C extends MetricComponent {
         @Override
-        MetricManager metricManager();
+        LocalMetricManager metricManager();
 
         @Override
         @Named("metric")
@@ -119,14 +114,7 @@ public class MetricManagerModule {
 
     @RequiredArgsConstructor
     @Module
-    public static class M {
-        private final List<MetricModule> backends;
-        private final Optional<List<String>> defaultBackends;
-        private final int groupLimit;
-        private final long seriesLimit;
-        private final long aggregationLimit;
-        private final long dataLimit;
-        private final int fetchParallelism;
+    public class M {
         private final CorePrimaryComponent primary;
 
         @Provides
@@ -148,18 +136,18 @@ public class MetricManagerModule {
         @Provides
         @MetricScope
         public List<MetricModule.Exposed> components(final MetricBackendReporter reporter) {
-            final List<MetricModule.Exposed> backends = new ArrayList<>();
+            final List<MetricModule.Exposed> exposed = new ArrayList<>();
 
             final ModuleIdBuilder idBuilder = new ModuleIdBuilder();
 
-            for (final MetricModule m : this.backends) {
+            for (final MetricModule m : backends) {
                 final String id = idBuilder.buildId(m);
 
                 final MetricModule.Depends depends = new MetricModule.Depends(reporter);
-                backends.add(m.module(primary, depends, id));
+                exposed.add(m.module(primary, depends, id));
             }
 
-            return backends;
+            return exposed;
         }
 
         @Provides
@@ -183,12 +171,37 @@ public class MetricManagerModule {
 
         @Provides
         @MetricScope
-        public MetricManager metricManager(
-            final AsyncFramework async, final GroupSet<MetricBackend> backends,
-            final MetadataManager metadata, final MetricBackendReporter reporter
-        ) {
-            return new LocalMetricManager(groupLimit, seriesLimit, aggregationLimit, dataLimit,
-                fetchParallelism, async, backends, metadata, reporter);
+        @Named("groupLimit")
+        public OptionalLimit groupLimit() {
+            return groupLimit;
+        }
+
+        @Provides
+        @MetricScope
+        @Named("seriesLimit")
+        public OptionalLimit seriesLimit() {
+            return seriesLimit;
+        }
+
+        @Provides
+        @MetricScope
+        @Named("aggregationLimit")
+        public OptionalLimit aggregationLimit() {
+            return aggregationLimit;
+        }
+
+        @Provides
+        @MetricScope
+        @Named("dataLimit")
+        public OptionalLimit dataLimit() {
+            return dataLimit;
+        }
+
+        @Provides
+        @MetricScope
+        @Named("fetchParallelism")
+        public int fetchParallelism() {
+            return fetchParallelism;
         }
     }
 
@@ -201,10 +214,10 @@ public class MetricManagerModule {
     public static class Builder {
         private Optional<List<MetricModule>> backends = empty();
         private Optional<List<String>> defaultBackends = empty();
-        private Optional<Integer> groupLimit = empty();
-        private Optional<Long> seriesLimit = empty();
-        private Optional<Long> aggregationLimit = empty();
-        private Optional<Long> dataLimit = empty();
+        private OptionalLimit groupLimit = OptionalLimit.empty();
+        private OptionalLimit seriesLimit = OptionalLimit.empty();
+        private OptionalLimit aggregationLimit = OptionalLimit.empty();
+        private OptionalLimit dataLimit = OptionalLimit.empty();
         private Optional<Integer> fetchParallelism = empty();
 
         public Builder backends(List<MetricModule> backends) {
@@ -217,23 +230,23 @@ public class MetricManagerModule {
             return this;
         }
 
-        public Builder groupLimit(int groupLimit) {
-            this.groupLimit = of(groupLimit);
+        public Builder groupLimit(long groupLimit) {
+            this.groupLimit = OptionalLimit.of(groupLimit);
             return this;
         }
 
         public Builder seriesLimit(long seriesLimit) {
-            this.seriesLimit = of(seriesLimit);
+            this.seriesLimit = OptionalLimit.of(seriesLimit);
             return this;
         }
 
-        public Builder aggregationLimit(Long aggregationLimit) {
-            this.aggregationLimit = of(aggregationLimit);
+        public Builder aggregationLimit(long aggregationLimit) {
+            this.aggregationLimit = OptionalLimit.of(aggregationLimit);
             return this;
         }
 
-        public Builder dataLimit(Long dataLimit) {
-            this.dataLimit = of(dataLimit);
+        public Builder dataLimit(long dataLimit) {
+            this.dataLimit = OptionalLimit.of(dataLimit);
             return this;
         }
 
@@ -247,10 +260,10 @@ public class MetricManagerModule {
             return new Builder(
                 mergeOptionalList(o.backends, backends),
                 mergeOptionalList(o.defaultBackends, defaultBackends),
-                pickOptional(groupLimit, o.groupLimit),
-                pickOptional(seriesLimit, o.seriesLimit),
-                pickOptional(aggregationLimit, o.aggregationLimit),
-                pickOptional(dataLimit, o.dataLimit),
+                groupLimit.orElse(o.groupLimit),
+                seriesLimit.orElse(o.seriesLimit),
+                aggregationLimit.orElse(o.aggregationLimit),
+                dataLimit.orElse(o.dataLimit),
                 pickOptional(fetchParallelism, o.fetchParallelism)
             );
             // @formatter:on
@@ -261,10 +274,10 @@ public class MetricManagerModule {
             return new MetricManagerModule(
                 backends.orElseGet(ImmutableList::of),
                 defaultBackends,
-                groupLimit.orElse(DEFAULT_GROUP_LIMIT),
-                seriesLimit.orElse(DEFAULT_SERIES_LIMIT),
-                aggregationLimit.orElse(DEFAULT_AGGREGATION_LIMIT),
-                dataLimit.orElse(DEFAULT_DATA_LIMIT),
+                groupLimit,
+                seriesLimit,
+                aggregationLimit,
+                dataLimit,
                 fetchParallelism.orElse(DEFAULT_FETCH_PARALLELISM)
             );
             // @formatter:on

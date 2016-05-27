@@ -75,7 +75,7 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
     ) {
         return bind(request.execute()).lazyTransform((initial) -> {
             if (initial.getScrollId() == null) {
-                return async.resolved(FindSeries.EMPTY);
+                return async.resolved(FindSeries.of());
             }
 
             final String scrollId = initial.getScrollId();
@@ -113,7 +113,7 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
             }
 
             if (hits.length == 0 || limit.isGreaterOrEqual(size)) {
-                return async.resolved(FindSeries.of(series, size, duplicates));
+                return async.resolved(FindSeries.of(limit.limitSet(series), limit.isGreater(size)));
             }
 
             return scroller.get().lazyTransform(this);

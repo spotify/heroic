@@ -31,6 +31,7 @@ import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.RequestError;
+import com.spotify.heroic.metric.ResultLimits;
 import com.spotify.heroic.metric.SeriesValues;
 import com.spotify.heroic.metric.ShardLatency;
 import com.spotify.heroic.metric.ShardedResultGroup;
@@ -71,6 +72,9 @@ public class QueryMetricsResponse {
     @Getter
     private final QueryTrace trace;
 
+    @Getter
+    private final ResultLimits limits;
+
     public static class Serializer extends JsonSerializer<QueryMetricsResponse> {
         @Override
         public void serialize(
@@ -83,6 +87,7 @@ public class QueryMetricsResponse {
 
             g.writeObjectField("range", response.getRange());
             g.writeObjectField("trace", response.getTrace());
+            g.writeObjectField("limits", response.getLimits());
 
             g.writeFieldName("commonTags");
             serializeCommonTags(g, common);

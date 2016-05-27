@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.metric.memory;
 
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.common.DateRange;
@@ -54,7 +53,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
-import java.util.concurrent.TimeUnit;
 
 /**
  * MetricBackend for Heroic cassandra datastore.
@@ -139,12 +137,10 @@ public class MemoryBackend extends AbstractMetricBackend {
         MetricType source, Series series, DateRange range, FetchQuotaWatcher watcher,
         QueryOptions options
     ) {
-        final Stopwatch w = Stopwatch.createStarted();
+        final QueryTrace.NamedWatch w = QueryTrace.watch(FETCH);
         final MemoryKey key = new MemoryKey(source, series);
-        final List<MetricCollection> groups = doFetch(key, range);
-        final QueryTrace trace = new QueryTrace(FETCH, w.elapsed(TimeUnit.NANOSECONDS));
-        final ImmutableList<Long> times = ImmutableList.of(trace.getElapsed());
-        return async.resolved(new FetchData(series, times, groups, trace));
+        final List<MetricCollection> groups = doFetch(key, range, watcher);
+        return async.resolved(FetchData.of(w.end(), ImmutableList.of(), groups));
     }
 
     @Override
@@ -184,7 +180,9 @@ public class MemoryBackend extends AbstractMetricBackend {
         times.add(System.nanoTime() - start);
     }
 
-    private List<MetricCollection> doFetch(final MemoryKey key, DateRange range) {
+    private List<MetricCollection> doFetch(
+        final MemoryKey key, final DateRange range, final FetchQuotaWatcher watcher
+    ) {
         final NavigableMap<Long, Metric> tree = storage.get(key);
 
         if (tree == null) {
@@ -192,9 +190,10 @@ public class MemoryBackend extends AbstractMetricBackend {
         }
 
         synchronized (tree) {
-            final Iterable<Metric> data = tree.subMap(range.getStart(), range.getEnd()).values();
-            return ImmutableList.of(
-                MetricCollection.build(key.getSource(), ImmutableList.copyOf(data)));
+            final Iterable<Metric> metrics = tree.subMap(range.getStart(), range.getEnd()).values();
+            final List<Metric> data = ImmutableList.copyOf(metrics);
+            watcher.readData(data.size());
+            return ImmutableList.of(MetricCollection.build(key.getSource(), data));
         }
     }
 

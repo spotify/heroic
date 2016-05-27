@@ -117,7 +117,7 @@ public class QueryResource {
                     final QueryResult r = e.getRight();
                     results.put(e.getLeft(),
                         new QueryMetricsResponse(r.getRange(), r.getGroups(), r.getErrors(),
-                            r.getTrace()));
+                            r.getTrace(), r.getLimits()));
                 }
 
                 return new QueryBatchResponse(results.build());
@@ -134,8 +134,8 @@ public class QueryResource {
         response.setTimeout(300, TimeUnit.SECONDS);
 
         httpAsync.bind(response, callback,
-            r -> new QueryMetricsResponse(r.getRange(), r.getGroups(), r.getErrors(),
-                r.getTrace()));
+            r -> new QueryMetricsResponse(r.getRange(), r.getGroups(), r.getErrors(), r.getTrace(),
+                r.getLimits()));
     }
 
     @SuppressWarnings("deprecation")

@@ -31,6 +31,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -43,6 +44,8 @@ public interface OptionalLimit {
     boolean isZero();
 
     <T> List<T> limitList(List<T> input);
+
+    <T> Set<T> limitSet(Set<T> set);
 
     <T> Stream<T> limitStream(Stream<T> stream);
 
@@ -68,7 +71,15 @@ public interface OptionalLimit {
      */
     void ifPresent(Consumer<Long> consumer);
 
+    /**
+     * Add the given size to the limit. Does nothing for empty limits.
+     *
+     * @param size Size to add.
+     * @return A new Optional limit that has been increased with the given size.
+     */
     OptionalLimit add(long size);
+
+    OptionalLimit orElse(OptionalLimit other);
 
     static OptionalLimit empty() {
         return EmptyOptionalLimit.INSTANCE;

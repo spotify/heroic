@@ -233,11 +233,6 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     public AsyncFuture<FindSeries> findSeries(final RangeFilter filter) {
         return doto(c -> {
             final OptionalLimit limit = filter.getLimit();
-
-            if (limit.isZero()) {
-                return async.resolved(FindSeries.EMPTY);
-            }
-
             final FilterBuilder f = filter(filter.getFilter());
 
             final SearchRequestBuilder request;

@@ -8,5 +8,6 @@
     "what": {"name": "test"},
     "elapsed": 0,
     "children": []
-  }
+  },
+  "limits": []
 }

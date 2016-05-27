@@ -32,9 +32,12 @@ public class LimitedFetchQuotaWatcher implements FetchQuotaWatcher {
     private final AtomicLong read = new AtomicLong();
 
     @Override
-    public boolean readData(long n) {
+    public void readData(long n) {
         final long r = read.addAndGet(n);
-        return r < dataLimit;
+
+        if (r >= dataLimit) {
+            throw new QuotaViolationException();
+        }
     }
 
     @Override

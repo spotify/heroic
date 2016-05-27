@@ -28,8 +28,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 @JsonSubTypes({
     @JsonSubTypes.Type(
         value = NodeError.class, name = "node"), @JsonSubTypes.Type(
-    value = ShardError.class, name = "shard")
+    value = ShardError.class, name = "shard"), @JsonSubTypes.Type(
+    value = QueryError.class, name = "query")
 })
 public interface RequestError {
-
 }
