@@ -22,7 +22,6 @@ metrics:
       project: project
       zone: zone
     - type: datastax
-    - type: generated
     - type: memory
 
 analytics:

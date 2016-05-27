@@ -19,7 +19,6 @@
     <module>heroic-parser</module>
     <module>heroic-all</module>
     <module>metric/datastax</module>
-    <module>metric/generated</module>
     <module>metric/bigtable</module>
     <module>metric/memory</module>
     <module>metadata/elasticsearch</module>
@@ -228,7 +227,7 @@
     </profile>
 
     <profile>
-      <id>repackaged</id>
+      <id>repackagea</id>
 
       <modules>
         <module>repackaged/bigtable</module>
@@ -305,11 +304,6 @@
       <dependency>
         <groupId>com.spotify.heroic.metric</groupId>
         <artifactId>heroic-metric-bigtable</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.spotify.heroic.metric</groupId>
-        <artifactId>heroic-metric-generated</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
