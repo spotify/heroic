@@ -47,7 +47,6 @@ import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Collector;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.StreamCollector;
 import lombok.RequiredArgsConstructor;
@@ -194,11 +193,11 @@ public class LocalMetricManager implements MetricManager {
 
                 final long estimate = aggregation.estimate(range);
 
-                if (aggregationLimit.isGreater(estimate)) {
+                if (estimate >= 0 && aggregationLimit.isGreater(estimate)) {
                     return async.resolved(ResultGroups.error(w.end(), QueryError.fromMessage(
                         String.format(
                             "aggregation is estimated more points [%d/%d] than what is allowed",
-                            estimate, aggregationLimit))));
+                            estimate, aggregationLimit.asLong().get()))));
                 }
 
                 final AggregationTraversal traversal =
@@ -353,7 +352,7 @@ public class LocalMetricManager implements MetricManager {
 
         @Override
         public AsyncFuture<Void> configure() {
-            return async.collectAndDiscard(run(b -> b.configure()));
+            return async.collectAndDiscard(run(MetricBackend::configure));
         }
 
         @Override
@@ -392,18 +391,14 @@ public class LocalMetricManager implements MetricManager {
         public AsyncFuture<MetricCollection> fetchRow(final BackendKey key) {
             final List<AsyncFuture<MetricCollection>> callbacks = run(b -> b.fetchRow(key));
 
-            return async.collect(callbacks, new Collector<MetricCollection, MetricCollection>() {
-                @Override
-                public MetricCollection collect(Collection<MetricCollection> results)
-                    throws Exception {
-                    final List<List<? extends Metric>> collections = new ArrayList<>();
+            return async.collect(callbacks, results -> {
+                final List<List<? extends Metric>> collections = new ArrayList<>();
 
-                    for (final MetricCollection result : results) {
-                        collections.add(result.getData());
-                    }
-
-                    return MetricCollection.mergeSorted(key.getType(), collections);
+                for (final MetricCollection result : results) {
+                    collections.add(result.getData());
                 }
+
+                return MetricCollection.mergeSorted(key.getType(), collections);
             });
         }
 
