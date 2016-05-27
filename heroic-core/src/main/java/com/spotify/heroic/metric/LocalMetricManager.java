@@ -511,14 +511,14 @@ public class LocalMetricManager implements MetricManager {
                 ImmutableSet.<ResultLimit>builder().addAll(this.limits.getLimits());
 
             for (final AggregationData group : result.getResult()) {
-                if (groupLimit.isGreaterOrEqual(groups.size())) {
-                    limits.add(ResultLimit.GROUP);
-                    break;
-                }
-
                 /* skip empty groups (no valid values) */
                 if (group.isEmpty()) {
                     continue;
+                }
+
+                if (groupLimit.isGreaterOrEqual(groups.size())) {
+                    limits.add(ResultLimit.GROUP);
+                    break;
                 }
 
                 final Set<Series> s = lookup.get(group.getGroup());

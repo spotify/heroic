@@ -58,7 +58,7 @@ public class TagValueSuggest {
                 limited1 = limited1 || g.limited;
             }
 
-            limited1 = limited1 || limit.isGreaterOrEqual(values1.size());
+            limited1 = limited1 || limit.isGreater(values1.size());
 
             return new TagValueSuggest(errors1, limit.limitList(ImmutableList.copyOf(values1)),
                 limited1);
