@@ -25,12 +25,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.spotify.heroic.QueryOptions;
-import com.spotify.heroic.aggregation.AggregationData;
 import com.spotify.heroic.aggregation.AggregationInstance;
+import com.spotify.heroic.aggregation.AggregationOutput;
 import com.spotify.heroic.aggregation.AggregationResult;
 import com.spotify.heroic.aggregation.AggregationSession;
-import com.spotify.heroic.aggregation.AggregationState;
-import com.spotify.heroic.aggregation.AggregationTraversal;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.GroupSet;
@@ -59,11 +57,8 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -200,36 +195,21 @@ public class LocalMetricManager implements MetricManager {
                             estimate, aggregationLimit.asLong().get()))));
                 }
 
-                final AggregationTraversal traversal =
-                    aggregation.session(states(result.getSeries()), range);
-
-                final AggregationSession session = traversal.getSession();
+                final AggregationSession session = aggregation.session(range);
 
                 final List<Callable<AsyncFuture<Pair<Series, FetchData>>>> fetches =
                     new ArrayList<>();
 
-                final Map<Map<String, String>, Set<Series>> lookup = new HashMap<>();
-
                 /* setup fetches */
-
-                for (final AggregationState state : traversal.getStates()) {
-                    final Set<Series> series = state.getSeries();
-                    lookup.put(state.getKey(), series);
-
-                    if (series.isEmpty()) {
-                        continue;
+                runVoid(b -> {
+                    for (final Series s : result.getSeries()) {
+                        fetches.add(() -> b
+                            .fetch(source, s, range, watcher, options)
+                            .directTransform(d -> Pair.of(s, d)));
                     }
 
-                    runVoid(b -> {
-                        for (final Series s : series) {
-                            fetches.add(() -> b
-                                .fetch(source, s, range, watcher, options)
-                                .directTransform(d -> Pair.of(s, d)));
-                        }
-
-                        return null;
-                    });
-                }
+                    return null;
+                });
 
                 final ResultLimits limits;
 
@@ -245,7 +225,7 @@ public class LocalMetricManager implements MetricManager {
 
                 if (options.isTracing()) {
                     // tracing enabled, keeps track of each individual FetchData trace.
-                    collector = new ResultCollector(watcher, aggregation, session, lookup, limits,
+                    collector = new ResultCollector(watcher, aggregation, session, limits,
                         options.getGroupLimit().orElse(groupLimit)) {
                         final ConcurrentLinkedQueue<QueryTrace> traces =
                             new ConcurrentLinkedQueue<>();
@@ -263,7 +243,7 @@ public class LocalMetricManager implements MetricManager {
                     };
                 } else {
                     // very limited tracing, does not collected each individual FetchData trace.
-                    collector = new ResultCollector(watcher, aggregation, session, lookup, limits,
+                    collector = new ResultCollector(watcher, aggregation, session, limits,
                         options.getGroupLimit().orElse(groupLimit)) {
                         @Override
                         public QueryTrace buildTrace() {
@@ -432,13 +412,6 @@ public class LocalMetricManager implements MetricManager {
         }
     }
 
-    private static List<AggregationState> states(Set<Series> series) {
-        return ImmutableList.copyOf(series
-            .stream()
-            .map(s -> new AggregationState(s.getTags(), ImmutableSet.of(s)))
-            .iterator());
-    }
-
     @RequiredArgsConstructor
     private abstract static class ResultCollector
         implements StreamCollector<Pair<Series, FetchData>, ResultGroups> {
@@ -448,7 +421,6 @@ public class LocalMetricManager implements MetricManager {
         final FetchQuotaWatcher watcher;
         final AggregationInstance aggregation;
         final AggregationSession session;
-        final Map<Map<String, String>, Set<Series>> lookup;
         final ResultLimits limits;
         final OptionalLimit groupLimit;
 
@@ -457,7 +429,8 @@ public class LocalMetricManager implements MetricManager {
             final FetchData f = result.getRight();
 
             for (final MetricCollection g : f.getGroups()) {
-                g.updateAggregation(session, result.getLeft().getTags());
+                g.updateAggregation(session, result.getLeft().getTags(),
+                    ImmutableSet.of(result.getLeft()));
             }
         }
 
@@ -505,27 +478,15 @@ public class LocalMetricManager implements MetricManager {
             final ImmutableSet.Builder<ResultLimit> limits =
                 ImmutableSet.<ResultLimit>builder().addAll(this.limits.getLimits());
 
-            for (final AggregationData group : result.getResult()) {
-                /* skip empty groups (no valid values) */
-                if (group.isEmpty()) {
-                    continue;
-                }
-
+            for (final AggregationOutput group : result.getResult()) {
                 if (groupLimit.isGreaterOrEqual(groups.size())) {
                     limits.add(ResultLimit.GROUP);
                     break;
                 }
 
-                final Set<Series> s = lookup.get(group.getGroup());
+                final SeriesValues series = SeriesValues.fromSeries(group.getSeries().iterator());
 
-                if (s == null) {
-                    return ResultGroups.error(trace, QueryError.fromMessage(
-                        "Series not available for result group: " + group.getGroup()));
-                }
-
-                final SeriesValues series = SeriesValues.fromSeries(s.iterator());
-
-                groups.add(new ResultGroup(group.getGroup(), series, group.getMetrics(),
+                groups.add(new ResultGroup(group.getKey(), series, group.getMetrics(),
                     aggregation.cadence()));
             }
 

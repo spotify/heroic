@@ -24,7 +24,6 @@ package com.spotify.heroic.aggregation;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.DateRange;
 
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -37,7 +36,7 @@ import java.util.Set;
  * @see Aggregation
  */
 public interface AggregationInstance {
-    public static final String SAMPLE_SIZE = "Aggregation.sampleSize";
+    String SAMPLE_SIZE = "Aggregation.sampleSize";
 
     /**
      * Estimate number of points this aggregation will produce.
@@ -59,7 +58,7 @@ public interface AggregationInstance {
     /**
      * Traverse the possible aggregations and build the necessary graph out of them.
      */
-    AggregationTraversal session(List<AggregationState> states, DateRange range);
+    AggregationSession session(DateRange range);
 
     /**
      * Get the distributed aggregation that is relevant for this aggregation.

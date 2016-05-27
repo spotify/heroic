@@ -21,30 +21,24 @@
 
 package com.spotify.heroic.aggregation;
 
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.metric.MetricCollection;
 import lombok.Data;
 
-import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-/**
- * Hold on to intermediate traverse states, and a session.
- */
 @Data
-public class AggregationTraversal {
-    private final List<AggregationState> states;
-    private final AggregationSession session;
-    private final long estimatedStatesSize;
+public final class AggregationOutput {
+    private final Map<String, String> key;
+    private final Set<Series> series;
+    private final MetricCollection metrics;
 
-    public AggregationTraversal(List<AggregationState> states,
-                                AggregationSession session,
-                                long estimatedStatesSize) {
-        this.states = states;
-        this.session = session;
-        this.estimatedStatesSize = estimatedStatesSize;
+    public boolean isEmpty() {
+        return metrics.isEmpty();
     }
 
-    public AggregationTraversal(List<AggregationState> states,
-                                AggregationSession session) {
-        this(states, session, states.size());
+    public AggregationOutput withKey(final Map<String, String> key) {
+        return new AggregationOutput(key, series, metrics);
     }
-
 }

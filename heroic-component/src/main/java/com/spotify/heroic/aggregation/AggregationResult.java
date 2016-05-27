@@ -28,6 +28,6 @@ import java.util.List;
 
 @Data
 public class AggregationResult {
-    private final List<AggregationData> result;
+    private final List<AggregationOutput> result;
     private final Statistics statistics;
 }

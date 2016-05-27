@@ -27,12 +27,14 @@ import com.google.common.collect.Iterators;
 import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.aggregation.Bucket;
 import com.spotify.heroic.aggregation.ReducerSession;
+import com.spotify.heroic.common.Series;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -43,8 +45,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * Metrics are constrained to the implemented types below, so far these are {@link Point}, {@link
  * Event}, {@link Spread} , and {@link MetricGroup}.
  * <p>
- * There is a JSON serialization available in {@link MetricCollectionSerialization} which correctly
- * preserves the type information of these collections.
+ * There is a JSON serialization available in {@link com.spotify.heroic.metric.MetricCollection}
+ * which correctly preserves the type information of these collections.
  * <p>
  * This class is a carrier for _any_ of these metrics, the canonical way for accessing the
  * underlying data is to first check it's type using {@link #getType()}, and then access the data
@@ -93,7 +95,7 @@ public abstract class MetricCollection {
      * Update the given aggregation with the content of this collection.
      */
     public abstract void updateAggregation(
-        final AggregationSession session, final Map<String, String> tags
+        AggregationSession session, Map<String, String> tags, Set<Series> series
     );
 
     /**
@@ -176,9 +178,9 @@ public abstract class MetricCollection {
 
         @Override
         public void updateAggregation(
-            AggregationSession session, Map<String, String> tags
+            AggregationSession session, Map<String, String> tags, Set<Series> series
         ) {
-            session.updatePoints(tags, adapt());
+            session.updatePoints(tags, series, adapt());
         }
 
         @Override
@@ -204,9 +206,9 @@ public abstract class MetricCollection {
 
         @Override
         public void updateAggregation(
-            AggregationSession session, Map<String, String> tags
+            AggregationSession session, Map<String, String> tags, Set<Series> series
         ) {
-            session.updateEvents(tags, adapt());
+            session.updateEvents(tags, series, adapt());
         }
 
         @Override
@@ -232,9 +234,9 @@ public abstract class MetricCollection {
 
         @Override
         public void updateAggregation(
-            AggregationSession session, Map<String, String> tags
+            AggregationSession session, Map<String, String> tags, Set<Series> series
         ) {
-            session.updateSpreads(tags, adapt());
+            session.updateSpreads(tags, series, adapt());
         }
 
         @Override
@@ -260,9 +262,9 @@ public abstract class MetricCollection {
 
         @Override
         public void updateAggregation(
-            AggregationSession session, Map<String, String> tags
+            AggregationSession session, Map<String, String> tags, Set<Series> series
         ) {
-            session.updateGroup(tags, adapt());
+            session.updateGroup(tags, series, adapt());
         }
 
         @Override
