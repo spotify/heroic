@@ -21,7 +21,6 @@
 
 package com.spotify.heroic;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationCombiner;
@@ -58,7 +57,6 @@ import lombok.RequiredArgsConstructor;
 import javax.inject.Inject;
 import javax.inject.Named;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -98,28 +96,6 @@ public class CoreQueryManager implements QueryManager {
     @Override
     public QueryManager.Group useOptionalGroup(final Optional<String> group) {
         return new Group(cluster.useOptionalGroup(group).shards());
-    }
-
-    @Override
-    public Collection<Group> useGroupPerNode(final Optional<String> group) {
-        final List<Group> result = new ArrayList<>();
-
-        for (final ClusterShardGroup shard : cluster.useOptionalGroup(group).shards()) {
-            result.add(new Group(ImmutableList.of(shard)));
-        }
-
-        return result;
-    }
-
-    @Override
-    public Collection<Group> useDefaultGroupPerNode() {
-        final List<Group> result = new ArrayList<>();
-
-        for (ClusterShardGroup shard : cluster.useDefaultGroup().shards()) {
-            result.add(new Group(ImmutableList.of(shard)));
-        }
-
-        return result;
     }
 
     @Override

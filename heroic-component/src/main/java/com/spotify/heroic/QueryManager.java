@@ -31,10 +31,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface QueryManager extends UsableGroupManager<QueryManager.Group> {
-    Collection<? extends QueryManager.Group> useGroupPerNode(Optional<String> group);
-
-    Collection<? extends QueryManager.Group> useDefaultGroupPerNode();
-
     QueryBuilder newQuery();
 
     QueryBuilder newQueryFromString(String query);
