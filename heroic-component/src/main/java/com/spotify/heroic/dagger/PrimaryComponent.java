@@ -25,12 +25,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.HeroicContext;
 import com.spotify.heroic.HeroicCoreInstance;
 import com.spotify.heroic.ShellTasks;
+import com.spotify.heroic.common.Features;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
 import com.spotify.heroic.statistics.HeroicReporter;
 
 import javax.inject.Named;
-import java.util.Set;
 
 public interface PrimaryComponent extends EarlyComponent {
     HeroicCoreInstance instance();
@@ -38,7 +38,7 @@ public interface PrimaryComponent extends EarlyComponent {
     HeroicReporter reporter();
 
     @Named("features")
-    Set<String> features();
+    Features features();
 
     @Named("application/json+internal")
     ObjectMapper internalMapper();

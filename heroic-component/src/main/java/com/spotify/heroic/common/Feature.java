@@ -19,25 +19,37 @@
  * under the License.
  */
 
-package com.spotify.heroic;
+package com.spotify.heroic.common;
 
-import com.spotify.heroic.cluster.ClusterShardGroup;
-import com.spotify.heroic.common.UsableGroupManager;
-import com.spotify.heroic.metric.QueryResult;
-import eu.toolchain.async.AsyncFuture;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 
-import java.util.List;
+public enum Feature {
+    DISTRIBUTED_AGGREGATIONS(FeatureId.DISTRIBUTED_AGGREGATIONS);
 
-public interface QueryManager extends UsableGroupManager<QueryManager.Group> {
-    QueryBuilder newQuery();
+    private final String id;
 
-    QueryBuilder newQueryFromString(String query);
+    Feature(final String id) {
+        this.id = id;
+    }
 
-    AsyncFuture<Void> initialized();
+    @JsonCreator
+    public static Feature create(final String id) {
+        switch (id) {
+            case FeatureId.DISTRIBUTED_AGGREGATIONS:
+                return DISTRIBUTED_AGGREGATIONS;
+            default:
+                throw new IllegalArgumentException(id);
+        }
+    }
 
-    interface Group {
-        AsyncFuture<QueryResult> query(Query query);
+    @JsonValue
+    public String id() {
+        return id;
+    }
 
-        List<ClusterShardGroup> shards();
+    @Override
+    public String toString() {
+        return id;
     }
 }

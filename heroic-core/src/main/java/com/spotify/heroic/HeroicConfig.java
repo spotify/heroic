@@ -27,13 +27,13 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.analytics.AnalyticsModule;
 import com.spotify.heroic.analytics.NullAnalyticsModule;
 import com.spotify.heroic.cache.CacheModule;
 import com.spotify.heroic.cache.noop.NoopCacheModule;
 import com.spotify.heroic.cluster.ClusterManagerModule;
 import com.spotify.heroic.common.Duration;
+import com.spotify.heroic.common.Features;
 import com.spotify.heroic.consumer.ConsumerModule;
 import com.spotify.heroic.generator.CoreGeneratorModule;
 import com.spotify.heroic.ingestion.IngestionModule;
@@ -58,12 +58,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static com.spotify.heroic.common.Optionals.mergeOptional;
 import static com.spotify.heroic.common.Optionals.mergeOptionalList;
-import static com.spotify.heroic.common.Optionals.mergeOptionalSet;
 import static com.spotify.heroic.common.Optionals.pickOptional;
 import static java.util.Objects.requireNonNull;
 import static java.util.Optional.empty;
@@ -102,7 +100,7 @@ public class HeroicConfig {
     private final Optional<Boolean> disableMetrics;
     private final boolean enableCors;
     private final Optional<String> corsAllowOrigin;
-    private final Set<String> features;
+    private final Features features;
     private final ClusterManagerModule cluster;
     private final MetricManagerModule metric;
     private final MetadataManagerModule metadata;
@@ -181,7 +179,7 @@ public class HeroicConfig {
         private Optional<Boolean> disableMetrics = empty();
         private Optional<Boolean> enableCors = empty();
         private Optional<String> corsAllowOrigin = empty();
-        private Optional<Set<String>> features = empty();
+        private Optional<Features> features = empty();
         private Optional<ClusterManagerModule.Builder> cluster = empty();
         private Optional<MetricManagerModule.Builder> metrics = empty();
         private Optional<MetadataManagerModule.Builder> metadata = empty();
@@ -227,7 +225,7 @@ public class HeroicConfig {
             return this;
         }
 
-        public Builder features(Set<String> features) {
+        public Builder features(Features features) {
             this.features = of(features);
             return this;
         }
@@ -295,7 +293,7 @@ public class HeroicConfig {
                 pickOptional(disableMetrics, o.disableMetrics),
                 pickOptional(enableCors, o.enableCors),
                 pickOptional(corsAllowOrigin, o.corsAllowOrigin),
-                mergeOptionalSet(features, o.features),
+                mergeOptional(features, o.features, Features::combine),
                 mergeOptional(cluster, o.cluster, ClusterManagerModule.Builder::merge),
                 mergeOptional(metrics, o.metrics, MetricManagerModule.Builder::merge),
                 mergeOptional(metadata, o.metadata, MetadataManagerModule.Builder::merge),
@@ -333,7 +331,7 @@ public class HeroicConfig {
                 disableMetrics,
                 enableCors.orElse(DEFAULT_ENABLE_CORS),
                 corsAllowOrigin,
-                features.map(ImmutableSet::copyOf).orElseGet(ImmutableSet::of),
+                features.orElseGet(Features::empty),
                 cluster.orElseGet(ClusterManagerModule::builder).build(),
                 metrics.orElseGet(MetricManagerModule::builder).build(),
                 metadata.orElseGet(MetadataManagerModule::builder).build(),

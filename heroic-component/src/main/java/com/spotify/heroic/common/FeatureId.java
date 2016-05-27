@@ -19,25 +19,8 @@
  * under the License.
  */
 
-package com.spotify.heroic;
+package com.spotify.heroic.common;
 
-import com.spotify.heroic.cluster.ClusterShardGroup;
-import com.spotify.heroic.common.UsableGroupManager;
-import com.spotify.heroic.metric.QueryResult;
-import eu.toolchain.async.AsyncFuture;
-
-import java.util.List;
-
-public interface QueryManager extends UsableGroupManager<QueryManager.Group> {
-    QueryBuilder newQuery();
-
-    QueryBuilder newQueryFromString(String query);
-
-    AsyncFuture<Void> initialized();
-
-    interface Group {
-        AsyncFuture<QueryResult> query(Query query);
-
-        List<ClusterShardGroup> shards();
-    }
+public interface FeatureId {
+    String DISTRIBUTED_AGGREGATIONS = "com.spotify.heroic.distributed_aggregations";
 }

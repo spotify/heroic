@@ -34,6 +34,8 @@ import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.ClusterShardGroup;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Duration;
+import com.spotify.heroic.common.Feature;
+import com.spotify.heroic.common.Features;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.TrueFilter;
@@ -59,7 +61,6 @@ import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.TimeUnit;
 
@@ -70,7 +71,7 @@ public class CoreQueryManager implements QueryManager {
     public static final QueryTrace.Identifier QUERY =
         QueryTrace.identifier(CoreQueryManager.class, "query");
 
-    private final Set<String> features;
+    private final Features features;
     private final AsyncFramework async;
     private final ClusterManager cluster;
     private final QueryParser parser;
@@ -80,7 +81,7 @@ public class CoreQueryManager implements QueryManager {
 
     @Inject
     public CoreQueryManager(
-        @Named("features") final Set<String> features, final AsyncFramework async,
+        @Named("features") final Features features, final AsyncFramework async,
         final ClusterManager cluster, final QueryParser parser, final QueryCache queryCache,
         final AggregationFactory aggregations, @Named("groupLimit") final OptionalLimit groupLimit
     ) {
@@ -186,8 +187,9 @@ public class CoreQueryManager implements QueryManager {
             final AggregationInstance aggregationInstance;
             final AggregationCombiner combiner;
 
-            if (features.contains(Query.DISTRIBUTED_AGGREGATIONS) ||
-                q.hasFeature(Query.DISTRIBUTED_AGGREGATIONS)) {
+            final Features features = CoreQueryManager.this.features.combine(q.getFeatures());
+
+            if (features.hasFeature(Feature.DISTRIBUTED_AGGREGATIONS)) {
                 aggregationInstance = root.distributed();
                 combiner = root.combiner(range);
             } else {
