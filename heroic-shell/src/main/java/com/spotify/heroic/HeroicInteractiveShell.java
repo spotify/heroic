@@ -172,7 +172,7 @@ public class HeroicInteractiveShell {
     }
 
     void runTask(List<String> command, final ShellIO io, final CoreInterface core)
-        throws Exception, IOException {
+        throws Exception {
         final AsyncFuture<Void> t;
 
         try {

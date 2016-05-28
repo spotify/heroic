@@ -56,7 +56,6 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
-import java.lang.Thread.UncaughtExceptionHandler;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -75,14 +74,11 @@ public class HeroicShell {
     public static final SerializerFramework serializer = ShellProtocol.setupSerializer();
 
     public static void main(String[] args) throws IOException {
-        Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
-            @Override
-            public void uncaughtException(Thread t, Throwable e) {
-                try {
-                    log.error("Uncaught exception in thread {}, exiting...", t, e);
-                } finally {
-                    System.exit(1);
-                }
+        Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
+            try {
+                log.error("Uncaught exception in thread {}, exiting...", t, e);
+            } finally {
+                System.exit(1);
             }
         });
 

@@ -1,18 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration shutdownHook="disable">
-  <Properties>
-    <Property name="log4j2.level">INFO</Property>
-    <Property name="log4j2.jetty_level">INFO</Property>
-  </Properties>
   <Appenders>
     <Console name="primary" target="SYSTEM_OUT">
       <PatternLayout alwaysWriteExceptions="false" pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n%throwable{full}"/>
     </Console>
   </Appenders>
   <Loggers>
-    <Logger name="org.eclipse.jetty" level="${log4j2.jetty_level}"></Logger>
+    <Logger name="org.eclipse.jetty" level="INFO"/>
 
-    <Root level="${log4j2.level}">
+    <Root level="DEBUG">
       <AppenderRef ref="primary" />
     </Root>
   </Loggers>

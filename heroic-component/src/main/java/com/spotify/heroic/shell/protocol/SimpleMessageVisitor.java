@@ -33,6 +33,11 @@ public abstract class SimpleMessageVisitor<R> implements Message.Visitor<R> {
     }
 
     @Override
+    public R visitCommandOutputFlush(CommandOutputFlush message) throws Exception {
+        return visitUnknown(message);
+    }
+
+    @Override
     public R visitCommandsResponse(CommandsResponse message) throws Exception {
         return visitUnknown(message);
     }

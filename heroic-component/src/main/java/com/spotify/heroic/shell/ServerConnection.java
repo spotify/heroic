@@ -31,6 +31,7 @@ import com.spotify.heroic.shell.protocol.FileRead;
 import com.spotify.heroic.shell.protocol.FileReadResult;
 import com.spotify.heroic.shell.protocol.FileWrite;
 import eu.toolchain.serializer.SerializerFramework;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -42,6 +43,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 
+@Slf4j
 final class ServerConnection extends ShellConnection {
     public static final int BUFFER_SIZE = (1 << 16);
 
@@ -100,7 +102,7 @@ final class ServerConnection extends ShellConnection {
             public void write(byte[] b, int off, int len) throws IOException {
                 final byte[] buffer = new byte[len];
                 System.arraycopy(b, off, buffer, 0, len);
-                request(new FileWrite(handle, buffer), Acknowledge.class);
+                send(new FileWrite(handle, buffer));
             }
 
             @Override

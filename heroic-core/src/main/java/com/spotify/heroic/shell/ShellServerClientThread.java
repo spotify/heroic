@@ -24,6 +24,7 @@ package com.spotify.heroic.shell;
 import com.spotify.heroic.ShellTasks;
 import com.spotify.heroic.shell.protocol.CommandDone;
 import com.spotify.heroic.shell.protocol.CommandOutput;
+import com.spotify.heroic.shell.protocol.CommandOutputFlush;
 import com.spotify.heroic.shell.protocol.CommandsRequest;
 import com.spotify.heroic.shell.protocol.CommandsResponse;
 import com.spotify.heroic.shell.protocol.EvaluateRequest;
@@ -35,7 +36,6 @@ import eu.toolchain.serializer.SerializerFramework;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.CharArrayWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -44,6 +44,7 @@ import java.io.Writer;
 import java.net.Socket;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.Arrays;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -135,32 +136,21 @@ class ShellServerClientThread implements Runnable {
 
     private PrintWriter setupPrintWriter(final ServerConnection ch) {
         return new PrintWriter(new Writer() {
-            private CharArrayWriter out = new CharArrayWriter(ServerConnection.BUFFER_SIZE);
-
             @Override
             public void close() throws IOException {
                 flush();
-                out = null;
             }
 
             @Override
             public void flush() throws IOException {
-                if (out == null) {
-                    throw new IOException("closed");
-                }
-
-                ch.send(new CommandOutput(out.toCharArray()));
-                out.reset();
+                ch.send(new CommandOutputFlush());
             }
 
             @Override
             public void write(char[] b, int off, int len) throws IOException {
-                if (out == null) {
-                    throw new IOException("closed");
-                }
-
-                out.write(b, off, len);
+                final char[] out = Arrays.copyOfRange(b, off, len);
+                ch.send(new CommandOutput(out));
             }
-        });
+        }, true);
     }
 }
