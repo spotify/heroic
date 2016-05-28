@@ -22,15 +22,14 @@
 package com.spotify.heroic.aggregation.simple;
 
 import com.spotify.heroic.aggregation.AggregationCombiner;
-import com.spotify.heroic.aggregation.AggregationData;
+import com.spotify.heroic.aggregation.AggregationOutput;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.AggregationResult;
 import com.spotify.heroic.aggregation.AggregationSession;
-import com.spotify.heroic.aggregation.AggregationState;
-import com.spotify.heroic.aggregation.AggregationTraversal;
 import com.spotify.heroic.aggregation.ReducerResult;
 import com.spotify.heroic.aggregation.ReducerSession;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricGroup;
@@ -40,6 +39,7 @@ import com.spotify.heroic.metric.Spread;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -68,11 +68,9 @@ public class FilterAggregation implements AggregationInstance {
     }
 
     @Override
-    public AggregationTraversal session(List<AggregationState> states, DateRange range) {
-        final AggregationTraversal traversal = of.session(states, range);
-        return new AggregationTraversal(traversal.getStates(),
-            new Session(filterStrategy, traversal.getSession()),
-            filterStrategy.getEstimatedStatesSize(states));
+    public AggregationSession session(DateRange range) {
+        final AggregationSession child = of.session(range);
+        return new Session(filterStrategy, child);
     }
 
     @Override
@@ -104,40 +102,44 @@ public class FilterAggregation implements AggregationInstance {
         }
 
         @Override
-        public void updatePoints(Map<String, String> group, List<Point> values) {
-            childSession.updatePoints(group, values);
+        public void updatePoints(
+            Map<String, String> key, Set<Series> series, List<Point> values
+        ) {
+            childSession.updatePoints(key, series, values);
         }
 
         @Override
-        public void updateEvents(Map<String, String> group, List<Event> values) {
-            childSession.updateEvents(group, values);
+        public void updateEvents(
+            Map<String, String> key, Set<Series> series, List<Event> values
+        ) {
+            childSession.updateEvents(key, series, values);
         }
 
         @Override
-        public void updateSpreads(Map<String, String> group, List<Spread> values) {
-            childSession.updateSpreads(group, values);
+        public void updateSpreads(
+            Map<String, String> key, Set<Series> series, List<Spread> values
+        ) {
+            childSession.updateSpreads(key, series, values);
         }
 
         @Override
-        public void updateGroup(Map<String, String> group, List<MetricGroup> values) {
-            childSession.updateGroup(group, values);
+        public void updateGroup(
+            Map<String, String> key, Set<Series> series, List<MetricGroup> values
+        ) {
+            childSession.updateGroup(key, series, values);
         }
 
         @Override
         public AggregationResult result() {
-            final List<FilterableMetrics<AggregationData>> aggData = getFilterableAggregationData();
-            final List<AggregationData> result = filterStrategy.filter(aggData);
-            return new AggregationResult(result, childSession.result().getStatistics());
-        }
+            final AggregationResult result = childSession.result();
 
-        private List<FilterableMetrics<AggregationData>> getFilterableAggregationData() {
-            return childSession
-                .result()
+            final List<FilterableMetrics<AggregationOutput>> filterable = result
                 .getResult()
                 .stream()
-                .map(a -> new AggregationData(a.getGroup(), a.getMetrics()))
                 .map(a -> new FilterableMetrics<>(a, a::getMetrics))
                 .collect(Collectors.toList());
+
+            return new AggregationResult(filterStrategy.filter(filterable), result.getStatistics());
         }
     }
 

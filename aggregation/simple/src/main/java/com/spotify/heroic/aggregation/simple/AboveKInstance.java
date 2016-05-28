@@ -24,12 +24,9 @@ package com.spotify.heroic.aggregation.simple;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.AggregationInstance;
-import com.spotify.heroic.aggregation.AggregationState;
-import com.spotify.heroic.aggregation.AggregationTraversal;
+import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.aggregation.ReducerSession;
 import com.spotify.heroic.common.DateRange;
-
-import java.util.List;
 
 public class AboveKInstance implements FilterKInstance {
     private final FilterKThresholdStrategy strategy;
@@ -52,8 +49,8 @@ public class AboveKInstance implements FilterKInstance {
     }
 
     @Override
-    public AggregationTraversal session(List<AggregationState> states, DateRange range) {
-        return aggregation.session(states, range);
+    public AggregationSession session(DateRange range) {
+        return aggregation.session(range);
     }
 
     @Override

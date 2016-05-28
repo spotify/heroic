@@ -100,19 +100,6 @@ public class Module implements HeroicModule {
                     }
                 });
 
-            c.register(Partition.NAME, Partition.class, PartitionInstance.class,
-                new AbstractAggregationDSL(factory) {
-                    @Override
-                    public Aggregation build(final AggregationArguments args) {
-                        final List<Aggregation> children = ImmutableList.copyOf(args
-                            .takeArguments(FunctionExpression.class)
-                            .stream()
-                            .map(this::asAggregation)
-                            .iterator());
-                        return new Partition(children);
-                    }
-                });
-
             c.register(Options.NAME, Options.class, AggregationInstance.class,
                 new AbstractAggregationDSL(factory) {
                     @Override

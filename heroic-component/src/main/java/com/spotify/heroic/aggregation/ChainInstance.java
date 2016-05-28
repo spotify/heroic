@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.MetricGroup;
@@ -101,24 +102,20 @@ public class ChainInstance implements AggregationInstance {
     }
 
     @Override
-    public AggregationTraversal session(final List<AggregationState> input, final DateRange range) {
-        final Iterator<AggregationInstance> iter = chain.iterator();
+    public AggregationSession session(final DateRange range) {
+        final Iterator<AggregationInstance> it = chain.iterator();
 
-        final AggregationInstance first = iter.next();
-        final AggregationTraversal head = first.session(input, range);
-
-        AggregationTraversal prev = head;
+        final AggregationInstance first = it.next();
+        final AggregationSession head = first.session(range);
 
         final List<AggregationSession> tail = new ArrayList<>();
 
-        while (iter.hasNext()) {
-            final AggregationTraversal s = iter.next().session(prev.getStates(), range);
-            tail.add(s.getSession());
-            prev = s;
+        while (it.hasNext()) {
+            final AggregationSession s = it.next().session(range);
+            tail.add(s);
         }
 
-        return new AggregationTraversal(
-            prev.getStates(), new Session(head.getSession(), tail), prev.getEstimatedStatesSize());
+        return new Session(head, tail);
     }
 
     @Override
@@ -140,41 +137,41 @@ public class ChainInstance implements AggregationInstance {
 
         @Override
         public void updatePoints(
-            Map<String, String> group, List<Point> values
+            Map<String, String> key, Set<Series> series, List<Point> values
         ) {
-            first.updatePoints(group, values);
+            first.updatePoints(key, series, values);
         }
 
         @Override
         public void updateEvents(
-            Map<String, String> group, List<Event> values
+            Map<String, String> key, Set<Series> series, List<Event> values
         ) {
-            first.updateEvents(group, values);
+            first.updateEvents(key, series, values);
         }
 
         @Override
         public void updateSpreads(
-            Map<String, String> group, List<Spread> values
+            Map<String, String> key, Set<Series> series, List<Spread> values
         ) {
-            first.updateSpreads(group, values);
+            first.updateSpreads(key, series, values);
         }
 
         @Override
         public void updateGroup(
-            Map<String, String> group, List<MetricGroup> values
+            Map<String, String> key, Set<Series> series, List<MetricGroup> values
         ) {
-            first.updateGroup(group, values);
+            first.updateGroup(key, series, values);
         }
 
         @Override
         public AggregationResult result() {
             final AggregationResult firstResult = first.result();
-            List<AggregationData> current = firstResult.getResult();
+            List<AggregationOutput> current = firstResult.getResult();
             Statistics statistics = firstResult.getStatistics();
 
             for (final AggregationSession session : rest) {
-                for (final AggregationData u : current) {
-                    u.getMetrics().updateAggregation(session, u.getGroup());
+                for (final AggregationOutput u : current) {
+                    u.getMetrics().updateAggregation(session, u.getKey(), u.getSeries());
                 }
 
                 final AggregationResult next = session.result();
