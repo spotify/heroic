@@ -36,7 +36,7 @@ public class GrpcRpcContainer {
     }
 
     public <Q, R> void register(
-        final GrpcEndpointSpecification<Q, R> spec, Function<Q, AsyncFuture<R>> handle
+        final GrpcDescriptor<Q, R> spec, Function<Q, AsyncFuture<R>> handle
     ) {
         register(new GrpcRpcEndpointHandleBase<Q, R>(spec) {
             @Override

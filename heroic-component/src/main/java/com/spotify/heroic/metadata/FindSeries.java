@@ -25,8 +25,10 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.cluster.ClusterShardGroup;
+import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.metric.ShardError;
 import eu.toolchain.async.Collector;
@@ -68,9 +70,7 @@ public class FindSeries {
         };
     }
 
-    public static Transform<Throwable, ? extends FindSeries> shardError(
-        final ClusterShardGroup shard
-    ) {
+    public static Transform<Throwable, FindSeries> shardError(final ClusterShardGroup shard) {
         return e -> new FindSeries(ImmutableList.of(ShardError.fromThrowable(shard, e)),
             ImmutableSet.of(), false);
     }
@@ -78,5 +78,12 @@ public class FindSeries {
     @JsonIgnore
     public boolean isEmpty() {
         return series.isEmpty();
+    }
+
+    @Data
+    public static class Request {
+        private final Filter filter;
+        private final DateRange range;
+        private final OptionalLimit limit;
     }
 }

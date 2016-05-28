@@ -27,7 +27,7 @@ import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public abstract class GrpcRpcEndpointHandleBase<Q, R> implements GrpcEndpointHandle<Q, R> {
-    private final GrpcEndpointSpecification<Q, R> spec;
+    private final GrpcDescriptor<Q, R> spec;
 
     @Override
     public TypeReference<Q> queryType() {

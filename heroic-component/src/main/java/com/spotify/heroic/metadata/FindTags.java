@@ -23,6 +23,9 @@ package com.spotify.heroic.metadata;
 
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.cluster.ClusterShardGroup;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.OptionalLimit;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.metric.ShardError;
 import eu.toolchain.async.Collector;
@@ -67,9 +70,7 @@ public class FindTags {
         };
     }
 
-    public static Transform<Throwable, ? extends FindTags> shardError(
-        final ClusterShardGroup c
-    ) {
+    public static Transform<Throwable, FindTags> shardError(final ClusterShardGroup c) {
         return e -> new FindTags(ImmutableList.of(ShardError.fromThrowable(c, e)), EMPTY_TAGS, 0);
     }
 
@@ -90,5 +91,12 @@ public class FindTags {
 
             entries.addAll(entry.getValue());
         }
+    }
+
+    @Data
+    public static class Request {
+        private final Filter filter;
+        private final DateRange range;
+        private final OptionalLimit limit;
     }
 }

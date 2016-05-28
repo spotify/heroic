@@ -24,10 +24,12 @@ package com.spotify.heroic.shell.task;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.async.AsyncObserver;
 import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.CoreComponent;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
+import com.spotify.heroic.metadata.CountSeries;
+import com.spotify.heroic.metadata.Entries;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.shell.ShellIO;
@@ -83,7 +85,7 @@ public class MetadataEntries implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        final RangeFilter filter = Tasks.setupRangeFilter(parser, params);
+        final Filter filter = Tasks.setupFilter(parser, params);
 
         final MetadataBackend group = metadata.useOptionalGroup(params.group);
 
@@ -111,16 +113,20 @@ public class MetadataEntries implements ShellTask {
             };
         }
 
-        return group.countSeries(filter).lazyTransform(c -> {
-            final ResolvableFuture<Void> future = async.future();
+        return group
+            .countSeries(new CountSeries.Request(filter, params.getRange(), params.getLimit()))
+            .lazyTransform(c -> {
+                final ResolvableFuture<Void> future = async.future();
 
-            group.entries(filter).observe(AsyncObserver.bind(future, entries -> {
-                entries.forEach(printer);
-                return async.resolved();
-            }));
+                group
+                    .entries(new Entries.Request(filter, params.getRange(), params.getLimit()))
+                    .observe(AsyncObserver.bind(future, entries -> {
+                        entries.getSeries().forEach(printer);
+                        return async.resolved();
+                    }));
 
-            return future;
-        });
+                return future;
+            });
     }
 
     @ToString

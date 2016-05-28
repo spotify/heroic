@@ -24,8 +24,6 @@ package com.spotify.heroic.cluster;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.UsableGroupManager;
 import com.spotify.heroic.filter.Filter;
@@ -39,15 +37,11 @@ import com.spotify.heroic.metric.ResultGroups;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.suggest.KeySuggest;
-import com.spotify.heroic.suggest.MatchOptions;
 import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
 import eu.toolchain.async.AsyncFuture;
-
-import java.util.List;
-import java.util.Optional;
 
 public interface ClusterNode extends UsableGroupManager<ClusterNode.Group> {
     NodeMetadata metadata();
@@ -64,31 +58,25 @@ public interface ClusterNode extends UsableGroupManager<ClusterNode.Group> {
             QueryOptions options
         );
 
-        AsyncFuture<FindTags> findTags(RangeFilter filter);
+        AsyncFuture<FindTags> findTags(FindTags.Request request);
 
-        AsyncFuture<FindKeys> findKeys(RangeFilter filter);
+        AsyncFuture<FindKeys> findKeys(FindKeys.Request request);
 
-        AsyncFuture<FindSeries> findSeries(RangeFilter filter);
+        AsyncFuture<FindSeries> findSeries(FindSeries.Request request);
 
-        AsyncFuture<DeleteSeries> deleteSeries(RangeFilter filter);
+        AsyncFuture<DeleteSeries> deleteSeries(DeleteSeries.Request request);
 
-        AsyncFuture<CountSeries> countSeries(RangeFilter filter);
+        AsyncFuture<CountSeries> countSeries(CountSeries.Request request);
 
-        AsyncFuture<TagKeyCount> tagKeyCount(RangeFilter filter);
+        AsyncFuture<TagKeyCount> tagKeyCount(TagKeyCount.Request request);
 
-        AsyncFuture<TagSuggest> tagSuggest(
-            RangeFilter filter, MatchOptions options, Optional<String> key, Optional<String> value
-        );
+        AsyncFuture<TagSuggest> tagSuggest(TagSuggest.Request request);
 
-        AsyncFuture<KeySuggest> keySuggest(
-            RangeFilter filter, MatchOptions options, Optional<String> key
-        );
+        AsyncFuture<KeySuggest> keySuggest(KeySuggest.Request request);
 
-        AsyncFuture<TagValuesSuggest> tagValuesSuggest(
-            RangeFilter filter, List<String> exclude, OptionalLimit groupLimit
-        );
+        AsyncFuture<TagValuesSuggest> tagValuesSuggest(TagValuesSuggest.Request request);
 
-        AsyncFuture<TagValueSuggest> tagValueSuggest(RangeFilter filter, Optional<String> key);
+        AsyncFuture<TagValueSuggest> tagValueSuggest(TagValueSuggest.Request request);
 
         AsyncFuture<WriteResult> writeSeries(DateRange range, Series series);
 

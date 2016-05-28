@@ -28,7 +28,6 @@ import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.elasticsearch.AbstractElasticsearchBackend;
@@ -51,7 +50,6 @@ import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.statistics.SuggestBackendReporter;
 import com.spotify.heroic.suggest.KeySuggest;
-import com.spotify.heroic.suggest.MatchOptions;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
@@ -196,37 +194,36 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     }
 
     @Override
-    public AsyncFuture<TagValuesSuggest> tagValuesSuggest(
-        final RangeFilter filter, final List<String> exclude, final OptionalLimit groupLimit
-    ) {
+    public AsyncFuture<TagValuesSuggest> tagValuesSuggest(final TagValuesSuggest.Request request) {
         return connection.doto((final Connection c) -> {
             final BoolFilterBuilder bool = boolFilter();
 
-            if (!(filter.getFilter() instanceof TrueFilter)) {
-                bool.must(filter(filter.getFilter()));
+            if (!(request.getFilter() instanceof TrueFilter)) {
+                bool.must(filter(request.getFilter()));
             }
 
-            for (final String e : exclude) {
+            for (final String e : request.getExclude()) {
                 bool.mustNot(termFilter(TAG_SKEY_RAW, e));
             }
 
             final QueryBuilder query =
                 bool.hasClauses() ? filteredQuery(matchAllQuery(), bool) : matchAllQuery();
 
-            final SearchRequestBuilder request = c
-                .search(filter.getRange(), TAG_TYPE)
+            final SearchRequestBuilder builder = c
+                .search(request.getRange(), TAG_TYPE)
                 .setSearchType(SearchType.COUNT)
                 .setQuery(query)
                 .setTimeout(TIMEOUT);
 
-            final OptionalLimit limit = filter.getLimit();
+            final OptionalLimit limit = request.getLimit();
+            final OptionalLimit groupLimit = request.getGroupLimit();
 
             {
                 final TermsBuilder terms = AggregationBuilders.terms("keys").field(TAG_SKEY_RAW);
 
                 limit.asInteger().ifPresent(l -> terms.size(l + 1));
 
-                request.addAggregation(terms);
+                builder.addAggregation(terms);
                 // make value bucket one entry larger than necessary to figure out when limiting
                 // is applied.
                 final TermsBuilder cardinality =
@@ -236,7 +233,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 terms.subAggregation(cardinality);
             }
 
-            return bind(request.execute()).directTransform((SearchResponse response) -> {
+            return bind(builder.execute()).directTransform((SearchResponse response) -> {
                 final List<TagValuesSuggest.Suggestion> suggestions = new ArrayList<>();
 
                 final Terms terms = response.getAggregations().get("keys");
@@ -268,11 +265,11 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     }
 
     @Override
-    public AsyncFuture<TagValueSuggest> tagValueSuggest(
-        final RangeFilter filter, final Optional<String> key
-    ) {
+    public AsyncFuture<TagValueSuggest> tagValueSuggest(final TagValueSuggest.Request request) {
         return connection.doto((final Connection c) -> {
             final BoolQueryBuilder bool = boolQuery();
+
+            final Optional<String> key = request.getKey();
 
             key.ifPresent(k -> {
                 if (!k.isEmpty()) {
@@ -282,26 +279,26 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
             QueryBuilder query = bool.hasClauses() ? bool : matchAllQuery();
 
-            if (!(filter.getFilter() instanceof TrueFilter)) {
-                query = filteredQuery(query, filter(filter.getFilter()));
+            if (!(request.getFilter() instanceof TrueFilter)) {
+                query = filteredQuery(query, filter(request.getFilter()));
             }
 
-            final SearchRequestBuilder request = c
-                .search(filter.getRange(), TAG_TYPE)
+            final SearchRequestBuilder builder = c
+                .search(request.getRange(), TAG_TYPE)
                 .setSearchType(SearchType.COUNT)
                 .setQuery(query);
 
-            final OptionalLimit limit = filter.getLimit();
+            final OptionalLimit limit = request.getLimit();
 
             {
                 final TermsBuilder terms =
                     AggregationBuilders.terms("values").field(TAG_SVAL_RAW).order(Order.term(true));
 
                 limit.asInteger().ifPresent(l -> terms.size(l + 1));
-                request.addAggregation(terms);
+                builder.addAggregation(terms);
             }
 
-            return bind(request.execute()).directTransform((SearchResponse response) -> {
+            return bind(builder.execute()).directTransform((SearchResponse response) -> {
                 final ImmutableList.Builder<String> suggestions = ImmutableList.builder();
 
                 final Terms terms = response.getAggregations().get("values");
@@ -318,11 +315,11 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     }
 
     @Override
-    public AsyncFuture<TagKeyCount> tagKeyCount(final RangeFilter filter) {
+    public AsyncFuture<TagKeyCount> tagKeyCount(final TagKeyCount.Request filter) {
         return connection.doto((final Connection c) -> {
             final QueryBuilder root = filteredQuery(matchAllQuery(), filter(filter.getFilter()));
 
-            final SearchRequestBuilder request = c
+            final SearchRequestBuilder builder = c
                 .search(filter.getRange(), TAG_TYPE)
                 .setSearchType(SearchType.COUNT)
                 .setQuery(root);
@@ -334,13 +331,13 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
                 limit.asInteger().ifPresent(l -> terms.size(l + 1));
 
-                request.addAggregation(terms);
+                builder.addAggregation(terms);
                 final CardinalityBuilder cardinality =
                     AggregationBuilders.cardinality("cardinality").field(TAG_SVAL_RAW);
                 terms.subAggregation(cardinality);
             }
 
-            return bind(request.execute()).directTransform((SearchResponse response) -> {
+            return bind(builder.execute()).directTransform((SearchResponse response) -> {
                 final Set<TagKeyCount.Suggestion> suggestions = new LinkedHashSet<>();
 
                 final Terms terms = response.getAggregations().get("keys");
@@ -360,20 +357,20 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     }
 
     @Override
-    public AsyncFuture<TagSuggest> tagSuggest(
-        final RangeFilter filter, final MatchOptions options, final Optional<String> key,
-        final Optional<String> value
-    ) {
+    public AsyncFuture<TagSuggest> tagSuggest(TagSuggest.Request request) {
         return connection.doto((final Connection c) -> {
             final BoolQueryBuilder bool = boolQuery();
+
+            final Optional<String> key = request.getKey();
+            final Optional<String> value = request.getValue();
 
             // special case: key and value are equal, which indicates that _any_ match should be
             // in effect.
             // XXX: Enhance API to allow for this to be intentional instead of this by
             // introducing an 'any' field.
             if (key.isPresent() && value.isPresent() && key.equals(value)) {
-                bool.should(matchTermValue(value.get()));
                 bool.should(matchTermKey(key.get()));
+                bool.should(matchTermValue(value.get()));
             } else {
                 key.ifPresent(k -> {
                     if (!k.isEmpty()) {
@@ -390,12 +387,12 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
             QueryBuilder query = bool.hasClauses() ? bool : matchAllQuery();
 
-            if (!(filter.getFilter() instanceof TrueFilter)) {
-                query = filteredQuery(query, filter(filter.getFilter()));
+            if (!(request.getFilter() instanceof TrueFilter)) {
+                query = filteredQuery(query, filter(request.getFilter()));
             }
 
-            final SearchRequestBuilder request = c
-                .search(filter.getRange(), TAG_TYPE)
+            final SearchRequestBuilder builder = c
+                .search(request.getRange(), TAG_TYPE)
                 .setSearchType(SearchType.COUNT)
                 .setQuery(query)
                 .setTimeout(TIMEOUT);
@@ -410,12 +407,12 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 final TermsBuilder terms =
                     AggregationBuilders.terms("terms").field(TAG_KV).subAggregation(hits);
 
-                filter.getLimit().asInteger().ifPresent(terms::size);
+                request.getLimit().asInteger().ifPresent(terms::size);
 
-                request.addAggregation(terms);
+                builder.addAggregation(terms);
             }
 
-            return bind(request.execute()).directTransform((SearchResponse response) -> {
+            return bind(builder.execute()).directTransform((SearchResponse response) -> {
                 final Set<Suggestion> suggestions = new LinkedHashSet<>();
 
                 Aggregations aggregations = response.getAggregations();
@@ -444,13 +441,11 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     }
 
     @Override
-    public AsyncFuture<KeySuggest> keySuggest(
-        final RangeFilter filter, final MatchOptions options, final Optional<String> key
-    ) {
+    public AsyncFuture<KeySuggest> keySuggest(final KeySuggest.Request request) {
         return connection.doto((final Connection c) -> {
             BoolQueryBuilder bool = boolQuery();
 
-            key.ifPresent(k -> {
+            request.getKey().ifPresent(k -> {
                 if (!k.isEmpty()) {
                     final String l = k.toLowerCase();
                     final BoolQueryBuilder b = boolQuery();
@@ -463,12 +458,12 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
             QueryBuilder query = bool.hasClauses() ? bool : matchAllQuery();
 
-            if (!(filter.getFilter() instanceof TrueFilter)) {
-                query = filteredQuery(query, filter(filter.getFilter()));
+            if (!(request.getFilter() instanceof TrueFilter)) {
+                query = filteredQuery(query, filter(request.getFilter()));
             }
 
-            final SearchRequestBuilder request = c
-                .search(filter.getRange(), "series")
+            final SearchRequestBuilder builder = c
+                .search(request.getRange(), "series")
                 .setSearchType(SearchType.COUNT)
                 .setQuery(query);
 
@@ -482,11 +477,11 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 final TermsBuilder terms =
                     AggregationBuilders.terms("terms").field(KEY).subAggregation(hits);
 
-                filter.getLimit().asInteger().ifPresent(terms::size);
-                request.addAggregation(terms);
+                request.getLimit().asInteger().ifPresent(terms::size);
+                builder.addAggregation(terms);
             }
 
-            return bind(request.execute()).directTransform((SearchResponse response) -> {
+            return bind(builder.execute()).directTransform((SearchResponse response) -> {
                 final Set<KeySuggest.Suggestion> suggestions = new LinkedHashSet<>();
 
                 final StringTerms terms = response.getAggregations().get("terms");
@@ -562,10 +557,10 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                         (response) -> WriteResult.of(System.nanoTime() - start)));
                 }
 
-                writes.add(async.collect(w, WriteResult.merger()));
+                writes.add(async.collect(w, WriteResult.reduce()));
             }
 
-            return async.collect(writes, WriteResult.merger());
+            return async.collect(writes, WriteResult.reduce());
         });
     }
 

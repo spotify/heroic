@@ -128,17 +128,17 @@ public class GrpcRpcProtocolServer implements LifeCycles {
         container.register(GrpcRpcProtocol.SUGGEST_TAG_KEY_COUNT,
             g -> g.apply(suggest, SuggestBackend::tagKeyCount));
 
-        container.register(GrpcRpcProtocol.SUGGEST_TAG, g -> g.apply(suggest,
-            (m, q) -> m.tagSuggest(q.getFilter(), q.getMatch(), q.getKey(), q.getValue())));
+        container.register(GrpcRpcProtocol.SUGGEST_TAG,
+            g -> g.apply(suggest, SuggestBackend::tagSuggest));
 
         container.register(GrpcRpcProtocol.SUGGEST_KEY,
-            g -> g.apply(suggest, (m, q) -> m.keySuggest(q.getFilter(), q.getMatch(), q.getKey())));
+            g -> g.apply(suggest, SuggestBackend::keySuggest));
 
-        container.register(GrpcRpcProtocol.SUGGEST_TAG_VALUES, g -> g.apply(suggest,
-            (m, q) -> m.tagValuesSuggest(q.getFilter(), q.getExclude(), q.getGroupLimit())));
+        container.register(GrpcRpcProtocol.SUGGEST_TAG_VALUES,
+            g -> g.apply(suggest, SuggestBackend::tagValuesSuggest));
 
         container.register(GrpcRpcProtocol.SUGGEST_TAG_VALUE,
-            g -> g.apply(suggest, (m, q) -> m.tagValueSuggest(q.getFilter(), q.getKey())));
+            g -> g.apply(suggest, SuggestBackend::tagValueSuggest));
 
         return container;
     }

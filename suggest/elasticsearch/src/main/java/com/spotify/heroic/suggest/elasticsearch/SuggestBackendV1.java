@@ -29,7 +29,6 @@ import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.elasticsearch.AbstractElasticsearchBackend;
 import com.spotify.heroic.elasticsearch.BackendType;
@@ -107,7 +106,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -186,33 +184,30 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
     }
 
     @Override
-    public AsyncFuture<TagValuesSuggest> tagValuesSuggest(
-        final RangeFilter filter, final List<String> exclude, final OptionalLimit groupLimit
-    ) {
+    public AsyncFuture<TagValuesSuggest> tagValuesSuggest(final TagValuesSuggest.Request request) {
         return connection.doto((final Connection c) -> {
-            final FilterBuilder f = TAG_CTX.filter(filter.getFilter());
+            final FilterBuilder f = TAG_CTX.filter(request.getFilter());
 
             final BoolQueryBuilder root = QueryBuilders.boolQuery();
             root.must(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-            if (!exclude.isEmpty()) {
-                for (final String e : exclude) {
-                    root.mustNot(QueryBuilders.matchQuery(Utils.TAG_KEY_RAW, e));
-                }
+            for (final String e : request.getExclude()) {
+                root.mustNot(QueryBuilders.matchQuery(Utils.TAG_KEY_RAW, e));
             }
 
-            final SearchRequestBuilder request;
+            final SearchRequestBuilder builder;
 
             try {
-                request = c
-                    .search(filter.getRange(), Utils.TYPE_TAG)
+                builder = c
+                    .search(request.getRange(), Utils.TYPE_TAG)
                     .setSearchType(SearchType.COUNT)
                     .setQuery(root);
             } catch (NoIndexSelectedException e) {
                 return async.failed(e);
             }
 
-            final OptionalLimit limit = filter.getLimit();
+            final OptionalLimit limit = request.getLimit();
+            final OptionalLimit groupLimit = request.getGroupLimit();
 
             {
                 final TermsBuilder terms =
@@ -220,7 +215,7 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
 
                 limit.asInteger().ifPresent(l -> terms.size(l + 1));
 
-                request.addAggregation(terms);
+                builder.addAggregation(terms);
                 // make value bucket one entry larger than necessary to figure out when limiting
                 // is applied.
                 final TermsBuilder cardinality =
@@ -230,7 +225,7 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
                 terms.subAggregation(cardinality);
             }
 
-            return bind(request.execute()).directTransform((SearchResponse response) -> {
+            return bind(builder.execute()).directTransform((SearchResponse response) -> {
                 final List<TagValuesSuggest.Suggestion> suggestions = new ArrayList<>();
 
                 final Terms terms = response.getAggregations().get("keys");
@@ -262,33 +257,25 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
     }
 
     @Override
-    public AsyncFuture<TagValueSuggest> tagValueSuggest(
-        final RangeFilter filter, final Optional<String> key
-    ) {
+    public AsyncFuture<TagValueSuggest> tagValueSuggest(final TagValueSuggest.Request request) {
         return connection.doto((final Connection c) -> {
             final BoolQueryBuilder root = QueryBuilders.boolQuery();
 
-            key.ifPresent(k -> {
+            request.getKey().ifPresent(k -> {
                 if (!k.isEmpty()) {
                     root.must(QueryBuilders.termQuery(Utils.TAG_KEY_RAW, k));
                 }
             });
 
             root.must(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(),
-                TAG_CTX.filter(filter.getFilter())));
+                TAG_CTX.filter(request.getFilter())));
 
-            final SearchRequestBuilder request;
+            final SearchRequestBuilder builder = c
+                .search(request.getRange(), Utils.TYPE_TAG)
+                .setSearchType(SearchType.COUNT)
+                .setQuery(root);
 
-            try {
-                request = c
-                    .search(filter.getRange(), Utils.TYPE_TAG)
-                    .setSearchType(SearchType.COUNT)
-                    .setQuery(root);
-            } catch (NoIndexSelectedException e) {
-                return async.failed(e);
-            }
-
-            final OptionalLimit limit = filter.getLimit();
+            final OptionalLimit limit = request.getLimit();
 
             {
                 final TermsBuilder terms = AggregationBuilders
@@ -297,10 +284,10 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
                     .order(Order.term(true));
 
                 limit.asInteger().ifPresent(l -> terms.size(l + 1));
-                request.addAggregation(terms);
+                builder.addAggregation(terms);
             }
 
-            return bind(request.execute()).directTransform((SearchResponse response) -> {
+            return bind(builder.execute()).directTransform((SearchResponse response) -> {
                 final ImmutableList.Builder<String> suggestions = ImmutableList.builder();
 
                 final Terms terms = response.getAggregations().get("values");
@@ -317,25 +304,25 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
     }
 
     @Override
-    public AsyncFuture<TagKeyCount> tagKeyCount(final RangeFilter filter) {
+    public AsyncFuture<TagKeyCount> tagKeyCount(final TagKeyCount.Request request) {
         return connection.doto((final Connection c) -> {
-            final FilterBuilder f = TAG_CTX.filter(filter.getFilter());
+            final FilterBuilder f = TAG_CTX.filter(request.getFilter());
 
             final BoolQueryBuilder root = QueryBuilders.boolQuery();
             root.must(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-            final SearchRequestBuilder request;
+            final SearchRequestBuilder builder;
 
             try {
-                request = c
-                    .search(filter.getRange(), Utils.TYPE_TAG)
+                builder = c
+                    .search(request.getRange(), Utils.TYPE_TAG)
                     .setSearchType(SearchType.COUNT)
                     .setQuery(root);
             } catch (NoIndexSelectedException e) {
                 return async.failed(e);
             }
 
-            final OptionalLimit limit = filter.getLimit();
+            final OptionalLimit limit = request.getLimit();
 
             {
                 final TermsBuilder terms =
@@ -343,13 +330,13 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
 
                 limit.asInteger().ifPresent(terms::size);
 
-                request.addAggregation(terms);
+                builder.addAggregation(terms);
                 final CardinalityBuilder cardinality =
                     AggregationBuilders.cardinality("cardinality").field(Utils.TAG_VALUE_RAW);
                 terms.subAggregation(cardinality);
             }
 
-            return bind(request.execute()).directTransform((SearchResponse response) -> {
+            return bind(builder.execute()).directTransform((SearchResponse response) -> {
                 final Set<TagKeyCount.Suggestion> suggestions = new LinkedHashSet<>();
 
                 final Terms terms = response.getAggregations().get("keys");
@@ -366,43 +353,34 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
     }
 
     @Override
-    public AsyncFuture<TagSuggest> tagSuggest(
-        final RangeFilter filter, final MatchOptions options, final Optional<String> key,
-        final Optional<String> value
-    ) {
+    public AsyncFuture<TagSuggest> tagSuggest(final TagSuggest.Request request) {
         return connection.doto((Connection c) -> {
             final QueryBuilder query;
 
             final BoolQueryBuilder fuzzy = QueryBuilders.boolQuery();
 
-            key.ifPresent(k -> {
+            request.getKey().ifPresent(k -> {
                 if (!k.isEmpty()) {
-                    fuzzy.should(match(Utils.TAG_KEY, k, options));
+                    fuzzy.should(match(Utils.TAG_KEY, k, request.getOptions()));
                 }
             });
 
-            value.ifPresent(v -> {
+            request.getValue().ifPresent(v -> {
                 if (!v.isEmpty()) {
-                    fuzzy.should(match(Utils.TAG_VALUE, v, options));
+                    fuzzy.should(match(Utils.TAG_VALUE, v, request.getOptions()));
                 }
             });
 
-            if (filter.getFilter() instanceof TrueFilter) {
+            if (request.getFilter() instanceof TrueFilter) {
                 query = fuzzy;
             } else {
-                query = QueryBuilders.filteredQuery(fuzzy, TAG_CTX.filter(filter.getFilter()));
+                query = QueryBuilders.filteredQuery(fuzzy, TAG_CTX.filter(request.getFilter()));
             }
 
-            final SearchRequestBuilder request;
-
-            try {
-                request = c
-                    .search(filter.getRange(), Utils.TYPE_TAG)
-                    .setSearchType(SearchType.COUNT)
-                    .setQuery(query);
-            } catch (NoIndexSelectedException e) {
-                return async.failed(e);
-            }
+            final SearchRequestBuilder builder = c
+                .search(request.getRange(), Utils.TYPE_TAG)
+                .setSearchType(SearchType.COUNT)
+                .setQuery(query);
 
             // aggregation
             {
@@ -419,11 +397,11 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
                     .subAggregation(hits)
                     .subAggregation(topHit);
 
-                filter.getLimit().asInteger().ifPresent(kvs::size);
-                request.addAggregation(kvs);
+                request.getLimit().asInteger().ifPresent(kvs::size);
+                builder.addAggregation(kvs);
             }
 
-            return bind(request.execute()).directTransform((SearchResponse response) -> {
+            return bind(builder.execute()).directTransform((SearchResponse response) -> {
                 final Set<Suggestion> suggestions = new LinkedHashSet<>();
 
                 final StringTerms kvs = response.getAggregations().get("kvs");
@@ -445,36 +423,28 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
     }
 
     @Override
-    public AsyncFuture<KeySuggest> keySuggest(
-        final RangeFilter filter, final MatchOptions options, final Optional<String> key
-    ) {
+    public AsyncFuture<KeySuggest> keySuggest(final KeySuggest.Request request) {
         return connection.doto((final Connection c) -> {
             final QueryBuilder query;
 
             final BoolQueryBuilder fuzzy = QueryBuilders.boolQuery();
 
-            key.ifPresent(k -> {
+            request.getKey().ifPresent(k -> {
                 if (!k.isEmpty()) {
-                    fuzzy.should(match(Utils.SERIES_KEY, k, options));
+                    fuzzy.should(match(Utils.SERIES_KEY, k, request.getOptions()));
                 }
             });
 
-            if (filter.getFilter() instanceof TrueFilter) {
+            if (request.getFilter() instanceof TrueFilter) {
                 query = fuzzy;
             } else {
-                query = QueryBuilders.filteredQuery(fuzzy, SERIES_CTX.filter(filter.getFilter()));
+                query = QueryBuilders.filteredQuery(fuzzy, SERIES_CTX.filter(request.getFilter()));
             }
 
-            final SearchRequestBuilder request;
-
-            try {
-                request = c
-                    .search(filter.getRange(), Utils.TYPE_SERIES)
-                    .setSearchType(SearchType.COUNT)
-                    .setQuery(query);
-            } catch (NoIndexSelectedException e) {
-                return async.failed(e);
-            }
+            final SearchRequestBuilder builder = c
+                .search(request.getRange(), Utils.TYPE_SERIES)
+                .setSearchType(SearchType.COUNT)
+                .setQuery(query);
 
             // aggregation
             {
@@ -491,11 +461,11 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
                     .subAggregation(hits)
                     .subAggregation(topHit);
 
-                filter.getLimit().asInteger().ifPresent(keys::size);
-                request.addAggregation(keys);
+                request.getLimit().asInteger().ifPresent(keys::size);
+                builder.addAggregation(keys);
             }
 
-            return bind(request.execute()).directTransform((SearchResponse response) -> {
+            return bind(builder.execute()).directTransform((SearchResponse response) -> {
                 final Set<KeySuggest.Suggestion> suggestions = new LinkedHashSet<>();
 
                 final StringTerms keys = response.getAggregations().get("keys");
@@ -590,7 +560,7 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
                 }
             }
 
-            return async.collect(futures, WriteResult.merger());
+            return async.collect(futures, WriteResult.reduce());
         });
     }
 

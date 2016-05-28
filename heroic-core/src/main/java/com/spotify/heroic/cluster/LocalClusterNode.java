@@ -24,8 +24,6 @@ package com.spotify.heroic.cluster;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.CountSeries;
@@ -42,7 +40,6 @@ import com.spotify.heroic.metric.ResultGroups;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.suggest.KeySuggest;
-import com.spotify.heroic.suggest.MatchOptions;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestManager;
 import com.spotify.heroic.suggest.TagKeyCount;
@@ -55,7 +52,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 import javax.inject.Inject;
-import java.util.List;
 import java.util.Optional;
 
 @ToString(exclude = {"async", "metrics", "metadata", "suggest"})
@@ -116,61 +112,55 @@ public class LocalClusterNode implements ClusterNode {
         }
 
         @Override
-        public AsyncFuture<FindTags> findTags(RangeFilter filter) {
-            return metadata().findTags(filter);
+        public AsyncFuture<FindTags> findTags(final FindTags.Request request) {
+            return metadata().findTags(request);
         }
 
         @Override
-        public AsyncFuture<FindKeys> findKeys(RangeFilter filter) {
-            return metadata().findKeys(filter);
+        public AsyncFuture<FindKeys> findKeys(final FindKeys.Request request) {
+            return metadata().findKeys(request);
         }
 
         @Override
-        public AsyncFuture<FindSeries> findSeries(RangeFilter filter) {
-            return metadata().findSeries(filter);
+        public AsyncFuture<FindSeries> findSeries(final FindSeries.Request request) {
+            return metadata().findSeries(request);
         }
 
         @Override
-        public AsyncFuture<DeleteSeries> deleteSeries(RangeFilter filter) {
-            return metadata().deleteSeries(filter);
+        public AsyncFuture<DeleteSeries> deleteSeries(final DeleteSeries.Request request) {
+            return metadata().deleteSeries(request);
         }
 
         @Override
-        public AsyncFuture<CountSeries> countSeries(RangeFilter filter) {
-            return metadata().countSeries(filter);
+        public AsyncFuture<CountSeries> countSeries(final CountSeries.Request request) {
+            return metadata().countSeries(request);
         }
 
         @Override
-        public AsyncFuture<TagKeyCount> tagKeyCount(RangeFilter filter) {
-            return suggest().tagKeyCount(filter);
+        public AsyncFuture<TagKeyCount> tagKeyCount(final TagKeyCount.Request request) {
+            return suggest().tagKeyCount(request);
         }
 
         @Override
-        public AsyncFuture<TagSuggest> tagSuggest(
-            RangeFilter filter, MatchOptions options, Optional<String> key, Optional<String> value
-        ) {
-            return suggest().tagSuggest(filter, options, key, value);
+        public AsyncFuture<TagSuggest> tagSuggest(final TagSuggest.Request request) {
+            return suggest().tagSuggest(request);
         }
 
         @Override
-        public AsyncFuture<KeySuggest> keySuggest(
-            RangeFilter filter, MatchOptions options, Optional<String> key
-        ) {
-            return suggest().keySuggest(filter, options, key);
+        public AsyncFuture<KeySuggest> keySuggest(final KeySuggest.Request request) {
+            return suggest().keySuggest(request);
         }
 
         @Override
         public AsyncFuture<TagValuesSuggest> tagValuesSuggest(
-            RangeFilter filter, List<String> exclude, OptionalLimit groupLimit
+            final TagValuesSuggest.Request request
         ) {
-            return suggest().tagValuesSuggest(filter, exclude, groupLimit);
+            return suggest().tagValuesSuggest(request);
         }
 
         @Override
-        public AsyncFuture<TagValueSuggest> tagValueSuggest(
-            RangeFilter filter, Optional<String> key
-        ) {
-            return suggest().tagValueSuggest(filter, key);
+        public AsyncFuture<TagValueSuggest> tagValueSuggest(final TagValueSuggest.Request request) {
+            return suggest().tagValueSuggest(request);
         }
 
         @Override

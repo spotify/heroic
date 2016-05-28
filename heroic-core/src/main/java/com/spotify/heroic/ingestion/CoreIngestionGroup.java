@@ -111,7 +111,7 @@ public class CoreIngestionGroup implements IngestionGroup {
         metadata.map(m -> doMetadataWrite(m, write, range.get())).ifPresent(futures::add);
         suggest.map(s -> doSuggestWrite(s, write, range.get())).ifPresent(futures::add);
 
-        return async.collect(futures, WriteResult.merger());
+        return async.collect(futures, WriteResult.reduce());
     }
 
     /**

@@ -196,7 +196,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
             final MetricCollection g = w.getData();
             results.add(writeTyped(series, client, g));
-            return async.collect(results, WriteResult.merger());
+            return async.collect(results, WriteResult.reduce());
         });
     }
 
@@ -216,7 +216,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
                 results.add(writeTyped(series, client, g));
 
-                async.collect(results, WriteResult.merger()).onDone(new FutureDone<WriteResult>() {
+                async.collect(results, WriteResult.reduce()).onDone(new FutureDone<WriteResult>() {
                     final ConcurrentLinkedQueue<WriteResult> times = new ConcurrentLinkedQueue<>();
                     final AtomicReference<Throwable> failed = new AtomicReference<>();
 
@@ -399,7 +399,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                 .directTransform(result -> WriteResult.of(System.nanoTime() - start)));
         }
 
-        return async.collect(writes.build(), WriteResult.merger());
+        return async.collect(writes.build(), WriteResult.reduce());
     }
 
     private <T extends Metric> AsyncFuture<WriteResult> writeOne(

@@ -24,8 +24,6 @@ package com.spotify.heroic.cluster;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.CountSeries;
@@ -39,18 +37,19 @@ import com.spotify.heroic.metric.ResultGroups;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.suggest.KeySuggest;
-import com.spotify.heroic.suggest.MatchOptions;
 import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.Collector;
+import eu.toolchain.async.Transform;
 import lombok.RequiredArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+import java.util.function.Function;
 
 @RequiredArgsConstructor
 public class CoreClusterNodeGroup implements ClusterNodeGroup {
@@ -77,164 +76,88 @@ public class CoreClusterNodeGroup implements ClusterNodeGroup {
         MetricType source, Filter filter, DateRange range, AggregationInstance aggregation,
         QueryOptions options
     ) {
-        final List<AsyncFuture<ResultGroups>> futures = new ArrayList<>(entries.size());
-
-        for (final ClusterShardGroup c : entries) {
-            futures.add(c
-                .apply(g -> g.query(source, filter, range, aggregation, options))
-                .catchFailed(ResultGroups.shardError(QUERY_NODE, c)));
-        }
-
-        return async.collect(futures, ResultGroups.collect(QUERY));
+        return run(g -> g.query(source, filter, range, aggregation, options),
+            c -> ResultGroups.shardError(QUERY_NODE, c), ResultGroups.collect(QUERY));
     }
 
     @Override
-    public AsyncFuture<FindTags> findTags(RangeFilter filter) {
-        final List<AsyncFuture<FindTags>> futures = new ArrayList<>(entries.size());
-
-        for (final ClusterShardGroup c : entries) {
-            futures.add(c.apply(g -> g.findTags(filter)).catchFailed(FindTags.shardError(c)));
-        }
-
-        return async.collect(futures, FindTags.reduce());
+    public AsyncFuture<FindTags> findTags(final FindTags.Request request) {
+        return run(g -> g.findTags(request), FindTags::shardError, FindTags.reduce());
     }
 
     @Override
-    public AsyncFuture<FindKeys> findKeys(RangeFilter filter) {
-        final List<AsyncFuture<FindKeys>> futures = new ArrayList<>(entries.size());
-
-        for (final ClusterShardGroup c : entries) {
-            futures.add(c.apply(g -> g.findKeys(filter)).catchFailed(FindKeys.shardError(c)));
-        }
-
-        return async.collect(futures, FindKeys.reduce());
+    public AsyncFuture<FindKeys> findKeys(final FindKeys.Request request) {
+        return run(g -> g.findKeys(request), FindKeys::shardError, FindKeys.reduce());
     }
 
     @Override
-    public AsyncFuture<FindSeries> findSeries(RangeFilter filter) {
-        final List<AsyncFuture<FindSeries>> futures = new ArrayList<>(entries.size());
-
-        for (final ClusterShardGroup c : entries) {
-            futures.add(c.apply(g -> g.findSeries(filter)).catchFailed(FindSeries.shardError(c)));
-        }
-
-        return async.collect(futures, FindSeries.reduce(filter.getLimit()));
+    public AsyncFuture<FindSeries> findSeries(final FindSeries.Request request) {
+        return run(g -> g.findSeries(request), FindSeries::shardError,
+            FindSeries.reduce(request.getLimit()));
     }
 
     @Override
-    public AsyncFuture<DeleteSeries> deleteSeries(RangeFilter filter) {
-        final List<AsyncFuture<DeleteSeries>> futures = new ArrayList<>(entries.size());
-
-        for (final ClusterShardGroup c : entries) {
-            futures.add(
-                c.apply(g -> g.deleteSeries(filter)).catchFailed(DeleteSeries.shardError(c)));
-        }
-
-        return async.collect(futures, DeleteSeries.reduce());
+    public AsyncFuture<DeleteSeries> deleteSeries(final DeleteSeries.Request request) {
+        return run(g -> g.deleteSeries(request), DeleteSeries::shardError, DeleteSeries.reduce());
     }
 
     @Override
-    public AsyncFuture<CountSeries> countSeries(RangeFilter filter) {
-        final List<AsyncFuture<CountSeries>> futures = new ArrayList<>(entries.size());
-
-        for (final ClusterShardGroup c : entries) {
-            futures.add(c.apply(g -> g.countSeries(filter)).catchFailed(CountSeries.shardError(c)));
-        }
-
-        return async.collect(futures, CountSeries.reduce());
+    public AsyncFuture<CountSeries> countSeries(final CountSeries.Request request) {
+        return run(g -> g.countSeries(request), CountSeries::shardError, CountSeries.reduce());
     }
 
     @Override
-    public AsyncFuture<TagKeyCount> tagKeyCount(RangeFilter filter) {
-        final List<AsyncFuture<TagKeyCount>> futures = new ArrayList<>(entries.size());
-
-        for (final ClusterShardGroup c : entries) {
-            futures.add(c.apply(g -> g.tagKeyCount(filter)).catchFailed(TagKeyCount.shardError(c)));
-        }
-
-        return async.collect(futures, TagKeyCount.reduce(filter.getLimit()));
+    public AsyncFuture<TagKeyCount> tagKeyCount(final TagKeyCount.Request request) {
+        return run(g -> g.tagKeyCount(request), TagKeyCount::shardError,
+            TagKeyCount.reduce(request.getLimit()));
     }
 
     @Override
-    public AsyncFuture<TagSuggest> tagSuggest(
-        RangeFilter filter, MatchOptions options, Optional<String> key, Optional<String> value
-    ) {
-        final List<AsyncFuture<TagSuggest>> futures = new ArrayList<>(entries.size());
-
-        for (final ClusterShardGroup shard : entries) {
-            futures.add(shard
-                .apply(g -> g.tagSuggest(filter, options, key, value))
-                .catchFailed(TagSuggest.shardError(shard)));
-        }
-
-        return async.collect(futures, TagSuggest.reduce(filter.getLimit()));
+    public AsyncFuture<TagSuggest> tagSuggest(final TagSuggest.Request request) {
+        return run(g -> g.tagSuggest(request), TagSuggest::shardError,
+            TagSuggest.reduce(request.getLimit()));
     }
 
     @Override
-    public AsyncFuture<KeySuggest> keySuggest(
-        RangeFilter filter, MatchOptions options, Optional<String> key
-    ) {
-        final List<AsyncFuture<KeySuggest>> futures = new ArrayList<>(entries.size());
-
-        for (final ClusterShardGroup shard : entries) {
-            futures.add(shard
-                .apply(g -> g.keySuggest(filter, options, key))
-                .catchFailed(KeySuggest.shardError(shard)));
-        }
-
-        return async.collect(futures, KeySuggest.reduce(filter.getLimit()));
+    public AsyncFuture<KeySuggest> keySuggest(final KeySuggest.Request request) {
+        return run(g -> g.keySuggest(request), KeySuggest::shardError,
+            KeySuggest.reduce(request.getLimit()));
     }
 
     @Override
-    public AsyncFuture<TagValuesSuggest> tagValuesSuggest(
-        RangeFilter filter, List<String> exclude, OptionalLimit groupLimit
-    ) {
-        final List<AsyncFuture<TagValuesSuggest>> futures = new ArrayList<>(entries.size());
-
-        for (final ClusterShardGroup shard : entries) {
-            futures.add(shard
-                .apply(g -> g.tagValuesSuggest(filter, exclude, groupLimit))
-                .catchFailed(TagValuesSuggest.shardError(shard)));
-        }
-
-        return async.collect(futures, TagValuesSuggest.reduce(filter.getLimit(), groupLimit));
+    public AsyncFuture<TagValuesSuggest> tagValuesSuggest(final TagValuesSuggest.Request request) {
+        return run(g -> g.tagValuesSuggest(request), TagValuesSuggest::shardError,
+            TagValuesSuggest.reduce(request.getLimit(), request.getGroupLimit()));
     }
 
     @Override
-    public AsyncFuture<TagValueSuggest> tagValueSuggest(RangeFilter filter, Optional<String> key) {
-        final List<AsyncFuture<TagValueSuggest>> futures = new ArrayList<>(entries.size());
-
-        for (final ClusterShardGroup shard : entries) {
-            futures.add(shard
-                .apply(g -> g.tagValueSuggest(filter, key))
-                .catchFailed(TagValueSuggest.shardError(shard)));
-        }
-
-        return async.collect(futures, TagValueSuggest.reduce(filter.getLimit()));
+    public AsyncFuture<TagValueSuggest> tagValueSuggest(final TagValueSuggest.Request request) {
+        return run(g -> g.tagValueSuggest(request), TagValueSuggest::shardError,
+            TagValueSuggest.reduce(request.getLimit()));
     }
 
     @Override
     public AsyncFuture<WriteResult> writeSeries(DateRange range, Series series) {
-        final List<AsyncFuture<WriteResult>> futures = new ArrayList<>(entries.size());
-
-        for (final ClusterShardGroup shard : entries) {
-            futures.add(shard
-                .apply(g -> g.writeSeries(range, series))
-                .catchFailed(WriteResult.shardError(shard)));
-        }
-
-        return async.collect(futures, WriteResult.merger());
+        return run(g -> g.writeSeries(range, series), WriteResult::shardError,
+            WriteResult.reduce());
     }
 
     @Override
     public AsyncFuture<WriteResult> writeMetric(WriteMetric write) {
-        final List<AsyncFuture<WriteResult>> futures = new ArrayList<>(entries.size());
+        return run(g -> g.writeMetric(write), WriteResult::shardError, WriteResult.reduce());
+    }
+
+    private <T> AsyncFuture<T> run(
+        final Function<ClusterNode.Group, AsyncFuture<T>> function,
+        final Function<ClusterShardGroup, Transform<Throwable, T>> catcher,
+        final Collector<T, T> collector
+    ) {
+        final List<AsyncFuture<T>> futures = new ArrayList<>(entries.size());
 
         for (final ClusterShardGroup shard : entries) {
-            futures.add(
-                shard.apply(g -> g.writeMetric(write)).catchFailed(WriteResult.shardError(shard)));
+            futures.add(shard.apply(g -> function.apply(g)).catchFailed(catcher.apply(shard)));
         }
 
-        return async.collect(futures, WriteResult.merger());
+        return async.collect(futures, collector);
     }
 }

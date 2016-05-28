@@ -34,7 +34,6 @@ import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.GroupSet;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.SelectedGroup;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
@@ -177,9 +176,6 @@ public class LocalMetricManager implements MetricManager {
                 options.getDataLimit().orElse(dataLimit).asLong().<FetchQuotaWatcher>map(
                     LimitedFetchQuotaWatcher::new).orElse(NO_QUOTA_WATCHER);
 
-            final RangeFilter rangeFilter =
-                new RangeFilter(filter, range, options.getSeriesLimit().orElse(seriesLimit));
-
             final LazyTransform<FindSeries, ResultGroups> transform = (final FindSeries result) -> {
                 /* if empty, there are not time series on this shard */
                 if (result.isEmpty()) {
@@ -255,8 +251,10 @@ public class LocalMetricManager implements MetricManager {
                 return async.eventuallyCollect(fetches, collector, fetchParallelism);
             };
 
+            final OptionalLimit limit = options.getSeriesLimit().orElse(seriesLimit);
+
             return metadata
-                .findSeries(rangeFilter)
+                .findSeries(new FindSeries.Request(filter, range, limit))
                 .onDone(reporter.reportFindSeries())
                 .lazyTransform(transform)
                 .onDone(reporter.reportQueryMetrics());
@@ -293,7 +291,7 @@ public class LocalMetricManager implements MetricManager {
 
         @Override
         public AsyncFuture<WriteResult> write(final WriteMetric write) {
-            return async.collect(run(b -> b.write(write)), WriteResult.merger());
+            return async.collect(run(b -> b.write(write)), WriteResult.reduce());
         }
 
         /**
@@ -304,7 +302,7 @@ public class LocalMetricManager implements MetricManager {
          */
         @Override
         public AsyncFuture<WriteResult> write(final Collection<WriteMetric> writes) {
-            return async.collect(run(b -> b.write(writes)), WriteResult.merger());
+            return async.collect(run(b -> b.write(writes)), WriteResult.reduce());
         }
 
         @Override

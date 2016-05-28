@@ -26,10 +26,12 @@ import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
-import com.spotify.heroic.common.RangeFilter;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.DeleteSeries;
+import com.spotify.heroic.metadata.Entries;
 import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.FindTags;
@@ -43,7 +45,6 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -86,10 +87,10 @@ public class MemoryBackend implements MetadataBackend {
     }
 
     @Override
-    public AsyncFuture<FindTags> findTags(RangeFilter filter) {
+    public AsyncFuture<FindTags> findTags(final FindTags.Request request) {
         final Map<String, Set<String>> tags = new HashMap<>();
 
-        lookup(filter).forEach(s -> {
+        lookup(request.getFilter(), request.getLimit()).forEach(s -> {
             for (final Map.Entry<String, String> e : s.getTags().entrySet()) {
                 Set<String> values = tags.get(e.getKey());
 
@@ -108,44 +109,53 @@ public class MemoryBackend implements MetadataBackend {
     }
 
     @Override
-    public AsyncFuture<FindSeries> findSeries(RangeFilter filter) {
-        final Set<Series> s = ImmutableSet.copyOf(lookup(filter.incLimit()).iterator());
+    public AsyncFuture<FindSeries> findSeries(final FindSeries.Request request) {
+        final OptionalLimit limit = request.getLimit();
 
-        return async.resolved(
-            FindSeries.of(filter.getLimit().limitSet(s), filter.getLimit().isGreater(s.size())));
+        final Set<Series> s =
+            ImmutableSet.copyOf(lookup(request.getFilter(), limit.add(1)).iterator());
+
+        return async.resolved(FindSeries.of(limit.limitSet(s), limit.isGreater(s.size())));
     }
 
     @Override
-    public AsyncFuture<CountSeries> countSeries(RangeFilter filter) {
+    public AsyncFuture<CountSeries> countSeries(final CountSeries.Request request) {
         return async.resolved(
-            new CountSeries(ImmutableList.of(), lookupFilter(filter).count(), false));
+            new CountSeries(ImmutableList.of(), lookupFilter(request.getFilter()).count(), false));
     }
 
     @Override
-    public AsyncFuture<DeleteSeries> deleteSeries(RangeFilter filter) {
-        final int deletes = (int) lookup(filter).map(storage::remove).filter(b -> b).count();
+    public AsyncFuture<DeleteSeries> deleteSeries(final DeleteSeries.Request request) {
+        final int deletes = (int) lookup(request.getFilter(), request.getLimit())
+            .map(storage::remove)
+            .filter(b -> b)
+            .count();
+
         return async.resolved(DeleteSeries.of(deletes, 0));
     }
 
     @Override
-    public AsyncFuture<FindKeys> findKeys(RangeFilter filter) {
-        final Set<String> keys = ImmutableSet.copyOf(lookup(filter).map(Series::getKey).iterator());
+    public AsyncFuture<FindKeys> findKeys(final FindKeys.Request request) {
+        final Set<String> keys = ImmutableSet.copyOf(
+            lookup(request.getFilter(), request.getLimit()).map(Series::getKey).iterator());
+
         return async.resolved(FindKeys.of(keys, keys.size(), 0));
     }
 
     @Override
-    public AsyncObservable<List<Series>> entries(RangeFilter filter) {
+    public AsyncObservable<Entries> entries(final Entries.Request request) {
         return observer -> observer
-            .observe(ImmutableList.copyOf(lookup(filter).iterator()))
+            .observe(new Entries(
+                ImmutableList.copyOf(lookup(request.getFilter(), request.getLimit()).iterator())))
             .onFinished(observer::end);
     }
 
-    private Stream<Series> lookupFilter(final RangeFilter filter) {
-        return storage.stream().filter(filter.getFilter()::apply);
+    private Stream<Series> lookupFilter(final Filter filter) {
+        return storage.stream().filter(filter::apply);
     }
 
-    private Stream<Series> lookup(final RangeFilter filter) {
+    private Stream<Series> lookup(final Filter filter, final OptionalLimit limit) {
         final Stream<Series> series = lookupFilter(filter);
-        return filter.getLimit().asLong().map(series::limit).orElse(series);
+        return limit.asLong().map(series::limit).orElse(series);
     }
 }

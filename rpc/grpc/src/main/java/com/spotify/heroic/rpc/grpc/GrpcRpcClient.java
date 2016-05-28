@@ -53,13 +53,13 @@ public class GrpcRpcClient {
     }
 
     public <R> AsyncFuture<R> request(
-        final GrpcEndpointSpecification<GrpcRpcEmptyBody, R> endpoint, final CallOptions options
+        final GrpcDescriptor<GrpcRpcEmptyBody, R> endpoint, final CallOptions options
     ) {
         return request(endpoint, EMPTY, options);
     }
 
     public <Q, R> AsyncFuture<R> request(
-        final GrpcEndpointSpecification<Q, R> endpoint, final Q entity, final CallOptions options
+        final GrpcDescriptor<Q, R> endpoint, final Q entity, final CallOptions options
     ) {
         return channel.doto(channel -> {
             final byte[] body;

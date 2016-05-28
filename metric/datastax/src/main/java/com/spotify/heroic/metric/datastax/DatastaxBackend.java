@@ -147,7 +147,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
                 futures.add(doWrite(c, c.schema.writeSession(), w));
             }
 
-            return async.collect(futures, WriteResult.merger());
+            return async.collect(futures, WriteResult.reduce());
         });
     }
 

@@ -22,8 +22,8 @@
 package com.spotify.heroic.shell.task;
 
 import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.dagger.CoreComponent;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
@@ -32,6 +32,7 @@ import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
 import com.spotify.heroic.suggest.SuggestManager;
+import com.spotify.heroic.suggest.TagValueSuggest;
 import dagger.Component;
 import eu.toolchain.async.AsyncFuture;
 import lombok.Getter;
@@ -65,11 +66,13 @@ public class SuggestTagValue implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        final RangeFilter filter = Tasks.setupRangeFilter(parser, params);
+        final Filter filter = Tasks.setupFilter(parser, params);
 
         return suggest
             .useOptionalGroup(params.group)
-            .tagValueSuggest(filter, params.key)
+            .tagValueSuggest(
+                new TagValueSuggest.Request(filter, params.getRange(), params.getLimit(),
+                    params.key))
             .directTransform(result -> {
                 int i = 0;
 

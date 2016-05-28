@@ -23,10 +23,12 @@ package com.spotify.heroic.shell.task;
 
 import com.spotify.heroic.async.AsyncObserver;
 import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.CoreComponent;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
+import com.spotify.heroic.metadata.CountSeries;
+import com.spotify.heroic.metadata.Entries;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.shell.ShellIO;
@@ -62,7 +64,7 @@ public class MetadataMigrate implements ShellTask {
 
     @Inject
     public MetadataMigrate(
-        MetadataManager metadata, QueryParser parser,  AsyncFramework async
+        MetadataManager metadata, QueryParser parser, AsyncFramework async
     ) {
         this.metadata = metadata;
         this.parser = parser;
@@ -78,7 +80,7 @@ public class MetadataMigrate implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        final RangeFilter filter = Tasks.setupRangeFilter(parser, params);
+        final Filter filter = Tasks.setupFilter(parser, params);
 
         final MetadataBackend group = metadata.useOptionalGroup(params.group);
         final MetadataBackend target = metadata.useOptionalGroup(params.target);
@@ -87,45 +89,51 @@ public class MetadataMigrate implements ShellTask {
         io.out().println("  from: " + group);
         io.out().println("    to: " + target);
 
-        return group.countSeries(filter).lazyTransform(c -> {
-            final long count = c.getCount();
+        return group
+            .countSeries(new CountSeries.Request(filter, params.getRange(), params.getLimit()))
+            .lazyTransform(c -> {
+                final long count = c.getCount();
 
-            io.out().println(String.format("Migrating %d entrie(s)", count));
+                io.out().println(String.format("Migrating %d entrie(s)", count));
 
-            if (!params.ok) {
-                io.out().println("Migration stopped, use --ok to proceed");
-                return null;
-            }
-
-            final AtomicInteger index = new AtomicInteger();
-
-            final ResolvableFuture<Void> future = async.future();
-
-            group.entries(filter).observe(AsyncObserver.<List<Series>>bind(future, entries -> {
-                for (final Series s : entries) {
-                    final int i = index.getAndIncrement();
-
-                    if (i % DOT_LIMIT == 0) {
-                        io.out().print(".");
-                        io.out().flush();
-                    }
-
-                    if (i % (DOT_LIMIT * LINE_LIMIT) == 0) {
-                        io.out().println(String.format(" %d/%d", i, count));
-                        io.out().flush();
-                    }
-
-                    target.write(s, filter.getRange());
+                if (!params.ok) {
+                    io.out().println("Migration stopped, use --ok to proceed");
+                    return null;
                 }
 
-                return async.resolved();
-            }).onFinished(() -> {
-                io.out().println(" " + String.format("%d/%d", index.get(), count) + " ended");
-                io.out().flush();
-            }));
+                final AtomicInteger index = new AtomicInteger();
 
-            return future;
-        });
+                final ResolvableFuture<Void> future = async.future();
+
+                group
+                    .entries(new Entries.Request(filter, params.getRange(), params.getLimit()))
+                    .observe(AsyncObserver.<Entries>bind(future, entries -> {
+                        for (final Series s : entries.getSeries()) {
+                            final int i = index.getAndIncrement();
+
+                            if (i % DOT_LIMIT == 0) {
+                                io.out().print(".");
+                                io.out().flush();
+                            }
+
+                            if (i % (DOT_LIMIT * LINE_LIMIT) == 0) {
+                                io.out().println(String.format(" %d/%d", i, count));
+                                io.out().flush();
+                            }
+
+                            target.write(s, params.getRange());
+                        }
+
+                        return async.resolved();
+                    }).onFinished(() -> {
+                        io
+                            .out()
+                            .println(" " + String.format("%d/%d", index.get(), count) + " ended");
+                        io.out().flush();
+                    }));
+
+                return future;
+            });
     }
 
     @ToString

@@ -22,9 +22,9 @@
 package com.spotify.heroic.shell.task;
 
 import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.grammar.QueryParser;
+import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
@@ -65,11 +65,13 @@ public class MetadataCount implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        final RangeFilter filter = Tasks.setupRangeFilter(parser, params);
+        final CountSeries.Request request =
+            new CountSeries.Request(Tasks.setupFilter(parser, params), params.getRange(),
+                params.getLimit());
 
         return metadata
             .useOptionalGroup(params.group)
-            .countSeries(filter)
+            .countSeries(request)
             .directTransform(result -> {
                 io.out().println(String.format("Found %d serie(s)", result.getCount()));
                 return null;

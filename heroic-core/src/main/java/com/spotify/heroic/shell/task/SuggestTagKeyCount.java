@@ -22,8 +22,8 @@
 package com.spotify.heroic.shell.task;
 
 import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.dagger.CoreComponent;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
@@ -66,11 +66,11 @@ public class SuggestTagKeyCount implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        final RangeFilter filter = Tasks.setupRangeFilter(parser, params);
+        final Filter filter = Tasks.setupFilter(parser, params);
 
         return suggest
             .useOptionalGroup(params.group)
-            .tagKeyCount(filter)
+            .tagKeyCount(new TagKeyCount.Request(filter, params.getRange(), params.getLimit()))
             .directTransform(result -> {
                 int i = 0;
 

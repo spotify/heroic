@@ -22,9 +22,10 @@
 package com.spotify.heroic.shell.task;
 
 import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.dagger.CoreComponent;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
+import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
@@ -65,12 +66,15 @@ public class MetadataTags implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        final RangeFilter filter = Tasks.setupRangeFilter(parser, params);
+        final Filter filter = Tasks.setupFilter(parser, params);
 
-        return metadata.useOptionalGroup(params.group).findTags(filter).directTransform(result -> {
-            io.out().println(result.toString());
-            return null;
-        });
+        return metadata
+            .useOptionalGroup(params.group)
+            .findTags(new FindTags.Request(filter, params.getRange(), params.getLimit()))
+            .directTransform(result -> {
+                io.out().println(result.toString());
+                return null;
+            });
     }
 
     @ToString

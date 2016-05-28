@@ -24,8 +24,6 @@ package com.spotify.heroic.cluster;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.CountSeries;
@@ -39,15 +37,11 @@ import com.spotify.heroic.metric.ResultGroups;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.suggest.KeySuggest;
-import com.spotify.heroic.suggest.MatchOptions;
 import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
 import eu.toolchain.async.AsyncFuture;
-
-import java.util.List;
-import java.util.Optional;
 
 public class TracingClusterNodeGroup implements ClusterNode.Group {
     private final ClusterNode.Group delegate;
@@ -78,59 +72,53 @@ public class TracingClusterNodeGroup implements ClusterNode.Group {
     }
 
     @Override
-    public AsyncFuture<FindTags> findTags(RangeFilter filter) {
-        return delegate.findTags(filter);
+    public AsyncFuture<FindTags> findTags(FindTags.Request request) {
+        return delegate.findTags(request);
     }
 
     @Override
-    public AsyncFuture<FindKeys> findKeys(RangeFilter filter) {
-        return delegate.findKeys(filter);
+    public AsyncFuture<FindKeys> findKeys(FindKeys.Request request) {
+        return delegate.findKeys(request);
     }
 
     @Override
-    public AsyncFuture<FindSeries> findSeries(RangeFilter filter) {
-        return delegate.findSeries(filter);
+    public AsyncFuture<FindSeries> findSeries(FindSeries.Request request) {
+        return delegate.findSeries(request);
     }
 
     @Override
-    public AsyncFuture<DeleteSeries> deleteSeries(RangeFilter filter) {
-        return delegate.deleteSeries(filter);
+    public AsyncFuture<DeleteSeries> deleteSeries(DeleteSeries.Request request) {
+        return delegate.deleteSeries(request);
     }
 
     @Override
-    public AsyncFuture<CountSeries> countSeries(RangeFilter filter) {
-        return delegate.countSeries(filter);
+    public AsyncFuture<CountSeries> countSeries(CountSeries.Request request) {
+        return delegate.countSeries(request);
     }
 
     @Override
-    public AsyncFuture<TagKeyCount> tagKeyCount(RangeFilter filter) {
-        return delegate.tagKeyCount(filter);
+    public AsyncFuture<TagKeyCount> tagKeyCount(TagKeyCount.Request request) {
+        return delegate.tagKeyCount(request);
     }
 
     @Override
-    public AsyncFuture<TagSuggest> tagSuggest(
-        RangeFilter filter, MatchOptions options, Optional<String> key, Optional<String> value
-    ) {
-        return delegate.tagSuggest(filter, options, key, value);
+    public AsyncFuture<TagSuggest> tagSuggest(TagSuggest.Request request) {
+        return delegate.tagSuggest(request);
     }
 
     @Override
-    public AsyncFuture<KeySuggest> keySuggest(
-        RangeFilter filter, MatchOptions options, Optional<String> key
-    ) {
-        return delegate.keySuggest(filter, options, key);
+    public AsyncFuture<KeySuggest> keySuggest(KeySuggest.Request request) {
+        return delegate.keySuggest(request);
     }
 
     @Override
-    public AsyncFuture<TagValuesSuggest> tagValuesSuggest(
-        RangeFilter filter, List<String> exclude, OptionalLimit groupLimit
-    ) {
-        return delegate.tagValuesSuggest(filter, exclude, groupLimit);
+    public AsyncFuture<TagValuesSuggest> tagValuesSuggest(TagValuesSuggest.Request request) {
+        return delegate.tagValuesSuggest(request);
     }
 
     @Override
-    public AsyncFuture<TagValueSuggest> tagValueSuggest(RangeFilter filter, Optional<String> key) {
-        return delegate.tagValueSuggest(filter, key);
+    public AsyncFuture<TagValueSuggest> tagValueSuggest(TagValueSuggest.Request request) {
+        return delegate.tagValueSuggest(request);
     }
 
     @Override

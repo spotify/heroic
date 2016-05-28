@@ -222,7 +222,7 @@ public class CoreIngestionGroupTest {
         final List<AsyncFuture<WriteResult>> futures = ImmutableList.of(other, other, other);
 
         doReturn(rangeSupplier).when(group).rangeSupplier(write);
-        doReturn(expected).when(async).collect(futures, WriteResult.merger());
+        doReturn(expected).when(async).collect(futures, WriteResult.reduce());
 
         doReturn(other).when(group).doMetricWrite(metric, write);
         doReturn(other).when(group).doMetadataWrite(metadata, write, range);
@@ -244,7 +244,7 @@ public class CoreIngestionGroupTest {
         final List<AsyncFuture<WriteResult>> futures = ImmutableList.of(other, other);
 
         doReturn(rangeSupplier).when(group).rangeSupplier(write);
-        doReturn(expected).when(async).collect(futures, WriteResult.merger());
+        doReturn(expected).when(async).collect(futures, WriteResult.reduce());
 
         doReturn(other).when(group).doMetricWrite(metric, write);
         doReturn(other).when(group).doMetadataWrite(metadata, write, range);

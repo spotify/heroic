@@ -26,7 +26,6 @@ import com.google.common.base.Charsets;
 import com.spotify.heroic.HeroicCoreInstance;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.Filter;
@@ -366,13 +365,6 @@ public final class Tasks {
         @Option(name = "--limit", usage = "Limit the number keys to operate on", metaVar = "<int>")
         @Getter
         protected OptionalLimit limit = OptionalLimit.empty();
-    }
-
-    public static RangeFilter setupRangeFilter(
-        QueryParser parser, TaskQueryParameters params
-    ) {
-        final Filter filter = setupFilter(parser, params);
-        return new RangeFilter(filter, params.getRange(), params.getLimit());
     }
 
     private static final List<DateTimeParser> today = new ArrayList<>();

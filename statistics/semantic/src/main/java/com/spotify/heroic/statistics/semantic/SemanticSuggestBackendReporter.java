@@ -24,15 +24,12 @@ package com.spotify.heroic.statistics.semantic;
 import com.codahale.metrics.Meter;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
-import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.SuggestBackendReporter;
 import com.spotify.heroic.suggest.KeySuggest;
-import com.spotify.heroic.suggest.MatchOptions;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
@@ -43,9 +40,6 @@ import com.spotify.metrics.core.SemanticMetricRegistry;
 import eu.toolchain.async.AsyncFuture;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
-
-import java.util.List;
-import java.util.Optional;
 
 @ToString(of = {"base"})
 public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
@@ -103,38 +97,29 @@ public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
 
         @Override
         public AsyncFuture<TagValuesSuggest> tagValuesSuggest(
-            final RangeFilter filter, final List<String> exclude, final OptionalLimit groupLimit
+            final TagValuesSuggest.Request request
         ) {
-            return delegate
-                .tagValuesSuggest(filter, exclude, groupLimit)
-                .onDone(tagValuesSuggest.setup());
+            return delegate.tagValuesSuggest(request).onDone(tagValuesSuggest.setup());
         }
 
         @Override
-        public AsyncFuture<TagKeyCount> tagKeyCount(final RangeFilter filter) {
-            return delegate.tagKeyCount(filter).onDone(tagKeyCount.setup());
+        public AsyncFuture<TagKeyCount> tagKeyCount(final TagKeyCount.Request request) {
+            return delegate.tagKeyCount(request).onDone(tagKeyCount.setup());
         }
 
         @Override
-        public AsyncFuture<TagSuggest> tagSuggest(
-            final RangeFilter filter, final MatchOptions options, final Optional<String> key,
-            final Optional<String> value
-        ) {
-            return delegate.tagSuggest(filter, options, key, value).onDone(tagSuggest.setup());
+        public AsyncFuture<TagSuggest> tagSuggest(final TagSuggest.Request request) {
+            return delegate.tagSuggest(request).onDone(tagSuggest.setup());
         }
 
         @Override
-        public AsyncFuture<KeySuggest> keySuggest(
-            final RangeFilter filter, final MatchOptions options, final Optional<String> key
-        ) {
-            return delegate.keySuggest(filter, options, key).onDone(keySuggest.setup());
+        public AsyncFuture<KeySuggest> keySuggest(final KeySuggest.Request request) {
+            return delegate.keySuggest(request).onDone(keySuggest.setup());
         }
 
         @Override
-        public AsyncFuture<TagValueSuggest> tagValueSuggest(
-            final RangeFilter filter, final Optional<String> key
-        ) {
-            return delegate.tagValueSuggest(filter, key).onDone(tagValueSuggest.setup());
+        public AsyncFuture<TagValueSuggest> tagValueSuggest(final TagValueSuggest.Request request) {
+            return delegate.tagValueSuggest(request).onDone(tagValueSuggest.setup());
         }
 
         @Override

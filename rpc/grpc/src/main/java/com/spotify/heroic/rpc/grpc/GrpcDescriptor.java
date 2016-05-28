@@ -24,7 +24,7 @@ package com.spotify.heroic.rpc.grpc;
 import com.fasterxml.jackson.core.type.TypeReference;
 import io.grpc.MethodDescriptor;
 
-public interface GrpcEndpointSpecification<Q, R> {
+public interface GrpcDescriptor<Q, R> {
     TypeReference<Q> queryType();
 
     TypeReference<R> responseType();

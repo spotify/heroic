@@ -26,13 +26,10 @@ import com.spotify.heroic.common.Collected;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Initializing;
-import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.WriteResult;
 import eu.toolchain.async.AsyncFuture;
-
-import java.util.List;
 
 public interface MetadataBackend extends Grouped, Initializing, Collected {
     AsyncFuture<Void> configure();
@@ -50,19 +47,19 @@ public interface MetadataBackend extends Grouped, Initializing, Collected {
      * <p>
      * This should perform pagination internally to avoid using too much memory.
      */
-    default AsyncObservable<List<Series>> entries(RangeFilter filter) {
+    default AsyncObservable<Entries> entries(Entries.Request request) {
         return AsyncObservable.empty();
     }
 
-    AsyncFuture<FindTags> findTags(RangeFilter filter);
+    AsyncFuture<FindTags> findTags(FindTags.Request request);
 
-    AsyncFuture<FindSeries> findSeries(RangeFilter filter);
+    AsyncFuture<FindSeries> findSeries(FindSeries.Request request);
 
-    AsyncFuture<CountSeries> countSeries(RangeFilter filter);
+    AsyncFuture<CountSeries> countSeries(CountSeries.Request request);
 
-    AsyncFuture<DeleteSeries> deleteSeries(RangeFilter filter);
+    AsyncFuture<DeleteSeries> deleteSeries(DeleteSeries.Request request);
 
-    AsyncFuture<FindKeys> findKeys(RangeFilter filter);
+    AsyncFuture<FindKeys> findKeys(FindKeys.Request request);
 
     default Statistics getStatistics() {
         return Statistics.empty();

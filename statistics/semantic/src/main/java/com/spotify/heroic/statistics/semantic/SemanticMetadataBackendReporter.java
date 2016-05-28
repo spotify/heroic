@@ -26,11 +26,11 @@ import com.codahale.metrics.Meter;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
-import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.DeleteSeries;
+import com.spotify.heroic.metadata.Entries;
 import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.FindTags;
@@ -43,8 +43,6 @@ import com.spotify.metrics.core.SemanticMetricRegistry;
 import eu.toolchain.async.AsyncFuture;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
-
-import java.util.List;
 
 @ToString(of = {"base"})
 public class SemanticMetadataBackendReporter implements MetadataBackendReporter {
@@ -133,34 +131,34 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
         }
 
         @Override
-        public AsyncObservable<List<Series>> entries(final RangeFilter filter) {
+        public AsyncObservable<Entries> entries(final Entries.Request request) {
             entries.mark();
-            return delegate.entries(filter);
+            return delegate.entries(request);
         }
 
         @Override
-        public AsyncFuture<FindTags> findTags(final RangeFilter filter) {
-            return delegate.findTags(filter).onDone(findTags.setup());
+        public AsyncFuture<FindTags> findTags(final FindTags.Request request) {
+            return delegate.findTags(request).onDone(findTags.setup());
         }
 
         @Override
-        public AsyncFuture<FindSeries> findSeries(final RangeFilter filter) {
-            return delegate.findSeries(filter).onDone(findSeries.setup());
+        public AsyncFuture<FindSeries> findSeries(final FindSeries.Request request) {
+            return delegate.findSeries(request).onDone(findSeries.setup());
         }
 
         @Override
-        public AsyncFuture<CountSeries> countSeries(final RangeFilter filter) {
-            return delegate.countSeries(filter).onDone(countSeries.setup());
+        public AsyncFuture<CountSeries> countSeries(final CountSeries.Request request) {
+            return delegate.countSeries(request).onDone(countSeries.setup());
         }
 
         @Override
-        public AsyncFuture<DeleteSeries> deleteSeries(final RangeFilter filter) {
-            return delegate.deleteSeries(filter).onDone(deleteSeries.setup());
+        public AsyncFuture<DeleteSeries> deleteSeries(final DeleteSeries.Request request) {
+            return delegate.deleteSeries(request).onDone(deleteSeries.setup());
         }
 
         @Override
-        public AsyncFuture<FindKeys> findKeys(final RangeFilter filter) {
-            return delegate.findKeys(filter).onDone(findKeys.setup());
+        public AsyncFuture<FindKeys> findKeys(final FindKeys.Request request) {
+            return delegate.findKeys(request).onDone(findKeys.setup());
         }
 
         @Override

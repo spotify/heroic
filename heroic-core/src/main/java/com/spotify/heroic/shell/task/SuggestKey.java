@@ -22,8 +22,8 @@
 package com.spotify.heroic.shell.task;
 
 import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.dagger.CoreComponent;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
@@ -67,13 +67,14 @@ public class SuggestKey implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        final RangeFilter filter = Tasks.setupRangeFilter(parser, params);
+        final Filter filter = Tasks.setupFilter(parser, params);
 
-        final MatchOptions fuzzyOptions = MatchOptions.builder().build();
+        final MatchOptions fuzzy = MatchOptions.builder().build();
 
         return suggest
             .useOptionalGroup(params.group)
-            .keySuggest(filter, fuzzyOptions, Optional.ofNullable(params.key))
+            .keySuggest(new KeySuggest.Request(filter, params.getRange(), params.getLimit(), fuzzy,
+                params.key))
             .directTransform(result -> {
                 int i = 0;
 
@@ -92,7 +93,7 @@ public class SuggestKey implements ShellTask {
         private Optional<String> group = Optional.empty();
 
         @Option(name = "-k", aliases = {"--key"}, usage = "Provide key context for suggestion")
-        private String key = null;
+        private Optional<String> key = Optional.empty();
 
         @Option(name = "--limit", aliases = {"--limit"},
             usage = "Limit the number of printed entries")
@@ -101,7 +102,7 @@ public class SuggestKey implements ShellTask {
 
         @Argument
         @Getter
-        private List<String> query = new ArrayList<String>();
+        private List<String> query = new ArrayList<>();
     }
 
     public static SuggestKey setup(final CoreComponent core) {

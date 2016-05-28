@@ -26,7 +26,6 @@ import com.google.common.hash.HashCode;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.elasticsearch.AbstractElasticsearchMetadataBackend;
@@ -154,7 +153,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     }
 
     @Override
-    public AsyncFuture<FindTags> findTags(final RangeFilter filter) {
+    public AsyncFuture<FindTags> findTags(final FindTags.Request filter) {
         return doto(c -> async.resolved(FindTags.EMPTY));
     }
 
@@ -198,12 +197,12 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                 writes.add(result);
             }
 
-            return async.collect(writes, WriteResult.merger());
+            return async.collect(writes, WriteResult.reduce());
         });
     }
 
     @Override
-    public AsyncFuture<CountSeries> countSeries(final RangeFilter filter) {
+    public AsyncFuture<CountSeries> countSeries(final CountSeries.Request filter) {
         return doto(c -> {
             final OptionalLimit limit = filter.getLimit();
 
@@ -213,88 +212,65 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
             final FilterBuilder f = filter(filter.getFilter());
 
-            final CountRequestBuilder request;
+            final CountRequestBuilder builder = c.count(filter.getRange(), TYPE_METADATA);
+            limit.asInteger().ifPresent(builder::setTerminateAfter);
 
-            try {
-                request = c.count(filter.getRange(), TYPE_METADATA);
-                limit.asInteger().ifPresent(request::setTerminateAfter);
-            } catch (NoIndexSelectedException e) {
-                return async.failed(e);
-            }
+            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-            request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
-
-            return bind(request.execute()).directTransform(
+            return bind(builder.execute()).directTransform(
                 response -> CountSeries.of(response.getCount(), false));
         });
     }
 
     @Override
-    public AsyncFuture<FindSeries> findSeries(final RangeFilter filter) {
+    public AsyncFuture<FindSeries> findSeries(final FindSeries.Request filter) {
         return doto(c -> {
             final OptionalLimit limit = filter.getLimit();
             final FilterBuilder f = filter(filter.getFilter());
 
-            final SearchRequestBuilder request;
+            final SearchRequestBuilder builder = c
+                .search(filter.getRange(), TYPE_METADATA)
+                .setScroll(SCROLL_TIME)
+                .setSearchType(SearchType.SCAN);
 
-            try {
-                request = c
-                    .search(filter.getRange(), TYPE_METADATA)
-                    .setScroll(SCROLL_TIME)
-                    .setSearchType(SearchType.SCAN);
+            builder.setSize(limit.asMaxInteger(SCROLL_SIZE));
+            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-                request.setSize(limit.asMaxInteger(SCROLL_SIZE));
-            } catch (NoIndexSelectedException e) {
-                return async.failed(e);
-            }
-
-            request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
-
-            return scrollOverSeries(c, request, filter.getLimit());
+            return scrollOverSeries(c, builder, filter.getLimit());
         });
     }
 
     @Override
-    public AsyncFuture<DeleteSeries> deleteSeries(final RangeFilter filter) {
+    public AsyncFuture<DeleteSeries> deleteSeries(final DeleteSeries.Request request) {
         return doto(c -> {
-            final FilterBuilder f = filter(filter.getFilter());
+            final FilterBuilder f = filter(request.getFilter());
 
-            final DeleteByQueryRequestBuilder request;
+            final DeleteByQueryRequestBuilder builder =
+                c.deleteByQuery(request.getRange(), TYPE_METADATA);
 
-            try {
-                request = c.deleteByQuery(filter.getRange(), TYPE_METADATA);
-            } catch (NoIndexSelectedException e) {
-                return async.failed(e);
-            }
+            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-            request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
-
-            return bind(request.execute()).directTransform(response -> DeleteSeries.of());
+            return bind(builder.execute()).directTransform(response -> DeleteSeries.of());
         });
     }
 
     @Override
-    public AsyncFuture<FindKeys> findKeys(final RangeFilter filter) {
+    public AsyncFuture<FindKeys> findKeys(final FindKeys.Request request) {
         return doto(c -> {
-            final FilterBuilder f = filter(filter.getFilter());
+            final FilterBuilder f = filter(request.getFilter());
 
-            final SearchRequestBuilder request;
+            final SearchRequestBuilder builder =
+                c.search(request.getRange(), TYPE_METADATA).setSearchType("count");
 
-            try {
-                request = c.search(filter.getRange(), TYPE_METADATA).setSearchType("count");
-            } catch (NoIndexSelectedException e) {
-                return async.failed(e);
-            }
-
-            request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
             {
                 final AggregationBuilder<?> terms =
                     AggregationBuilders.terms("terms").field(KEY).size(0);
-                request.addAggregation(terms);
+                builder.addAggregation(terms);
             }
 
-            return bind(request.execute()).directTransform(response -> {
+            return bind(builder.execute()).directTransform(response -> {
                 final Terms terms = (Terms) response.getAggregations().get("terms");
 
                 final Set<String> keys = new HashSet<String>();

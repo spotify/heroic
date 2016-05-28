@@ -26,7 +26,7 @@ import io.grpc.MethodDescriptor;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
-public class GrpcRpcEndpointSpec<Q, R> implements GrpcEndpointSpecification<Q, R> {
+public class GrpcRpcEndpointSpec<Q, R> implements GrpcDescriptor<Q, R> {
     private final TypeReference<Q> queryType;
     private final TypeReference<R> responseType;
     private final MethodDescriptor<byte[], byte[]> descriptor;

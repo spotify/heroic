@@ -50,7 +50,7 @@ public class WriteResult {
         return of(ImmutableList.of(duration));
     }
 
-    public static Collector<WriteResult, WriteResult> merger() {
+    public static Collector<WriteResult, WriteResult> reduce() {
         return results -> {
             if (results.isEmpty()) {
                 return WriteResult.EMPTY;

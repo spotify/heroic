@@ -32,8 +32,6 @@ import com.spotify.heroic.cluster.RpcProtocol;
 import com.spotify.heroic.cluster.TracingClusterNodeGroup;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
-import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.UsableGroupManager;
 import com.spotify.heroic.filter.Filter;
@@ -47,7 +45,6 @@ import com.spotify.heroic.metric.ResultGroups;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.suggest.KeySuggest;
-import com.spotify.heroic.suggest.MatchOptions;
 import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
@@ -66,7 +63,6 @@ import javax.inject.Named;
 import java.net.Inet6Address;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
 
@@ -203,28 +199,28 @@ public class NativeRpcProtocol implements RpcProtocol {
             }
 
             @Override
-            public AsyncFuture<FindTags> findTags(RangeFilter filter) {
-                return request(METADATA_FIND_TAGS, filter, FindTags.class);
+            public AsyncFuture<FindTags> findTags(final FindTags.Request request) {
+                return request(METADATA_FIND_TAGS, request, FindTags.class);
             }
 
             @Override
-            public AsyncFuture<FindKeys> findKeys(RangeFilter filter) {
-                return request(METADATA_FIND_KEYS, filter, FindKeys.class);
+            public AsyncFuture<FindKeys> findKeys(final FindKeys.Request request) {
+                return request(METADATA_FIND_KEYS, request, FindKeys.class);
             }
 
             @Override
-            public AsyncFuture<FindSeries> findSeries(RangeFilter filter) {
-                return request(METADATA_FIND_SERIES, filter, FindSeries.class);
+            public AsyncFuture<FindSeries> findSeries(final FindSeries.Request request) {
+                return request(METADATA_FIND_SERIES, request, FindSeries.class);
             }
 
             @Override
-            public AsyncFuture<CountSeries> countSeries(RangeFilter filter) {
-                return request(METADATA_COUNT_SERIES, filter, CountSeries.class);
+            public AsyncFuture<CountSeries> countSeries(final CountSeries.Request request) {
+                return request(METADATA_COUNT_SERIES, request, CountSeries.class);
             }
 
             @Override
-            public AsyncFuture<DeleteSeries> deleteSeries(RangeFilter filter) {
-                return request(METADATA_DELETE_SERIES, filter, DeleteSeries.class);
+            public AsyncFuture<DeleteSeries> deleteSeries(final DeleteSeries.Request request) {
+                return request(METADATA_DELETE_SERIES, request, DeleteSeries.class);
             }
 
             @Override
@@ -234,40 +230,32 @@ public class NativeRpcProtocol implements RpcProtocol {
             }
 
             @Override
-            public AsyncFuture<TagKeyCount> tagKeyCount(RangeFilter filter) {
-                return request(SUGGEST_TAG_KEY_COUNT, filter, TagKeyCount.class);
+            public AsyncFuture<TagKeyCount> tagKeyCount(final TagKeyCount.Request request) {
+                return request(SUGGEST_TAG_KEY_COUNT, request, TagKeyCount.class);
             }
 
             @Override
-            public AsyncFuture<TagSuggest> tagSuggest(
-                RangeFilter filter, MatchOptions match, Optional<String> key, Optional<String> value
-            ) {
-                return request(SUGGEST_TAG, new RpcTagSuggest(filter, match, key, value),
-                    TagSuggest.class);
+            public AsyncFuture<TagSuggest> tagSuggest(final TagSuggest.Request request) {
+                return request(SUGGEST_TAG, request, TagSuggest.class);
             }
 
             @Override
-            public AsyncFuture<KeySuggest> keySuggest(
-                RangeFilter filter, MatchOptions match, Optional<String> key
-            ) {
-                return request(SUGGEST_KEY, new RpcKeySuggest(filter, match, key),
-                    KeySuggest.class);
+            public AsyncFuture<KeySuggest> keySuggest(final KeySuggest.Request request) {
+                return request(SUGGEST_KEY, request, KeySuggest.class);
             }
 
             @Override
             public AsyncFuture<TagValuesSuggest> tagValuesSuggest(
-                RangeFilter filter, List<String> exclude, OptionalLimit groupLimit
+                final TagValuesSuggest.Request request
             ) {
-                return request(SUGGEST_TAG_VALUES,
-                    new RpcSuggestTagValues(filter, exclude, groupLimit), TagValuesSuggest.class);
+                return request(SUGGEST_TAG_VALUES, request, TagValuesSuggest.class);
             }
 
             @Override
             public AsyncFuture<TagValueSuggest> tagValueSuggest(
-                RangeFilter filter, Optional<String> key
+                final TagValueSuggest.Request request
             ) {
-                return request(SUGGEST_TAG_VALUE, new RpcSuggestTagValue(filter, key),
-                    TagValueSuggest.class);
+                return request(SUGGEST_TAG_VALUE, request, TagValueSuggest.class);
             }
 
             private <T, R> AsyncFuture<R> request(String endpoint, T body, Class<R> expected) {
@@ -319,74 +307,6 @@ public class NativeRpcProtocol implements RpcProtocol {
             this.range = checkNotNull(range, "range");
             this.aggregation = checkNotNull(aggregation, "aggregation");
             this.options = checkNotNull(options, "options");
-        }
-    }
-
-    @Data
-    public static class RpcTagSuggest {
-        private final RangeFilter filter;
-        private final MatchOptions match;
-        private final Optional<String> key;
-        private final Optional<String> value;
-
-        public RpcTagSuggest(
-            @JsonProperty("range") final RangeFilter filter,
-            @JsonProperty("match") final MatchOptions match,
-            @JsonProperty("key") final Optional<String> key,
-            @JsonProperty("value") final Optional<String> value
-        ) {
-            this.filter = filter;
-            this.match = checkNotNull(match, "match");
-            this.key = key;
-            this.value = value;
-        }
-    }
-
-    @Data
-    public static class RpcSuggestTagValues {
-        private final RangeFilter filter;
-        private final List<String> exclude;
-        private final OptionalLimit groupLimit;
-
-        public RpcSuggestTagValues(
-            @JsonProperty("filter") final RangeFilter filter,
-            @JsonProperty("exclude") final List<String> exclude,
-            @JsonProperty("groupLimit") final OptionalLimit groupLimit
-        ) {
-            this.filter = filter;
-            this.exclude = checkNotNull(exclude, "exclude");
-            this.groupLimit = checkNotNull(groupLimit, "groupLimit");
-        }
-    }
-
-    @Data
-    public static class RpcSuggestTagValue {
-        private final RangeFilter filter;
-        private final Optional<String> key;
-
-        public RpcSuggestTagValue(
-            @JsonProperty("filter") final RangeFilter filter,
-            @JsonProperty("key") final Optional<String> key
-        ) {
-            this.filter = checkNotNull(filter, "filter");
-            this.key = key;
-        }
-    }
-
-    @Data
-    public static class RpcKeySuggest {
-        private final RangeFilter filter;
-        private final MatchOptions match;
-        private final Optional<String> key;
-
-        public RpcKeySuggest(
-            @JsonProperty("filter") final RangeFilter filter,
-            @JsonProperty("match") final MatchOptions match,
-            @JsonProperty("key") final Optional<String> key
-        ) {
-            this.filter = checkNotNull(filter, "filter");
-            this.match = checkNotNull(match, "match");
-            this.key = key;
         }
     }
 

@@ -24,6 +24,9 @@ package com.spotify.heroic.metadata;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.cluster.ClusterShardGroup;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.OptionalLimit;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.metric.ShardError;
 import eu.toolchain.async.Collector;
@@ -74,10 +77,15 @@ public class FindKeys {
         };
     }
 
-    public static Transform<Throwable, ? extends FindKeys> shardError(
-        final ClusterShardGroup shard
-    ) {
+    public static Transform<Throwable, FindKeys> shardError(final ClusterShardGroup shard) {
         return e -> new FindKeys(ImmutableList.of(ShardError.fromThrowable(shard, e)),
             ImmutableSet.of(), 0, 0);
+    }
+
+    @Data
+    public static final class Request {
+        private final Filter filter;
+        private final DateRange range;
+        private final OptionalLimit limit;
     }
 }

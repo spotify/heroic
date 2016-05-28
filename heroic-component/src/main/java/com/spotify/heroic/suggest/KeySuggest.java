@@ -25,7 +25,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.cluster.ClusterShardGroup;
+import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.OptionalLimit;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.metric.ShardError;
 import eu.toolchain.async.Collector;
@@ -38,6 +40,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -79,9 +82,7 @@ public class KeySuggest {
         };
     }
 
-    public static Transform<Throwable, KeySuggest> shardError(
-        final ClusterShardGroup shard
-    ) {
+    public static Transform<Throwable, KeySuggest> shardError(final ClusterShardGroup shard) {
         return e -> new KeySuggest(ImmutableList.of(ShardError.fromThrowable(shard, e)),
             ImmutableList.of());
     }
@@ -125,5 +126,14 @@ public class KeySuggest {
                 return a.key.compareTo(b.key);
             }
         };
+    }
+
+    @Data
+    public static class Request {
+        private final Filter filter;
+        private final DateRange range;
+        private final OptionalLimit limit;
+        private final MatchOptions options;
+        private final Optional<String> key;
     }
 }

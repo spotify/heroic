@@ -19,30 +19,24 @@
  * under the License.
  */
 
-package com.spotify.heroic.common;
+package com.spotify.heroic.metadata;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.OptionalLimit;
+import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
-public class RangeFilter {
-    private final Filter filter;
-    private final DateRange range;
-    private final OptionalLimit limit;
+public class Entries {
+    private final List<Series> series;
 
-    @JsonCreator
-    public RangeFilter(
-        @JsonProperty("filter") Filter filter, @JsonProperty("range") DateRange range,
-        @JsonProperty("limit") OptionalLimit limit
-    ) {
-        this.filter = filter;
-        this.range = range;
-        this.limit = limit;
-    }
-
-    public RangeFilter incLimit() {
-        return new RangeFilter(filter, range, limit.add(1));
+    @Data
+    public static class Request {
+        private final Filter filter;
+        private final DateRange range;
+        private final OptionalLimit limit;
     }
 }

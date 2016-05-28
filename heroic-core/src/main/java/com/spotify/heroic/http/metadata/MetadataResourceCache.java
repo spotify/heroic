@@ -25,7 +25,6 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.spotify.heroic.cluster.ClusterManager;
-import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindTags;
 import eu.toolchain.async.AsyncFuture;
@@ -33,6 +32,7 @@ import eu.toolchain.async.FutureDone;
 import lombok.Data;
 
 import javax.inject.Inject;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -44,32 +44,32 @@ public class MetadataResourceCache {
         this.cluster = cluster;
     }
 
-    private final LoadingCache<Entry, AsyncFuture<FindTags>> findTags = CacheBuilder
-        .newBuilder()
-        .maximumSize(10000)
-        .expireAfterWrite(30, TimeUnit.MINUTES)
-        .build(new CacheLoader<Entry, AsyncFuture<FindTags>>() {
-            @Override
-            public AsyncFuture<FindTags> load(
-                Entry e
-            ) {
-                return cluster.useGroup(e.getGroup()).findTags(e.getFilter());
-            }
-        });
+    private final LoadingCache<Grouped<FindTags.Request>, AsyncFuture<FindTags>> findTags =
+        CacheBuilder
+            .newBuilder()
+            .maximumSize(10000)
+            .expireAfterWrite(30, TimeUnit.MINUTES)
+            .build(new CacheLoader<Grouped<FindTags.Request>, AsyncFuture<FindTags>>() {
+                @Override
+                public AsyncFuture<FindTags> load(Grouped<FindTags.Request> g) {
+                    return cluster.useOptionalGroup(g.getGroup()).findTags(g.getValue());
+                }
+            });
 
-    public AsyncFuture<FindTags> findTags(final String group, final RangeFilter filter)
-        throws ExecutionException {
-        final Entry e = new Entry(group, filter);
+    public AsyncFuture<FindTags> findTags(
+        final Optional<String> group, final FindTags.Request request
+    ) throws ExecutionException {
+        final Grouped<FindTags.Request> key = new Grouped<>(group, request);
 
-        return findTags.get(e).onDone(new FutureDone<FindTags>() {
+        return findTags.get(key).onDone(new FutureDone<FindTags>() {
             @Override
             public void cancelled() {
-                findTags.invalidate(e);
+                findTags.invalidate(key);
             }
 
             @Override
             public void failed(Throwable e) {
-                findTags.invalidate(e);
+                findTags.invalidate(key);
             }
 
             @Override
@@ -78,32 +78,32 @@ public class MetadataResourceCache {
         });
     }
 
-    private final LoadingCache<Entry, AsyncFuture<FindKeys>> findKeys = CacheBuilder
-        .newBuilder()
-        .maximumSize(10000)
-        .expireAfterWrite(30, TimeUnit.MINUTES)
-        .build(new CacheLoader<Entry, AsyncFuture<FindKeys>>() {
-            @Override
-            public AsyncFuture<FindKeys> load(
-                Entry e
-            ) {
-                return cluster.useGroup(e.getGroup()).findKeys(e.getFilter());
-            }
-        });
+    private final LoadingCache<Grouped<FindKeys.Request>, AsyncFuture<FindKeys>> findKeys =
+        CacheBuilder
+            .newBuilder()
+            .maximumSize(10000)
+            .expireAfterWrite(30, TimeUnit.MINUTES)
+            .build(new CacheLoader<Grouped<FindKeys.Request>, AsyncFuture<FindKeys>>() {
+                @Override
+                public AsyncFuture<FindKeys> load(Grouped<FindKeys.Request> g) {
+                    return cluster.useOptionalGroup(g.getGroup()).findKeys(g.getValue());
+                }
+            });
 
-    public AsyncFuture<FindKeys> findKeys(final String group, final RangeFilter filter)
-        throws ExecutionException {
-        final Entry e = new Entry(group, filter);
+    public AsyncFuture<FindKeys> findKeys(
+        final Optional<String> group, final FindKeys.Request request
+    ) throws ExecutionException {
+        final Grouped<FindKeys.Request> key = new Grouped<>(group, request);
 
-        return findKeys.get(e).onDone(new FutureDone<FindKeys>() {
+        return findKeys.get(key).onDone(new FutureDone<FindKeys>() {
             @Override
             public void cancelled() {
-                findKeys.invalidate(e);
+                findKeys.invalidate(key);
             }
 
             @Override
             public void failed(Throwable e) {
-                findKeys.invalidate(e);
+                findKeys.invalidate(key);
             }
 
             @Override
@@ -113,8 +113,8 @@ public class MetadataResourceCache {
     }
 
     @Data
-    private static final class Entry {
-        final String group;
-        final RangeFilter filter;
+    static class Grouped<T> {
+        private final Optional<String> group;
+        private final T value;
     }
 }

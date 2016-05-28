@@ -22,10 +22,11 @@
 package com.spotify.heroic.shell.task;
 
 import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.dagger.CoreComponent;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metadata.CountSeries;
+import com.spotify.heroic.metadata.DeleteSeries;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.shell.ShellIO;
@@ -73,20 +74,25 @@ public class MetadataDelete implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        final RangeFilter filter = Tasks.setupRangeFilter(parser, params);
+        final Filter filter = Tasks.setupFilter(parser, params);
 
         final MetadataBackend group = metadata.useOptionalGroup(params.group);
 
-        return group.countSeries(filter).lazyTransform((LazyTransform<CountSeries, Void>) c -> {
-            io.out().println(String.format("Deleteing %d entrie(s)", c.getCount()));
+        return group
+            .countSeries(new CountSeries.Request(filter, params.getRange(), params.getLimit()))
+            .lazyTransform((LazyTransform<CountSeries, Void>) c -> {
+                io.out().println(String.format("Deleteing %d entrie(s)", c.getCount()));
 
-            if (!params.ok) {
-                io.out().println("Deletion stopped, use --ok to proceed");
-                return async.resolved(null);
-            }
+                if (!params.ok) {
+                    io.out().println("Deletion stopped, use --ok to proceed");
+                    return async.resolved(null);
+                }
 
-            return group.deleteSeries(filter).directTransform(r -> null);
-        });
+                return group
+                    .deleteSeries(
+                        new DeleteSeries.Request(filter, params.getRange(), params.getLimit()))
+                    .directTransform(r -> null);
+            });
     }
 
     @ToString

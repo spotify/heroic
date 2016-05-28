@@ -23,6 +23,6 @@ package com.spotify.heroic.rpc.grpc;
 
 import eu.toolchain.async.AsyncFuture;
 
-public interface GrpcEndpointHandle<Q, R> extends GrpcEndpointSpecification<Q, R> {
+public interface GrpcEndpointHandle<Q, R> extends GrpcDescriptor<Q, R> {
     AsyncFuture<R> handle(final Q request) throws Exception;
 }
