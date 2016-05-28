@@ -23,7 +23,6 @@ package com.spotify.heroic.suggest.elasticsearch;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.hash.HashCode;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
@@ -414,10 +413,9 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
             }
 
             return bind(builder.execute()).directTransform((SearchResponse response) -> {
-                final ImmutableSortedSet.Builder<Suggestion> suggestions =
-                    ImmutableSortedSet.naturalOrder();
+                final ImmutableList.Builder<Suggestion> suggestions = ImmutableList.builder();
 
-                Aggregations aggregations = response.getAggregations();
+                final Aggregations aggregations = response.getAggregations();
 
                 if (aggregations == null) {
                     return TagSuggest.of();

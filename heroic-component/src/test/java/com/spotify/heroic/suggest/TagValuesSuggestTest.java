@@ -3,24 +3,17 @@ package com.spotify.heroic.suggest;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Ordering;
+import com.spotify.heroic.AbstractReducedResultTest;
 import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.metric.RequestError;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import static org.junit.Assert.assertEquals;
 
 @RunWith(MockitoJUnitRunner.class)
-public class TagValuesSuggestTest {
-    @Mock
-    private RequestError e1;
-
-    @Mock
-    private RequestError e2;
-
+public class TagValuesSuggestTest extends AbstractReducedResultTest {
     private TagValuesSuggest s1;
     private TagValuesSuggest s2;
     private TagValuesSuggest s3;
@@ -43,28 +36,17 @@ public class TagValuesSuggestTest {
 
     @Test
     public void reduceTest() throws Exception {
-        final TagValuesSuggest ref =
-            new TagValuesSuggest(ImmutableList.of(e1, e2), ImmutableList.of(host, role, site),
-                false);
+        assertEquals(new TagValuesSuggest(errors, ImmutableList.of(host, role, site), false),
+            TagValuesSuggest
+                .reduce(OptionalLimit.empty(), OptionalLimit.empty())
+                .collect(ImmutableList.of(s1, s2, s3)));
 
-        final TagValuesSuggest result = TagValuesSuggest
-            .reduce(OptionalLimit.empty(), OptionalLimit.empty())
-            .collect(ImmutableList.of(s1, s2, s3));
-
-        assertEquals(ref, result);
-    }
-
-    @Test
-    public void reduceLimitedTest() throws Exception {
-        final TagValuesSuggest ref = new TagValuesSuggest(ImmutableList.of(e1, e2),
-            ImmutableList.of(new TagValuesSuggest.Suggestion(host.getKey(),
-                ImmutableSortedSet.of(host.getValues().iterator().next()), true)), true);
-
-        final TagValuesSuggest result = TagValuesSuggest
-            .reduce(OptionalLimit.of(1L), OptionalLimit.of(1L))
-            .collect(ImmutableList.of(s1, s2, s3));
-
-        assertEquals(ref, result);
+        assertEquals(new TagValuesSuggest(errors, ImmutableList.of(
+            new TagValuesSuggest.Suggestion(host.getKey(),
+                ImmutableSortedSet.of(host.getValues().iterator().next()), true)), true),
+            TagValuesSuggest
+                .reduce(OptionalLimit.of(1L), OptionalLimit.of(1L))
+                .collect(ImmutableList.of(s1, s2, s3)));
     }
 
     @Test

@@ -169,13 +169,14 @@ public class MemoryBackend implements SuggestBackend, Grouped {
             values.ifPresent(parts -> parts.forEach(
                 k -> ids.retainAll(tagValues.getOrDefault(k, ImmutableSet.of()))));
 
-            final SortedSet<TagSuggest.Suggestion> suggestions = ImmutableSortedSet.copyOf(request
-                .getLimit()
-                .limitStream(ids.stream())
-                .map(tagIndex::get)
-                .filter(v -> v != null)
-                .map(d -> new TagSuggest.Suggestion(SCORE, d.id.key, d.id.value))
-                .iterator());
+            final List<TagSuggest.Suggestion> suggestions = ImmutableList.copyOf(
+                ImmutableSortedSet.copyOf(request
+                    .getLimit()
+                    .limitStream(ids.stream())
+                    .map(tagIndex::get)
+                    .filter(v -> v != null)
+                    .map(d -> new TagSuggest.Suggestion(SCORE, d.id.key, d.id.value))
+                    .iterator()));
 
             return async.resolved(TagSuggest.of(suggestions));
         }

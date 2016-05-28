@@ -24,7 +24,6 @@ package com.spotify.heroic.suggest.elasticsearch;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.hash.HashCode;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
@@ -403,8 +402,7 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
             }
 
             return bind(builder.execute()).directTransform((SearchResponse response) -> {
-                final ImmutableSortedSet.Builder<Suggestion> suggestions =
-                    ImmutableSortedSet.naturalOrder();
+                final ImmutableList.Builder<Suggestion> suggestions = ImmutableList.builder();
 
                 final StringTerms kvs = response.getAggregations().get("kvs");
 

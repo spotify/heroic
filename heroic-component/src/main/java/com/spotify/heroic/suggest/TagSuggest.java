@@ -39,18 +39,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.SortedSet;
 
 @Data
 public class TagSuggest {
     private final List<RequestError> errors;
-    private final SortedSet<Suggestion> suggestions;
+    private final List<Suggestion> suggestions;
 
     public static TagSuggest of() {
-        return new TagSuggest(ImmutableList.of(), ImmutableSortedSet.of());
+        return new TagSuggest(ImmutableList.of(), ImmutableList.of());
     }
 
-    public static TagSuggest of(SortedSet<Suggestion> suggestions) {
+    public static TagSuggest of(List<Suggestion> suggestions) {
         return new TagSuggest(ImmutableList.of(), suggestions);
     }
 
@@ -73,13 +72,15 @@ public class TagSuggest {
                 }
             }
 
-            final SortedSet<Suggestion> values = ImmutableSortedSet.copyOf(suggestions1
-                .entrySet()
-                .stream()
-                .map(e -> new Suggestion(e.getValue(), e.getKey().getLeft(), e.getKey().getRight()))
-                .iterator());
+            final List<Suggestion> values = ImmutableList.copyOf(ImmutableSortedSet.copyOf(
+                suggestions1
+                    .entrySet()
+                    .stream()
+                    .map(e -> new Suggestion(e.getValue(), e.getKey().getLeft(),
+                        e.getKey().getRight()))
+                    .iterator()));
 
-            return new TagSuggest(errors1, limit.limitSortedSet(values));
+            return new TagSuggest(errors1, limit.limitList(values));
         };
     }
 
@@ -103,7 +104,7 @@ public class TagSuggest {
 
     public static Transform<Throwable, TagSuggest> shardError(final ClusterShardGroup shard) {
         return e -> new TagSuggest(ImmutableList.of(ShardError.fromThrowable(shard, e)),
-            ImmutableSortedSet.of());
+            ImmutableList.of());
     }
 
     @Data
