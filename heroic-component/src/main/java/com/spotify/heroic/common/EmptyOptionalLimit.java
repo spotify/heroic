@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -76,6 +77,11 @@ class EmptyOptionalLimit implements OptionalLimit {
 
     @Override
     public <T> Set<T> limitSet(final Set<T> input) {
+        return input;
+    }
+
+    @Override
+    public <T> SortedSet<T> limitSortedSet(final SortedSet<T> input) {
         return input;
     }
 

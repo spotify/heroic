@@ -21,9 +21,8 @@
 
 package com.spotify.heroic.suggest;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSortedSet;
 import com.spotify.heroic.cluster.ClusterShardGroup;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.OptionalLimit;
@@ -33,113 +32,78 @@ import com.spotify.heroic.metric.ShardError;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-
-import static com.google.common.base.Preconditions.checkNotNull;
+import java.util.SortedSet;
 
 @Data
 public class TagSuggest {
     private final List<RequestError> errors;
-    private final List<Suggestion> suggestions;
+    private final SortedSet<Suggestion> suggestions;
 
     public static TagSuggest of() {
-        return new TagSuggest(ImmutableList.of(), ImmutableList.of());
+        return new TagSuggest(ImmutableList.of(), ImmutableSortedSet.of());
     }
 
-    public static TagSuggest of(List<Suggestion> suggestions) {
+    public static TagSuggest of(SortedSet<Suggestion> suggestions) {
         return new TagSuggest(ImmutableList.of(), suggestions);
     }
 
     public static Collector<TagSuggest, TagSuggest> reduce(final OptionalLimit limit) {
         return groups -> {
             final List<RequestError> errors1 = new ArrayList<>();
-            final HashMap<Pair<String, String>, Suggestion> suggestions1 = new HashMap<>();
+            final Map<Pair<String, String>, Float> suggestions1 = new HashMap<>();
 
             for (final TagSuggest g : groups) {
                 errors1.addAll(g.errors);
 
                 for (final Suggestion s : g.suggestions) {
-                    final Pair<String, String> key = Pair.of(s.key, s.value);
-
-                    final Suggestion replaced = suggestions1.put(key, s);
-
-                    if (replaced == null) {
-                        continue;
-                    }
+                    final Pair<String, String> key = Pair.of(s.getKey(), s.getValue());
+                    final Float old = suggestions1.put(key, s.getScore());
 
                     // prefer higher score if available.
-                    if (s.score < replaced.score) {
-                        suggestions1.put(key, replaced);
+                    if (old != null && s.score < old) {
+                        suggestions1.put(key, old);
                     }
                 }
             }
 
-            final List<Suggestion> results = new ArrayList<>(suggestions1.values());
-            Collections.sort(results, Suggestion.COMPARATOR);
+            final SortedSet<Suggestion> values = ImmutableSortedSet.copyOf(suggestions1
+                .entrySet()
+                .stream()
+                .map(e -> new Suggestion(e.getValue(), e.getKey().getLeft(), e.getKey().getRight()))
+                .iterator());
 
-            return new TagSuggest(errors1, limit.limitList(results));
+            return new TagSuggest(errors1, limit.limitSortedSet(values));
         };
     }
 
     @Data
-    @EqualsAndHashCode(of = {"key", "value"})
-    public static final class Suggestion {
+    public static final class Suggestion implements Comparable<Suggestion> {
         private final float score;
         private final String key;
         private final String value;
 
-        @JsonCreator
-        public Suggestion(
-            @JsonProperty("score") Float score, @JsonProperty("key") String key,
-            @JsonProperty("value") String value
-        ) {
-            this.score = checkNotNull(score, "score");
-            this.key = checkNotNull(key, "key");
-            this.value = value;
+        @Override
+        public int compareTo(final Suggestion o) {
+            final int s = -Float.compare(score, o.score);
+
+            if (s != 0) {
+                return s;
+            }
+
+            return key.compareTo(o.key);
         }
-
-        // sort suggestions descending by score.
-        private static final Comparator<Suggestion> COMPARATOR = new Comparator<Suggestion>() {
-            @Override
-            public int compare(Suggestion a, Suggestion b) {
-                final int s = Float.compare(b.score, a.score);
-
-                if (s != 0) {
-                    return s;
-                }
-
-                return compareKey(a, b);
-            }
-
-            private int compareKey(Suggestion a, Suggestion b) {
-                if (a.key == null && b.key == null) {
-                    return 0;
-                }
-
-                if (a.key == null) {
-                    return 1;
-                }
-
-                if (b.key == null) {
-                    return -1;
-                }
-
-                return a.key.compareTo(b.key);
-            }
-        };
     }
 
     public static Transform<Throwable, TagSuggest> shardError(final ClusterShardGroup shard) {
         return e -> new TagSuggest(ImmutableList.of(ShardError.fromThrowable(shard, e)),
-            ImmutableList.of());
+            ImmutableSortedSet.of());
     }
 
     @Data

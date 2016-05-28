@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -46,6 +47,8 @@ public interface OptionalLimit {
     <T> List<T> limitList(List<T> input);
 
     <T> Set<T> limitSet(Set<T> set);
+
+    <T> SortedSet<T> limitSortedSet(SortedSet<T> values);
 
     <T> Stream<T> limitStream(Stream<T> stream);
 

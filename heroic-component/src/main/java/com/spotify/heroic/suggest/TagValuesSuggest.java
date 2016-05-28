@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.suggest;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.cluster.ClusterShardGroup;
 import com.spotify.heroic.common.DateRange;
@@ -34,14 +32,11 @@ import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
 import lombok.Data;
 
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedSet;
 import java.util.TreeSet;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 @Data
 public class TagValuesSuggest {
@@ -79,72 +74,44 @@ public class TagValuesSuggest {
                 limited1 = limited1 || g.limited;
             }
 
-            final ArrayList<Suggestion> suggestions1 = new ArrayList<>(midflights.size());
+            final SortedSet<Suggestion> suggestions1 = new TreeSet<>();
 
             for (final Map.Entry<String, MidFlight> e : midflights.entrySet()) {
                 final String key = e.getKey();
                 final MidFlight m = e.getValue();
 
-                final ImmutableList<String> values = ImmutableList.copyOf(m.values);
-                final boolean sLimited = m.limited || groupLimit.isGreater(values.size());
+                final boolean sLimited = m.limited || groupLimit.isGreater(m.values.size());
 
-                suggestions1.add(new Suggestion(key, groupLimit.limitList(values), sLimited));
+                suggestions1.add(
+                    new Suggestion(key, groupLimit.limitSortedSet(m.values), sLimited));
             }
 
-            return new TagValuesSuggest(errors.build(), limit.limitList(suggestions1),
+            return new TagValuesSuggest(errors.build(),
+                limit.limitList(ImmutableList.copyOf(suggestions1)),
                 limited1 || limit.isGreater(suggestions1.size()));
         };
     }
 
     @Data
-    public static final class Suggestion {
+    public static final class Suggestion implements Comparable<Suggestion> {
         private final String key;
-        private final List<String> values;
+        private final SortedSet<String> values;
         private final boolean limited;
 
-        @JsonCreator
-        public Suggestion(
-            @JsonProperty("key") String key, @JsonProperty("values") List<String> values,
-            @JsonProperty("limited") Boolean limited
-        ) {
-            this.key = checkNotNull(key, "key");
-            this.values = ImmutableList.copyOf(checkNotNull(values, "values"));
-            this.limited = checkNotNull(limited, "limited");
+        @Override
+        public int compareTo(final Suggestion o) {
+            final int v = -Integer.compare(values.size(), o.values.size());
+
+            if (v != 0) {
+                return v;
+            }
+
+            return key.compareTo(o.key);
         }
-
-        // sort suggestions descending by score.
-        public static final Comparator<Suggestion> COMPARATOR = new Comparator<Suggestion>() {
-            @Override
-            public int compare(Suggestion a, Suggestion b) {
-                final int v = Integer.compare(b.values.size(), a.values.size());
-
-                if (v != 0) {
-                    return v;
-                }
-
-                return compareKey(a, b);
-            }
-
-            private int compareKey(Suggestion a, Suggestion b) {
-                if (a.key == null && b.key == null) {
-                    return 0;
-                }
-
-                if (a.key == null) {
-                    return 1;
-                }
-
-                if (b.key == null) {
-                    return -1;
-                }
-
-                return a.key.compareTo(b.key);
-            }
-        };
     }
 
     private static class MidFlight {
-        private final TreeSet<String> values = new TreeSet<>();
+        private final SortedSet<String> values = new TreeSet<>();
         private boolean limited;
     }
 

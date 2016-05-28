@@ -23,6 +23,7 @@ package com.spotify.heroic.suggest.elasticsearch;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.hash.HashCode;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
@@ -251,7 +252,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                         result.add(valueBucket.getKey());
                     }
 
-                    final List<String> values = groupLimit.limitList(ImmutableList.copyOf(result));
+                    final SortedSet<String> values = groupLimit.limitSortedSet(result);
                     final boolean limited = groupLimit.isGreater(valueBuckets.size());
 
                     suggestions.add(
@@ -413,7 +414,8 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
             }
 
             return bind(builder.execute()).directTransform((SearchResponse response) -> {
-                final Set<Suggestion> suggestions = new LinkedHashSet<>();
+                final ImmutableSortedSet.Builder<Suggestion> suggestions =
+                    ImmutableSortedSet.naturalOrder();
 
                 Aggregations aggregations = response.getAggregations();
 
@@ -435,7 +437,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                     suggestions.add(new Suggestion(hits.getMaxScore(), k, v));
                 }
 
-                return TagSuggest.of(ImmutableList.copyOf(suggestions));
+                return TagSuggest.of(suggestions.build());
             });
         });
     }

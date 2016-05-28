@@ -23,6 +23,7 @@ package com.spotify.heroic.suggest.memory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedSet;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Groups;
@@ -119,9 +120,8 @@ public class MemoryBackend implements SuggestBackend, Grouped {
         final List<TagValuesSuggest.Suggestion> suggestions = ImmutableList.copyOf(request
             .getLimit()
             .limitStream(counts.entrySet().stream())
-            .map(
-                e -> new TagValuesSuggest.Suggestion(e.getKey(), ImmutableList.copyOf(e.getValue()),
-                    false))
+            .map(e -> new TagValuesSuggest.Suggestion(e.getKey(),
+                ImmutableSortedSet.copyOf(e.getValue()), false))
             .iterator());
 
         return async.resolved(TagValuesSuggest.of(suggestions, false));
@@ -169,7 +169,7 @@ public class MemoryBackend implements SuggestBackend, Grouped {
             values.ifPresent(parts -> parts.forEach(
                 k -> ids.retainAll(tagValues.getOrDefault(k, ImmutableSet.of()))));
 
-            final List<TagSuggest.Suggestion> suggestions = ImmutableList.copyOf(request
+            final SortedSet<TagSuggest.Suggestion> suggestions = ImmutableSortedSet.copyOf(request
                 .getLimit()
                 .limitStream(ids.stream())
                 .map(tagIndex::get)

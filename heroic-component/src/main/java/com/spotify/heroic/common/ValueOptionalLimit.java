@@ -27,21 +27,32 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedSet;
 import lombok.EqualsAndHashCode;
-import lombok.RequiredArgsConstructor;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 @EqualsAndHashCode
-@RequiredArgsConstructor
 @JsonSerialize(using = ValueOptionalLimit.Serializer.class)
 class ValueOptionalLimit implements OptionalLimit {
     private final long limit;
+
+    public ValueOptionalLimit(final long limit) {
+        if (limit < 0) {
+            throw new IllegalArgumentException("limit");
+        }
+
+        this.limit = limit;
+    }
 
     @Override
     public boolean isGreater(final long size) {
@@ -84,30 +95,17 @@ class ValueOptionalLimit implements OptionalLimit {
 
     @Override
     public <T> List<T> limitList(final List<T> input) {
-        if (limit > Integer.MAX_VALUE) {
-            throw new IllegalStateException(
-                "Limit is larger than maximum possible integer (" + limit + ")");
-        }
-
-        if (input.size() < limit) {
-            return input;
-        }
-
-        return ImmutableList.copyOf(input.stream().limit(limit).iterator());
+        return limitCollection(input, ImmutableList::copyOf);
     }
 
     @Override
     public <T> Set<T> limitSet(final Set<T> input) {
-        if (limit > Integer.MAX_VALUE) {
-            throw new IllegalStateException(
-                "Limit is larger than maximum possible integer (" + limit + ")");
-        }
+        return limitCollection(input, ImmutableSet::copyOf);
+    }
 
-        if (input.size() < limit) {
-            return input;
-        }
-
-        return ImmutableSet.copyOf(input.stream().limit(limit).iterator());
+    @Override
+    public <T> SortedSet<T> limitSortedSet(final SortedSet<T> input) {
+        return limitCollection(input, ImmutableSortedSet::copyOf);
     }
 
     @Override
@@ -133,6 +131,21 @@ class ValueOptionalLimit implements OptionalLimit {
     @Override
     public String toString() {
         return "[" + limit + "]";
+    }
+
+    private <V, T extends Collection<V>> T limitCollection(
+        final T input, final Function<Iterator<V>, T> converter
+    ) {
+        if (limit > Integer.MAX_VALUE) {
+            throw new IllegalStateException(
+                "Limit is larger than maximum possible integer (" + limit + ")");
+        }
+
+        if (input.size() < limit) {
+            return input;
+        }
+
+        return converter.apply(input.stream().limit(limit).iterator());
     }
 
     static class Serializer extends JsonSerializer<ValueOptionalLimit> {
