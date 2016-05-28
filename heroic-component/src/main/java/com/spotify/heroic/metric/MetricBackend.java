@@ -105,7 +105,7 @@ public interface MetricBackend extends Initializing, Grouped, Collected {
      * matching keys.
      */
     AsyncObservable<BackendKeySet> streamKeysPaged(
-        BackendKeyFilter filter, QueryOptions options, int pageSize
+        BackendKeyFilter filter, QueryOptions options, long pageSize
     );
 
     /**

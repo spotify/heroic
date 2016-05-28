@@ -105,7 +105,7 @@ class BigtableAnalyticsMetricBackend implements MetricBackend {
 
     @Override
     public AsyncObservable<BackendKeySet> streamKeysPaged(
-        BackendKeyFilter filter, QueryOptions options, int pageSize
+        BackendKeyFilter filter, QueryOptions options, long pageSize
     ) {
         return backend.streamKeysPaged(filter, options, pageSize);
     }

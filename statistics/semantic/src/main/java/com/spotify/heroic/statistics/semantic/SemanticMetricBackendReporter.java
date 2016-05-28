@@ -146,7 +146,7 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
 
         @Override
         public AsyncObservable<BackendKeySet> streamKeysPaged(
-            final BackendKeyFilter filter, final QueryOptions options, final int pageSize
+            final BackendKeyFilter filter, final QueryOptions options, final long pageSize
         ) {
             return delegate.streamKeysPaged(filter, options, pageSize);
         }

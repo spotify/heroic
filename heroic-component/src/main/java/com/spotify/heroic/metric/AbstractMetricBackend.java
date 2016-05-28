@@ -32,6 +32,7 @@ import eu.toolchain.async.AsyncFuture;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
+import java.util.Optional;
 
 @RequiredArgsConstructor
 public abstract class AbstractMetricBackend implements MetricBackend {
@@ -76,31 +77,26 @@ public abstract class AbstractMetricBackend implements MetricBackend {
 
     @Override
     public AsyncObservable<MetricCollection> streamRow(BackendKey key) {
-        return observer -> {
-            observer.end();
-        };
+        return AsyncObserver::end;
     }
 
     @Override
     public AsyncObservable<BackendKeySet> streamKeysPaged(
-        BackendKeyFilter filter, final QueryOptions options, final int pageSize
+        BackendKeyFilter filter, final QueryOptions options, final long pageSize
     ) {
-        return observer -> {
-            streamKeysNextPage(observer, filter, options, pageSize, null);
-        };
+        return observer -> streamKeysNextPage(observer, filter, options, pageSize,
+            Optional.empty());
     }
 
     private void streamKeysNextPage(
         final AsyncObserver<BackendKeySet> observer, final BackendKeyFilter filter,
-        final QueryOptions options, final int pageSize, final BackendKey key
+        final QueryOptions options, final long pageSize, final Optional<BackendKey> key
     ) throws Exception {
-        BackendKeyFilter partial = filter;
-
-        if (key != null) {
-            partial = filter.withStart(BackendKeyFilter.gt(key));
-        }
-
-        partial = partial.withLimit(OptionalLimit.of((long) pageSize));
+        final BackendKeyFilter partial = key
+            .map(BackendKeyFilter::gt)
+            .map(filter::withStart)
+            .orElse(filter)
+            .withLimit(OptionalLimit.of(pageSize));
 
         final AsyncObservable<BackendKeySet> observable = streamKeys(partial, options);
 
@@ -133,7 +129,7 @@ public abstract class AbstractMetricBackend implements MetricBackend {
 
                 final BackendKey next = lastSeen;
                 lastSeen = null;
-                streamKeysNextPage(observer, filter, options, pageSize, next);
+                streamKeysNextPage(observer, filter, options, pageSize, Optional.of(next));
             }
         });
     }
