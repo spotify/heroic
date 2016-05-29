@@ -23,18 +23,14 @@ package com.spotify.heroic.metadata;
 
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.async.AsyncObservable;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.SelectedGroup;
-import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
-import com.spotify.heroic.metric.WriteResult;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @RequiredArgsConstructor
@@ -45,67 +41,48 @@ public class MetadataBackendGroup implements MetadataBackend {
 
     @Override
     public AsyncFuture<Void> configure() {
-        final List<AsyncFuture<Void>> callbacks = new ArrayList<>();
-        run(backend -> backend.configure());
-        return async.collectAndDiscard(callbacks);
+        return async.collectAndDiscard(run(MetadataBackend::configure));
     }
 
     @Override
     public AsyncFuture<FindTags> findTags(final FindTags.Request request) {
-        final List<AsyncFuture<FindTags>> callbacks = run(b -> b.findTags(request));
-        return async.collect(callbacks, FindTags.reduce());
+        return async.collect(run(b -> b.findTags(request)), FindTags.reduce());
     }
 
     @Override
     public AsyncFuture<CountSeries> countSeries(final CountSeries.Request request) {
-        final List<AsyncFuture<CountSeries>> callbacks = run(b -> b.countSeries(request));
-        return async.collect(callbacks, CountSeries.reduce());
+        return async.collect(run(b -> b.countSeries(request)), CountSeries.reduce());
     }
 
     @Override
     public AsyncFuture<FindSeries> findSeries(final FindSeries.Request request) {
-        final List<AsyncFuture<FindSeries>> callbacks = run(v -> v.findSeries(request));
-        return async.collect(callbacks, FindSeries.reduce(request.getLimit()));
+        return async.collect(run(v -> v.findSeries(request)),
+            FindSeries.reduce(request.getLimit()));
     }
 
     @Override
     public AsyncFuture<DeleteSeries> deleteSeries(final DeleteSeries.Request request) {
-        final List<AsyncFuture<DeleteSeries>> callbacks = run(b -> b.deleteSeries(request));
-        return async.collect(callbacks, DeleteSeries.reduce());
+        return async.collect(run(b -> b.deleteSeries(request)), DeleteSeries.reduce());
     }
 
     @Override
     public AsyncFuture<FindKeys> findKeys(final FindKeys.Request request) {
-        final List<AsyncFuture<FindKeys>> callbacks = run(b -> b.findKeys(request));
-        return async.collect(callbacks, FindKeys.reduce());
+        return async.collect(run(b -> b.findKeys(request)), FindKeys.reduce());
     }
 
     @Override
-    public AsyncFuture<WriteResult> write(final Series series, final DateRange range) {
-        final List<AsyncFuture<WriteResult>> callbacks = run(b -> b.write(series, range));
-        return async.collect(callbacks, WriteResult.reduce());
+    public AsyncFuture<WriteMetadata> write(final WriteMetadata.Request request) {
+        return async.collect(run(b -> b.write(request)), WriteMetadata.reduce());
     }
 
     @Override
     public AsyncObservable<Entries> entries(final Entries.Request request) {
-        final List<AsyncObservable<Entries>> observables = new ArrayList<>();
-
-        for (final MetadataBackend b : backends) {
-            observables.add(b.entries(request));
-        }
-
-        return AsyncObservable.chain(observables);
+        return AsyncObservable.chain(run(b -> b.entries(request)));
     }
 
     @Override
     public boolean isReady() {
-        boolean ready = true;
-
-        for (final MetadataBackend backend : backends) {
-            ready = ready && backend.isReady();
-        }
-
-        return ready;
+        return backends.getMembers().stream().allMatch(MetadataBackend::isReady);
     }
 
     @Override

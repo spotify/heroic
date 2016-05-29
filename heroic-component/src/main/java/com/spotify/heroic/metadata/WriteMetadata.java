@@ -19,12 +19,15 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric;
+package com.spotify.heroic.metadata;
 
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.cluster.ClusterShardGroup;
+import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.RequestTimer;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.metric.RequestError;
+import com.spotify.heroic.metric.ShardError;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
 import lombok.Data;
@@ -32,48 +35,44 @@ import lombok.Data;
 import java.util.List;
 
 @Data
-public class WriteMetric {
+public class WriteMetadata {
     private final List<RequestError> errors;
     private final List<Long> times;
 
-    public static WriteMetric of() {
-        return new WriteMetric(ImmutableList.of(), ImmutableList.of());
+    public static WriteMetadata of() {
+        return new WriteMetadata(ImmutableList.of(), ImmutableList.of());
     }
 
-    private static WriteMetric of(final Long time) {
-        return new WriteMetric(ImmutableList.of(), ImmutableList.of(time));
+    private static WriteMetadata of(final long time) {
+        return new WriteMetadata(ImmutableList.of(), ImmutableList.of(time));
     }
 
-    public static WriteMetric error(final RequestError error) {
-        return new WriteMetric(ImmutableList.of(error), ImmutableList.of());
-    }
-
-    public static Transform<Throwable, WriteMetric> shardError(final ClusterShardGroup c) {
-        return e -> new WriteMetric(ImmutableList.of(ShardError.fromThrowable(c, e)),
+    public static Transform<Throwable, WriteMetadata> shardError(final ClusterShardGroup c) {
+        return e -> new WriteMetadata(ImmutableList.of(ShardError.fromThrowable(c, e)),
             ImmutableList.of());
     }
 
-    public static Collector<WriteMetric, WriteMetric> reduce() {
-        return results -> {
+    public static Collector<WriteMetadata, WriteMetadata> reduce() {
+        return requests -> {
             final ImmutableList.Builder<RequestError> errors = ImmutableList.builder();
             final ImmutableList.Builder<Long> times = ImmutableList.builder();
 
-            for (final WriteMetric r : results) {
+            for (final WriteMetadata r : requests) {
                 errors.addAll(r.getErrors());
                 times.addAll(r.getTimes());
             }
 
-            return new WriteMetric(errors.build(), times.build());
+            return new WriteMetadata(errors.build(), times.build());
         };
     }
 
-    public static RequestTimer<WriteMetric> timer() {
-        return new RequestTimer<>(WriteMetric::of);
+    public static RequestTimer<WriteMetadata> timer() {
+        return new RequestTimer<>(WriteMetadata::of);
     }
 
     @Data
     public static class Request {
-        final Series series;
-        final MetricCollection data;
+        private final Series series;
+        private final DateRange range;
     }
 }

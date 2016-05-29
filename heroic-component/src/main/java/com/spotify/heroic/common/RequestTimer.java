@@ -19,27 +19,20 @@
  * under the License.
  */
 
-package com.spotify.heroic.cache.noop;
+package com.spotify.heroic.common;
 
-import com.spotify.heroic.cache.CacheScope;
-import com.spotify.heroic.cache.QueryCache;
-import com.spotify.heroic.metric.FullQuery;
-import com.spotify.heroic.metric.QueryResult;
-import eu.toolchain.async.AsyncFuture;
+import com.google.common.base.Stopwatch;
+import lombok.RequiredArgsConstructor;
 
-import javax.inject.Inject;
-import java.util.function.Supplier;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
-@CacheScope
-public class NoopQueryCache implements QueryCache {
-    @Inject
-    public NoopQueryCache() {
-    }
+@RequiredArgsConstructor
+public class RequestTimer<T> {
+    private final Stopwatch watch = Stopwatch.createStarted();
+    private final Function<Long, T> builder;
 
-    @Override
-    public AsyncFuture<QueryResult> load(
-        FullQuery.Request request, Supplier<AsyncFuture<QueryResult>> loader
-    ) {
-        return loader.get();
+    public T end() {
+        return builder.apply(watch.elapsed(TimeUnit.MICROSECONDS));
     }
 }

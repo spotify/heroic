@@ -23,9 +23,7 @@ package com.spotify.heroic.analytics.bigtable;
 
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.async.AsyncObservable;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
-import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.BackendEntry;
 import com.spotify.heroic.metric.BackendKey;
@@ -35,15 +33,12 @@ import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricCollection;
-import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.WriteMetric;
-import com.spotify.heroic.metric.WriteResult;
 import eu.toolchain.async.AsyncFuture;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 import java.time.LocalDate;
-import java.util.Collection;
 import java.util.List;
 
 @ToString
@@ -73,22 +68,16 @@ class BigtableAnalyticsMetricBackend implements MetricBackend {
     }
 
     @Override
-    public AsyncFuture<WriteResult> write(WriteMetric write) {
-        return backend.write(write);
-    }
-
-    @Override
-    public AsyncFuture<WriteResult> write(Collection<WriteMetric> writes) {
-        return backend.write(writes);
+    public AsyncFuture<WriteMetric> write(WriteMetric.Request request) {
+        return backend.write(request);
     }
 
     @Override
     public AsyncFuture<FetchData> fetch(
-        MetricType type, Series series, DateRange range, FetchQuotaWatcher watcher,
-        QueryOptions options
+        final FetchData.Request request, final FetchQuotaWatcher watcher
     ) {
-        analytics.reportFetchSeries(LocalDate.now(), series);
-        return backend.fetch(type, series, range, watcher, options);
+        analytics.reportFetchSeries(LocalDate.now(), request.getSeries());
+        return backend.fetch(request, watcher);
     }
 
     @Override

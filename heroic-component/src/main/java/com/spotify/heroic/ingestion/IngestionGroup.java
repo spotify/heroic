@@ -23,10 +23,8 @@ package com.spotify.heroic.ingestion;
 
 import com.spotify.heroic.common.Collected;
 import com.spotify.heroic.common.Grouped;
-import com.spotify.heroic.metric.WriteMetric;
-import com.spotify.heroic.metric.WriteResult;
 import eu.toolchain.async.AsyncFuture;
 
 public interface IngestionGroup extends Grouped, Collected {
-    AsyncFuture<WriteResult> write(WriteMetric write);
+    AsyncFuture<Ingestion> write(Ingestion.Request request);
 }

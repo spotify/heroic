@@ -26,26 +26,20 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.ByteStreams;
-import com.spotify.heroic.QueryOptions;
-import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.cluster.NodeMetadata;
 import com.spotify.heroic.cluster.RpcProtocol;
 import com.spotify.heroic.cluster.TracingClusterNodeGroup;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
-import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.UsableGroupManager;
-import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.DeleteSeries;
 import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.FindTags;
-import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.ResultGroups;
+import com.spotify.heroic.metadata.WriteMetadata;
+import com.spotify.heroic.metric.FullQuery;
 import com.spotify.heroic.metric.WriteMetric;
-import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.suggest.KeySuggest;
 import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
@@ -202,21 +196,17 @@ public class GrpcRpcProtocol implements RpcProtocol {
             }
 
             @Override
-            public AsyncFuture<ResultGroups> query(
-                MetricType source, Filter filter, DateRange range, AggregationInstance aggregation,
-                QueryOptions options
-            ) {
-                return request(METRICS_QUERY,
-                    new RpcFullQuery(source, filter, range, aggregation, options));
+            public AsyncFuture<FullQuery> query(final FullQuery.Request request) {
+                return request(METRICS_FULL_QUERY, request);
             }
 
             @Override
-            public AsyncFuture<WriteResult> writeMetric(WriteMetric write) {
-                return request(METRICS_WRITE, write);
+            public AsyncFuture<WriteMetric> writeMetric(final WriteMetric.Request request) {
+                return request(METRICS_WRITE, request);
             }
 
             @Override
-            public AsyncFuture<FindTags> findTags(FindTags.Request request) {
+            public AsyncFuture<FindTags> findTags(final FindTags.Request request) {
                 return request(METADATA_FIND_TAGS, request);
             }
 
@@ -241,10 +231,8 @@ public class GrpcRpcProtocol implements RpcProtocol {
             }
 
             @Override
-            public AsyncFuture<WriteResult> writeSeries(
-                final DateRange range, final Series series
-            ) {
-                return request(METADATA_WRITE, new RpcWriteSeries(range, series));
+            public AsyncFuture<WriteMetadata> writeSeries(final WriteMetadata.Request request) {
+                return request(METADATA_WRITE, request);
             }
 
             @Override
@@ -304,29 +292,6 @@ public class GrpcRpcProtocol implements RpcProtocol {
         }
     }
 
-    @Data
-    public static class RpcFullQuery {
-        private final MetricType source;
-        private final Filter filter;
-        private final DateRange range;
-        private final AggregationInstance aggregation;
-        private final QueryOptions options;
-    }
-
-    @Data
-    public static class RpcWriteSeries {
-        private final DateRange range;
-        private final Series series;
-
-        public RpcWriteSeries(
-            @JsonProperty("range") final DateRange range,
-            @JsonProperty("series") final Series series
-        ) {
-            this.range = checkNotNull(range);
-            this.series = checkNotNull(series);
-        }
-    }
-
     private static final MethodDescriptor.Marshaller<byte[]> BYTE_MARSHALLER =
         new MethodDescriptor.Marshaller<byte[]>() {
             @Override
@@ -362,14 +327,16 @@ public class GrpcRpcProtocol implements RpcProtocol {
         }, new TypeReference<NodeMetadata>() {
         });
 
-    public static final GrpcDescriptor<GroupedQuery<RpcFullQuery>, ResultGroups> METRICS_QUERY =
-        descriptor("metrics:query", new TypeReference<GroupedQuery<RpcFullQuery>>() {
-        }, new TypeReference<ResultGroups>() {
+    public static final GrpcDescriptor<GroupedQuery<FullQuery.Request>, FullQuery>
+        METRICS_FULL_QUERY =
+        descriptor("metrics:fullQuery", new TypeReference<GroupedQuery<FullQuery.Request>>() {
+        }, new TypeReference<FullQuery>() {
         });
 
-    public static final GrpcDescriptor<GroupedQuery<WriteMetric>, WriteResult> METRICS_WRITE =
-        descriptor("metrics:write", new TypeReference<GroupedQuery<WriteMetric>>() {
-        }, new TypeReference<WriteResult>() {
+    public static final GrpcDescriptor<GroupedQuery<WriteMetric.Request>, WriteMetric>
+        METRICS_WRITE =
+        descriptor("metrics:write", new TypeReference<GroupedQuery<WriteMetric.Request>>() {
+        }, new TypeReference<WriteMetric>() {
         });
 
     public static final GrpcDescriptor<GroupedQuery<FindTags.Request>, FindTags>
@@ -402,9 +369,10 @@ public class GrpcRpcProtocol implements RpcProtocol {
         }, new TypeReference<DeleteSeries>() {
         });
 
-    public static final GrpcDescriptor<GroupedQuery<RpcWriteSeries>, WriteResult> METADATA_WRITE =
-        descriptor("metadata:writeSeries", new TypeReference<GroupedQuery<RpcWriteSeries>>() {
-        }, new TypeReference<WriteResult>() {
+    public static final GrpcDescriptor<GroupedQuery<WriteMetadata.Request>, WriteMetadata>
+        METADATA_WRITE = descriptor("metadata:writeSeries",
+        new TypeReference<GroupedQuery<WriteMetadata.Request>>() {
+        }, new TypeReference<WriteMetadata>() {
         });
 
     public static final GrpcDescriptor<GroupedQuery<TagKeyCount.Request>, TagKeyCount>

@@ -29,6 +29,7 @@ import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.CoreComponent;
+import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricCollection;
@@ -96,16 +97,17 @@ public class WritePerformance implements ShellTask {
         final MetricBackendGroup readGroup = metrics.useGroup(params.from);
         final List<MetricBackend> targets = resolveTargets(params.targets);
 
-        final List<AsyncFuture<List<WriteMetric>>> reads = new ArrayList<>();
+        final List<AsyncFuture<List<WriteMetric.Request>>> reads = new ArrayList<>();
 
         for (final Series s : series) {
             reads.add(readGroup
-                .fetch(MetricType.POINT, s, range, QueryOptions.defaults())
+                .fetch(new FetchData.Request(MetricType.POINT, s, range, QueryOptions.defaults()))
                 .directTransform(result -> {
-                    final ImmutableList.Builder<WriteMetric> writes = ImmutableList.builder();
+                    final ImmutableList.Builder<WriteMetric.Request> writes =
+                        ImmutableList.builder();
 
                     for (final MetricCollection group : result.getGroups()) {
-                        writes.add(new WriteMetric(s, group));
+                        writes.add(new WriteMetric.Request(s, group));
                     }
 
                     return writes.build();
@@ -132,7 +134,7 @@ public class WritePerformance implements ShellTask {
 
                 int totalWrites = 0;
 
-                for (final WriteMetric w : input) {
+                for (final WriteMetric.Request w : input) {
                     totalWrites += (w.getData().size() * params.writes);
                 }
 
@@ -233,28 +235,15 @@ public class WritePerformance implements ShellTask {
     }
 
     private List<Callable<AsyncFuture<Times>>> buildWrites(
-        List<MetricBackend> targets, List<WriteMetric> input, final Parameters params,
+        List<MetricBackend> targets, List<WriteMetric.Request> input, final Parameters params,
         final long start
     ) {
         final List<Callable<AsyncFuture<Times>>> writes = new ArrayList<>();
 
         int request = 0;
 
-        if (params.batch) {
-            for (int i = 0; i < params.writes; i++) {
-                final MetricBackend target = targets.get(request++ % targets.size());
-
-                writes.add(() -> target.write(input).directTransform(result -> {
-                    final long runtime = System.currentTimeMillis() - start;
-                    return new Times(result.getTimes(), runtime);
-                }));
-            }
-
-            return writes;
-        }
-
         for (int i = 0; i < params.writes; i++) {
-            for (final WriteMetric w : input) {
+            for (final WriteMetric.Request w : input) {
                 final MetricBackend target = targets.get(request++ % targets.size());
 
                 writes.add(() -> target.write(w).directTransform(result -> {
@@ -378,9 +367,6 @@ public class WritePerformance implements ShellTask {
             metaVar = "<number>")
         private int writes = 10;
 
-        @Option(name = "-B", aliases = {"--batch"}, usage = "Write using batch API")
-        private boolean batch = false;
-
         @Option(name = "--parallelism",
             usage = "The number of requests to send in parallel (default: 100)",
             metaVar = "<number>")
@@ -412,7 +398,7 @@ public class WritePerformance implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         WritePerformance task();
     }
 }

@@ -26,6 +26,7 @@ import lombok.RequiredArgsConstructor;
 
 import java.util.Iterator;
 import java.util.Set;
+import java.util.stream.Stream;
 
 @RequiredArgsConstructor
 public class SelectedGroup<T extends Grouped> implements Grouped, Iterable<T> {
@@ -38,6 +39,10 @@ public class SelectedGroup<T extends Grouped> implements Grouped, Iterable<T> {
     @Override
     public Iterator<T> iterator() {
         return members.iterator();
+    }
+
+    public Stream<T> stream() {
+        return members.stream();
     }
 
     public boolean isEmpty() {

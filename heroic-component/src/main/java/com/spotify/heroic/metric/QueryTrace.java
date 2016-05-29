@@ -37,6 +37,10 @@ public class QueryTrace {
     private final long elapsed;
     private final List<QueryTrace> children;
 
+    public static QueryTrace of(final Identifier what) {
+        return new QueryTrace(what, 0L, ImmutableList.of());
+    }
+
     public static QueryTrace of(final Identifier what, final long elapsed) {
         return new QueryTrace(what, elapsed, ImmutableList.of());
     }

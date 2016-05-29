@@ -23,9 +23,7 @@ package com.spotify.heroic.statistics.semantic;
 
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.async.AsyncObservable;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
-import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.BackendEntry;
 import com.spotify.heroic.metric.BackendKey;
@@ -35,9 +33,7 @@ import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricCollection;
-import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.WriteMetric;
-import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 import com.spotify.metrics.core.MetricId;
@@ -46,7 +42,6 @@ import eu.toolchain.async.AsyncFuture;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
-import java.util.Collection;
 import java.util.List;
 
 @ToString(of = {"base"})
@@ -115,21 +110,15 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
         }
 
         @Override
-        public AsyncFuture<WriteResult> write(final WriteMetric w) {
-            return delegate.write(w).onDone(write.setup());
-        }
-
-        @Override
-        public AsyncFuture<WriteResult> write(final Collection<WriteMetric> writes) {
-            return delegate.write(writes).onDone(writeBatch.setup());
+        public AsyncFuture<WriteMetric> write(final WriteMetric.Request request) {
+            return delegate.write(request).onDone(write.setup());
         }
 
         @Override
         public AsyncFuture<FetchData> fetch(
-            final MetricType type, final Series series, final DateRange range,
-            final FetchQuotaWatcher watcher, final QueryOptions options
+            final FetchData.Request request, final FetchQuotaWatcher watcher
         ) {
-            return delegate.fetch(type, series, range, watcher, options).onDone(fetch.setup());
+            return delegate.fetch(request, watcher).onDone(fetch.setup());
         }
 
         @Override

@@ -52,6 +52,7 @@ public class WriteResource {
         @Suspended final AsyncResponse response, @QueryParam("group") String group,
         WriteMetricRequest write
     ) throws Exception {
-        httpAsync.bind(response, ingestion.useGroup(group).write(write.toWriteMetric()), r -> r);
+        httpAsync.bind(response, ingestion.useGroup(group).write(write.toIngestionRequest()),
+            r -> r);
     }
 }

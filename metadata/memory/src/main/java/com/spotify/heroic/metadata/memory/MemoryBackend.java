@@ -24,7 +24,6 @@ package com.spotify.heroic.metadata.memory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.async.AsyncObservable;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.Series;
@@ -36,7 +35,7 @@ import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.MetadataBackend;
-import com.spotify.heroic.metric.WriteResult;
+import com.spotify.heroic.metadata.WriteMetadata;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.ToString;
@@ -81,9 +80,9 @@ public class MemoryBackend implements MetadataBackend {
     }
 
     @Override
-    public AsyncFuture<WriteResult> write(Series series, DateRange range) {
-        this.storage.add(series);
-        return async.resolved(WriteResult.EMPTY);
+    public AsyncFuture<WriteMetadata> write(final WriteMetadata.Request request) {
+        this.storage.add(request.getSeries());
+        return async.resolved(WriteMetadata.of());
     }
 
     @Override

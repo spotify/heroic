@@ -329,8 +329,9 @@ public class DataMigrate implements ShellTask {
                 return async.cancelled();
             }
 
-            final AsyncFuture<Void> write =
-                to.write(new WriteMetric(key.getSeries(), value)).directTransform(v -> null);
+            final AsyncFuture<Void> write = to
+                .write(new WriteMetric.Request(key.getSeries(), value))
+                .directTransform(v -> null);
 
             future.bind(write);
             return write;

@@ -23,8 +23,12 @@ package com.spotify.heroic.metric;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.spotify.heroic.QueryOptions;
+import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.cluster.ClusterShardGroup;
+import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.filter.Filter;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
 import lombok.Data;
@@ -34,24 +38,24 @@ import java.util.List;
 
 @Slf4j
 @Data
-public final class ResultGroups {
+public final class FullQuery {
     private final QueryTrace trace;
     private final List<RequestError> errors;
     private final List<ResultGroup> groups;
     private final Statistics statistics;
     private final ResultLimits limits;
 
-    public static ResultGroups error(final QueryTrace trace, final RequestError error) {
-        return new ResultGroups(trace, ImmutableList.of(error), ImmutableList.of(),
-            Statistics.empty(), ResultLimits.of());
-    }
-
-    public static ResultGroups empty(final QueryTrace trace) {
-        return new ResultGroups(trace, ImmutableList.of(), ImmutableList.of(), Statistics.empty(),
+    public static FullQuery error(final QueryTrace trace, final RequestError error) {
+        return new FullQuery(trace, ImmutableList.of(error), ImmutableList.of(), Statistics.empty(),
             ResultLimits.of());
     }
 
-    public static Collector<ResultGroups, ResultGroups> collect(final QueryTrace.Identifier what) {
+    public static FullQuery empty(final QueryTrace trace) {
+        return new FullQuery(trace, ImmutableList.of(), ImmutableList.of(), Statistics.empty(),
+            ResultLimits.of());
+    }
+
+    public static Collector<FullQuery, FullQuery> collect(final QueryTrace.Identifier what) {
         final QueryTrace.NamedWatch w = QueryTrace.watch(what);
 
         return results -> {
@@ -61,7 +65,7 @@ public final class ResultGroups {
             Statistics statistics = Statistics.empty();
             final ImmutableSet.Builder<ResultLimit> limits = ImmutableSet.builder();
 
-            for (final ResultGroups r : results) {
+            for (final FullQuery r : results) {
                 traces.add(r.trace);
                 errors.addAll(r.errors);
                 groups.addAll(r.groups);
@@ -69,21 +73,30 @@ public final class ResultGroups {
                 limits.addAll(r.limits.getLimits());
             }
 
-            return new ResultGroups(w.end(traces.build()), errors.build(), groups.build(),
-                statistics, new ResultLimits(limits.build()));
+            return new FullQuery(w.end(traces.build()), errors.build(), groups.build(), statistics,
+                new ResultLimits(limits.build()));
         };
     }
 
-    public static Transform<Throwable, ResultGroups> shardError(
+    public static Transform<Throwable, FullQuery> shardError(
         final QueryTrace.Identifier what, final ClusterShardGroup c
     ) {
         final QueryTrace.NamedWatch w = QueryTrace.watch(what);
-        return e -> new ResultGroups(w.end(), ImmutableList.of(ShardError.fromThrowable(c, e)),
+        return e -> new FullQuery(w.end(), ImmutableList.of(ShardError.fromThrowable(c, e)),
             ImmutableList.of(), Statistics.empty(), ResultLimits.of());
     }
 
-    public static Transform<ResultGroups, ResultGroups> trace(final QueryTrace.Identifier what) {
+    public static Transform<FullQuery, FullQuery> trace(final QueryTrace.Identifier what) {
         final QueryTrace.NamedWatch w = QueryTrace.watch(what);
-        return r -> new ResultGroups(w.end(r.trace), r.errors, r.groups, r.statistics, r.limits);
+        return r -> new FullQuery(w.end(r.trace), r.errors, r.groups, r.statistics, r.limits);
+    }
+
+    @Data
+    public static class Request {
+        private final MetricType source;
+        private final Filter filter;
+        private final DateRange range;
+        private final AggregationInstance aggregation;
+        private final QueryOptions options;
     }
 }

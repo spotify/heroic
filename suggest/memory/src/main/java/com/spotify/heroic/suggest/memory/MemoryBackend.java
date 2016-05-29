@@ -24,19 +24,18 @@ package com.spotify.heroic.suggest.memory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.suggest.KeySuggest;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
+import com.spotify.heroic.suggest.WriteSuggest;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.Data;
@@ -221,9 +220,9 @@ public class MemoryBackend implements SuggestBackend, Grouped {
     }
 
     @Override
-    public AsyncFuture<WriteResult> write(
-        final Series s, final DateRange range
-    ) {
+    public AsyncFuture<WriteSuggest> write(final WriteSuggest.Request request) {
+        final Series s = request.getSeries();
+
         final Lock l = lock.writeLock();
 
         l.lock();
@@ -251,7 +250,7 @@ public class MemoryBackend implements SuggestBackend, Grouped {
                 }
             }
 
-            return async.resolved(WriteResult.EMPTY);
+            return async.resolved(WriteSuggest.of());
         } finally {
             l.unlock();
         }

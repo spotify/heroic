@@ -24,9 +24,7 @@ package com.spotify.heroic.statistics.semantic;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
 import com.spotify.heroic.async.AsyncObservable;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
-import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.DeleteSeries;
@@ -35,7 +33,7 @@ import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.MetadataBackend;
-import com.spotify.heroic.metric.WriteResult;
+import com.spotify.heroic.metadata.WriteMetadata;
 import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
 import com.spotify.metrics.core.MetricId;
@@ -126,8 +124,8 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
         }
 
         @Override
-        public AsyncFuture<WriteResult> write(final Series series, final DateRange range) {
-            return delegate.write(series, range).onDone(write.setup());
+        public AsyncFuture<WriteMetadata> write(final WriteMetadata.Request request) {
+            return delegate.write(request).onDone(write.setup());
         }
 
         @Override

@@ -22,11 +22,8 @@
 package com.spotify.heroic.statistics.semantic;
 
 import com.codahale.metrics.Meter;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
-import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
-import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.SuggestBackendReporter;
 import com.spotify.heroic.suggest.KeySuggest;
@@ -35,6 +32,7 @@ import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
+import com.spotify.heroic.suggest.WriteSuggest;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 import eu.toolchain.async.AsyncFuture;
@@ -123,8 +121,8 @@ public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
         }
 
         @Override
-        public AsyncFuture<WriteResult> write(final Series series, final DateRange range) {
-            return delegate.write(series, range).onDone(write.setup());
+        public AsyncFuture<WriteSuggest> write(final WriteSuggest.Request request) {
+            return delegate.write(request).onDone(write.setup());
         }
 
         @Override

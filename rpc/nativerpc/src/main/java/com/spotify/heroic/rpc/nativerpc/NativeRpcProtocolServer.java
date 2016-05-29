@@ -33,14 +33,13 @@ import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
+import com.spotify.heroic.metadata.WriteMetadata;
+import com.spotify.heroic.metric.FullQuery;
 import com.spotify.heroic.metric.MetricBackend;
+import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
-import com.spotify.heroic.metric.ResultGroups;
 import com.spotify.heroic.metric.WriteMetric;
-import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.rpc.nativerpc.NativeRpcProtocol.GroupedQuery;
-import com.spotify.heroic.rpc.nativerpc.NativeRpcProtocol.RpcQuery;
-import com.spotify.heroic.rpc.nativerpc.NativeRpcProtocol.RpcWriteSeries;
 import com.spotify.heroic.rpc.nativerpc.message.NativeRpcEmptyBody;
 import com.spotify.heroic.suggest.KeySuggest;
 import com.spotify.heroic.suggest.SuggestBackend;
@@ -131,20 +130,18 @@ public class NativeRpcProtocolServer implements LifeCycles {
         });
 
         container.register(NativeRpcProtocol.METRICS_QUERY,
-            new NativeRpcEndpoint<GroupedQuery<RpcQuery>, ResultGroups>() {
+            new NativeRpcEndpoint<GroupedQuery<FullQuery.Request>, FullQuery>() {
                 @Override
-                public AsyncFuture<ResultGroups> handle(final GroupedQuery<RpcQuery> g)
+                public AsyncFuture<FullQuery> handle(final GroupedQuery<FullQuery.Request> g)
                     throws Exception {
-                    return g.apply(metrics,
-                        (m, q) -> m.query(q.getSource(), q.getFilter(), q.getRange(),
-                            q.getAggregation(), q.getOptions()));
+                    return g.apply(metrics, MetricBackendGroup::query);
                 }
             });
 
         container.register(NativeRpcProtocol.METRICS_WRITE,
-            new NativeRpcEndpoint<GroupedQuery<WriteMetric>, WriteResult>() {
+            new NativeRpcEndpoint<GroupedQuery<WriteMetric.Request>, WriteMetric>() {
                 @Override
-                public AsyncFuture<WriteResult> handle(final GroupedQuery<WriteMetric> g)
+                public AsyncFuture<WriteMetric> handle(final GroupedQuery<WriteMetric.Request> g)
                     throws Exception {
                     return g.apply(metrics, MetricBackend::write);
                 }
@@ -187,11 +184,12 @@ public class NativeRpcProtocolServer implements LifeCycles {
             });
 
         container.register(NativeRpcProtocol.METADATA_WRITE,
-            new NativeRpcEndpoint<GroupedQuery<RpcWriteSeries>, WriteResult>() {
+            new NativeRpcEndpoint<GroupedQuery<WriteMetadata.Request>, WriteMetadata>() {
                 @Override
-                public AsyncFuture<WriteResult> handle(final GroupedQuery<RpcWriteSeries> g)
-                    throws Exception {
-                    return g.apply(metadata, (m, q) -> m.write(q.getSeries(), q.getRange()));
+                public AsyncFuture<WriteMetadata> handle(
+                    final GroupedQuery<WriteMetadata.Request> g
+                ) throws Exception {
+                    return g.apply(metadata, MetadataBackend::write);
                 }
             });
 

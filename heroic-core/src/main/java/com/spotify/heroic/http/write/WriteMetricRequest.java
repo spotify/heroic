@@ -24,9 +24,9 @@ package com.spotify.heroic.http.write;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.ingestion.Ingestion;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
-import com.spotify.heroic.metric.WriteMetric;
 import lombok.Data;
 
 import static java.util.Optional.ofNullable;
@@ -52,7 +52,7 @@ public class WriteMetricRequest {
         return data.getDataAs(Metric.class);
     }
 
-    public WriteMetric toWriteMetric() {
-        return new WriteMetric(series, data);
+    public Ingestion.Request toIngestionRequest() {
+        return new Ingestion.Request(series, data);
     }
 }

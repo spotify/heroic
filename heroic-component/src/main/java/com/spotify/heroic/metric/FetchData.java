@@ -23,6 +23,9 @@ package com.spotify.heroic.metric;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
+import com.spotify.heroic.QueryOptions;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Series;
 import eu.toolchain.async.Collector;
 import lombok.Data;
 
@@ -34,18 +37,19 @@ import java.util.stream.Collectors;
 @Data
 public class FetchData {
     private final QueryTrace trace;
+    private final List<RequestError> errors;
     private final List<Long> times;
     private final List<MetricCollection> groups;
-    private final boolean limited;
 
-    public static FetchData limited(final QueryTrace trace) {
-        return new FetchData(trace, ImmutableList.of(), ImmutableList.of(), true);
+    public static FetchData error(final QueryTrace trace, final RequestError error) {
+        return new FetchData(trace, ImmutableList.of(error), ImmutableList.of(),
+            ImmutableList.of());
     }
 
     public static FetchData of(
         final QueryTrace trace, final List<Long> times, final List<MetricCollection> groups
     ) {
-        return new FetchData(trace, times, groups, false);
+        return new FetchData(trace, ImmutableList.of(), times, groups);
     }
 
     public static Collector<FetchData, FetchData> collect(
@@ -57,7 +61,6 @@ public class FetchData {
             final ImmutableList.Builder<Long> times = ImmutableList.builder();
             final Map<MetricType, ImmutableList.Builder<Metric>> fetchGroups = new HashMap<>();
             final ImmutableList.Builder<QueryTrace> traces = ImmutableList.builder();
-            boolean limited = false;
 
             for (final FetchData fetch : results) {
                 times.addAll(fetch.times);
@@ -73,8 +76,6 @@ public class FetchData {
 
                     data.addAll(g.data);
                 }
-
-                limited |= fetch.limited;
             }
 
             final List<MetricCollection> groups = fetchGroups
@@ -85,7 +86,15 @@ public class FetchData {
                     .immutableSortedCopy(e.getValue().build())))
                 .collect(Collectors.toList());
 
-            return new FetchData(w.end(traces.build()), times.build(), groups, limited);
+            return new FetchData(w.end(traces.build()), ImmutableList.of(), times.build(), groups);
         };
+    }
+
+    @Data
+    public static class Request {
+        private final MetricType type;
+        private final Series series;
+        private final DateRange range;
+        private final QueryOptions options;
     }
 }

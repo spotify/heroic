@@ -34,6 +34,7 @@ import com.spotify.heroic.metadata.DeleteSeries;
 import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.FindTags;
+import com.spotify.heroic.metadata.WriteMetadata;
 import com.spotify.heroic.suggest.KeySuggest;
 import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
@@ -99,7 +100,8 @@ public class MetadataResource {
     @Path("series")
     public void addSeries(@Suspended final AsyncResponse response, final Series series) {
         final DateRange range = DateRange.now();
-        httpAsync.bind(response, cluster.useDefaultGroup().writeSeries(range, series));
+        httpAsync.bind(response,
+            cluster.useDefaultGroup().writeSeries(new WriteMetadata.Request(series, range)));
     }
 
     @POST

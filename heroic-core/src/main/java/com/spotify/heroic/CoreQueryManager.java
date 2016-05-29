@@ -47,11 +47,11 @@ import com.spotify.heroic.grammar.QueryExpression;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.grammar.RangeExpression;
 import com.spotify.heroic.grammar.StringExpression;
+import com.spotify.heroic.metric.FullQuery;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.QueryResultPart;
 import com.spotify.heroic.metric.QueryTrace;
-import com.spotify.heroic.metric.ResultGroups;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.RequiredArgsConstructor;
@@ -197,11 +197,14 @@ public class CoreQueryManager implements QueryManager {
                 combiner = AggregationCombiner.DEFAULT;
             }
 
-            return queryCache.load(source, filter, range, aggregationInstance, options, () -> {
+            final FullQuery.Request request =
+                new FullQuery.Request(source, filter, range, aggregationInstance, options);
+
+            return queryCache.load(request, () -> {
                 for (final ClusterShardGroup shard : shards) {
                     final AsyncFuture<QueryResultPart> queryPart = shard
-                        .apply(g -> g.query(source, filter, range, aggregationInstance, options))
-                        .catchFailed(ResultGroups.shardError(QUERY_NODE, shard))
+                        .apply(g -> g.query(request))
+                        .catchFailed(FullQuery.shardError(QUERY_NODE, shard))
                         .directTransform(QueryResultPart.fromResultGroup(shard));
 
                     futures.add(queryPart);

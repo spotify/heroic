@@ -23,12 +23,9 @@ package com.spotify.heroic.metadata;
 
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.Collected;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Initializing;
-import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
-import com.spotify.heroic.metric.WriteResult;
 import eu.toolchain.async.AsyncFuture;
 
 public interface MetadataBackend extends Grouped, Initializing, Collected {
@@ -36,11 +33,8 @@ public interface MetadataBackend extends Grouped, Initializing, Collected {
 
     /**
      * Buffer a write for the specified series.
-     *
-     * @param series Series to write.
-     * @param range Range to write for.
      */
-    AsyncFuture<WriteResult> write(Series series, DateRange range);
+    AsyncFuture<WriteMetadata> write(WriteMetadata.Request request);
 
     /**
      * Iterate <em>all</em> available metadata.

@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
+import com.spotify.heroic.common.RequestTimer;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
@@ -38,7 +39,6 @@ import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.WriteMetric;
-import com.spotify.heroic.metric.WriteResult;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.Data;
@@ -47,7 +47,6 @@ import lombok.ToString;
 import javax.inject.Inject;
 import javax.inject.Named;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -66,17 +65,14 @@ public class MemoryBackend extends AbstractMetricBackend {
 
     static final List<BackendEntry> EMPTY_ENTRIES = new ArrayList<>();
 
-    static final Comparator<MemoryKey> COMPARATOR = new Comparator<MemoryKey>() {
-        @Override
-        public int compare(final MemoryKey a, final MemoryKey b) {
-            final int t = a.getSource().compareTo(b.getSource());
+    static final Comparator<MemoryKey> COMPARATOR = (a, b) -> {
+        final int t = a.getSource().compareTo(b.getSource());
 
-            if (t != 0) {
-                return t;
-            }
-
-            return a.getSeries().compareTo(b.getSeries());
+        if (t != 0) {
+            return t;
         }
+
+        return a.getSeries().compareTo(b.getSeries());
     };
 
     private final Object createLock = new Object();
@@ -113,33 +109,17 @@ public class MemoryBackend extends AbstractMetricBackend {
     }
 
     @Override
-    public AsyncFuture<WriteResult> write(WriteMetric write) {
-        final long start = System.nanoTime();
-        final List<Long> times = new ArrayList<>();
-        writeOne(times, write, start);
-        return async.resolved(WriteResult.of(times));
+    public AsyncFuture<WriteMetric> write(WriteMetric.Request request) {
+        final RequestTimer<WriteMetric> timer = WriteMetric.timer();
+        writeOne(request);
+        return async.resolved(timer.end());
     }
 
     @Override
-    public AsyncFuture<WriteResult> write(Collection<WriteMetric> writes) {
-        final List<Long> times = new ArrayList<>(writes.size());
-
-        for (final WriteMetric write : writes) {
-            final long start = System.nanoTime();
-            writeOne(times, write, start);
-        }
-
-        return async.resolved(WriteResult.of(times));
-    }
-
-    @Override
-    public AsyncFuture<FetchData> fetch(
-        MetricType source, Series series, DateRange range, FetchQuotaWatcher watcher,
-        QueryOptions options
-    ) {
+    public AsyncFuture<FetchData> fetch(FetchData.Request request, FetchQuotaWatcher watcher) {
         final QueryTrace.NamedWatch w = QueryTrace.watch(FETCH);
-        final MemoryKey key = new MemoryKey(source, series);
-        final List<MetricCollection> groups = doFetch(key, range, watcher);
+        final MemoryKey key = new MemoryKey(request.getType(), request.getSeries());
+        final List<MetricCollection> groups = doFetch(key, request.getRange(), watcher);
         return async.resolved(FetchData.of(w.end(), ImmutableList.of(), groups));
     }
 
@@ -165,10 +145,10 @@ public class MemoryBackend extends AbstractMetricBackend {
         private final Series series;
     }
 
-    private void writeOne(final List<Long> times, final WriteMetric write, final long start) {
-        final MetricCollection g = write.getData();
+    private void writeOne(final WriteMetric.Request request) {
+        final MetricCollection g = request.getData();
 
-        final MemoryKey key = new MemoryKey(g.getType(), write.getSeries());
+        final MemoryKey key = new MemoryKey(g.getType(), request.getSeries());
         final NavigableMap<Long, Metric> tree = getOrCreate(key);
 
         synchronized (tree) {
@@ -176,8 +156,6 @@ public class MemoryBackend extends AbstractMetricBackend {
                 tree.put(d.getTimestamp(), d);
             }
         }
-
-        times.add(System.nanoTime() - start);
     }
 
     private List<MetricCollection> doFetch(

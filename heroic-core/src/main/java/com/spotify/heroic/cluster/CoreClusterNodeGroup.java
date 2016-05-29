@@ -21,21 +21,15 @@
 
 package com.spotify.heroic.cluster;
 
-import com.spotify.heroic.QueryOptions;
-import com.spotify.heroic.aggregation.AggregationInstance;
-import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.Series;
-import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.DeleteSeries;
 import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.FindTags;
-import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metadata.WriteMetadata;
+import com.spotify.heroic.metric.FullQuery;
 import com.spotify.heroic.metric.QueryTrace;
-import com.spotify.heroic.metric.ResultGroups;
 import com.spotify.heroic.metric.WriteMetric;
-import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.suggest.KeySuggest;
 import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
@@ -72,12 +66,9 @@ public class CoreClusterNodeGroup implements ClusterNodeGroup {
     }
 
     @Override
-    public AsyncFuture<ResultGroups> query(
-        MetricType source, Filter filter, DateRange range, AggregationInstance aggregation,
-        QueryOptions options
-    ) {
-        return run(g -> g.query(source, filter, range, aggregation, options),
-            c -> ResultGroups.shardError(QUERY_NODE, c), ResultGroups.collect(QUERY));
+    public AsyncFuture<FullQuery> query(final FullQuery.Request request) {
+        return run(g -> g.query(request), c -> FullQuery.shardError(QUERY_NODE, c),
+            FullQuery.collect(QUERY));
     }
 
     @Override
@@ -137,14 +128,13 @@ public class CoreClusterNodeGroup implements ClusterNodeGroup {
     }
 
     @Override
-    public AsyncFuture<WriteResult> writeSeries(DateRange range, Series series) {
-        return run(g -> g.writeSeries(range, series), WriteResult::shardError,
-            WriteResult.reduce());
+    public AsyncFuture<WriteMetadata> writeSeries(final WriteMetadata.Request request) {
+        return run(g -> g.writeSeries(request), WriteMetadata::shardError, WriteMetadata.reduce());
     }
 
     @Override
-    public AsyncFuture<WriteResult> writeMetric(WriteMetric write) {
-        return run(g -> g.writeMetric(write), WriteResult::shardError, WriteResult.reduce());
+    public AsyncFuture<WriteMetric> writeMetric(final WriteMetric.Request write) {
+        return run(g -> g.writeMetric(write), WriteMetric::shardError, WriteMetric.reduce());
     }
 
     private <T> AsyncFuture<T> run(
@@ -155,7 +145,7 @@ public class CoreClusterNodeGroup implements ClusterNodeGroup {
         final List<AsyncFuture<T>> futures = new ArrayList<>(entries.size());
 
         for (final ClusterShardGroup shard : entries) {
-            futures.add(shard.apply(g -> function.apply(g)).catchFailed(catcher.apply(shard)));
+            futures.add(shard.apply(function::apply).catchFailed(catcher.apply(shard)));
         }
 
         return async.collect(futures, collector);

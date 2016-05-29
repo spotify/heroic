@@ -22,12 +22,9 @@
 package com.spotify.heroic.suggest;
 
 import com.spotify.heroic.common.Collected;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Initializing;
-import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
-import com.spotify.heroic.metric.WriteResult;
 import eu.toolchain.async.AsyncFuture;
 
 public interface SuggestBackend extends Grouped, Initializing, Collected {
@@ -50,7 +47,7 @@ public interface SuggestBackend extends Grouped, Initializing, Collected {
 
     AsyncFuture<TagValueSuggest> tagValueSuggest(TagValueSuggest.Request request);
 
-    AsyncFuture<WriteResult> write(Series series, DateRange range);
+    AsyncFuture<WriteSuggest> write(WriteSuggest.Request request);
 
     default Statistics getStatistics() {
         return Statistics.empty();

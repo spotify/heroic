@@ -49,14 +49,14 @@ public class BasicSerializationTest {
     }
 
     @Test
-    public void testResultGroups() throws Exception {
+    public void testFullQuery() throws Exception {
         final List<ResultGroup> groups = new ArrayList<>();
         final List<RequestError> errors = new ArrayList<>();
-        final ResultGroups expected =
-            new ResultGroups(QueryTrace.of(QueryTrace.identifier("test"), 0L), errors, groups,
+        final FullQuery expected =
+            new FullQuery(QueryTrace.of(QueryTrace.identifier("test"), 0L), errors, groups,
                 Statistics.empty(), ResultLimits.of());
 
-        assertSerialization("ResultGroups.json", expected, ResultGroups.class);
+        assertSerialization("FullQuery.json", expected, FullQuery.class);
     }
 
     private <T> void assertSerialization(final String json, final T expected, final Class<T> type)

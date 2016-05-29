@@ -21,21 +21,15 @@
 
 package com.spotify.heroic.cluster;
 
-import com.spotify.heroic.QueryOptions;
-import com.spotify.heroic.aggregation.AggregationInstance;
-import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.Series;
-import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.DeleteSeries;
 import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.FindTags;
-import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metadata.WriteMetadata;
+import com.spotify.heroic.metric.FullQuery;
 import com.spotify.heroic.metric.QueryTrace;
-import com.spotify.heroic.metric.ResultGroups;
 import com.spotify.heroic.metric.WriteMetric;
-import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.suggest.KeySuggest;
 import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
@@ -62,13 +56,8 @@ public class TracingClusterNodeGroup implements ClusterNode.Group {
     }
 
     @Override
-    public AsyncFuture<ResultGroups> query(
-        MetricType source, Filter filter, DateRange range, AggregationInstance aggregation,
-        QueryOptions options
-    ) {
-        return delegate
-            .query(source, filter, range, aggregation, options)
-            .directTransform(ResultGroups.trace(query));
+    public AsyncFuture<FullQuery> query(FullQuery.Request request) {
+        return delegate.query(request).directTransform(FullQuery.trace(query));
     }
 
     @Override
@@ -122,12 +111,12 @@ public class TracingClusterNodeGroup implements ClusterNode.Group {
     }
 
     @Override
-    public AsyncFuture<WriteResult> writeSeries(DateRange range, Series series) {
-        return delegate.writeSeries(range, series);
+    public AsyncFuture<WriteMetadata> writeSeries(final WriteMetadata.Request request) {
+        return delegate.writeSeries(request);
     }
 
     @Override
-    public AsyncFuture<WriteResult> writeMetric(WriteMetric write) {
-        return delegate.writeMetric(write);
+    public AsyncFuture<WriteMetric> writeMetric(final WriteMetric.Request request) {
+        return delegate.writeMetric(request);
     }
 }

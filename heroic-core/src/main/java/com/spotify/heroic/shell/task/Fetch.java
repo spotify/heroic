@@ -26,6 +26,7 @@ import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.CoreComponent;
+import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricCollection;
@@ -96,41 +97,44 @@ public class Fetch implements ShellTask {
 
         final QueryOptions options = QueryOptions.builder().tracing(params.tracing).build();
 
-        return readGroup.fetch(source, series, range, options).lazyTransform(result -> {
-            outer:
-            for (final MetricCollection g : result.getGroups()) {
-                int i = 0;
+        return readGroup
+            .fetch(new FetchData.Request(source, series, range, options))
+            .lazyTransform(result -> {
+                outer:
+                for (final MetricCollection g : result.getGroups()) {
+                    int i = 0;
 
-                Calendar current = null;
-                Calendar last = null;
+                    Calendar current = null;
+                    Calendar last = null;
 
-                for (final Metric d : g.getData()) {
-                    current = Calendar.getInstance();
-                    current.setTime(new Date(d.getTimestamp()));
+                    for (final Metric d : g.getData()) {
+                        current = Calendar.getInstance();
+                        current.setTime(new Date(d.getTimestamp()));
 
-                    if (flipped(last, current)) {
-                        io.out().println(flip.format(current.getTime()));
+                        if (flipped(last, current)) {
+                            io.out().println(flip.format(current.getTime()));
+                        }
+
+                        io
+                            .out()
+                            .println(
+                                String.format("  %s: %s", point.format(new Date(d.getTimestamp())),
+                                    d));
+
+                        if (i++ >= limit) {
+                            break outer;
+                        }
+
+                        last = current;
                     }
-
-                    io
-                        .out()
-                        .println(
-                            String.format("  %s: %s", point.format(new Date(d.getTimestamp())), d));
-
-                    if (i++ >= limit) {
-                        break outer;
-                    }
-
-                    last = current;
                 }
-            }
 
-            io.out().println("TRACE:");
-            result.getTrace().formatTrace(io.out());
-            io.out().flush();
+                io.out().println("TRACE:");
+                result.getTrace().formatTrace(io.out());
+                io.out().flush();
 
-            return async.resolved();
-        });
+                return async.resolved();
+            });
     }
 
     private boolean flipped(Calendar last, Calendar current) {

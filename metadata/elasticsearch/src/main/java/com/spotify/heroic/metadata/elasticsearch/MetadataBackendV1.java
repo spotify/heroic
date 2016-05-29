@@ -21,13 +21,13 @@
 
 package com.spotify.heroic.metadata.elasticsearch;
 
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.HashCode;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.OptionalLimit;
+import com.spotify.heroic.common.RequestTimer;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.elasticsearch.AbstractElasticsearchMetadataBackend;
 import com.spotify.heroic.elasticsearch.BackendType;
@@ -53,7 +53,7 @@ import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.MetadataBackend;
-import com.spotify.heroic.metric.WriteResult;
+import com.spotify.heroic.metadata.WriteMetadata;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -101,7 +101,6 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
 
 import static org.elasticsearch.index.query.FilterBuilders.andFilter;
 import static org.elasticsearch.index.query.FilterBuilders.boolFilter;
@@ -196,13 +195,15 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
     }
 
     @Override
-    public AsyncFuture<WriteResult> write(final Series series, final DateRange range) {
+    public AsyncFuture<WriteMetadata> write(final WriteMetadata.Request request) {
         return doto(c -> {
+            final Series series = request.getSeries();
+            final DateRange range = request.getRange();
             final String id = Integer.toHexString(series.hashCode());
 
             final String[] indices = c.writeIndices(range);
 
-            final List<AsyncFuture<WriteResult>> futures = new ArrayList<>();
+            final List<AsyncFuture<WriteMetadata>> futures = new ArrayList<>();
 
             for (final String index : indices) {
                 if (!writeCache.acquire(Pair.of(index, series.getHashCode()))) {
@@ -216,20 +217,17 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
                 ElasticsearchUtils.buildMetadataDoc(source, series);
                 source.endObject();
 
-                final IndexRequestBuilder request = c
+                final IndexRequestBuilder builder = c
                     .index(index, ElasticsearchUtils.TYPE_METADATA)
                     .setId(id)
                     .setSource(source)
                     .setOpType(OpType.CREATE);
 
-                final Stopwatch watch = Stopwatch.createStarted();
-
-                futures.add(bind(request.execute()).directTransform(result -> {
-                    return WriteResult.of(watch.elapsed(TimeUnit.NANOSECONDS));
-                }));
+                final RequestTimer<WriteMetadata> timer = WriteMetadata.timer();
+                futures.add(bind(builder.execute()).directTransform(result -> timer.end()));
             }
 
-            return async.collect(futures, WriteResult.reduce());
+            return async.collect(futures, WriteMetadata.reduce());
         });
     }
 

@@ -21,11 +21,6 @@
 
 package com.spotify.heroic.cluster;
 
-import com.spotify.heroic.QueryOptions;
-import com.spotify.heroic.aggregation.AggregationInstance;
-import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.Series;
-import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.DeleteSeries;
 import com.spotify.heroic.metadata.FindKeys;
@@ -33,12 +28,11 @@ import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
+import com.spotify.heroic.metadata.WriteMetadata;
+import com.spotify.heroic.metric.FullQuery;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
-import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.ResultGroups;
 import com.spotify.heroic.metric.WriteMetric;
-import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.suggest.KeySuggest;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestManager;
@@ -104,11 +98,8 @@ public class LocalClusterNode implements ClusterNode {
         }
 
         @Override
-        public AsyncFuture<ResultGroups> query(
-            MetricType source, Filter filter, DateRange range, AggregationInstance aggregation,
-            QueryOptions options
-        ) {
-            return metrics().query(source, filter, range, aggregation, options);
+        public AsyncFuture<FullQuery> query(final FullQuery.Request request) {
+            return metrics().query(request);
         }
 
         @Override
@@ -164,13 +155,13 @@ public class LocalClusterNode implements ClusterNode {
         }
 
         @Override
-        public AsyncFuture<WriteResult> writeSeries(DateRange range, Series series) {
-            return metadata().write(series, range);
+        public AsyncFuture<WriteMetadata> writeSeries(final WriteMetadata.Request request) {
+            return metadata().write(request);
         }
 
         @Override
-        public AsyncFuture<WriteResult> writeMetric(WriteMetric write) {
-            return metrics().write(write);
+        public AsyncFuture<WriteMetric> writeMetric(final WriteMetric.Request request) {
+            return metrics().write(request);
         }
 
         private SuggestBackend suggest() {

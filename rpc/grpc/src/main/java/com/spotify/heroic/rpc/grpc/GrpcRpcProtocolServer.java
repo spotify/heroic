@@ -28,6 +28,7 @@ import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metric.MetricBackend;
+import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestManager;
@@ -100,9 +101,8 @@ public class GrpcRpcProtocolServer implements LifeCycles {
 
         container.register(GrpcRpcProtocol.METADATA, empty -> async.resolved(localMetadata));
 
-        container.register(GrpcRpcProtocol.METRICS_QUERY, g -> g.apply(metrics,
-            (m, q) -> m.query(q.getSource(), q.getFilter(), q.getRange(), q.getAggregation(),
-                q.getOptions())));
+        container.register(GrpcRpcProtocol.METRICS_FULL_QUERY,
+            g -> g.apply(metrics, MetricBackendGroup::query));
 
         container.register(GrpcRpcProtocol.METRICS_WRITE,
             g -> g.apply(metrics, MetricBackend::write));
@@ -120,7 +120,7 @@ public class GrpcRpcProtocolServer implements LifeCycles {
             g -> g.apply(metadata, MetadataBackend::countSeries));
 
         container.register(GrpcRpcProtocol.METADATA_WRITE,
-            g -> g.apply(metadata, (m, q) -> m.write(q.getSeries(), q.getRange())));
+            g -> g.apply(metadata, MetadataBackend::write));
 
         container.register(GrpcRpcProtocol.METADATA_DELETE_SERIES,
             g -> g.apply(metadata, MetadataBackend::deleteSeries));

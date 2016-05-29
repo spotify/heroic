@@ -26,6 +26,7 @@ import com.google.common.hash.HashCode;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.OptionalLimit;
+import com.spotify.heroic.common.RequestTimer;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.elasticsearch.AbstractElasticsearchMetadataBackend;
@@ -51,7 +52,7 @@ import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.MetadataBackend;
-import com.spotify.heroic.metric.WriteResult;
+import com.spotify.heroic.metadata.WriteMetadata;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -158,8 +159,10 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     }
 
     @Override
-    public AsyncFuture<WriteResult> write(final Series series, final DateRange range) {
+    public AsyncFuture<WriteMetadata> write(final WriteMetadata.Request request) {
         return doto(c -> {
+            final Series series = request.getSeries();
+            final DateRange range = request.getRange();
             final String id = series.hash();
 
             final String[] indices;
@@ -170,7 +173,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                 return async.failed(e);
             }
 
-            final List<AsyncFuture<WriteResult>> writes = new ArrayList<>();
+            final List<AsyncFuture<WriteMetadata>> writes = new ArrayList<>();
 
             for (final String index : indices) {
                 if (!writeCache.acquire(Pair.of(index, series.getHashCode()))) {
@@ -184,20 +187,21 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                 buildContext(source, series);
                 source.endObject();
 
-                final IndexRequestBuilder request = c
+                final IndexRequestBuilder builder = c
                     .index(index, TYPE_METADATA)
                     .setId(id)
                     .setSource(source)
                     .setOpType(OpType.CREATE);
 
-                final long start = System.nanoTime();
-                AsyncFuture<WriteResult> result = bind(request.execute()).directTransform(
-                    response -> WriteResult.of(System.nanoTime() - start));
+                final RequestTimer<WriteMetadata> timer = WriteMetadata.timer();
+
+                AsyncFuture<WriteMetadata> result =
+                    bind(builder.execute()).directTransform(response -> timer.end());
 
                 writes.add(result);
             }
 
-            return async.collect(writes, WriteResult.reduce());
+            return async.collect(writes, WriteMetadata.reduce());
         });
     }
 

@@ -33,6 +33,7 @@ import com.spotify.heroic.dagger.LoadingComponent;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestManagerModule;
 import com.spotify.heroic.suggest.SuggestModule;
+import com.spotify.heroic.suggest.WriteSuggest;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import org.junit.After;
@@ -101,6 +102,6 @@ public abstract class AbstractSuggestBackendIT {
     private AsyncFuture<Void> writeSeries(
         final SuggestBackend suggest, final Series s, final DateRange range
     ) throws Exception {
-        return suggest.write(s, range).directTransform(r -> null);
+        return suggest.write(new WriteSuggest.Request(s, range)).directTransform(r -> null);
     }
 }

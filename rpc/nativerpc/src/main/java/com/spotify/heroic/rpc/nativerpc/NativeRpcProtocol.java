@@ -24,26 +24,20 @@ package com.spotify.heroic.rpc.nativerpc;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.spotify.heroic.QueryOptions;
-import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.cluster.NodeMetadata;
 import com.spotify.heroic.cluster.RpcProtocol;
 import com.spotify.heroic.cluster.TracingClusterNodeGroup;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
-import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.UsableGroupManager;
-import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.DeleteSeries;
 import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.FindTags;
-import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.ResultGroups;
+import com.spotify.heroic.metadata.WriteMetadata;
+import com.spotify.heroic.metric.FullQuery;
 import com.spotify.heroic.metric.WriteMetric;
-import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.suggest.KeySuggest;
 import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
@@ -185,17 +179,13 @@ public class NativeRpcProtocol implements RpcProtocol {
             }
 
             @Override
-            public AsyncFuture<ResultGroups> query(
-                MetricType source, Filter filter, DateRange range, AggregationInstance aggregation,
-                QueryOptions options
-            ) {
-                return request(METRICS_QUERY,
-                    new RpcQuery(source, filter, range, aggregation, options), ResultGroups.class);
+            public AsyncFuture<FullQuery> query(final FullQuery.Request request) {
+                return request(METRICS_QUERY, request, FullQuery.class);
             }
 
             @Override
-            public AsyncFuture<WriteResult> writeMetric(WriteMetric write) {
-                return request(METRICS_WRITE, write, WriteResult.class);
+            public AsyncFuture<WriteMetric> writeMetric(WriteMetric.Request request) {
+                return request(METRICS_WRITE, request, WriteMetric.class);
             }
 
             @Override
@@ -224,9 +214,8 @@ public class NativeRpcProtocol implements RpcProtocol {
             }
 
             @Override
-            public AsyncFuture<WriteResult> writeSeries(DateRange range, Series series) {
-                return request(METADATA_WRITE, new RpcWriteSeries(range, series),
-                    WriteResult.class);
+            public AsyncFuture<WriteMetadata> writeSeries(final WriteMetadata.Request request) {
+                return request(METADATA_WRITE, request, WriteMetadata.class);
             }
 
             @Override
@@ -283,44 +272,6 @@ public class NativeRpcProtocol implements RpcProtocol {
         ) {
             return function.apply(group.map(manager::useGroup).orElseGet(manager::useDefaultGroup),
                 query);
-        }
-    }
-
-    @Data
-    public static class RpcQuery {
-        private final MetricType source;
-        private final Filter filter;
-        private final DateRange range;
-        private final AggregationInstance aggregation;
-        private final QueryOptions options;
-
-        @JsonCreator
-        public RpcQuery(
-            @JsonProperty("source") final MetricType source,
-            @JsonProperty("filter") final Filter filter,
-            @JsonProperty("range") final DateRange range,
-            @JsonProperty("aggregation") final AggregationInstance aggregation,
-            @JsonProperty("options") final QueryOptions options
-        ) {
-            this.source = checkNotNull(source, "source");
-            this.filter = checkNotNull(filter, "filter");
-            this.range = checkNotNull(range, "range");
-            this.aggregation = checkNotNull(aggregation, "aggregation");
-            this.options = checkNotNull(options, "options");
-        }
-    }
-
-    @Data
-    public static class RpcWriteSeries {
-        private final DateRange range;
-        private final Series series;
-
-        public RpcWriteSeries(
-            @JsonProperty("range") final DateRange range,
-            @JsonProperty("series") final Series series
-        ) {
-            this.range = checkNotNull(range);
-            this.series = checkNotNull(series);
         }
     }
 }

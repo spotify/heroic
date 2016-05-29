@@ -22,18 +22,16 @@
 package com.spotify.heroic.suggest;
 
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.SelectedGroup;
-import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
-import com.spotify.heroic.metric.WriteResult;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.Data;
 import lombok.ToString;
 
 import java.util.List;
+import java.util.function.Function;
 
 @Data
 @ToString(of = {"backends"})
@@ -77,8 +75,8 @@ public class SuggestBackendGroup implements SuggestBackend {
     }
 
     @Override
-    public AsyncFuture<WriteResult> write(final Series series, final DateRange range) {
-        return async.collect(run(b -> b.write(series, range)), WriteResult.reduce());
+    public AsyncFuture<WriteSuggest> write(final WriteSuggest.Request request) {
+        return async.collect(run(b -> b.write(request)), WriteSuggest.reduce());
     }
 
     @Override
@@ -104,26 +102,13 @@ public class SuggestBackendGroup implements SuggestBackend {
 
     @Override
     public Statistics getStatistics() {
-        Statistics s = Statistics.empty();
-
-        for (final SuggestBackend b : backends) {
-            s = s.merge(b.getStatistics());
-        }
-
-        return s;
+        return backends
+            .stream()
+            .map(SuggestBackend::getStatistics)
+            .reduce(Statistics.empty(), Statistics::merge);
     }
 
-    private <T> List<T> run(InternalOperation<T> op) {
-        final ImmutableList.Builder<T> result = ImmutableList.builder();
-
-        for (final SuggestBackend b : backends) {
-            result.add(op.run(b));
-        }
-
-        return result.build();
-    }
-
-    public static interface InternalOperation<T> {
-        T run(SuggestBackend backend);
+    private <T> List<T> run(final Function<SuggestBackend, T> op) {
+        return ImmutableList.copyOf(backends.stream().map(op).iterator());
     }
 }

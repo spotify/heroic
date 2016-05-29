@@ -39,6 +39,7 @@ import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManagerModule;
 import com.spotify.heroic.metadata.MetadataModule;
+import com.spotify.heroic.metadata.WriteMetadata;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.RetryPolicy;
@@ -147,7 +148,7 @@ public abstract class AbstractMetadataBackendIT {
             new FindSeries.Request(new MatchKeyFilter(s.getKey()), range, OptionalLimit.empty());
 
         return metadata
-            .write(s, range)
+            .write(new WriteMetadata.Request(s, range))
             .lazyTransform(v -> async
                 .retryUntilResolved(() -> metadata.findSeries(f).directTransform(result -> {
                     if (!result.getSeries().contains(s)) {

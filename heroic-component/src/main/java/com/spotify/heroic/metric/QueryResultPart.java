@@ -52,7 +52,7 @@ public class QueryResultPart {
 
     private final ResultLimits limits;
 
-    public static Transform<ResultGroups, QueryResultPart> fromResultGroup(
+    public static Transform<FullQuery, QueryResultPart> fromResultGroup(
         final ClusterShardGroup shard
     ) {
         return result -> {

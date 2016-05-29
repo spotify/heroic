@@ -19,61 +19,52 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric;
+package com.spotify.heroic.suggest;
 
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.cluster.ClusterShardGroup;
+import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.RequestTimer;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.metric.RequestError;
 import eu.toolchain.async.Collector;
-import eu.toolchain.async.Transform;
 import lombok.Data;
 
 import java.util.List;
 
 @Data
-public class WriteMetric {
+public class WriteSuggest {
     private final List<RequestError> errors;
     private final List<Long> times;
 
-    public static WriteMetric of() {
-        return new WriteMetric(ImmutableList.of(), ImmutableList.of());
+    public static WriteSuggest of() {
+        return new WriteSuggest(ImmutableList.of(), ImmutableList.of());
     }
 
-    private static WriteMetric of(final Long time) {
-        return new WriteMetric(ImmutableList.of(), ImmutableList.of(time));
+    public static WriteSuggest of(final long time) {
+        return new WriteSuggest(ImmutableList.of(), ImmutableList.of(time));
     }
 
-    public static WriteMetric error(final RequestError error) {
-        return new WriteMetric(ImmutableList.of(error), ImmutableList.of());
-    }
-
-    public static Transform<Throwable, WriteMetric> shardError(final ClusterShardGroup c) {
-        return e -> new WriteMetric(ImmutableList.of(ShardError.fromThrowable(c, e)),
-            ImmutableList.of());
-    }
-
-    public static Collector<WriteMetric, WriteMetric> reduce() {
-        return results -> {
+    public static Collector<WriteSuggest, WriteSuggest> reduce() {
+        return requests -> {
             final ImmutableList.Builder<RequestError> errors = ImmutableList.builder();
             final ImmutableList.Builder<Long> times = ImmutableList.builder();
 
-            for (final WriteMetric r : results) {
+            for (final WriteSuggest r : requests) {
                 errors.addAll(r.getErrors());
                 times.addAll(r.getTimes());
             }
 
-            return new WriteMetric(errors.build(), times.build());
+            return new WriteSuggest(errors.build(), times.build());
         };
     }
 
-    public static RequestTimer<WriteMetric> timer() {
-        return new RequestTimer<>(WriteMetric::of);
+    public static RequestTimer<WriteSuggest> timer() {
+        return new RequestTimer<>(WriteSuggest::of);
     }
 
     @Data
     public static class Request {
-        final Series series;
-        final MetricCollection data;
+        private final Series series;
+        private final DateRange range;
     }
 }

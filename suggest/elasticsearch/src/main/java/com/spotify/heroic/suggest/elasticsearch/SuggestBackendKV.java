@@ -28,6 +28,7 @@ import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.OptionalLimit;
+import com.spotify.heroic.common.RequestTimer;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.elasticsearch.AbstractElasticsearchBackend;
@@ -47,7 +48,6 @@ import com.spotify.heroic.filter.StartsWithFilter;
 import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
-import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.statistics.SuggestBackendReporter;
 import com.spotify.heroic.suggest.KeySuggest;
 import com.spotify.heroic.suggest.SuggestBackend;
@@ -56,6 +56,7 @@ import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagSuggest.Suggestion;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
+import com.spotify.heroic.suggest.WriteSuggest;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
@@ -498,8 +499,11 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     }
 
     @Override
-    public AsyncFuture<WriteResult> write(final Series s, final DateRange range) {
+    public AsyncFuture<WriteSuggest> write(final WriteSuggest.Request request) {
         return connection.doto((final Connection c) -> {
+            final Series s = request.getSeries();
+            final DateRange range = request.getRange();
+
             final String[] indices;
 
             try {
@@ -508,7 +512,8 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 return async.failed(e);
             }
 
-            final List<AsyncFuture<WriteResult>> writes = new ArrayList<>();
+            final RequestTimer<WriteSuggest> timer = WriteSuggest.timer();
+            final List<AsyncFuture<WriteSuggest>> writes = new ArrayList<>();
 
             for (final String index : indices) {
                 final Pair<String, HashCode> key = Pair.of(index, s.getHashCode());
@@ -520,23 +525,18 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
                 final String seriesId = s.hash();
 
-                final List<AsyncFuture<WriteResult>> w = new ArrayList<>();
-
                 final XContentBuilder series = XContentFactory.jsonBuilder();
 
                 series.startObject();
                 buildContext(series, s);
                 series.endObject();
 
-                final long start = System.nanoTime();
-
-                w.add(bind(c
+                writes.add(bind(c
                     .index(index, SERIES_TYPE)
                     .setId(seriesId)
                     .setSource(series)
                     .setOpType(OpType.CREATE)
-                    .execute()).directTransform(
-                    (response) -> WriteResult.of(System.nanoTime() - start)));
+                    .execute()).directTransform(response -> timer.end()));
 
                 for (final Map.Entry<String, String> e : s.getTags().entrySet()) {
                     final XContentBuilder suggest = XContentFactory.jsonBuilder();
@@ -548,19 +548,16 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
                     final String suggestId = seriesId + ":" + Integer.toHexString(e.hashCode());
 
-                    w.add(bind(c
+                    writes.add(bind(c
                         .index(index, TAG_TYPE)
                         .setId(suggestId)
                         .setSource(suggest)
                         .setOpType(OpType.CREATE)
-                        .execute()).directTransform(
-                        (response) -> WriteResult.of(System.nanoTime() - start)));
+                        .execute()).directTransform(response -> timer.end()));
                 }
-
-                writes.add(async.collect(w, WriteResult.reduce()));
             }
 
-            return async.collect(writes, WriteResult.reduce());
+            return async.collect(writes, WriteSuggest.reduce());
         });
     }
 

@@ -100,6 +100,6 @@ public abstract class AbstractMetricBackendIT {
         }
 
         final List<Point> points = ImmutableList.of(new Point(100000L, 42D));
-        backend.write(new WriteMetric(s1, MetricCollection.points(points))).get();
+        backend.write(new WriteMetric.Request(s1, MetricCollection.points(points))).get();
     }
 }
