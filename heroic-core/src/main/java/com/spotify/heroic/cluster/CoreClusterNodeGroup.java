@@ -100,7 +100,7 @@ public class CoreClusterNodeGroup implements ClusterNodeGroup {
     @Override
     public AsyncFuture<TagKeyCount> tagKeyCount(final TagKeyCount.Request request) {
         return run(g -> g.tagKeyCount(request), TagKeyCount::shardError,
-            TagKeyCount.reduce(request.getLimit()));
+            TagKeyCount.reduce(request.getLimit(), request.getExactLimit()));
     }
 
     @Override

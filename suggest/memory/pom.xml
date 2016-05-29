@@ -29,8 +29,8 @@
     </dependency>
 
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
+      <groupId>com.spotify.heroic</groupId>
+      <artifactId>heroic-test</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

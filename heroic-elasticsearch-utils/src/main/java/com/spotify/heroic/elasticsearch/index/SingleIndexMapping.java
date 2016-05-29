@@ -65,12 +65,16 @@ public class SingleIndexMapping implements IndexMapping {
     }
 
     @Override
-    public SearchRequestBuilder search(final Client client, DateRange range, final String type) {
+    public SearchRequestBuilder search(
+        final Client client, final DateRange range, final String type
+    ) {
         return client.prepareSearch(index).setTypes(type);
     }
 
     @Override
-    public CountRequestBuilder count(final Client client, DateRange range, final String type) {
+    public CountRequestBuilder count(
+        final Client client, final DateRange range, final String type
+    ) {
         return client.prepareCount(index).setTypes(type);
     }
 

@@ -33,6 +33,7 @@ import eu.toolchain.async.Transform;
 import lombok.Data;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
@@ -106,7 +107,36 @@ public class TagValuesSuggest {
                 return v;
             }
 
-            return key.compareTo(o.key);
+            final int k = key.compareTo(o.key);
+
+            if (k != 0) {
+                return k;
+            }
+
+            final Iterator<String> left = values.iterator();
+            final Iterator<String> right = o.values.iterator();
+
+            while (left.hasNext()) {
+                final String l = left.next();
+
+                if (!right.hasNext()) {
+                    return -1;
+                }
+
+                final String r = right.next();
+
+                final int kv = l.compareTo(r);
+
+                if (kv != 0) {
+                    return kv;
+                }
+            }
+
+            if (right.hasNext()) {
+                return 1;
+            }
+
+            return Boolean.compare(limited, o.limited);
         }
     }
 

@@ -106,11 +106,13 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
 import static com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestUtils.loadJsonResource;
+import static com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestUtils.variables;
 import static org.elasticsearch.index.query.FilterBuilders.andFilter;
 import static org.elasticsearch.index.query.FilterBuilders.boolFilter;
 import static org.elasticsearch.index.query.FilterBuilders.matchAllFilter;
@@ -324,15 +326,15 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
             final OptionalLimit limit = request.getLimit();
 
             {
-                final TermsBuilder terms =
+                final TermsBuilder keys =
                     AggregationBuilders.terms("keys").field(Utils.TAG_KEY_RAW);
 
-                limit.asInteger().ifPresent(terms::size);
+                limit.asInteger().ifPresent(keys::size);
 
-                builder.addAggregation(terms);
+                builder.addAggregation(keys);
                 final CardinalityBuilder cardinality =
                     AggregationBuilders.cardinality("cardinality").field(Utils.TAG_VALUE_RAW);
-                terms.subAggregation(cardinality);
+                keys.subAggregation(cardinality);
             }
 
             return bind(builder.execute()).directTransform((SearchResponse response) -> {
@@ -343,7 +345,8 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
                 for (final Terms.Bucket bucket : terms.getBuckets()) {
                     final Cardinality cardinality = bucket.getAggregations().get("cardinality");
                     suggestions.add(
-                        new TagKeyCount.Suggestion(bucket.getKey(), cardinality.getValue()));
+                        new TagKeyCount.Suggestion(bucket.getKey(), cardinality.getValue(),
+                            Optional.empty()));
                 }
 
                 return TagKeyCount.of(ImmutableList.copyOf(suggestions), false);
@@ -827,8 +830,10 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
 
     public static BackendType backendType() {
         final Map<String, Map<String, Object>> mappings = new HashMap<>();
-        mappings.put("tag", loadJsonResource("v1/tag.json"));
-        mappings.put("series", loadJsonResource("v1/series.json"));
+        mappings.put(Utils.TYPE_TAG,
+            loadJsonResource("v1/tag.json", variables(ImmutableMap.of("type", Utils.TYPE_TAG))));
+        mappings.put(Utils.TYPE_SERIES, loadJsonResource("v1/series.json",
+            variables(ImmutableMap.of("type", Utils.TYPE_SERIES))));
         return new BackendType(mappings, ImmutableMap.of(), SuggestBackendV1.class);
     }
 }

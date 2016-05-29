@@ -8,6 +8,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.runners.MockitoJUnitRunner;
 
+import java.util.Optional;
+
 import static org.junit.Assert.assertEquals;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -16,9 +18,9 @@ public class TagKeyCountTest extends AbstractReducedResultTest {
     private TagKeyCount s2;
     private TagKeyCount s3;
 
-    final TagKeyCount.Suggestion sug1 = new TagKeyCount.Suggestion("site", 5L);
-    final TagKeyCount.Suggestion sug2 = new TagKeyCount.Suggestion("site", 5L);
-    final TagKeyCount.Suggestion sug3 = new TagKeyCount.Suggestion("role", 10L);
+    final TagKeyCount.Suggestion sug1 = new TagKeyCount.Suggestion("site", 5L, Optional.empty());
+    final TagKeyCount.Suggestion sug2 = new TagKeyCount.Suggestion("site", 5L, Optional.empty());
+    final TagKeyCount.Suggestion sug3 = new TagKeyCount.Suggestion("role", 10L, Optional.empty());
 
     @Before
     public void setup() {
@@ -30,13 +32,15 @@ public class TagKeyCountTest extends AbstractReducedResultTest {
     @Test
     public void reduceTest() throws Exception {
         assertEquals(new TagKeyCount(errors,
-                ImmutableList.of(new TagKeyCount.Suggestion("role", 10L),
-                    new TagKeyCount.Suggestion("site", 10L)), false),
-            TagKeyCount.reduce(OptionalLimit.empty()).collect(ImmutableList.of(s1, s2, s3)));
+            ImmutableList.of(new TagKeyCount.Suggestion("role", 10L, Optional.empty()),
+                new TagKeyCount.Suggestion("site", 10L, Optional.empty())), false), TagKeyCount
+            .reduce(OptionalLimit.empty(), OptionalLimit.empty())
+            .collect(ImmutableList.of(s1, s2, s3)));
 
-        assertEquals(
-            new TagKeyCount(errors, ImmutableList.of(new TagKeyCount.Suggestion("role", 10L)),
-                true),
-            TagKeyCount.reduce(OptionalLimit.of(1L)).collect(ImmutableList.of(s1, s2, s3)));
+        assertEquals(new TagKeyCount(errors,
+                ImmutableList.of(new TagKeyCount.Suggestion("role", 10L, Optional.empty())), true),
+            TagKeyCount
+                .reduce(OptionalLimit.of(1L), OptionalLimit.empty())
+                .collect(ImmutableList.of(s1, s2, s3)));
     }
 }

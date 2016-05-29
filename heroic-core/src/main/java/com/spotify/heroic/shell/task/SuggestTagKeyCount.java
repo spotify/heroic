@@ -70,7 +70,8 @@ public class SuggestTagKeyCount implements ShellTask {
 
         return suggest
             .useOptionalGroup(params.group)
-            .tagKeyCount(new TagKeyCount.Request(filter, params.getRange(), params.getLimit()))
+            .tagKeyCount(new TagKeyCount.Request(filter, params.getRange(), params.getLimit(),
+                params.getExactLimit()))
             .directTransform(result -> {
                 int i = 0;
 
@@ -95,6 +96,11 @@ public class SuggestTagKeyCount implements ShellTask {
             usage = "Limit the number of printed entries")
         @Getter
         private OptionalLimit limit = OptionalLimit.empty();
+
+        @Option(name = "--exact-limit", aliases = {"--exact-limit"},
+            usage = "Number of entries to perform an expensive exact count for")
+        @Getter
+        private OptionalLimit exactLimit = OptionalLimit.empty();
 
         @Argument
         @Getter

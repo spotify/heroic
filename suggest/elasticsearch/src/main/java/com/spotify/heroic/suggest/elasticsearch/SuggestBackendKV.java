@@ -23,6 +23,7 @@ package com.spotify.heroic.suggest.elasticsearch;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.HashCode;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
@@ -77,6 +78,7 @@ import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.Aggregations;
+import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
 import org.elasticsearch.search.aggregations.bucket.terms.StringTerms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms.Bucket;
@@ -100,10 +102,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestUtils.loadJsonResource;
+import static com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestUtils.variables;
 import static org.elasticsearch.index.query.FilterBuilders.andFilter;
 import static org.elasticsearch.index.query.FilterBuilders.boolFilter;
 import static org.elasticsearch.index.query.FilterBuilders.matchAllFilter;
@@ -122,9 +127,10 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     implements SuggestBackend, Grouped, LifeCycles {
     public static final String WRITE_CACHE_SIZE = "write-cache-size";
 
+    static final String TAG_TYPE = "tag";
+    static final String SERIES_TYPE = "series";
+
     private static final String TAG_DELIMITER = "\0";
-    private static final String SERIES_TYPE = "series";
-    private static final String TAG_TYPE = "tag";
     private static final String KEY = "key";
     private static final String TAG_KEYS = "tag_keys";
     private static final String TAGS = "tags";
@@ -147,7 +153,8 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     private static final String[] KEY_SUGGEST_SOURCES = new String[]{KEY};
     private static final String[] TAG_SUGGEST_SOURCES = new String[]{TAG_SKEY, TAG_SVAL};
 
-    private final Managed<Connection> connection;
+    final Managed<Connection> connection;
+
     private final SuggestBackendReporter reporter;
 
     /**
@@ -316,39 +323,64 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     }
 
     @Override
-    public AsyncFuture<TagKeyCount> tagKeyCount(final TagKeyCount.Request filter) {
+    public AsyncFuture<TagKeyCount> tagKeyCount(final TagKeyCount.Request request) {
         return connection.doto((final Connection c) -> {
-            final QueryBuilder root = filteredQuery(matchAllQuery(), filter(filter.getFilter()));
+            final QueryBuilder root = filteredQuery(matchAllQuery(), filter(request.getFilter()));
 
             final SearchRequestBuilder builder = c
-                .search(filter.getRange(), TAG_TYPE)
+                .search(request.getRange(), TAG_TYPE)
                 .setSearchType(SearchType.COUNT)
                 .setQuery(root);
 
-            final OptionalLimit limit = filter.getLimit();
+            final OptionalLimit limit = request.getLimit();
+            final OptionalLimit exactLimit = request.getExactLimit();
 
             {
-                final TermsBuilder terms = AggregationBuilders.terms("keys").field(TAG_SKEY_RAW);
+                final TermsBuilder keys = AggregationBuilders.terms("keys").field(TAG_SKEY_RAW);
+                limit.asInteger().ifPresent(l -> keys.size(l + 1));
+                builder.addAggregation(keys);
 
-                limit.asInteger().ifPresent(l -> terms.size(l + 1));
-
-                builder.addAggregation(terms);
                 final CardinalityBuilder cardinality =
                     AggregationBuilders.cardinality("cardinality").field(TAG_SVAL_RAW);
-                terms.subAggregation(cardinality);
+
+                keys.subAggregation(cardinality);
+
+                exactLimit.asInteger().ifPresent(size -> {
+                    final TermsBuilder values =
+                        AggregationBuilders.terms("values").field(TAG_SVAL_RAW).size(size + 1);
+
+                    keys.subAggregation(values);
+                });
             }
 
             return bind(builder.execute()).directTransform((SearchResponse response) -> {
                 final Set<TagKeyCount.Suggestion> suggestions = new LinkedHashSet<>();
 
-                final Terms terms = response.getAggregations().get("keys");
+                final Terms keys = response.getAggregations().get("keys");
 
-                final List<Bucket> buckets = terms.getBuckets();
+                final List<Bucket> buckets = keys.getBuckets();
 
                 for (final Terms.Bucket bucket : limit.limitList(buckets)) {
                     final Cardinality cardinality = bucket.getAggregations().get("cardinality");
+                    final Terms values = bucket.getAggregations().get("values");
+
+                    final Optional<Set<String>> exactValues;
+
+                    if (values != null) {
+                        exactValues = Optional
+                            .of(values
+                                .getBuckets()
+                                .stream()
+                                .map(MultiBucketsAggregation.Bucket::getKey)
+                                .collect(Collectors.toSet()))
+                            .filter(sets -> !exactLimit.isGreater(sets.size()));
+                    } else {
+                        exactValues = Optional.empty();
+                    }
+
                     suggestions.add(
-                        new TagKeyCount.Suggestion(bucket.getKey(), cardinality.getValue()));
+                        new TagKeyCount.Suggestion(bucket.getKey(), cardinality.getValue(),
+                            exactValues));
                 }
 
                 return TagKeyCount.of(ImmutableList.copyOf(suggestions),
@@ -464,7 +496,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
             }
 
             final SearchRequestBuilder builder = c
-                .search(request.getRange(), "series")
+                .search(request.getRange(), SERIES_TYPE)
                 .setSearchType(SearchType.COUNT)
                 .setQuery(query);
 
@@ -475,17 +507,17 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                     .setSize(1)
                     .setFetchSource(KEY_SUGGEST_SOURCES, new String[0]);
 
-                final TermsBuilder terms =
-                    AggregationBuilders.terms("terms").field(KEY).subAggregation(hits);
+                final TermsBuilder keys =
+                    AggregationBuilders.terms("keys").field(KEY).subAggregation(hits);
 
-                request.getLimit().asInteger().ifPresent(terms::size);
-                builder.addAggregation(terms);
+                request.getLimit().asInteger().ifPresent(keys::size);
+                builder.addAggregation(keys);
             }
 
             return bind(builder.execute()).directTransform((SearchResponse response) -> {
                 final Set<KeySuggest.Suggestion> suggestions = new LinkedHashSet<>();
 
-                final StringTerms terms = response.getAggregations().get("terms");
+                final StringTerms terms = response.getAggregations().get("keys");
 
                 for (final Terms.Bucket bucket : terms.getBuckets()) {
                     final TopHits topHits = bucket.getAggregations().get("hits");
@@ -709,10 +741,15 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     public static Supplier<BackendType> factory() {
         return () -> {
             final Map<String, Map<String, Object>> mappings = new HashMap<>();
-            mappings.put("tag", loadJsonResource("kv/tag.json"));
-            mappings.put("series", loadJsonResource("kv/series.json"));
 
-            final Map<String, Object> settings = loadJsonResource("kv/settings.json");
+            mappings.put(TAG_TYPE,
+                loadJsonResource("kv/tag.json", variables(ImmutableMap.of("type", TAG_TYPE))));
+
+            mappings.put(SERIES_TYPE, loadJsonResource("kv/series.json",
+                variables(ImmutableMap.of("type", SERIES_TYPE))));
+
+            final Map<String, Object> settings =
+                loadJsonResource("kv/settings.json", Function.identity());
 
             return new BackendType(mappings, settings, SuggestBackendKV.class);
         };

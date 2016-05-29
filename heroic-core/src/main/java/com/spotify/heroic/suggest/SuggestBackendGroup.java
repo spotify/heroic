@@ -59,7 +59,7 @@ public class SuggestBackendGroup implements SuggestBackend {
     @Override
     public AsyncFuture<TagKeyCount> tagKeyCount(final TagKeyCount.Request request) {
         return async.collect(run(b -> b.tagKeyCount(request)),
-            TagKeyCount.reduce(request.getLimit()));
+            TagKeyCount.reduce(request.getLimit(), request.getExactLimit()));
     }
 
     @Override

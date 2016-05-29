@@ -35,13 +35,14 @@ import java.util.List;
 public class WriteSuggest {
     private final List<RequestError> errors;
     private final List<Long> times;
+    private final List<String> ids;
 
     public static WriteSuggest of() {
-        return new WriteSuggest(ImmutableList.of(), ImmutableList.of());
+        return new WriteSuggest(ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
     }
 
     public static WriteSuggest of(final long time) {
-        return new WriteSuggest(ImmutableList.of(), ImmutableList.of(time));
+        return new WriteSuggest(ImmutableList.of(), ImmutableList.of(time), ImmutableList.of());
     }
 
     public static Collector<WriteSuggest, WriteSuggest> reduce() {
@@ -54,7 +55,7 @@ public class WriteSuggest {
                 times.addAll(r.getTimes());
             }
 
-            return new WriteSuggest(errors.build(), times.build());
+            return new WriteSuggest(errors.build(), times.build(), ImmutableList.of());
         };
     }
 

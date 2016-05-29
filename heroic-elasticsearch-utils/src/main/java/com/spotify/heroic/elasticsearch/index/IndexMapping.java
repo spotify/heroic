@@ -47,6 +47,6 @@ public interface IndexMapping {
     DeleteByQueryRequestBuilder deleteByQuery(Client client, DateRange range, String type)
         throws NoIndexSelectedException;
 
-    CountRequestBuilder count(Client client, DateRange range, String metadataType)
+    CountRequestBuilder count(Client client, DateRange range, String type)
         throws NoIndexSelectedException;
 }

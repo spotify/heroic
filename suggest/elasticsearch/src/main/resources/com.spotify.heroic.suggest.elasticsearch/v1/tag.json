@@ -1,5 +1,5 @@
 {
-  "tag": {
+  "{{type}}": {
     "properties": {
       "series": {
         "include_in_parent": true,

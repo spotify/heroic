@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.suggest;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.spotify.heroic.cluster.ClusterShardGroup;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.OptionalLimit;
@@ -33,15 +33,13 @@ import com.spotify.heroic.metric.ShardError;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-
-import static com.google.common.base.Preconditions.checkNotNull;
+import java.util.Optional;
+import java.util.Set;
 
 @Data
 public class TagKeyCount {
@@ -53,77 +51,70 @@ public class TagKeyCount {
         return new TagKeyCount(ImmutableList.of(), suggestions, limited);
     }
 
-    public static Collector<TagKeyCount, TagKeyCount> reduce(final OptionalLimit limit) {
+    public static Collector<TagKeyCount, TagKeyCount> reduce(
+        final OptionalLimit limit, final OptionalLimit exactLimit
+    ) {
         return groups -> {
             final List<RequestError> errors1 = new ArrayList<>();
-            final HashMap<String, Suggestion> suggestions1 = new HashMap<>();
-            boolean limited1 = false;
+            final HashMap<String, Suggestion> suggestions = new HashMap<>();
+            boolean limited = false;
 
             for (final TagKeyCount g : groups) {
                 errors1.addAll(g.errors);
 
                 for (final Suggestion s : g.suggestions) {
-                    final Suggestion replaced = suggestions1.put(s.key, s);
+                    final Suggestion replaced = suggestions.put(s.key, s);
 
                     if (replaced == null) {
                         continue;
                     }
 
-                    suggestions1.put(s.key, new Suggestion(s.key, s.count + replaced.count));
+                    final Optional<Set<String>> exactValues;
+
+                    if (s.exactValues.isPresent() && replaced.exactValues.isPresent()) {
+                        exactValues = Optional.<Set<String>>of(ImmutableSet.copyOf(
+                            Iterables.concat(s.exactValues.get(),
+                                replaced.exactValues.get()))).filter(
+                            set -> !exactLimit.isGreater(set.size()));
+                    } else {
+                        exactValues = Optional.empty();
+                    }
+
+                    suggestions.put(s.key,
+                        new Suggestion(s.key, s.count + replaced.count, exactValues));
                 }
 
-                limited1 = limited1 || g.limited;
+                limited = limited || g.limited;
             }
 
-            final List<Suggestion> list = new ArrayList<>(suggestions1.values());
-            Collections.sort(list, Suggestion.COMPARATOR);
+            final List<Suggestion> list = new ArrayList<>(suggestions.values());
+            Collections.sort(list);
 
             return new TagKeyCount(errors1, limit.limitList(list),
-                limited1 || limit.isGreater(list.size()));
+                limited || limit.isGreater(list.size()));
         };
     }
 
     @Data
-    @EqualsAndHashCode(of = {"key"})
-    public static final class Suggestion {
+    public static final class Suggestion implements Comparable<Suggestion> {
         private final String key;
         private final long count;
+        private final Optional<Set<String>> exactValues;
 
-        @JsonCreator
-        public Suggestion(@JsonProperty("key") String key, @JsonProperty("count") Long count) {
-            this.key = checkNotNull(key, "value must not be null");
-            this.count = checkNotNull(count, "count must not be null");
+        @Override
+        public int compareTo(final Suggestion o) {
+            final int k = key.compareTo(o.key);
+
+            if (k != 0) {
+                return k;
+            }
+
+            return Long.compare(count(), o.count());
         }
 
-        // sort suggestions descending by score.
-        private static final Comparator<Suggestion> COMPARATOR = new Comparator<Suggestion>() {
-            @Override
-            public int compare(Suggestion a, Suggestion b) {
-                final int s = Long.compare(b.count, a.count);
-
-                if (s != 0) {
-                    return s;
-                }
-
-                return compareKey(a, b);
-            }
-
-            private int compareKey(Suggestion a, Suggestion b) {
-                if (a.key == null && b.key == null) {
-                    return 0;
-                }
-
-                if (a.key == null) {
-                    return 1;
-                }
-
-                if (b.key == null) {
-                    return -1;
-                }
-
-                return a.key.compareTo(b.key);
-            }
-        };
+        public long count() {
+            return exactValues.map(s -> (long) s.size()).orElse(count);
+        }
     }
 
     public static Transform<Throwable, TagKeyCount> shardError(final ClusterShardGroup shard) {
@@ -136,5 +127,6 @@ public class TagKeyCount {
         private final Filter filter;
         private final DateRange range;
         private final OptionalLimit limit;
+        private final OptionalLimit exactLimit;
     }
 }

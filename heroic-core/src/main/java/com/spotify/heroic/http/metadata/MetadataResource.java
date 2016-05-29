@@ -145,7 +145,8 @@ public class MetadataResource {
             () -> OptionalLimit.of(request.getLimit()));
         httpAsync.bind(response, cluster
             .useDefaultGroup()
-            .tagKeyCount(new TagKeyCount.Request(c.getFilter(), c.getRange(), c.getLimit())));
+            .tagKeyCount(new TagKeyCount.Request(c.getFilter(), c.getRange(), c.getLimit(),
+                OptionalLimit.of(10))));
     }
 
     @POST

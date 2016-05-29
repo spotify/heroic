@@ -31,5 +31,11 @@
       <artifactId>lombok</artifactId>
       <scope>provided</scope>
     </dependency>
+
+    <dependency>
+      <groupId>com.spotify.heroic</groupId>
+      <artifactId>heroic-elasticsearch-test</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 </project>

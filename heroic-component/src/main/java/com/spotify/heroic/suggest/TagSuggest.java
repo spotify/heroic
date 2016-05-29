@@ -98,7 +98,13 @@ public class TagSuggest {
                 return s;
             }
 
-            return key.compareTo(o.key);
+            int k = key.compareTo(o.key);
+
+            if (k != 0) {
+                return k;
+            }
+
+            return value.compareTo(o.value);
         }
     }
 

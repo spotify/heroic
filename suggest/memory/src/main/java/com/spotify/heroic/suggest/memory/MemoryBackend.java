@@ -39,8 +39,6 @@ import com.spotify.heroic.suggest.WriteSuggest;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 import javax.inject.Inject;
@@ -148,7 +146,8 @@ public class MemoryBackend implements SuggestBackend, Grouped {
         final List<TagKeyCount.Suggestion> suggestions = ImmutableList.copyOf(request
             .getLimit()
             .limitStream(counts.entrySet().stream())
-            .map(e -> new TagKeyCount.Suggestion(e.getKey(), (long) e.getValue().size()))
+            .map(e -> new TagKeyCount.Suggestion(e.getKey(), (long) e.getValue().size(),
+                Optional.empty()))
             .iterator());
 
         return async.resolved(TagKeyCount.of(suggestions, false));
@@ -331,8 +330,7 @@ public class MemoryBackend implements SuggestBackend, Grouped {
         return series.stream().filter(filter::apply).onClose(l::unlock);
     }
 
-    @EqualsAndHashCode
-    @RequiredArgsConstructor
+    @Data
     static class TagId {
         private final String key;
         private final String value;

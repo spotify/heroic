@@ -76,6 +76,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
     public static final String DEFAULT_GROUP = "elasticsearch";
     public static final String DEFAULT_TEMPLATE_NAME = "heroic-suggest";
     public static final String DEFAULT_BACKEND_TYPE = "default";
+    public static final boolean DEFAULT_CONFIGURE = false;
 
     private final Optional<String> id;
     private final Groups groups;
@@ -84,6 +85,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
     private final long writeCacheDurationMinutes;
     private final String templateName;
     private final String backendType;
+    private final boolean configure;
 
     private static Supplier<BackendType> defaultSetup = SuggestBackendKV.factory();
 
@@ -107,7 +109,8 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
         @JsonProperty("writesPerSecond") Optional<Double> writesPerSecond,
         @JsonProperty("writeCacheDurationMinutes") Optional<Long> writeCacheDurationMinutes,
         @JsonProperty("templateName") Optional<String> templateName,
-        @JsonProperty("backendType") Optional<String> backendType
+        @JsonProperty("backendType") Optional<String> backendType,
+        @JsonProperty("configure") Optional<Boolean> configure
     ) {
         this.id = id;
         this.groups = groups.orElseGet(Groups::empty).or(DEFAULT_GROUP);
@@ -119,6 +122,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
         this.backendType = backendType.orElse(DEFAULT_BACKEND_TYPE);
         this.type =
             backendType.flatMap(bt -> ofNullable(backendTypes.get(bt))).orElse(defaultSetup);
+        this.configure = configure.orElse(DEFAULT_CONFIGURE);
     }
 
     @Override
@@ -166,7 +170,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
         @ElasticsearchScope
         @Named("configure")
         public boolean configure(ExtraParameters params) {
-            return params.contains(ExtraParameters.CONFIGURE) ||
+            return configure || params.contains(ExtraParameters.CONFIGURE) ||
                 params.contains(ELASTICSEARCH_CONFIGURE_PARAM);
         }
 
@@ -219,6 +223,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
         private Optional<Long> writeCacheDurationMinutes = empty();
         private Optional<String> templateName = empty();
         private Optional<String> backendType = empty();
+        private Optional<Boolean> configure = empty();
 
         public Builder id(final String id) {
             checkNotNull(id, "id");
@@ -262,9 +267,14 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
             return this;
         }
 
+        public Builder configure(final boolean configure) {
+            this.configure = of(configure);
+            return this;
+        }
+
         public ElasticsearchSuggestModule build() {
             return new ElasticsearchSuggestModule(id, groups, connection, writesPerSecond,
-                writeCacheDurationMinutes, templateName, backendType);
+                writeCacheDurationMinutes, templateName, backendType, configure);
         }
     }
 }
