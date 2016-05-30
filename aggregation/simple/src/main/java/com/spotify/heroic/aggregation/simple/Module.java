@@ -116,42 +116,17 @@ public class Module implements HeroicModule {
                 });
 
             c.register(TopK.NAME, TopK.class, TopKInstance.class,
-                new FilterAggregationBuilder<TopK>(factory) {
-                    @Override
-                    protected TopK buildAggregation(AggregationArguments args, Aggregation of) {
-                        return new TopK(fetchK(args, IntegerExpression.class).getValue(), of);
-
-                    }
-                });
+                args -> new TopK(fetchK(args, IntegerExpression.class).getValue()));
 
             c.register(BottomK.NAME, BottomK.class, BottomKInstance.class,
-                new FilterAggregationBuilder<BottomK>(factory) {
-                    @Override
-                    protected BottomK buildAggregation(AggregationArguments args,
-                                                       Aggregation of) {
-                        return new BottomK(fetchK(args, IntegerExpression.class).getValue(), of);
-
-                    }
-                });
+                 args -> new BottomK(fetchK(args, IntegerExpression.class).getValue()));
 
             c.register(AboveK.NAME, AboveK.class, AboveKInstance.class,
-                new FilterAggregationBuilder<AboveK>(factory) {
-                    @Override
-                    protected AboveK buildAggregation(AggregationArguments args,
-                                                      Aggregation of) {
-                        return new AboveK(fetchK(args, DoubleExpression.class).getValue(), of);
-                    }
-                });
+                args -> new AboveK(fetchK(args, DoubleExpression.class).getValue()));
 
             c.register(BelowK.NAME, BelowK.class, BelowKInstance.class,
-                new FilterAggregationBuilder<BelowK>(factory) {
-                    @Override
-                    protected BelowK buildAggregation(AggregationArguments args,
-                                                      Aggregation of) {
-                        return new BelowK(fetchK(args, DoubleExpression.class).getValue(), of);
-                    }
-                });
-            }
+                args -> new BelowK(fetchK(args, DoubleExpression.class).getValue()));
+        }
         // @formatter:on
 
         private <T extends Expression> T fetchK(AggregationArguments args, Class<T> doubleClass) {

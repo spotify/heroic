@@ -21,17 +21,19 @@
 
 package com.spotify.heroic.metric;
 
+import com.spotify.heroic.common.Series;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.util.Map;
+import java.util.Set;
 
 @Data
 @EqualsAndHashCode
 public final class ShardedResultGroup {
     private final Map<String, String> shard;
     private final Map<String, String> key;
-    private final SeriesValues series;
+    private final Set<Series> series;
     private final MetricCollection group;
     private final long cadence;
 

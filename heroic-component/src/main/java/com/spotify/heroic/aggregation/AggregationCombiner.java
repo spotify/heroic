@@ -29,9 +29,11 @@ import java.util.List;
 public interface AggregationCombiner {
     List<ShardedResultGroup> combine(List<List<ShardedResultGroup>> all);
 
-    static AggregationCombiner DEFAULT = new AggregationCombiner() {
+    AggregationCombiner DEFAULT = new AggregationCombiner() {
         @Override
-        public List<ShardedResultGroup> combine(List<List<ShardedResultGroup>> all) {
+        public List<ShardedResultGroup> combine(
+            final List<List<ShardedResultGroup>> all
+        ) {
             final ImmutableList.Builder<ShardedResultGroup> combined = ImmutableList.builder();
 
             for (final List<ShardedResultGroup> groups : all) {
@@ -39,6 +41,11 @@ public interface AggregationCombiner {
             }
 
             return combined.build();
+        }
+
+        @Override
+        public String toString() {
+            return "DEFAULT";
         }
     };
 }

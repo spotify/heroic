@@ -24,8 +24,6 @@ package com.spotify.heroic.aggregation.simple;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.AggregationInstance;
-import com.spotify.heroic.aggregation.AggregationSession;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 
@@ -53,7 +51,7 @@ public class CountInstance extends DistributedBucketInstance<StripedCountBucket>
     }
 
     @Override
-    public AggregationSession reducer(DateRange range) {
-        return new SumInstance(size, extent).session(range);
+    public AggregationInstance reducer() {
+        return new SumInstance(size, extent);
     }
 }

@@ -77,9 +77,7 @@ public interface AggregationInstance {
      *
      * @return The distributed aggregation for the current aggregation.
      */
-    default AggregationInstance distributed() {
-        return this;
-    }
+    AggregationInstance distributed();
 
     /**
      * Build a reducer for the given aggregation.
@@ -89,20 +87,8 @@ public interface AggregationInstance {
      *
      * @return A reducer for the current aggregation.
      */
-    default AggregationSession reducer(DateRange range) {
-        return session(range);
-    }
-
-    /**
-     * Build a combiner for the given aggregation.
-     * <p>
-     * A combiner organizes how distributed sub-aggregations are re-combined. Specific aggregations
-     * have different methods of recombining results that are more or less efficient.
-     *
-     * @return An aggregation combiner.
-     */
-    default AggregationCombiner combiner(DateRange range) {
-        return AggregationCombiner.DEFAULT;
+    default AggregationInstance reducer() {
+        return this;
     }
 
     /**
@@ -115,5 +101,12 @@ public interface AggregationInstance {
      */
     default Set<String> requiredTags() {
         return ImmutableSet.of();
+    }
+
+    /**
+     * Indicated if any aggregation after this in a chain can be reduced or not.
+     */
+    default boolean distributable() {
+        return true;
     }
 }

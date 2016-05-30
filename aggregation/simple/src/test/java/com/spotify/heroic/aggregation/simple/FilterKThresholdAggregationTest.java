@@ -3,8 +3,10 @@ package com.spotify.heroic.aggregation.simple;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.AggregationOutput;
 import com.spotify.heroic.aggregation.AggregationSession;
+import com.spotify.heroic.aggregation.ChainInstance;
 import com.spotify.heroic.aggregation.EmptyInstance;
 import com.spotify.heroic.aggregation.GroupInstance;
 import com.spotify.heroic.aggregation.GroupingAggregation;
@@ -31,8 +33,8 @@ public class FilterKThresholdAggregationTest {
         final GroupingAggregation g1 =
             new GroupInstance(Optional.of(ImmutableList.of("site")), EmptyInstance.INSTANCE);
 
-        final AboveKInstance a1 = new AboveKInstance(1, g1);
-        final BelowKInstance b1 = new BelowKInstance(2.5, a1);
+        final AggregationInstance a1 = ChainInstance.of(g1, new AboveKInstance(1));
+        final AggregationInstance b1 = ChainInstance.of(a1, new BelowKInstance(2.5));
 
         final Set<Series> states = new HashSet<>();
 

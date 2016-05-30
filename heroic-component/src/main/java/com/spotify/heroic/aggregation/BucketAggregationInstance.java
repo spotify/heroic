@@ -218,6 +218,11 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
     }
 
     @Override
+    public AggregationInstance distributed() {
+        return this;
+    }
+
+    @Override
     public long cadence() {
         return size;
     }

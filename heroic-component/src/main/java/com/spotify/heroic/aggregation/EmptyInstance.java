@@ -65,6 +65,11 @@ public class EmptyInstance implements AggregationInstance {
     }
 
     @Override
+    public AggregationInstance distributed() {
+        return this;
+    }
+
+    @Override
     public long cadence() {
         return 0;
     }

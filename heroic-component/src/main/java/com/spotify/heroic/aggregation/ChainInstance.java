@@ -82,23 +82,64 @@ public class ChainInstance implements AggregationInstance {
         final Iterator<AggregationInstance> it = chain.iterator();
 
         final ImmutableList.Builder<AggregationInstance> chain = ImmutableList.builder();
+        AggregationInstance last = it.next();
 
-        do {
-            final AggregationInstance a = it.next();
-            chain.add(it.hasNext() ? a : a.distributed());
-        } while (it.hasNext());
+        if (!last.distributable()) {
+            return EmptyInstance.INSTANCE;
+        }
 
-        return new ChainInstance(chain.build());
+        while (it.hasNext()) {
+            final AggregationInstance next = it.next();
+
+            if (!next.distributable()) {
+                chain.add(last.distributed());
+                return fromList(chain.build());
+            }
+
+            chain.add(last);
+            last = next;
+        }
+
+        chain.add(last.distributed());
+        return fromList(chain.build());
     }
 
     @Override
-    public AggregationCombiner combiner(final DateRange range) {
-        return chain.get(chain.size() - 1).combiner(range);
-    }
+    public AggregationInstance reducer() {
+        final Iterator<AggregationInstance> it = chain.iterator();
+        AggregationInstance last = it.next();
 
-    @Override
-    public AggregationSession reducer(final DateRange range) {
-        return chain.get(chain.size() - 1).session(range);
+        final ImmutableList.Builder<AggregationInstance> chain = ImmutableList.builder();
+
+        if (!last.distributable()) {
+            chain.add(EmptyInstance.INSTANCE);
+            chain.add(last);
+
+            while (it.hasNext()) {
+                chain.add(it.next());
+            }
+
+            return fromList(chain.build());
+        }
+
+        while (it.hasNext()) {
+            final AggregationInstance next = it.next();
+
+            if (!next.distributable()) {
+                chain.add(last.reducer());
+                chain.add(next);
+
+                while (it.hasNext()) {
+                    chain.add(it.next());
+                }
+
+                return fromList(chain.build());
+            }
+
+            last = next;
+        }
+
+        return last.reducer();
     }
 
     @Override
@@ -128,6 +169,34 @@ public class ChainInstance implements AggregationInstance {
     @Override
     public String toString() {
         return "[" + CHAIN_JOINER.join(chain.stream().map(Object::toString).iterator()) + "]";
+    }
+
+    public static AggregationInstance of(final AggregationInstance... aggregations) {
+        return fromList(ImmutableList.copyOf(aggregations));
+    }
+
+    public static AggregationInstance fromList(final List<AggregationInstance> chain) {
+        if (chain.size() == 1) {
+            return chain.iterator().next();
+        }
+
+        return new ChainInstance(flattenChain(chain));
+    }
+
+    private static List<AggregationInstance> flattenChain(
+        final List<AggregationInstance> chain
+    ) {
+        final ImmutableList.Builder<AggregationInstance> child = ImmutableList.builder();
+
+        for (final AggregationInstance i : chain) {
+            if (i instanceof ChainInstance) {
+                child.addAll(flattenChain(ChainInstance.class.cast(i).getChain()));
+            } else {
+                child.add(i);
+            }
+        }
+
+        return child.build();
     }
 
     @RequiredArgsConstructor

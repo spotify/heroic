@@ -140,7 +140,7 @@ public class QueryMetricsResponse {
 
             for (final ShardedResultGroup r : result) {
                 final Set<Map.Entry<String, SortedSet<String>>> entries =
-                    r.getSeries().getTags().entrySet();
+                    SeriesValues.fromSeries(r.getSeries().iterator()).getTags().entrySet();
 
                 for (final Map.Entry<String, SortedSet<String>> e : entries) {
                     if (blacklist.contains(e.getKey())) {
@@ -176,7 +176,7 @@ public class QueryMetricsResponse {
                 g.writeStartObject();
 
                 final MetricCollection collection = group.getGroup();
-                final SeriesValues series = group.getSeries();
+                final SeriesValues series = SeriesValues.fromSeries(group.getSeries().iterator());
 
                 g.writeStringField("type", collection.getType().identifier());
                 g.writeStringField("hash", Integer.toHexString(group.hashCode()));

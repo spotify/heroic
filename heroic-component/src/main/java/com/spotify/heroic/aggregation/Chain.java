@@ -66,7 +66,7 @@ public class Chain implements Aggregation {
     }
 
     @Override
-    public ChainInstance apply(final AggregationContext context) {
+    public AggregationInstance apply(final AggregationContext context) {
         ListIterator<Aggregation> it = chain.listIterator(chain.size());
 
         AggregationContext current = context;
@@ -81,6 +81,6 @@ public class Chain implements Aggregation {
             chain.add(instance);
         }
 
-        return new ChainInstance(Lists.reverse(chain.build()));
+        return ChainInstance.fromList(Lists.reverse(chain.build()));
     }
 }

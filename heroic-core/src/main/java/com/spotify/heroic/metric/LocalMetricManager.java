@@ -452,9 +452,7 @@ public class LocalMetricManager implements MetricManager {
                     break;
                 }
 
-                final SeriesValues series = SeriesValues.fromSeries(group.getSeries().iterator());
-
-                groups.add(new ResultGroup(group.getKey(), series, group.getMetrics(),
+                groups.add(new ResultGroup(group.getKey(), group.getSeries(), group.getMetrics(),
                     aggregation.cadence()));
             }
 

@@ -28,6 +28,7 @@ import com.spotify.heroic.aggregation.AggregationContext;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.DefaultAggregationContext;
+import com.spotify.heroic.aggregation.DistributedAggregationCombiner;
 import com.spotify.heroic.aggregation.Empty;
 import com.spotify.heroic.cache.QueryCache;
 import com.spotify.heroic.cluster.ClusterManager;
@@ -70,6 +71,7 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -80,6 +82,7 @@ import java.util.SortedSet;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+@Slf4j
 public class CoreQueryManager implements QueryManager {
     public static final long SHIFT_TOLERANCE = TimeUnit.MILLISECONDS.convert(10, TimeUnit.SECONDS);
     public static final QueryTrace.Identifier QUERY_NODE =
@@ -202,11 +205,14 @@ public class CoreQueryManager implements QueryManager {
 
             if (features.hasFeature(Feature.DISTRIBUTED_AGGREGATIONS)) {
                 aggregationInstance = root.distributed();
-                combiner = root.combiner(range);
+                combiner = new DistributedAggregationCombiner(root.reducer(), range);
             } else {
                 aggregationInstance = root;
                 combiner = AggregationCombiner.DEFAULT;
             }
+
+            log.info("Features: {}, Original: {}, Distributed: {}, Combiner: {}", features, root,
+                aggregationInstance, combiner);
 
             final FullQuery.Request request =
                 new FullQuery.Request(source, filter, range, aggregationInstance, options);

@@ -59,9 +59,7 @@ public class AggregationTest {
         final GroupInstance g1i = (GroupInstance) chain.getChain().get(0);
         final GroupInstance g2i = (GroupInstance) chain.getChain().get(1);
         final GroupInstance g2i1i =
-            (GroupInstance) ((ChainInstance) ((GroupInstance) chain.getChain().get(1)).getEach())
-                .getChain()
-                .get(0);
+            (GroupInstance) (((GroupInstance) chain.getChain().get(1)).getEach());
 
         assertEquals(Optional.of(ImmutableSet.of("foo", "bar")),
             g1i.getOf().map(ImmutableSet::copyOf));

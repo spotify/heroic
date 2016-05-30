@@ -5,18 +5,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.common.Statistics;
-import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.Point;
-import com.spotify.heroic.metric.SeriesValues;
-import com.spotify.heroic.metric.ShardedResultGroup;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -25,11 +20,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -127,47 +120,6 @@ public class GroupingAggregationTest {
 
         verify(each).distributed();
         verify(g).newInstance(of, distributed);
-    }
-
-    @Test
-    public void testCombiner() {
-        final AggregationInstance each = mock(AggregationInstance.class);
-        final Optional<List<String>> of = Optional.empty();
-        final SimpleGroup g = spy(new SimpleGroup(of, each));
-
-        final AggregationSession r = mock(AggregationSession.class);
-        final DateRange range = mock(DateRange.class);
-
-        final AggregationResult result =
-            new AggregationResult(ImmutableList.of(), Statistics.empty());
-
-        doReturn(r).when(each).reducer(range);
-        doReturn(result).when(r).result();
-
-        final AggregationCombiner combiner = g.combiner(range);
-
-        final List<List<ShardedResultGroup>> all = new ArrayList<>();
-
-        final ImmutableMap<String, String> shard = ImmutableMap.of();
-        final MetricCollection empty = MetricCollection.points(ImmutableList.of());
-
-        final Map<String, String> k1 = ImmutableMap.of("id", "a");
-        final SeriesValues g1 = SeriesValues.of("id", "a");
-        final Map<String, String> k2 = ImmutableMap.of("id", "b");
-        final SeriesValues g2 = SeriesValues.of("id", "b");
-
-        final ShardedResultGroup a = new ShardedResultGroup(shard, k1, g1, empty, 0);
-        final ShardedResultGroup b = new ShardedResultGroup(shard, k1, g1, empty, 0);
-        final ShardedResultGroup c = new ShardedResultGroup(shard, k2, g2, empty, 0);
-
-        all.add(ImmutableList.of(a, b, c));
-
-        assertTrue(combiner.combine(all).isEmpty());
-
-        verify(r, times(2)).updatePoints(ImmutableMap.of("id", "a"), ImmutableSet.of(),
-            ImmutableList.of());
-        verify(r, times(1)).updatePoints(ImmutableMap.of("id", "b"), ImmutableSet.of(),
-            ImmutableList.of());
     }
 
     public static class SimpleGroup extends GroupingAggregation {

@@ -22,7 +22,6 @@
 package com.spotify.heroic.aggregation;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
@@ -30,15 +29,12 @@ import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Point;
-import com.spotify.heroic.metric.SeriesValues;
-import com.spotify.heroic.metric.ShardedResultGroup;
 import com.spotify.heroic.metric.Spread;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -99,70 +95,13 @@ public abstract class GroupingAggregation implements AggregationInstance {
     }
 
     @Override
-    public AggregationSession reducer(final DateRange range) {
-        return each.reducer(range);
-    }
-
-    /**
-     * Grouping aggregations need to recombine the results for each result group.
-     * <p>
-     * Result groups are identified by their tags, and several shards might return groups having the
-     * same id. Because of this, each group must instantiate an {@link
-     * AggregationInstance#reducer(DateRange)}, belonging to the child aggregation to recombine
-     * results that are from different groups.
-     */
-    @Override
-    public AggregationCombiner combiner(final DateRange range) {
-        return (all) -> {
-            final Map<Map<String, String>, Reduction> sessions = new HashMap<>();
-
-            /* iterate through all groups and setup, and feed a reducer session for every group */
-            for (List<ShardedResultGroup> groups : all) {
-                for (final ShardedResultGroup g : groups) {
-                    final Map<String, String> key = g.getKey();
-
-                    Reduction red = sessions.get(key);
-
-                    if (red == null) {
-                        red = new Reduction(each.reducer(range));
-                        sessions.put(key, red);
-                    }
-
-                    g.getGroup().updateAggregation(red.session, key, ImmutableSet.of());
-                    red.series.addSeriesValues(g.getSeries());
-                }
-            }
-
-            /* build results from every reducer group into a final result */
-            final ImmutableList.Builder<ShardedResultGroup> groups = ImmutableList.builder();
-
-            for (final Map.Entry<Map<String, String>, Reduction> e : sessions.entrySet()) {
-                final Map<String, String> key = e.getKey();
-                final Reduction red = e.getValue();
-
-                final SeriesValues series = red.series.build();
-                final AggregationResult result = red.session.result();
-
-                for (final AggregationOutput out : result.getResult()) {
-                    groups.add(
-                        new ShardedResultGroup(ImmutableMap.of(), key, series, out.getMetrics(),
-                            each.cadence()));
-                }
-            }
-
-            return groups.build();
-        };
+    public AggregationInstance reducer() {
+        return newInstance(of, each.reducer());
     }
 
     @Override
     public String toString() {
         return String.format("%s(of=%s, each=%s)", getClass().getSimpleName(), of, each);
-    }
-
-    @Data
-    private final class Reduction {
-        private final AggregationSession session;
-        private final SeriesValues.Builder series = SeriesValues.builder();
     }
 
     @ToString

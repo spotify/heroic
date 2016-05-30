@@ -23,11 +23,12 @@ package com.spotify.heroic.aggregation.simple;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.aggregation.AggregationInstance;
+import lombok.Data;
 
+@Data
 public class BottomKInstance extends FilterAggregation {
     @JsonCreator
-    public BottomKInstance(@JsonProperty("k") long k, @JsonProperty("of") AggregationInstance of) {
-        super(new FilterKAreaStrategy(FilterKAreaType.BOTTOM, k), of);
+    public BottomKInstance(@JsonProperty("k") long k) {
+        super(new FilterKAreaStrategy(FilterKAreaType.BOTTOM, k));
     }
 }

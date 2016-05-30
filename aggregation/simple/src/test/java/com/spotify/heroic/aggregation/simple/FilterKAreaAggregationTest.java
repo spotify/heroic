@@ -2,8 +2,10 @@ package com.spotify.heroic.aggregation.simple;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.AggregationOutput;
 import com.spotify.heroic.aggregation.AggregationSession;
+import com.spotify.heroic.aggregation.ChainInstance;
 import com.spotify.heroic.aggregation.EmptyInstance;
 import com.spotify.heroic.aggregation.GroupInstance;
 import com.spotify.heroic.aggregation.GroupingAggregation;
@@ -30,8 +32,8 @@ public class FilterKAreaAggregationTest {
         final GroupingAggregation g =
             new GroupInstance(Optional.of(ImmutableList.of("site")), EmptyInstance.INSTANCE);
 
-        final TopKInstance t1 = new TopKInstance(2, g);
-        final BottomKInstance b1 = new BottomKInstance(1, t1);
+        final AggregationInstance t1 = ChainInstance.of(g, new TopKInstance(2));
+        final AggregationInstance b1 = ChainInstance.of(t1, new BottomKInstance(1));
 
         final Set<Series> series = new HashSet<>();
 

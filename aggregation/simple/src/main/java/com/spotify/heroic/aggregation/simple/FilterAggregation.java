@@ -21,17 +21,16 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import com.spotify.heroic.aggregation.AggregationCombiner;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.AggregationOutput;
 import com.spotify.heroic.aggregation.AggregationResult;
 import com.spotify.heroic.aggregation.AggregationSession;
+import com.spotify.heroic.aggregation.EmptyInstance;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Point;
-import com.spotify.heroic.metric.ShardedResultGroup;
 import com.spotify.heroic.metric.Spread;
 
 import java.util.List;
@@ -42,16 +41,10 @@ import java.util.stream.Collectors;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public class FilterAggregation implements AggregationInstance {
-    private final AggregationInstance of;
     private final FilterStrategy filterStrategy;
 
-    public FilterAggregation(final FilterStrategy filterStrategy, final AggregationInstance of) {
+    public FilterAggregation(final FilterStrategy filterStrategy) {
         this.filterStrategy = checkNotNull(filterStrategy, "filterStrategy");
-        this.of = checkNotNull(of, "of");
-    }
-
-    public AggregationInstance getOf() {
-        return of;
     }
 
     @Override
@@ -61,27 +54,31 @@ public class FilterAggregation implements AggregationInstance {
 
     @Override
     public long cadence() {
-        return of.cadence();
+        return -1;
+    }
+
+    @Override
+    public AggregationInstance distributed() {
+        return EmptyInstance.INSTANCE;
+    }
+
+    @Override
+    public AggregationInstance reducer() {
+        return EmptyInstance.INSTANCE;
+    }
+
+    /**
+     * Filtering aggregations are by definition <em>not</em> distributable since they are incapable
+     * of making a complete local decision.
+     */
+    @Override
+    public boolean distributable() {
+        return false;
     }
 
     @Override
     public AggregationSession session(DateRange range) {
-        final AggregationSession child = of.session(range);
-        return new Session(filterStrategy, child);
-    }
-
-    @Override
-    public AggregationCombiner combiner(DateRange range) {
-        return all -> {
-            final List<FilterableMetrics<ShardedResultGroup>> filterableMetrics = of
-                .combiner(range)
-                .combine(all)
-                .stream()
-                .map(s -> new FilterableMetrics<>(s, s::getGroup))
-                .collect(Collectors.toList());
-
-            return filterStrategy.filter(filterableMetrics);
-        };
+        return new Session(filterStrategy, EmptyInstance.INSTANCE.session(range));
     }
 
     private class Session implements AggregationSession {

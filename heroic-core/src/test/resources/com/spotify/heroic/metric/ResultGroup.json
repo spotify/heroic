@@ -1,6 +1,6 @@
 {
   "key": {},
-  "series": {"keys": [], "tags": {}},
+  "series": [],
   "group": {
     "type": "points",
     "data": []

@@ -3,7 +3,9 @@ package com.spotify.heroic.metric;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.HeroicMappers;
+import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.grammar.QueryParser;
 import org.junit.Test;
@@ -13,6 +15,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 
@@ -41,7 +44,7 @@ public class BasicSerializationTest {
 
     @Test
     public void testResultGroup() throws Exception {
-        final SeriesValues series = SeriesValues.empty();
+        final Set<Series> series = ImmutableSet.of();
         final ResultGroup expected =
             new ResultGroup(ImmutableMap.of(), series, MetricCollection.points(new ArrayList<>()),
                 0L);
