@@ -43,7 +43,7 @@ public abstract class SamplingAggregation implements Aggregation {
     @Override
     public AggregationInstance apply(final AggregationContext context) {
         final Duration s = firstPresent(size, context.size()).orElseGet(context::defaultSize);
-        final Duration e = firstPresent(extent, context.extent()).orElseGet(context::defaultExtent);
+        final Duration e = firstPresent(firstPresent(extent, size), context.extent()).orElse(s);
         return apply(context, s.convert(TimeUnit.MILLISECONDS), e.convert(TimeUnit.MILLISECONDS));
     }
 
