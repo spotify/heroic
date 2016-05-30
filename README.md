@@ -245,8 +245,7 @@ available profiles are listed in `--help`.
 
 ## Repackaged Dependencies
 
-* [repackaged/bigtable](./repackaged/bigtable/)
-* [repackaged/datastax](./repackaged/datastax/)
+* [repackaged/bigtable](/repackaged/bigtable)
 
 These are third-party dependencies that has to be repackaged to avoid binary
 incompatibilities with dependencies.
@@ -258,7 +257,7 @@ for the shaded jar.
 ```
 $> mvn clean package -D maven.test.skip=true
 ...
-[WARNING] foo-3.5.jar, foo-4.5.jar define 10 overlapping classes: 
+[WARNING] foo-3.5.jar, foo-4.5.jar define 10 overlapping classes:
 [WARNING]   - com.foo.ConflictingClass
 ...
 ```

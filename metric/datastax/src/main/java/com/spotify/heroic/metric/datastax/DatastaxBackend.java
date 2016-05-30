@@ -52,7 +52,6 @@ import com.spotify.heroic.metric.datastax.schema.Schema;
 import com.spotify.heroic.metric.datastax.schema.Schema.PreparedFetch;
 import com.spotify.heroic.metric.datastax.schema.SchemaBoundStatement;
 import com.spotify.heroic.metric.datastax.schema.SchemaInstance;
-import com.spotify.heroic.statistics.MetricBackendReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Borrowed;
@@ -90,26 +89,21 @@ import java.util.function.Function;
 @Slf4j
 @ToString(of = {"connection"})
 public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles {
-    public static final QueryTrace.Identifier KEYS =
-        QueryTrace.identifier(DatastaxBackend.class, "keys");
     public static final QueryTrace.Identifier FETCH_SEGMENT =
         QueryTrace.identifier(DatastaxBackend.class, "fetch_segment");
     public static final QueryTrace.Identifier FETCH =
         QueryTrace.identifier(DatastaxBackend.class, "fetch");
 
     private final AsyncFramework async;
-    private final MetricBackendReporter reporter;
     private final Managed<Connection> connection;
     private final Groups groups;
 
     @Inject
     public DatastaxBackend(
-        final AsyncFramework async, final MetricBackendReporter reporter,
-        final Managed<Connection> connection, final Groups groups
+        final AsyncFramework async, final Managed<Connection> connection, final Groups groups
     ) {
         super(async);
         this.async = async;
-        this.reporter = reporter;
         this.connection = connection;
         this.groups = groups;
     }
@@ -549,7 +543,8 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
             int count = rows.getAvailableWithoutFetching();
 
             final Optional<AsyncFuture<Void>> nextFetch = rows.isFullyFetched() ? Optional.empty()
-                : Optional.of(Async.bind(async, rows.fetchMoreResults()));
+                : Optional.of(
+                    Async.bind(async, rows.fetchMoreResults()).directTransform(r -> null));
 
             while (count-- > 0) {
                 final R part;
@@ -648,7 +643,8 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
             int count = rows.getAvailableWithoutFetching();
 
             final Optional<AsyncFuture<Void>> nextFetch = rows.isFullyFetched() ? Optional.empty()
-                : Optional.of(Async.bind(async, rows.fetchMoreResults()));
+                : Optional.of(
+                    Async.bind(async, rows.fetchMoreResults()).directTransform(r -> null));
 
             final List<R> batch = new ArrayList<>();
 

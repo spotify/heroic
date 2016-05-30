@@ -49,4 +49,28 @@ public interface FetchQuotaWatcher {
      * @return {@code true} if any quota was violated, {@code false} otherwise.
      */
     boolean isQuotaViolated();
+
+    /**
+     * Special quota watcher indicating no quota should be applied.
+     */
+    FetchQuotaWatcher NO_QUOTA = new FetchQuotaWatcher() {
+        @Override
+        public void readData(long n) {
+        }
+
+        @Override
+        public boolean mayReadData() {
+            return true;
+        }
+
+        @Override
+        public int getReadDataQuota() {
+            return Integer.MAX_VALUE;
+        }
+
+        @Override
+        public boolean isQuotaViolated() {
+            return false;
+        }
+    };
 }

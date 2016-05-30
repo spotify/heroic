@@ -1,5 +1,6 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.spotify.heroic</groupId>
@@ -228,11 +229,10 @@
     </profile>
 
     <profile>
-      <id>repackagea</id>
+      <id>repackaged</id>
 
       <modules>
         <module>repackaged/bigtable</module>
-        <module>repackaged/datastax</module>
       </modules>
     </profile>
   </profiles>
@@ -443,8 +443,9 @@
       </dependency>
 
       <dependency>
-        <groupId>com.spotify.heroic.repackaged</groupId>
+        <groupId>com.datastax.cassandra</groupId>
         <artifactId>cassandra-driver-core</artifactId>
+        <classifier>shaded</classifier>
         <version>${datastax.version}</version>
       </dependency>
 
@@ -764,23 +765,32 @@
                 </filters>
                 <transformers>
                   <!-- required for lucene -->
-                  <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                  <transformer
+                      implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                     <resource>META-INF/services/org.apache.lucene.codecs.Codec</resource>
                   </transformer>
-                  <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                  <transformer
+                      implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                     <resource>META-INF/services/org.apache.lucene.codecs.DocValuesFormat</resource>
                   </transformer>
-                  <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                  <transformer
+                      implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                     <resource>META-INF/services/org.apache.lucene.codecs.PostingsFormat</resource>
                   </transformer>
-                  <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-                    <resource>META-INF/services/org.apache.lucene.analysis.util.CharFilterFactory</resource>
+                  <transformer
+                      implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                    <resource>META-INF/services/org.apache.lucene.analysis.util.CharFilterFactory
+                    </resource>
                   </transformer>
-                  <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-                    <resource>META-INF/services/org.apache.lucene.analysis.util.TokenFilterFactory</resource>
+                  <transformer
+                      implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                    <resource>META-INF/services/org.apache.lucene.analysis.util.TokenFilterFactory
+                    </resource>
                   </transformer>
-                  <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-                    <resource>META-INF/services/org.apache.lucene.analysis.util.TokenizerFactory</resource>
+                  <transformer
+                      implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                    <resource>META-INF/services/org.apache.lucene.analysis.util.TokenizerFactory
+                    </resource>
                   </transformer>
                 </transformers>
               </configuration>

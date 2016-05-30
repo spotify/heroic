@@ -71,29 +71,6 @@ public class LocalMetricManager implements MetricManager {
         QueryTrace.identifier(LocalMetricManager.class, "query");
     private static final QueryTrace.Identifier FETCH =
         QueryTrace.identifier(LocalMetricManager.class, "fetch");
-    private static final QueryTrace.Identifier KEYS =
-        QueryTrace.identifier(LocalMetricManager.class, "keys");
-
-    public static final FetchQuotaWatcher NO_QUOTA_WATCHER = new FetchQuotaWatcher() {
-        @Override
-        public void readData(long n) {
-        }
-
-        @Override
-        public boolean mayReadData() {
-            return true;
-        }
-
-        @Override
-        public int getReadDataQuota() {
-            return Integer.MAX_VALUE;
-        }
-
-        @Override
-        public boolean isQuotaViolated() {
-            return false;
-        }
-    };
 
     private final OptionalLimit groupLimit;
     private final OptionalLimit seriesLimit;
@@ -178,7 +155,7 @@ public class LocalMetricManager implements MetricManager {
 
             final FetchQuotaWatcher watcher =
                 options.getDataLimit().orElse(dataLimit).asLong().<FetchQuotaWatcher>map(
-                    LimitedFetchQuotaWatcher::new).orElse(NO_QUOTA_WATCHER);
+                    LimitedFetchQuotaWatcher::new).orElse(FetchQuotaWatcher.NO_QUOTA);
 
             final LazyTransform<FindSeries, FullQuery> transform = (final FindSeries result) -> {
                 /* if empty, there are not time series on this shard */
@@ -283,7 +260,7 @@ public class LocalMetricManager implements MetricManager {
 
         @Override
         public AsyncFuture<FetchData> fetch(final FetchData.Request request) {
-            return fetch(request, NO_QUOTA_WATCHER);
+            return fetch(request, FetchQuotaWatcher.NO_QUOTA);
         }
 
         @Override

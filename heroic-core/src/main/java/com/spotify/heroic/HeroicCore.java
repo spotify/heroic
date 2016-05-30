@@ -311,8 +311,15 @@ public class HeroicCore implements HeroicConfiguration {
                 }
 
                 if (t != null) {
-                    log.error("Unhandled exception caught in core executor", t);
-                    log.error("Exiting (code=2)");
+                    if (log.isErrorEnabled()) {
+                        log.error("Unhandled exception caught in core executor", t);
+                        log.error("Exiting (code=2)");
+                    } else {
+                        System.err.println("Unhandled exception caught in core executor");
+                        System.err.println("Exiting (code=2)");
+                        t.printStackTrace(System.err);
+                    }
+
                     System.exit(2);
                 }
             }

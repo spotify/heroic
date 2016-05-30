@@ -22,9 +22,11 @@
 package com.spotify.heroic.metric.datastax;
 
 import com.datastax.driver.core.BoundStatement;
+import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.WriteType;
+import com.datastax.driver.core.exceptions.DriverException;
 import com.datastax.driver.core.policies.RetryPolicy;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -103,5 +105,21 @@ public class AggressiveRetryPolicy implements RetryPolicy {
         Statement statement, ConsistencyLevel cl, int requiredReplica, int aliveReplica, int nbRetry
     ) {
         return (nbRetry == 0) ? RetryDecision.tryNextHost(cl) : RetryDecision.rethrow();
+    }
+
+    @Override
+    public RetryDecision onRequestError(
+        final Statement statement, final ConsistencyLevel cl, final DriverException e,
+        final int nbRetry
+    ) {
+        return RetryDecision.rethrow();
+    }
+
+    @Override
+    public void init(final Cluster cluster) {
+    }
+
+    @Override
+    public void close() {
     }
 }
