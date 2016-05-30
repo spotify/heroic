@@ -71,7 +71,13 @@ public abstract class AbstractMetricBackendIT {
 
         final HeroicConfig.Builder fragment = HeroicConfig.builder().metrics(metric);
 
-        core = HeroicCore.builder().configFragment(fragment).build().newInstance();
+        core = HeroicCore
+            .builder()
+            .setupShellServer(false)
+            .setupService(false)
+            .configFragment(fragment)
+            .build()
+            .newInstance();
 
         core.start().get();
 

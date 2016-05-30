@@ -15,16 +15,14 @@ public abstract class AbstractDatastaxBackendIT extends AbstractMetricBackendIT 
     @Override
     protected Optional<MetricModule> setupModule() {
         return properties.getOptionalString("remote").map(v -> {
-            final String seed = properties.getRequiredString("seed");
-
             final String keyspace = "heroic_it_" + UUID.randomUUID().toString().replace('-', '_');
 
-            return DatastaxMetricModule
-                .builder()
-                .schema(setupSchema(keyspace))
-                .configure(true)
-                .seeds(ImmutableSet.of(seed))
-                .build();
+            final DatastaxMetricModule.Builder builder =
+                DatastaxMetricModule.builder().schema(setupSchema(keyspace)).configure(true);
+
+            properties.getOptionalString("seed").map(ImmutableSet::of).ifPresent(builder::seeds);
+
+            return builder.build();
         });
     }
 

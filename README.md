@@ -73,6 +73,11 @@ properties.
 | -D it.elasticsearch.remote=true                     | Run Elasticsearch tests against a remote database      |
 | -D it.elasticsearch.seed=&lt;seed&gt;               | Use the given seed (default: `localhost`)              |
 | -D it.elasticsearch.clusterName=&lt;clusterName&gt; | Use the given cluster name (default: `elasticsearch`)  |
+|-----------------------------------------------------|--------------------------------------------------------|
+| -D datastax.version=&lt;version&gt;                 | Use the given client version when building the project |
+| -D it.datastax.remote=true                          | Run Datastax tests against a remote database           |
+| -D it.datastax.seed=&lt;seed&gt;                    | Use the given seed (default: `localhost`)              |
+|-----------------------------------------------------|--------------------------------------------------------|
 
 The following is an example Elasticsearch remote integration test:
 

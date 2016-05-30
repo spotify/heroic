@@ -52,7 +52,7 @@
     <hk2.version>2.3.0</hk2.version>
     <jetty.version>9.3.7.v20160115</jetty.version>
     <lucene.version>4.10.4</lucene.version>
-    <datastax.version>2.1.9</datastax.version>
+    <datastax.version>3.0.2</datastax.version>
     <semantic-metrics.version>0.2.3</semantic-metrics.version>
     <netty.version>4.1.0.CR3</netty.version>
     <tiny-async.version>1.8.0</tiny-async.version>
