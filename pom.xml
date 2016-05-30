@@ -31,6 +31,7 @@
     <module>consumer/collectd</module>
     <module>rpc/nativerpc</module>
     <module>rpc/grpc</module>
+    <module>rpc/jvm</module>
     <module>heroic-dist</module>
     <module>statistics/semantic</module>
   </modules>
@@ -364,6 +365,11 @@
       <dependency>
         <groupId>com.spotify.heroic.rpc</groupId>
         <artifactId>heroic-rpc-grpc</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.spotify.heroic.rpc</groupId>
+        <artifactId>heroic-rpc-jvm</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

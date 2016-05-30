@@ -86,7 +86,7 @@ public class MemoryProfile extends HeroicProfileBase {
         return builder
             .cluster(
                 ClusterManagerModule.builder()
-                .tags(ImmutableMap.of("site", "local"))
+                    .tags(ImmutableMap.of("site", "local"))
             )
             .metrics(
                 MetricManagerModule.builder()

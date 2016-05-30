@@ -89,6 +89,10 @@
       <groupId>com.spotify.heroic.rpc</groupId>
       <artifactId>heroic-rpc-grpc</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.spotify.heroic.rpc</groupId>
+      <artifactId>heroic-rpc-jvm</artifactId>
+    </dependency>
 
     <!-- statistics -->
     <dependency>
