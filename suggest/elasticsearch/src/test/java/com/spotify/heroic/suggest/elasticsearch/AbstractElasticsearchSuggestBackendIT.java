@@ -9,12 +9,12 @@ import com.spotify.heroic.test.ElasticsearchTestUtils;
 import java.util.UUID;
 
 public abstract class AbstractElasticsearchSuggestBackendIT extends AbstractSuggestBackendIT {
-    private final String testName = "heroic-it-" + UUID.randomUUID().toString();
-
     protected abstract String backendType();
 
     @Override
     protected SuggestModule setupModule() throws Exception {
+        final String testName = "heroic-it-" + UUID.randomUUID().toString();
+
         final RotatingIndexMapping index =
             RotatingIndexMapping.builder().pattern(testName + "-%s").build();
 
