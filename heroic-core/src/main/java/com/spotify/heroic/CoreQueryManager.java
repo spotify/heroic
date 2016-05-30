@@ -191,7 +191,9 @@ public class CoreQueryManager implements QueryManager {
             final Duration cadence = buildCadence(aggregation, rawRange);
 
             final long now = System.currentTimeMillis();
-            final DateRange range = buildShiftedRange(rawRange, cadence.toMilliseconds(), now);
+
+            final DateRange range = features.withFeature(Feature.SHIFT_RANGE,
+                () -> buildShiftedRange(rawRange, cadence.toMilliseconds(), now), () -> rawRange);
 
             final Filter filter = q.getFilter().orElseGet(TrueFilter::get);
 

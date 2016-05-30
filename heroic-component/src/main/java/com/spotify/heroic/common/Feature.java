@@ -24,8 +24,25 @@ package com.spotify.heroic.common;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
+/**
+ * Features that can be enabled in configuration, or per-query.
+ */
 public enum Feature {
-    DISTRIBUTED_AGGREGATIONS(FeatureId.DISTRIBUTED_AGGREGATIONS);
+    /**
+     * Enable feature to perform distributed aggregations.
+     * <p>
+     * Aggregations are commonly performed per-shard, and the result concatenated. This enabled
+     * experimental support for distributed aggregations which behave transparently across shards.
+     */
+    DISTRIBUTED_AGGREGATIONS("com.spotify.heroic.distributed_aggregations"),
+
+    /**
+     * Enable feature to cause range to be rounded on the current cadence.
+     * <p>
+     * This will assert that there are data outside of the range queried for, which is a useful
+     * feature when using a dashboarding system.
+     */
+    SHIFT_RANGE("com.spotify.heroic.shift_range");
 
     private final String id;
 
@@ -35,12 +52,13 @@ public enum Feature {
 
     @JsonCreator
     public static Feature create(final String id) {
-        switch (id) {
-            case FeatureId.DISTRIBUTED_AGGREGATIONS:
-                return DISTRIBUTED_AGGREGATIONS;
-            default:
-                throw new IllegalArgumentException(id);
+        for (final Feature f : values()) {
+            if (f.id.equals(id)) {
+                return f;
+            }
         }
+
+        throw new IllegalArgumentException(id);
     }
 
     @JsonValue

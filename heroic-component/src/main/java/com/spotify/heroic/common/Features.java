@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableSet;
 import lombok.Data;
 
 import java.util.Set;
+import java.util.function.Supplier;
 
 @Data
 public class Features {
@@ -57,5 +58,20 @@ public class Features {
 
     public static Features empty() {
         return new Features(ImmutableSet.of());
+    }
+
+    /**
+     * Run the given operation if feature is set, or another operation if it is not.
+     *
+     * @param feature Feature to check for.
+     * @param isSet Operation to run if feature is set.
+     * @param isNotSet Operation to run if feature is not set.
+     * @param <T> type to return from operation.
+     * @return The returned value from the matching operation.
+     */
+    public <T> T withFeature(
+        final Feature feature, final Supplier<T> isSet, final Supplier<T> isNotSet
+    ) {
+        return hasFeature(feature) ? isSet.get() : isNotSet.get();
     }
 }
