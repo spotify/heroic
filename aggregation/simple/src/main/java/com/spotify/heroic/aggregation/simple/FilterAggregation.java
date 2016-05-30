@@ -22,16 +22,13 @@
 package com.spotify.heroic.aggregation.simple;
 
 import com.spotify.heroic.aggregation.AggregationCombiner;
-import com.spotify.heroic.aggregation.AggregationOutput;
 import com.spotify.heroic.aggregation.AggregationInstance;
+import com.spotify.heroic.aggregation.AggregationOutput;
 import com.spotify.heroic.aggregation.AggregationResult;
 import com.spotify.heroic.aggregation.AggregationSession;
-import com.spotify.heroic.aggregation.ReducerResult;
-import com.spotify.heroic.aggregation.ReducerSession;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.Event;
-import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.ShardedResultGroup;
@@ -71,11 +68,6 @@ public class FilterAggregation implements AggregationInstance {
     public AggregationSession session(DateRange range) {
         final AggregationSession child = of.session(range);
         return new Session(filterStrategy, child);
-    }
-
-    @Override
-    public ReducerSession reducer(DateRange range) {
-        return new FilterKReducerSession(filterStrategy, of.reducer(range));
     }
 
     @Override
@@ -140,49 +132,6 @@ public class FilterAggregation implements AggregationInstance {
                 .collect(Collectors.toList());
 
             return new AggregationResult(filterStrategy.filter(filterable), result.getStatistics());
-        }
-    }
-
-    private static class FilterKReducerSession implements ReducerSession {
-        private final ReducerSession childReducer;
-        private final FilterStrategy filterStrategy;
-
-        public FilterKReducerSession(FilterStrategy filterStrategy, ReducerSession reducer) {
-            this.filterStrategy = filterStrategy;
-            this.childReducer = reducer;
-        }
-
-        @Override
-        public void updatePoints(Map<String, String> group, List<Point> values) {
-            childReducer.updatePoints(group, values);
-        }
-
-        @Override
-        public void updateEvents(Map<String, String> group, List<Event> values) {
-            childReducer.updateEvents(group, values);
-        }
-
-        @Override
-        public void updateSpreads(Map<String, String> group, List<Spread> values) {
-            childReducer.updateSpreads(group, values);
-        }
-
-        @Override
-        public void updateGroup(Map<String, String> group, List<MetricGroup> values) {
-            childReducer.updateGroup(group, values);
-        }
-
-        @Override
-        public ReducerResult result() {
-            final List<FilterableMetrics<MetricCollection>> filterableMetrics = childReducer
-                .result()
-                .getResult()
-                .stream()
-                .map(m -> new FilterableMetrics<>(m, () -> m))
-                .collect(Collectors.toList());
-
-            return new ReducerResult(filterStrategy.filter(filterableMetrics),
-                childReducer.result().getStatistics());
         }
     }
 }

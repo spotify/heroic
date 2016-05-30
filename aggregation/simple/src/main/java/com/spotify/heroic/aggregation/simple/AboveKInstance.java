@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.AggregationSession;
-import com.spotify.heroic.aggregation.ReducerSession;
 import com.spotify.heroic.common.DateRange;
 
 public class AboveKInstance implements FilterKInstance {
@@ -51,11 +50,6 @@ public class AboveKInstance implements FilterKInstance {
     @Override
     public AggregationSession session(DateRange range) {
         return aggregation.session(range);
-    }
-
-    @Override
-    public ReducerSession reducer(DateRange range) {
-        return aggregation.reducer(range);
     }
 
     public double getK() {

@@ -26,12 +26,12 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.aggregation.AggregationCombiner;
 import com.spotify.heroic.aggregation.AggregationInstance;
+import com.spotify.heroic.aggregation.AggregationOutput;
+import com.spotify.heroic.aggregation.AggregationResult;
+import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.aggregation.Bucket;
 import com.spotify.heroic.aggregation.BucketAggregationInstance;
-import com.spotify.heroic.aggregation.BucketReducerSession;
-import com.spotify.heroic.aggregation.ReducerSession;
 import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.SeriesValues;
 import com.spotify.heroic.metric.ShardedResultGroup;
@@ -56,37 +56,31 @@ public abstract class DistributedBucketInstance<B extends Bucket>
 
     @Override
     public AggregationCombiner combiner(final DateRange range) {
-        return new AggregationCombiner() {
-            @Override
-            public List<ShardedResultGroup> combine(List<List<ShardedResultGroup>> all) {
-                final Map<String, String> key = ImmutableMap.of();
-                final ReducerSession session = reducer(range);
+        return all -> {
+            final Map<String, String> key = ImmutableMap.of();
+            final AggregationSession session = reducer(range);
 
-                final SeriesValues.Builder series = SeriesValues.builder();
+            final SeriesValues.Builder series = SeriesValues.builder();
 
-                for (final List<ShardedResultGroup> groups : all) {
-                    for (final ShardedResultGroup g : groups) {
-                        g.getGroup().updateReducer(session, key);
-                        series.addSeriesValues(g.getSeries());
-                    }
+            for (final List<ShardedResultGroup> groups : all) {
+                for (final ShardedResultGroup g : groups) {
+                    g.getGroup().updateAggregation(session, key, ImmutableSet.of());
+                    series.addSeriesValues(g.getSeries());
                 }
-
-                final SeriesValues s = series.build();
-
-                final ImmutableList.Builder<ShardedResultGroup> groups = ImmutableList.builder();
-
-                for (final MetricCollection metrics : session.result().getResult()) {
-                    groups.add(
-                        new ShardedResultGroup(ImmutableMap.of(), key, s, metrics, getSize()));
-                }
-
-                return groups.build();
             }
-        };
-    }
 
-    @Override
-    public ReducerSession reducer(DateRange range) {
-        return new BucketReducerSession<B>(out, size, this::buildBucket, this::build, range);
+            final SeriesValues s = series.build();
+
+            final ImmutableList.Builder<ShardedResultGroup> groups = ImmutableList.builder();
+
+            final AggregationResult result = session.result();
+
+            for (final AggregationOutput out1 : result.getResult()) {
+                groups.add(new ShardedResultGroup(ImmutableMap.of(), key, s, out1.getMetrics(),
+                    getSize()));
+            }
+
+            return groups.build();
+        };
     }
 }

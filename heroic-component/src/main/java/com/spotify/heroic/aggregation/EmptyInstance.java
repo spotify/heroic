@@ -69,11 +69,6 @@ public class EmptyInstance implements AggregationInstance {
         return 0;
     }
 
-    @Override
-    public ReducerSession reducer(final DateRange range) {
-        return new CollectorReducerSession();
-    }
-
     /**
      * A trivial session that collects all values provided to it.
      */
@@ -188,94 +183,6 @@ public class EmptyInstance implements AggregationInstance {
             final Iterator<T> metrics = Iterators.mergeSorted(iterators, comparator);
 
             return new AggregationOutput(key, series, builder.apply(ImmutableList.copyOf(metrics)));
-        }
-    }
-
-    @Data
-    @ToString(of = {})
-    private static final class CollectorReducerSession implements ReducerSession {
-        private final ConcurrentLinkedQueue<Collected<Point>> points =
-            new ConcurrentLinkedQueue<>();
-        private final ConcurrentLinkedQueue<Collected<Event>> events =
-            new ConcurrentLinkedQueue<>();
-        private final ConcurrentLinkedQueue<Collected<Spread>> spreads =
-            new ConcurrentLinkedQueue<>();
-        private final ConcurrentLinkedQueue<Collected<MetricGroup>> groups =
-            new ConcurrentLinkedQueue<>();
-
-        @Override
-        public void updatePoints(Map<String, String> group, List<Point> values) {
-            points.add(new Collected<>(group, values));
-        }
-
-        @Override
-        public void updateEvents(Map<String, String> group, List<Event> values) {
-            events.add(new Collected<>(group, values));
-        }
-
-        @Override
-        public void updateSpreads(Map<String, String> group, List<Spread> values) {
-            spreads.add(new Collected<>(group, values));
-        }
-
-        @Override
-        public void updateGroup(Map<String, String> group, List<MetricGroup> values) {
-            groups.add(new Collected<>(group, values));
-        }
-
-        @Override
-        public ReducerResult result() {
-            final ImmutableList.Builder<MetricCollection> groups = ImmutableList.builder();
-
-            if (!this.groups.isEmpty()) {
-                groups.add(collectGroup(this.groups, MetricType.GROUP.comparator(),
-                    MetricCollection::groups));
-            }
-
-            if (!this.points.isEmpty()) {
-                groups.add(collectGroup(this.points, MetricType.POINT.comparator(),
-                    MetricCollection::points));
-            }
-
-            if (!this.events.isEmpty()) {
-                groups.add(collectGroup(this.events, MetricType.EVENT.comparator(),
-                    MetricCollection::events));
-            }
-
-            if (!this.spreads.isEmpty()) {
-                groups.add(collectGroup(this.spreads, MetricType.SPREAD.comparator(),
-                    MetricCollection::spreads));
-            }
-
-            return new ReducerResult(groups.build(), Statistics.empty());
-        }
-
-        private <T extends Metric> MetricCollection collectGroup(
-            final ConcurrentLinkedQueue<Collected<T>> collected,
-            final Comparator<? super T> comparator,
-            final Function<List<T>, MetricCollection> builder
-        ) {
-            final ImmutableList.Builder<List<T>> iterables = ImmutableList.builder();
-
-            for (final Collected<T> d : collected) {
-                iterables.add(d.getValues());
-            }
-
-            /* no need to merge, single results are already sorted */
-            if (collected.size() == 1) {
-                return builder.apply(iterables.build().iterator().next());
-            }
-
-            final ImmutableList<Iterator<T>> iterators =
-                ImmutableList.copyOf(iterables.build().stream().map(Iterable::iterator).iterator());
-            final Iterator<T> metrics = Iterators.mergeSorted(iterators, comparator);
-            return builder.apply(ImmutableList.copyOf(metrics));
-        }
-
-        @Data
-        private static final class Collected<T extends Metric> {
-            private final Map<String, String> group;
-            private final List<T> values;
         }
     }
 

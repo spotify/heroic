@@ -89,7 +89,9 @@ public interface AggregationInstance {
      *
      * @return A reducer for the current aggregation.
      */
-    ReducerSession reducer(final DateRange range);
+    default AggregationSession reducer(DateRange range) {
+        return session(range);
+    }
 
     /**
      * Build a combiner for the given aggregation.
@@ -99,7 +101,7 @@ public interface AggregationInstance {
      *
      * @return An aggregation combiner.
      */
-    default AggregationCombiner combiner(final DateRange range) {
+    default AggregationCombiner combiner(DateRange range) {
         return AggregationCombiner.DEFAULT;
     }
 

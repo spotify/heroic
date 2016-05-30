@@ -223,11 +223,6 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
     }
 
     @Override
-    public ReducerSession reducer(DateRange range) {
-        return new BucketReducerSession<B>(out, size, this::buildBucket, this::build, range);
-    }
-
-    @Override
     public String toString() {
         return String.format("%s(size=%d, extent=%d)", getClass().getSimpleName(), size, extent);
     }
@@ -253,7 +248,7 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
 
     protected abstract Metric build(B bucket);
 
-    private static interface BucketConsumer<B extends Bucket, M extends Metric> {
+    private interface BucketConsumer<B extends Bucket, M extends Metric> {
         void apply(B bucket, M metric);
     }
 }

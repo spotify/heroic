@@ -135,10 +135,11 @@ public class GroupingAggregationTest {
         final Optional<List<String>> of = Optional.empty();
         final SimpleGroup g = spy(new SimpleGroup(of, each));
 
-        final ReducerSession r = mock(ReducerSession.class);
+        final AggregationSession r = mock(AggregationSession.class);
         final DateRange range = mock(DateRange.class);
 
-        final ReducerResult result = new ReducerResult(ImmutableList.of(), Statistics.empty());
+        final AggregationResult result =
+            new AggregationResult(ImmutableList.of(), Statistics.empty());
 
         doReturn(r).when(each).reducer(range);
         doReturn(result).when(r).result();
@@ -163,8 +164,10 @@ public class GroupingAggregationTest {
 
         assertTrue(combiner.combine(all).isEmpty());
 
-        verify(r, times(2)).updatePoints(ImmutableMap.of("id", "a"), ImmutableList.of());
-        verify(r, times(1)).updatePoints(ImmutableMap.of("id", "b"), ImmutableList.of());
+        verify(r, times(2)).updatePoints(ImmutableMap.of("id", "a"), ImmutableSet.of(),
+            ImmutableList.of());
+        verify(r, times(1)).updatePoints(ImmutableMap.of("id", "b"), ImmutableSet.of(),
+            ImmutableList.of());
     }
 
     public static class SimpleGroup extends GroupingAggregation {

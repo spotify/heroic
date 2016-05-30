@@ -28,7 +28,6 @@ import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.Event;
-import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.SeriesValues;
@@ -100,7 +99,7 @@ public abstract class GroupingAggregation implements AggregationInstance {
     }
 
     @Override
-    public ReducerSession reducer(final DateRange range) {
+    public AggregationSession reducer(final DateRange range) {
         return each.reducer(range);
     }
 
@@ -129,7 +128,7 @@ public abstract class GroupingAggregation implements AggregationInstance {
                         sessions.put(key, red);
                     }
 
-                    g.getGroup().updateReducer(red.session, key);
+                    g.getGroup().updateAggregation(red.session, key, ImmutableSet.of());
                     red.series.addSeriesValues(g.getSeries());
                 }
             }
@@ -142,10 +141,12 @@ public abstract class GroupingAggregation implements AggregationInstance {
                 final Reduction red = e.getValue();
 
                 final SeriesValues series = red.series.build();
+                final AggregationResult result = red.session.result();
 
-                for (final MetricCollection metrics : red.session.result().getResult()) {
-                    groups.add(new ShardedResultGroup(ImmutableMap.of(), key, series, metrics,
-                        each.cadence()));
+                for (final AggregationOutput out : result.getResult()) {
+                    groups.add(
+                        new ShardedResultGroup(ImmutableMap.of(), key, series, out.getMetrics(),
+                            each.cadence()));
                 }
             }
 
@@ -160,7 +161,7 @@ public abstract class GroupingAggregation implements AggregationInstance {
 
     @Data
     private final class Reduction {
-        private final ReducerSession session;
+        private final AggregationSession session;
         private final SeriesValues.Builder series = SeriesValues.builder();
     }
 

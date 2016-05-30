@@ -65,8 +65,8 @@ public class BucketAggregationTest {
             }
 
             @Override
-            public ReducerSession reducer(final DateRange range) {
-                return Mockito.mock(ReducerSession.class);
+            public AggregationSession reducer(final DateRange range) {
+                return Mockito.mock(AggregationSession.class);
             }
         };
     }
