@@ -19,25 +19,10 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric;
+package com.spotify.heroic.test;
 
-import com.spotify.heroic.common.Series;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-
-import java.util.Map;
-import java.util.Set;
-
-@Data
-@EqualsAndHashCode
-public final class ShardedResultGroup {
-    private final Map<String, String> shard;
-    private final Map<String, String> key;
-    private final Set<Series> series;
-    private final MetricCollection metrics;
-    private final long cadence;
-
-    public boolean isEmpty() {
-        return metrics.isEmpty();
+public class Data {
+    public static Points points() {
+        return new Points();
     }
 }

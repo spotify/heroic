@@ -19,25 +19,21 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric;
+package com.spotify.heroic.test;
 
-import com.spotify.heroic.common.Series;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
+import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.metric.MetricCollection;
+import com.spotify.heroic.metric.Point;
 
-import java.util.Map;
-import java.util.Set;
+public class Points {
+    private final ImmutableList.Builder<Point> points = ImmutableList.builder();
 
-@Data
-@EqualsAndHashCode
-public final class ShardedResultGroup {
-    private final Map<String, String> shard;
-    private final Map<String, String> key;
-    private final Set<Series> series;
-    private final MetricCollection metrics;
-    private final long cadence;
+    public Points p(final long t, final double v) {
+        points.add(new Point(t, v));
+        return this;
+    }
 
-    public boolean isEmpty() {
-        return metrics.isEmpty();
+    public MetricCollection build() {
+        return MetricCollection.points(points.build());
     }
 }

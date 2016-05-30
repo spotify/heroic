@@ -102,7 +102,7 @@ public class Query implements ShellTask {
                 io.out().println(String.format("LIMITS: %s", result.getLimits().getLimits()));
 
                 for (final ShardedResultGroup resultGroup : result.getGroups()) {
-                    final MetricCollection group = resultGroup.getGroup();
+                    final MetricCollection group = resultGroup.getMetrics();
 
                     io
                         .out()

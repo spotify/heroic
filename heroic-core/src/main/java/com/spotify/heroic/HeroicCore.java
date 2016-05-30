@@ -547,14 +547,14 @@ public class HeroicCore implements HeroicConfiguration {
     private HeroicConfig config(LoadingComponent loading) throws Exception {
         HeroicConfig.Builder builder = HeroicConfig.builder();
 
-        for (final HeroicConfig.Builder fragment : configFragments) {
-            builder = builder.merge(fragment);
-        }
-
         for (final HeroicProfile profile : profiles) {
             log.info("Loading profile '{}' (params: {})", profile.description(), params);
             final ExtraParameters p = profile.scope().map(params::scope).orElse(params);
             builder = builder.merge(profile.build(p));
+        }
+
+        for (final HeroicConfig.Builder fragment : configFragments) {
+            builder = builder.merge(fragment);
         }
 
         final ObjectMapper mapper = loading.configMapper();

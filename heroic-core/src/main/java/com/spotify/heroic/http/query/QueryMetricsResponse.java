@@ -175,7 +175,7 @@ public class QueryMetricsResponse {
             for (final ShardedResultGroup group : result) {
                 g.writeStartObject();
 
-                final MetricCollection collection = group.getGroup();
+                final MetricCollection collection = group.getMetrics();
                 final SeriesValues series = SeriesValues.fromSeries(group.getSeries().iterator());
 
                 g.writeStringField("type", collection.getType().identifier());

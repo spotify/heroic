@@ -43,7 +43,7 @@ public class DistributedAggregationCombiner implements AggregationCombiner {
             /* iterate through all groups and setup, and feed a reducer session for every group */
         for (List<ShardedResultGroup> groups : all) {
             for (final ShardedResultGroup g : groups) {
-                g.getGroup().updateAggregation(session, g.getKey(), g.getSeries());
+                g.getMetrics().updateAggregation(session, g.getKey(), g.getSeries());
             }
         }
 
