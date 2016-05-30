@@ -83,6 +83,19 @@ $> mvn -P integration-tests \
     clean verify
 ```
 
+#### Full Cluster Tests
+
+Full cluster tests are defined in [heroic-dist/src/test/java](/heroic-dist/src/test/java).
+
+This way, they have access to all the modules and parts of Heroic.
+
+The [JVM RPC](/rpc/jvm) module is specifically designed to allow for rapid
+execution of integration tests. It allows multiple cores to be defined and
+communicate with each other in the same JVM instance.
+
+See [ClusterIT](/heroic-dist/src/test/java/com/spotify/heroic/ClusterIT.java)
+for a basic example of this.
+
 #### Coverage
 
 [![Coverage](https://codecov.io/gh/spotify/heroic/branch/master/graphs/icicle.svg)](https://codecov.io/gh/spotify/heroic/branch/master)
