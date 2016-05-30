@@ -24,40 +24,10 @@ package com.spotify.heroic.aggregation.simple;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.AggregationInstance;
-import com.spotify.heroic.aggregation.AggregationSession;
-import com.spotify.heroic.common.DateRange;
 
-public class BottomKInstance implements FilterKInstance {
-    private final FilterKAreaStrategy strategy;
-    private final FilterAggregation aggregation;
-
+public class BottomKInstance extends FilterAggregation {
     @JsonCreator
     public BottomKInstance(@JsonProperty("k") long k, @JsonProperty("of") AggregationInstance of) {
-        strategy = new FilterKAreaStrategy(FilterKAreaType.BOTTOM, k);
-        aggregation = new FilterAggregation(strategy, of);
-    }
-
-    @Override
-    public long estimate(DateRange range) {
-        return aggregation.estimate(range);
-    }
-
-    @Override
-    public long cadence() {
-        return aggregation.cadence();
-    }
-
-    @Override
-    public AggregationSession session(DateRange range) {
-        return aggregation.session(range);
-    }
-
-    @Override
-    public AggregationInstance getOf() {
-        return aggregation.getOf();
-    }
-
-    public long getK() {
-        return strategy.getK();
+        super(new FilterKAreaStrategy(FilterKAreaType.BOTTOM, k), of);
     }
 }

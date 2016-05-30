@@ -24,40 +24,10 @@ package com.spotify.heroic.aggregation.simple;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.AggregationInstance;
-import com.spotify.heroic.aggregation.AggregationSession;
-import com.spotify.heroic.common.DateRange;
 
-public class AboveKInstance implements FilterKInstance {
-    private final FilterKThresholdStrategy strategy;
-    private final FilterAggregation aggregation;
-
+public class AboveKInstance extends FilterAggregation {
     @JsonCreator
     public AboveKInstance(@JsonProperty("k") double k, @JsonProperty("of") AggregationInstance of) {
-        strategy = new FilterKThresholdStrategy(FilterKThresholdType.ABOVE, k);
-        aggregation = new FilterAggregation(strategy, of);
-    }
-
-    @Override
-    public long estimate(DateRange range) {
-        return aggregation.estimate(range);
-    }
-
-    @Override
-    public long cadence() {
-        return aggregation.cadence();
-    }
-
-    @Override
-    public AggregationSession session(DateRange range) {
-        return aggregation.session(range);
-    }
-
-    public double getK() {
-        return strategy.getK();
-    }
-
-    @Override
-    public AggregationInstance getOf() {
-        return aggregation.getOf();
+        super(new FilterKThresholdStrategy(FilterKThresholdType.ABOVE, k), of);
     }
 }
