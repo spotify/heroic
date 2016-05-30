@@ -24,7 +24,7 @@ package com.spotify.heroic.http.metadata;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.spotify.heroic.cluster.ClusterManager;
+import com.spotify.heroic.QueryManager;
 import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindTags;
 import eu.toolchain.async.AsyncFuture;
@@ -37,11 +37,11 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 public class MetadataResourceCache {
-    private final ClusterManager cluster;
+    private final QueryManager query;
 
     @Inject
-    public MetadataResourceCache(final ClusterManager cluster) {
-        this.cluster = cluster;
+    public MetadataResourceCache(final QueryManager query) {
+        this.query = query;
     }
 
     private final LoadingCache<Grouped<FindTags.Request>, AsyncFuture<FindTags>> findTags =
@@ -52,7 +52,7 @@ public class MetadataResourceCache {
             .build(new CacheLoader<Grouped<FindTags.Request>, AsyncFuture<FindTags>>() {
                 @Override
                 public AsyncFuture<FindTags> load(Grouped<FindTags.Request> g) {
-                    return cluster.useOptionalGroup(g.getGroup()).findTags(g.getValue());
+                    return query.useOptionalGroup(g.getGroup()).findTags(g.getValue());
                 }
             });
 
@@ -86,7 +86,7 @@ public class MetadataResourceCache {
             .build(new CacheLoader<Grouped<FindKeys.Request>, AsyncFuture<FindKeys>>() {
                 @Override
                 public AsyncFuture<FindKeys> load(Grouped<FindKeys.Request> g) {
-                    return cluster.useOptionalGroup(g.getGroup()).findKeys(g.getValue());
+                    return query.useOptionalGroup(g.getGroup()).findKeys(g.getValue());
                 }
             });
 

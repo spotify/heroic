@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.AggregationInstance;
-import com.spotify.heroic.cluster.ClusterShardGroup;
+import com.spotify.heroic.cluster.ClusterShard;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.filter.Filter;
@@ -79,7 +79,7 @@ public final class FullQuery {
     }
 
     public static Transform<Throwable, FullQuery> shardError(
-        final QueryTrace.Identifier what, final ClusterShardGroup c
+        final QueryTrace.Identifier what, final ClusterShard c
     ) {
         final QueryTrace.NamedWatch w = QueryTrace.watch(what);
         return e -> new FullQuery(w.end(), ImmutableList.of(ShardError.fromThrowable(c, e)),

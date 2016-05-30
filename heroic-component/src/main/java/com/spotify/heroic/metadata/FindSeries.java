@@ -24,7 +24,7 @@ package com.spotify.heroic.metadata;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.spotify.heroic.cluster.ClusterShardGroup;
+import com.spotify.heroic.cluster.ClusterShard;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.Series;
@@ -70,7 +70,7 @@ public class FindSeries {
         };
     }
 
-    public static Transform<Throwable, FindSeries> shardError(final ClusterShardGroup shard) {
+    public static Transform<Throwable, FindSeries> shardError(final ClusterShard shard) {
         return e -> new FindSeries(ImmutableList.of(ShardError.fromThrowable(shard, e)),
             ImmutableSet.of(), false);
     }

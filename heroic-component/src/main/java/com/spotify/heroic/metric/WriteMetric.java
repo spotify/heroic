@@ -22,7 +22,7 @@
 package com.spotify.heroic.metric;
 
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.cluster.ClusterShardGroup;
+import com.spotify.heroic.cluster.ClusterShard;
 import com.spotify.heroic.common.RequestTimer;
 import com.spotify.heroic.common.Series;
 import eu.toolchain.async.Collector;
@@ -48,7 +48,7 @@ public class WriteMetric {
         return new WriteMetric(ImmutableList.of(error), ImmutableList.of());
     }
 
-    public static Transform<Throwable, WriteMetric> shardError(final ClusterShardGroup c) {
+    public static Transform<Throwable, WriteMetric> shardError(final ClusterShard c) {
         return e -> new WriteMetric(ImmutableList.of(ShardError.fromThrowable(c, e)),
             ImmutableList.of());
     }

@@ -22,7 +22,7 @@
 package com.spotify.heroic.metadata;
 
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.cluster.ClusterShardGroup;
+import com.spotify.heroic.cluster.ClusterShard;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.RequestTimer;
 import com.spotify.heroic.common.Series;
@@ -47,7 +47,7 @@ public class WriteMetadata {
         return new WriteMetadata(ImmutableList.of(), ImmutableList.of(time));
     }
 
-    public static Transform<Throwable, WriteMetadata> shardError(final ClusterShardGroup c) {
+    public static Transform<Throwable, WriteMetadata> shardError(final ClusterShard c) {
         return e -> new WriteMetadata(ImmutableList.of(ShardError.fromThrowable(c, e)),
             ImmutableList.of());
     }

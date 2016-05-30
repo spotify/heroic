@@ -303,15 +303,15 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
     }
 
     @Override
-    public ClusterNodeGroup useOptionalGroup(Optional<String> group) {
-        final List<ClusterShardGroup> shards = new ArrayList<>();
+    public List<ClusterShard> useOptionalGroup(final Optional<String> group) {
+        final ImmutableList.Builder<ClusterShard> shards = ImmutableList.builder();
 
         for (final Pair<Map<String, String>, List<ClusterNode>> e : findManyFromAllShards(null)) {
-            shards.add(new ClusterShardGroup(async, e.getKey(), ImmutableList.copyOf(
+            shards.add(new ClusterShard(async, e.getKey(), ImmutableList.copyOf(
                 e.getValue().stream().map(c -> c.useOptionalGroup(group)).iterator())));
         }
 
-        return new CoreClusterNodeGroup(async, shards);
+        return shards.build();
     }
 
     @Override

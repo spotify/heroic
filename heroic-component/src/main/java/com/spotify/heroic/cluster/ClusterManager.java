@@ -42,7 +42,7 @@ import java.util.Set;
  *
  * @author udoprog
  */
-public interface ClusterManager extends UsableGroupManager<ClusterNodeGroup>, Initializing {
+public interface ClusterManager extends UsableGroupManager<List<ClusterShard>>, Initializing {
     @Data
     class Statistics {
         private final int onlineNodes;

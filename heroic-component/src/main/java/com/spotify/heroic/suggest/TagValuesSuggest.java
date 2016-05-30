@@ -22,7 +22,7 @@
 package com.spotify.heroic.suggest;
 
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.cluster.ClusterShardGroup;
+import com.spotify.heroic.cluster.ClusterShard;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.filter.Filter;
@@ -145,7 +145,7 @@ public class TagValuesSuggest {
         private boolean limited;
     }
 
-    public static Transform<Throwable, TagValuesSuggest> shardError(final ClusterShardGroup shard) {
+    public static Transform<Throwable, TagValuesSuggest> shardError(final ClusterShard shard) {
         return e -> new TagValuesSuggest(ImmutableList.of(ShardError.fromThrowable(shard, e)),
             ImmutableList.of(), false);
     }

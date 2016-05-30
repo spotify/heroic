@@ -31,7 +31,8 @@ import com.spotify.heroic.aggregation.DefaultAggregationContext;
 import com.spotify.heroic.aggregation.Empty;
 import com.spotify.heroic.cache.QueryCache;
 import com.spotify.heroic.cluster.ClusterManager;
-import com.spotify.heroic.cluster.ClusterShardGroup;
+import com.spotify.heroic.cluster.ClusterNode;
+import com.spotify.heroic.cluster.ClusterShard;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.Feature;
@@ -47,13 +48,27 @@ import com.spotify.heroic.grammar.QueryExpression;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.grammar.RangeExpression;
 import com.spotify.heroic.grammar.StringExpression;
+import com.spotify.heroic.metadata.CountSeries;
+import com.spotify.heroic.metadata.DeleteSeries;
+import com.spotify.heroic.metadata.FindKeys;
+import com.spotify.heroic.metadata.FindSeries;
+import com.spotify.heroic.metadata.FindTags;
+import com.spotify.heroic.metadata.WriteMetadata;
 import com.spotify.heroic.metric.FullQuery;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.QueryResultPart;
 import com.spotify.heroic.metric.QueryTrace;
+import com.spotify.heroic.metric.WriteMetric;
+import com.spotify.heroic.suggest.KeySuggest;
+import com.spotify.heroic.suggest.TagKeyCount;
+import com.spotify.heroic.suggest.TagSuggest;
+import com.spotify.heroic.suggest.TagValueSuggest;
+import com.spotify.heroic.suggest.TagValuesSuggest;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.Collector;
+import eu.toolchain.async.Transform;
 import lombok.RequiredArgsConstructor;
 
 import javax.inject.Inject;
@@ -63,6 +78,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.SortedSet;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 public class CoreQueryManager implements QueryManager {
     public static final long SHIFT_TOLERANCE = TimeUnit.MILLISECONDS.convert(10, TimeUnit.SECONDS);
@@ -96,7 +112,7 @@ public class CoreQueryManager implements QueryManager {
 
     @Override
     public QueryManager.Group useOptionalGroup(final Optional<String> group) {
-        return new Group(cluster.useOptionalGroup(group).shards());
+        return new Group(cluster.useOptionalGroup(group));
     }
 
     @Override
@@ -156,14 +172,9 @@ public class CoreQueryManager implements QueryManager {
         });
     }
 
-    @Override
-    public AsyncFuture<Void> initialized() {
-        return cluster.initialized();
-    }
-
     @RequiredArgsConstructor
     public class Group implements QueryManager.Group {
-        private final List<ClusterShardGroup> shards;
+        private final List<ClusterShard> shards;
 
         @Override
         public AsyncFuture<QueryResult> query(Query q) {
@@ -201,7 +212,7 @@ public class CoreQueryManager implements QueryManager {
                 new FullQuery.Request(source, filter, range, aggregationInstance, options);
 
             return queryCache.load(request, () -> {
-                for (final ClusterShardGroup shard : shards) {
+                for (final ClusterShard shard : shards) {
                     final AsyncFuture<QueryResultPart> queryPart = shard
                         .apply(g -> g.query(request))
                         .catchFailed(FullQuery.shardError(QUERY_NODE, shard))
@@ -218,8 +229,92 @@ public class CoreQueryManager implements QueryManager {
         }
 
         @Override
-        public List<ClusterShardGroup> shards() {
+        public AsyncFuture<FindTags> findTags(final FindTags.Request request) {
+            return run(g -> g.findTags(request), FindTags::shardError, FindTags.reduce());
+        }
+
+        @Override
+        public AsyncFuture<FindKeys> findKeys(final FindKeys.Request request) {
+            return run(g -> g.findKeys(request), FindKeys::shardError, FindKeys.reduce());
+        }
+
+        @Override
+        public AsyncFuture<FindSeries> findSeries(final FindSeries.Request request) {
+            return run(g -> g.findSeries(request), FindSeries::shardError,
+                FindSeries.reduce(request.getLimit()));
+        }
+
+        @Override
+        public AsyncFuture<DeleteSeries> deleteSeries(final DeleteSeries.Request request) {
+            return run(g -> g.deleteSeries(request), DeleteSeries::shardError,
+                DeleteSeries.reduce());
+        }
+
+        @Override
+        public AsyncFuture<CountSeries> countSeries(final CountSeries.Request request) {
+            return run(g -> g.countSeries(request), CountSeries::shardError, CountSeries.reduce());
+        }
+
+        @Override
+        public AsyncFuture<TagKeyCount> tagKeyCount(final TagKeyCount.Request request) {
+            return run(g -> g.tagKeyCount(request), TagKeyCount::shardError,
+                TagKeyCount.reduce(request.getLimit(), request.getExactLimit()));
+        }
+
+        @Override
+        public AsyncFuture<TagSuggest> tagSuggest(final TagSuggest.Request request) {
+            return run(g -> g.tagSuggest(request), TagSuggest::shardError,
+                TagSuggest.reduce(request.getLimit()));
+        }
+
+        @Override
+        public AsyncFuture<KeySuggest> keySuggest(final KeySuggest.Request request) {
+            return run(g -> g.keySuggest(request), KeySuggest::shardError,
+                KeySuggest.reduce(request.getLimit()));
+        }
+
+        @Override
+        public AsyncFuture<TagValuesSuggest> tagValuesSuggest(
+            final TagValuesSuggest.Request request
+        ) {
+            return run(g -> g.tagValuesSuggest(request), TagValuesSuggest::shardError,
+                TagValuesSuggest.reduce(request.getLimit(), request.getGroupLimit()));
+        }
+
+        @Override
+        public AsyncFuture<TagValueSuggest> tagValueSuggest(final TagValueSuggest.Request request) {
+            return run(g -> g.tagValueSuggest(request), TagValueSuggest::shardError,
+                TagValueSuggest.reduce(request.getLimit()));
+        }
+
+        @Override
+        public AsyncFuture<WriteMetadata> writeSeries(final WriteMetadata.Request request) {
+            return run(g -> g.writeSeries(request), WriteMetadata::shardError,
+                WriteMetadata.reduce());
+        }
+
+        @Override
+        public AsyncFuture<WriteMetric> writeMetric(final WriteMetric.Request write) {
+            return run(g -> g.writeMetric(write), WriteMetric::shardError, WriteMetric.reduce());
+        }
+
+        @Override
+        public List<ClusterShard> shards() {
             return shards;
+        }
+
+        private <T> AsyncFuture<T> run(
+            final Function<ClusterNode.Group, AsyncFuture<T>> function,
+            final Function<ClusterShard, Transform<Throwable, T>> catcher,
+            final Collector<T, T> collector
+        ) {
+            final List<AsyncFuture<T>> futures = new ArrayList<>(shards.size());
+
+            for (final ClusterShard shard : shards) {
+                futures.add(shard.apply(function::apply).catchFailed(catcher.apply(shard)));
+            }
+
+            return async.collect(futures, collector);
         }
 
         private Duration buildCadence(final Aggregation aggregation, final DateRange rawRange) {

@@ -24,5 +24,5 @@ package com.spotify.heroic.cluster;
 import java.util.List;
 
 public interface ClusterNodeGroup extends ClusterNode.Group {
-    List<ClusterShardGroup> shards();
+    List<ClusterShard> shards();
 }

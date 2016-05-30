@@ -33,7 +33,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 @Data
-public class ClusterShardGroup {
+public class ClusterShard {
     private final AsyncFramework async;
 
     private final Map<String, String> shard;

@@ -23,7 +23,7 @@ package com.spotify.heroic.metric;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.cluster.ClusterShardGroup;
+import com.spotify.heroic.cluster.ClusterShard;
 import lombok.Data;
 
 import java.util.Map;
@@ -54,7 +54,7 @@ public class ResultGroup {
     }
 
     public static Function<? super ResultGroup, ? extends ShardedResultGroup> toShardedResultGroup(
-        final ClusterShardGroup shard
+        final ClusterShard shard
     ) {
         return g -> new ShardedResultGroup(shard.getShard(), g.getKey(), g.getSeries(),
             g.getGroup(), g.getCadence());

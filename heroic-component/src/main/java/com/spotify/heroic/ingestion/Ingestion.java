@@ -22,7 +22,7 @@
 package com.spotify.heroic.ingestion;
 
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.cluster.ClusterShardGroup;
+import com.spotify.heroic.cluster.ClusterShard;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metadata.WriteMetadata;
 import com.spotify.heroic.metric.Metric;
@@ -67,7 +67,7 @@ public class Ingestion {
         };
     }
 
-    public static Transform<Throwable, Ingestion> shardError(final ClusterShardGroup shard) {
+    public static Transform<Throwable, Ingestion> shardError(final ClusterShard shard) {
         return e -> new Ingestion(ImmutableList.of(ShardError.fromThrowable(shard, e)),
             ImmutableList.of());
     }

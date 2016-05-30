@@ -23,7 +23,7 @@ package com.spotify.heroic.metric;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.cluster.ClusterShardGroup;
+import com.spotify.heroic.cluster.ClusterShard;
 import lombok.Data;
 
 import java.util.List;
@@ -49,7 +49,7 @@ public class ShardError implements RequestError {
         return new ShardError(nodes, shard, error);
     }
 
-    public static ShardError fromThrowable(ClusterShardGroup c, Throwable e) {
+    public static ShardError fromThrowable(ClusterShard c, Throwable e) {
         final List<String> nodes =
             c.getGroups().stream().map(Object::toString).collect(Collectors.toList());
         final String message = errorMessage(e);

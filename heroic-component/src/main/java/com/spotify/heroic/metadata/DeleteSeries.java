@@ -22,7 +22,7 @@
 package com.spotify.heroic.metadata;
 
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.cluster.ClusterShardGroup;
+import com.spotify.heroic.cluster.ClusterShard;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.filter.Filter;
@@ -65,7 +65,7 @@ public class DeleteSeries {
         };
     }
 
-    public static Transform<Throwable, DeleteSeries> shardError(final ClusterShardGroup shard) {
+    public static Transform<Throwable, DeleteSeries> shardError(final ClusterShard shard) {
         return e -> new DeleteSeries(ImmutableList.of(ShardError.fromThrowable(shard, e)), 0, 0);
     }
 

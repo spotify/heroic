@@ -22,7 +22,7 @@
 package com.spotify.heroic.metric;
 
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.cluster.ClusterShardGroup;
+import com.spotify.heroic.cluster.ClusterShard;
 import eu.toolchain.async.Transform;
 import lombok.Data;
 
@@ -53,7 +53,7 @@ public class QueryResultPart {
     private final ResultLimits limits;
 
     public static Transform<FullQuery, QueryResultPart> fromResultGroup(
-        final ClusterShardGroup shard
+        final ClusterShard shard
     ) {
         return result -> {
             final ImmutableList<ShardedResultGroup> groups = ImmutableList.copyOf(result

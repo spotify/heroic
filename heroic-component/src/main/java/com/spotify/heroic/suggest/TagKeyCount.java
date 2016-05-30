@@ -24,7 +24,7 @@ package com.spotify.heroic.suggest;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.spotify.heroic.cluster.ClusterShardGroup;
+import com.spotify.heroic.cluster.ClusterShard;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.filter.Filter;
@@ -117,7 +117,7 @@ public class TagKeyCount {
         }
     }
 
-    public static Transform<Throwable, TagKeyCount> shardError(final ClusterShardGroup shard) {
+    public static Transform<Throwable, TagKeyCount> shardError(final ClusterShard shard) {
         return e -> new TagKeyCount(ImmutableList.of(ShardError.fromThrowable(shard, e)),
             ImmutableList.of(), false);
     }
