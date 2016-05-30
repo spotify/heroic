@@ -14,6 +14,7 @@ import com.spotify.heroic.ingestion.Ingestion;
 import com.spotify.heroic.ingestion.IngestionComponent;
 import com.spotify.heroic.ingestion.IngestionManager;
 import com.spotify.heroic.metric.MetricCollection;
+import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.ShardedResultGroup;
 import com.spotify.heroic.profile.MemoryProfile;
@@ -28,6 +29,7 @@ import org.junit.Test;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
@@ -91,10 +93,10 @@ public class ClusterIT {
 
         writes.add(m1
             .useDefaultGroup()
-            .write(new Ingestion.Request(s1, points().p(0, 1D).p(20, 2D).build())));
+            .write(new Ingestion.Request(s1, points().p(10, 1D).p(30, 2D).build())));
         writes.add(m2
             .useDefaultGroup()
-            .write(new Ingestion.Request(s2, points().p(0, 3D).p(10, 4D).build())));
+            .write(new Ingestion.Request(s2, points().p(10, 3D).p(20, 4D).build())));
 
         async.collectAndDiscard(writes).get();
     }
@@ -109,7 +111,7 @@ public class ClusterIT {
 
     @Test
     public void basicQueryTest() throws Exception {
-        final QueryResult result = query("sum(10ms) from points(0, 10000)");
+        final QueryResult result = query("sum(10ms)");
 
         final Set<MetricCollection> m = result
             .getGroups()
@@ -117,12 +119,12 @@ public class ClusterIT {
             .map(ShardedResultGroup::getMetrics)
             .collect(Collectors.toSet());
 
-        assertEquals(ImmutableSet.of(points().p(0, 4D).p(10, 4D).p(20, 2D).build()), m);
+        assertEquals(ImmutableSet.of(points().p(10, 4D).p(20, 4D).p(30, 2D).build()), m);
     }
 
     @Test
     public void distributedQueryTest() throws Exception {
-        final QueryResult result = query("sum(10ms) by shared from points(0, 10000)");
+        final QueryResult result = query("sum(10ms) by shared");
 
         final Set<MetricCollection> m = result
             .getGroups()
@@ -130,12 +132,12 @@ public class ClusterIT {
             .map(ShardedResultGroup::getMetrics)
             .collect(Collectors.toSet());
 
-        assertEquals(ImmutableSet.of(points().p(0, 4D).p(10, 4D).p(20, 2D).build()), m);
+        assertEquals(ImmutableSet.of(points().p(10, 4D).p(20, 4D).p(30, 2D).build()), m);
     }
 
     @Test
     public void distributedDifferentQueryTest() throws Exception {
-        final QueryResult result = query("sum(10ms) by diff from points(0, 10000)");
+        final QueryResult result = query("sum(10ms) by diff");
 
         final Set<MetricCollection> m = result
             .getGroups()
@@ -143,14 +145,29 @@ public class ClusterIT {
             .map(ShardedResultGroup::getMetrics)
             .collect(Collectors.toSet());
 
-        assertEquals(ImmutableSet.of(points().p(0, 1D).p(20, 2D).build(),
-            points().p(0, 3D).p(10, 4D).build()), m);
+        assertEquals(ImmutableSet.of(points().p(10, 1D).p(30, 2D).build(),
+            points().p(10, 3D).p(20, 4D).build()), m);
+    }
+
+    @Test
+    public void filterQueryTest() throws Exception {
+        final QueryResult result = query("average(10ms) by * | topk(2) | bottomk(1) | sum(10ms)");
+
+        final Set<MetricCollection> m = result
+            .getGroups()
+            .stream()
+            .map(ShardedResultGroup::getMetrics)
+            .collect(Collectors.toSet());
+
+        assertEquals(ImmutableSet.of(points().p(10, 1D).p(30, 2D).build()), m);
     }
 
     public QueryResult query(final String queryString) throws Exception {
         final Query q = query
             .newQueryFromString(queryString)
             .features(Features.of(Feature.DISTRIBUTED_AGGREGATIONS))
+            .source(Optional.of(MetricType.POINT))
+            .rangeIfAbsent(Optional.of(new QueryDateRange.Absolute(10, 40)))
             .build();
 
         return query.useDefaultGroup().query(q).get();
