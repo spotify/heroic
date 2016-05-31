@@ -174,6 +174,8 @@ public class HeroicCore implements HeroicConfiguration {
 
     private final List<HeroicConfig.Builder> configFragments;
 
+    private final Optional<ExecutorService> executor;
+
     @Override
     public boolean isDisableLocal() {
         return disableBackends;
@@ -262,7 +264,7 @@ public class HeroicCore implements HeroicConfiguration {
         log.info("Building Loading Injector");
 
         final ExecutorService executor =
-            buildCoreExecutor(Runtime.getRuntime().availableProcessors() * 2);
+            setupExecutor(Runtime.getRuntime().availableProcessors() * 2);
 
         return DaggerCoreLoadingComponent
             .builder()
@@ -285,45 +287,46 @@ public class HeroicCore implements HeroicConfiguration {
     /**
      * Setup a fixed thread pool executor that correctly handles unhandled exceptions.
      *
-     * @param nThreads Number of threads to configure.
+     * @param threads Number of threads to configure.
      * @return
      */
-    private ExecutorService buildCoreExecutor(final int nThreads) {
-        return new ThreadPoolExecutor(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS,
-            new LinkedBlockingQueue<Runnable>(), new ThreadFactoryBuilder()
-            .setNameFormat("heroic-core-%d")
-            .setUncaughtExceptionHandler(uncaughtExceptionHandler)
-            .build()) {
-            @Override
-            protected void afterExecute(Runnable r, Throwable t) {
-                super.afterExecute(r, t);
+    private ExecutorService setupExecutor(final int threads) {
+        return executor.orElseGet(
+            () -> new ThreadPoolExecutor(threads, threads, 0L, TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<>(), new ThreadFactoryBuilder()
+                .setNameFormat("heroic-core-%d")
+                .setUncaughtExceptionHandler(uncaughtExceptionHandler)
+                .build()) {
+                @Override
+                protected void afterExecute(Runnable r, Throwable t) {
+                    super.afterExecute(r, t);
 
-                if (t == null && (r instanceof Future<?>)) {
-                    try {
-                        ((Future<?>) r).get();
-                    } catch (CancellationException e) {
-                        t = e;
-                    } catch (ExecutionException e) {
-                        t = e.getCause();
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                }
-
-                if (t != null) {
-                    if (log.isErrorEnabled()) {
-                        log.error("Unhandled exception caught in core executor", t);
-                        log.error("Exiting (code=2)");
-                    } else {
-                        System.err.println("Unhandled exception caught in core executor");
-                        System.err.println("Exiting (code=2)");
-                        t.printStackTrace(System.err);
+                    if (t == null && (r instanceof Future<?>)) {
+                        try {
+                            ((Future<?>) r).get();
+                        } catch (CancellationException e) {
+                            t = e;
+                        } catch (ExecutionException e) {
+                            t = e.getCause();
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                        }
                     }
 
-                    System.exit(2);
+                    if (t != null) {
+                        if (log.isErrorEnabled()) {
+                            log.error("Unhandled exception caught in core executor", t);
+                            log.error("Exiting (code=2)");
+                        } else {
+                            System.err.println("Unhandled exception caught in core executor");
+                            System.err.println("Exiting (code=2)");
+                            t.printStackTrace(System.err);
+                        }
+
+                        System.exit(2);
+                    }
                 }
-            }
-        };
+            });
     }
 
     /**
@@ -637,6 +640,13 @@ public class HeroicCore implements HeroicConfiguration {
         private final ImmutableList.Builder<HeroicConfig.Builder> configFragments =
             ImmutableList.builder();
 
+        private Optional<ExecutorService> executor = empty();
+
+        public Builder executor(final ExecutorService executor) {
+            this.executor = of(executor);
+            return this;
+        }
+
         /**
          * Register a specific ID for this heroic instance.
          *
@@ -821,7 +831,9 @@ public class HeroicCore implements HeroicConfiguration {
                 early.build(),
                 late.build(),
 
-                configFragments.build()
+                configFragments.build(),
+
+                executor
             );
             // @formatter:on
         }
