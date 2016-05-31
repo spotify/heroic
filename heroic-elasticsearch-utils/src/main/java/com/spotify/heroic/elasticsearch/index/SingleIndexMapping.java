@@ -26,7 +26,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.common.DateRange;
 import lombok.ToString;
 import org.elasticsearch.action.count.CountRequestBuilder;
-import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.client.Client;
 
@@ -76,13 +75,6 @@ public class SingleIndexMapping implements IndexMapping {
         final Client client, final DateRange range, final String type
     ) {
         return client.prepareCount(index).setTypes(type);
-    }
-
-    @Override
-    public DeleteByQueryRequestBuilder deleteByQuery(
-        final Client client, DateRange range, final String type
-    ) {
-        return client.prepareDeleteByQuery(index).setTypes(type);
     }
 
     public static Builder builder() {

@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.spotify.heroic.common.DateRange;
 import org.elasticsearch.action.count.CountRequestBuilder;
-import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.client.Client;
 
@@ -42,9 +41,6 @@ public interface IndexMapping {
     String[] writeIndices(DateRange range) throws NoIndexSelectedException;
 
     SearchRequestBuilder search(Client client, DateRange range, String type)
-        throws NoIndexSelectedException;
-
-    DeleteByQueryRequestBuilder deleteByQuery(Client client, DateRange range, String type)
         throws NoIndexSelectedException;
 
     CountRequestBuilder count(Client client, DateRange range, String type)

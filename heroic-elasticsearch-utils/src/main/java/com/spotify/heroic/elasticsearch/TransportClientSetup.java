@@ -25,12 +25,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
-import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
-import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 
+import java.net.UnknownHostException;
 import java.util.List;
 
 public class TransportClientSetup implements ClientSetup {
@@ -50,17 +49,16 @@ public class TransportClientSetup implements ClientSetup {
     }
 
     @Override
-    public Client setup() throws Exception {
+    public ClientWrapper setup() throws Exception {
         final Settings settings =
-            ImmutableSettings.builder().put("cluster.name", clusterName).build();
+            Settings.builder().put("cluster.name", clusterName).build();
 
-        final TransportClient client = new TransportClient(settings);
+        final TransportClient client = TransportClient.builder().settings(settings).build();
 
         for (final InetSocketTransportAddress seed : seeds) {
             client.addTransportAddress(seed);
         }
-
-        return client;
+        return new ClientWrapper(client, () -> { });
     }
 
     private static List<InetSocketTransportAddress> seeds(final List<String> rawSeeds) {
@@ -71,12 +69,25 @@ public class TransportClientSetup implements ClientSetup {
     }
 
     private static InetSocketTransportAddress parseInetSocketTransportAddress(final String seed) {
+        // TODO: handle exceptions in a cleaner way
         if (seed.contains(":")) {
             final String[] parts = seed.split(":");
-            return new InetSocketTransportAddress(parts[0], Integer.parseInt(parts[1]));
+            try {
+                return new InetSocketTransportAddress(
+                    java.net.InetAddress.getByName(parts[0]),
+                    Integer.parseInt(parts[1]));
+            } catch (UnknownHostException e) {
+                throw new RuntimeException(e);
+            }
         }
 
-        return new InetSocketTransportAddress(seed, DEFAULT_PORT);
+        try {
+            return new InetSocketTransportAddress(
+                java.net.InetAddress.getByName(seed),
+                DEFAULT_PORT);
+        } catch (UnknownHostException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public static Builder builder() {
