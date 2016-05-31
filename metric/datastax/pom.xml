@@ -63,7 +63,7 @@
     <!-- testing -->
     <dependency>
       <groupId>com.spotify.heroic</groupId>
-      <artifactId>heroic-test</artifactId>
+      <artifactId>heroic-test-it</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

@@ -15,7 +15,8 @@
     <module>heroic-elasticsearch-utils</module>
     <module>heroic-elasticsearch-test</module>
     <module>heroic-core</module>
-    <module>heroic-test</module>
+    <module>heroic-test-base</module>
+    <module>heroic-test-it</module>
     <module>heroic-shell</module>
     <module>heroic-parser</module>
     <module>heroic-all</module>
@@ -250,12 +251,6 @@
       <!-- heroic components -->
       <dependency>
         <groupId>com.spotify.heroic</groupId>
-        <artifactId>heroic-test</artifactId>
-        <version>${project.version}</version>
-        <type>pom</type>
-      </dependency>
-      <dependency>
-        <groupId>com.spotify.heroic</groupId>
         <artifactId>heroic-component</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -282,7 +277,12 @@
 
       <dependency>
         <groupId>com.spotify.heroic</groupId>
-        <artifactId>heroic-test</artifactId>
+        <artifactId>heroic-test-base</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.spotify.heroic</groupId>
+        <artifactId>heroic-test-it</artifactId>
         <version>${project.version}</version>
       </dependency>
 

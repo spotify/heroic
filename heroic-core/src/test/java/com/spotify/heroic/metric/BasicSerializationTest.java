@@ -8,6 +8,7 @@ import com.spotify.heroic.HeroicMappers;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.grammar.QueryParser;
+import com.spotify.heroic.test.Resources;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -65,18 +66,12 @@ public class BasicSerializationTest {
     private <T> void assertSerialization(final String json, final T expected, final Class<T> type)
         throws IOException {
         // verify that it is equal to the local file.
-        try (InputStream in = openResource(json)) {
+        try (final InputStream in = Resources.openResource(getClass(), json)) {
             assertEquals(expected, mapper.readValue(in, type));
         }
 
         // roundtrip
         final String string = mapper.writeValueAsString(expected);
         assertEquals(expected, mapper.readValue(string, type));
-    }
-
-    private InputStream openResource(String path) {
-        final Class<?> cls = BasicSerializationTest.class;
-        final String fullPath = cls.getPackage().getName().replace('.', '/') + "/" + path;
-        return cls.getClassLoader().getResourceAsStream(fullPath);
     }
 }

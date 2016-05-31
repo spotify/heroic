@@ -9,13 +9,13 @@
     <version>0.0.1-SNAPSHOT</version>
   </parent>
 
-  <artifactId>heroic-elasticsearch-test</artifactId>
+  <artifactId>heroic-test-it</artifactId>
   <packaging>jar</packaging>
 
-  <name>Heroic: Elasticsearch Test Project</name>
+  <name>Heroic: Integration Testing Project</name>
 
   <description>
-    A set of useful testing utilities for testing Heroic with Elasticsearch.
+    A set of useful testing utilities for Heroic.
   </description>
 
   <dependencies>
@@ -27,12 +27,25 @@
 
     <dependency>
       <groupId>com.spotify.heroic</groupId>
-      <artifactId>heroic-test-it</artifactId>
+      <artifactId>heroic-core</artifactId>
     </dependency>
 
     <dependency>
       <groupId>com.spotify.heroic</groupId>
-      <artifactId>heroic-elasticsearch-utils</artifactId>
+      <artifactId>heroic-test-base</artifactId>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <scope>compile</scope>
     </dependency>
   </dependencies>
 </project>
