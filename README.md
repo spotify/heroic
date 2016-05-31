@@ -59,6 +59,14 @@ Heroic has been tested with the following services:
       [elastic/elasticsearch#13273](https://github.com/elastic/elasticsearch/issues/13273)
 * Kafka (`0.8.x`) when using [consumer/kafka](/consumer/kafka).
 
+#### Logging
+
+Logging is captured using [SLF4J](http://www.slf4j.org/), and forwarded to
+[Log4j](http://logging.apache.org/log4j/).
+
+To configure logging, define the `-D -Dlog4j.configurationFile==<path>`
+parameter. You can use [docs/log4j2-file.xml](/docs/log4j2-file.xml) as a base.
+
 ## Testing
 
 We run unit tests with Maven:
