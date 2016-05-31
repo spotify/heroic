@@ -27,7 +27,6 @@ import com.google.common.base.Optional;
 import com.spotify.heroic.common.Duration;
 import lombok.ToString;
 import org.elasticsearch.action.count.CountRequestBuilder;
-import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.client.Client;
@@ -129,16 +128,6 @@ public class RotatingIndexMapping implements IndexMapping {
     @Override
     public String[] writeIndices() {
         return writeIndices(System.currentTimeMillis());
-    }
-
-    @Override
-    public DeleteByQueryRequestBuilder deleteByQuery(
-        final Client client, final String type
-    ) throws NoIndexSelectedException {
-        return client
-            .prepareDeleteByQuery(readIndices())
-            .setIndicesOptions(options())
-            .setTypes(type);
     }
 
     @Override

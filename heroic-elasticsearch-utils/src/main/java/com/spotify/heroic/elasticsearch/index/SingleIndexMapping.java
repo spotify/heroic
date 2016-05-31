@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.ToString;
 import org.elasticsearch.action.count.CountRequestBuilder;
-import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.client.Client;
 
@@ -71,13 +70,6 @@ public class SingleIndexMapping implements IndexMapping {
     @Override
     public CountRequestBuilder count(final Client client, final String type) {
         return client.prepareCount(index).setTypes(type);
-    }
-
-    @Override
-    public DeleteByQueryRequestBuilder deleteByQuery(
-        final Client client, final String type
-    ) {
-        return client.prepareDeleteByQuery(index).setTypes(type);
     }
 
     public static Builder builder() {
