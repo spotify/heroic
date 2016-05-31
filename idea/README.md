@@ -12,7 +12,8 @@ After starting IDEA you can select the code style under
 (File &rarr; Settings &rarr; Editor &rarr; Code Style) and pick scheme `Heroic`.
 
 IDEA requires you to run `mvn compile` prior to the first run in order to
-generate certain sources.
+generate certain sources. In order to compile the project successfully, do not
+foget to follow the [building instructions](../README.md#Building).
 
 * `heroic-parser` - Contains Antlr4 grammar files which are not generated
     automatically by IDEA.
