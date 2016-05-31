@@ -447,6 +447,13 @@
         <artifactId>cassandra-driver-core</artifactId>
         <classifier>shaded</classifier>
         <version>${datastax.version}</version>
+
+        <exclusions>
+          <exclusion>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-handler</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
 
       <!-- useful collections and utilities -->
