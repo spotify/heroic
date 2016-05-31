@@ -213,9 +213,6 @@ public class CoreQueryManager implements QueryManager {
                 combiner = AggregationCombiner.DEFAULT;
             }
 
-            log.info("Features: {}, Original: {}, Distributed: {}, Combiner: {}", features, root,
-                aggregationInstance, combiner);
-
             final FullQuery.Request request =
                 new FullQuery.Request(source, filter, range, aggregationInstance, options);
 
