@@ -187,7 +187,7 @@ public class HeroicConfig {
         private Optional<CacheModule.Builder> cache = empty();
         private Optional<IngestionModule.Builder> ingestion = empty();
         private Optional<List<ConsumerModule.Builder>> consumers = empty();
-        private Optional<ShellServerModule.Builder> shellServer = empty();
+        private Optional<ShellServerModule> shellServer = empty();
         private Optional<AnalyticsModule.Builder> analytics = empty();
         private Optional<CoreGeneratorModule.Builder> generator = empty();
         private Optional<StatisticsModule> statistics = empty();
@@ -276,7 +276,7 @@ public class HeroicConfig {
             return this;
         }
 
-        public Builder shellServer(ShellServerModule.Builder shellServer) {
+        public Builder shellServer(ShellServerModule shellServer) {
             this.shellServer = of(shellServer);
             return this;
         }
@@ -301,7 +301,7 @@ public class HeroicConfig {
                 pickOptional(cache, o.cache),
                 mergeOptional(ingestion, o.ingestion, IngestionModule.Builder::merge),
                 mergeOptionalList(consumers, o.consumers),
-                mergeOptional(shellServer, o.shellServer, ShellServerModule.Builder::merge),
+                pickOptional(shellServer, o.shellServer),
                 pickOptional(analytics, o.analytics),
                 mergeOptional(generator, o.generator, CoreGeneratorModule.Builder::merge),
                 pickOptional(statistics, o.statistics),
@@ -340,7 +340,7 @@ public class HeroicConfig {
                 ingestion.orElseGet(IngestionModule::builder).build(),
                 consumers.map(c -> c.stream().map(ConsumerModule.Builder::build).iterator()).map
                     (ImmutableList::copyOf).orElseGet(ImmutableList::of),
-                shellServer.map(ShellServerModule.Builder::build),
+                shellServer,
                 analytics.map(AnalyticsModule.Builder::build).orElseGet(NullAnalyticsModule::new),
                 generator.orElseGet(CoreGeneratorModule::builder).build(),
                 statistics.orElseGet(NoopStatisticsModule::new),

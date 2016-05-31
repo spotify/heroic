@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.shell;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
@@ -34,7 +35,6 @@ import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
 import eu.toolchain.serializer.SerializerFramework;
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,10 +45,8 @@ import java.net.ServerSocket;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 
-import static com.spotify.heroic.common.Optionals.pickOptional;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
-import static java.util.Optional.ofNullable;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -58,6 +56,14 @@ public class ShellServerModule {
 
     final String host;
     final int port;
+
+    @JsonCreator
+    public ShellServerModule(
+        @JsonProperty("host") Optional<String> host, @JsonProperty("port") Optional<Integer> port
+    ) {
+        this.host = host.orElse(DEFAULT_HOST);
+        this.port = port.orElse(DEFAULT_PORT);
+    }
 
     public ShellServerComponent module(PrimaryComponent primary) {
         return DaggerShellServerModule_C.builder().primaryComponent(primary).m(new M()).build();
@@ -117,15 +123,9 @@ public class ShellServerModule {
     }
 
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
-    @AllArgsConstructor
     public static class Builder {
         private Optional<String> host = empty();
         private Optional<Integer> port = empty();
-
-        public Builder(@JsonProperty("host") String host, @JsonProperty("port") Integer port) {
-            this.host = ofNullable(host);
-            this.port = ofNullable(port);
-        }
 
         public Builder host(String host) {
             this.host = of(host);
@@ -135,10 +135,6 @@ public class ShellServerModule {
         public Builder port(int port) {
             this.port = of(port);
             return this;
-        }
-
-        public Builder merge(Builder o) {
-            return new Builder(pickOptional(host, o.host), pickOptional(port, o.port));
         }
 
         public ShellServerModule build() {
