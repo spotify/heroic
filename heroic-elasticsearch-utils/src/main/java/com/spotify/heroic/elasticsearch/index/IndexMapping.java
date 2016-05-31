@@ -24,7 +24,6 @@ package com.spotify.heroic.elasticsearch.index;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.elasticsearch.action.count.CountRequestBuilder;
-import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.client.Client;
 
@@ -41,9 +40,6 @@ public interface IndexMapping {
     String[] writeIndices() throws NoIndexSelectedException;
 
     SearchRequestBuilder search(Client client, String type)
-        throws NoIndexSelectedException;
-
-    DeleteByQueryRequestBuilder deleteByQuery(Client client, String type)
         throws NoIndexSelectedException;
 
     CountRequestBuilder count(Client client, String type)

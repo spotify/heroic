@@ -23,10 +23,9 @@ package com.spotify.heroic.elasticsearch;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.elasticsearch.client.Client;
-import org.elasticsearch.common.base.Optional;
-import org.elasticsearch.common.settings.ImmutableSettings;
+import com.google.common.base.Optional;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeBuilder;
 
 import java.io.File;
@@ -80,11 +79,10 @@ public class StandaloneClientSetup implements ClientSetup {
     }
 
     @Override
-    public Client setup() throws Exception {
-        final Settings settings = ImmutableSettings
+    public ClientWrapper setup() throws Exception {
+        final Settings settings = Settings
             .builder()
-            .put("path.logs", root.resolve("logs"))
-            .put("path.data", root.resolve("data"))
+            .put("path.home", root)
             .put("node.name", InetAddress.getLocalHost().getHostName())
             .put("script.inline", "on")
             // .put("script.disable_dynamic", false)
@@ -92,13 +90,12 @@ public class StandaloneClientSetup implements ClientSetup {
             // true)
             .put("discovery.zen.ping.multicast.enabled", false)
             .build();
-
-        return NodeBuilder
+        final Node node = NodeBuilder
             .nodeBuilder()
             .settings(settings)
             .clusterName(clusterName)
-            .node()
-            .client();
+            .node();
+        return new ClientWrapper(node.client(), node::close);
     }
 
     public static Builder builder() {

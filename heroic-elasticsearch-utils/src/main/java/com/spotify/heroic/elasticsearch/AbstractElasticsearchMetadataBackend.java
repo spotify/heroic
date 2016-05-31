@@ -42,7 +42,6 @@ import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
@@ -68,7 +67,7 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
 
     protected abstract Managed<Connection> connection();
 
-    protected abstract FilterBuilder filter(Filter filter);
+    protected abstract QueryBuilder filter(Filter filter);
 
     protected abstract Series toSeries(SearchHit hit);
 
@@ -170,7 +169,7 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
 
     @Override
     public AsyncObservable<Entries> entries(final Entries.Request request) {
-        final FilterBuilder f = filter(request.getFilter());
+        final QueryBuilder f = filter(request.getFilter());
 
         QueryBuilder query = QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f);
 
