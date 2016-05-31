@@ -49,6 +49,7 @@ import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.bigtable.api.BigtableDataClient;
 import com.spotify.heroic.metric.bigtable.api.BigtableTableAdminClient;
+import com.spotify.heroic.metric.bigtable.api.ColumnFamily;
 import com.spotify.heroic.metric.bigtable.api.Family;
 import com.spotify.heroic.metric.bigtable.api.Mutations;
 import com.spotify.heroic.metric.bigtable.api.ReadRowsRequest;
@@ -60,6 +61,8 @@ import com.spotify.heroic.statistics.MetricBackendReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
+import eu.toolchain.async.RetryPolicy;
+import eu.toolchain.async.RetryResult;
 import eu.toolchain.serializer.BytesSerialWriter;
 import eu.toolchain.serializer.Serializer;
 import eu.toolchain.serializer.SerializerFramework;
@@ -76,7 +79,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
 
 @ToString(of = {"connection"})
@@ -90,7 +92,6 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     public static final QueryTrace.Identifier FETCH =
         QueryTrace.identifier(BigtableBackend.class, "fetch");
 
-    public static final String METRICS = "metrics";
     public static final String POINTS = "points";
     public static final String EVENTS = "events";
     public static final long PERIOD = 0x100000000L;
@@ -100,6 +101,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     private final Serializer<RowKey> rowKeySerializer;
     private final Managed<BigtableConnection> connection;
     private final Groups groups;
+    private final String table;
     private final boolean configure;
     private final MetricBackendReporter reporter;
     private final ObjectMapper mapper;
@@ -114,8 +116,9 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     public BigtableBackend(
         final AsyncFramework async, @Named("common") final SerializerFramework serializer,
         final Serializer<RowKey> rowKeySerializer, final Managed<BigtableConnection> connection,
-        final Groups groups, @Named("configure") final boolean configure,
-        MetricBackendReporter reporter, @Named("application/json") ObjectMapper mapper
+        final Groups groups, @Named("table") final String table,
+        @Named("configure") final boolean configure, MetricBackendReporter reporter,
+        @Named("application/json") ObjectMapper mapper
     ) {
         super(async);
         this.async = async;
@@ -123,6 +126,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         this.rowKeySerializer = rowKeySerializer;
         this.connection = connection;
         this.groups = groups;
+        this.table = table;
         this.configure = configure;
         this.reporter = reporter;
         this.mapper = mapper;
@@ -136,34 +140,44 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
     @Override
     public AsyncFuture<Void> configure() {
-        return connection.doto((final BigtableConnection c) -> async.call(new Callable<Void>() {
-            @Override
-            public Void call() throws Exception {
-                final BigtableTableAdminClient admin = c.tableAdminClient();
+        return connection.doto(c -> configureMetricsTable(c.tableAdminClient()));
+    }
 
-                configureMetricsTable(admin);
+    private AsyncFuture<Void> configureMetricsTable(final BigtableTableAdminClient admin)
+        throws IOException {
+        return async
+            .call(() -> admin.getTable(table))
+            .lazyTransform(tableCheck -> tableCheck.map(async::resolved).orElseGet(() -> {
+                log.info("Creating missing table: " + table);
+                final Table createdTable = admin.createTable(table);
 
-                return null;
-            }
+                // check until table exists
+                return async
+                    .retryUntilResolved(() -> {
+                        if (!admin.getTable(createdTable.getName()).isPresent()) {
+                            throw new IllegalStateException(
+                                "Table does not exist: " + createdTable.toURI());
+                        }
 
-            private void configureMetricsTable(final BigtableTableAdminClient admin)
-                throws IOException {
-                final Table metrics = admin.getTable(METRICS).orElseGet(() -> {
-                    log.info("Creating missing table: " + METRICS);
-                    return admin.createTable(METRICS);
-                });
+                        return async.resolved(createdTable);
+                    }, RetryPolicy.timed(10000, RetryPolicy.linear(1000)))
+                    .directTransform(RetryResult::getResult);
+            }))
+            .lazyTransform(metrics -> {
+                final List<AsyncFuture<ColumnFamily>> families = new ArrayList<>();
 
-                metrics.getColumnFamily(POINTS).orElseGet(() -> {
+                families.add(async.call(() -> metrics.getColumnFamily(POINTS).orElseGet(() -> {
                     log.info("Creating missing column family: " + POINTS);
                     return admin.createColumnFamily(metrics, POINTS);
-                });
+                })));
 
-                metrics.getColumnFamily(EVENTS).orElseGet(() -> {
+                families.add(async.call(() -> metrics.getColumnFamily(EVENTS).orElseGet(() -> {
                     log.info("Creating missing column family: " + EVENTS);
                     return admin.createColumnFamily(metrics, EVENTS);
-                });
-            }
-        }));
+                })));
+
+                return async.collectAndDiscard(families);
+            });
     }
 
     @Override
@@ -316,14 +330,14 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         for (final Pair<RowKey, Mutations> e : saved) {
             final ByteString rowKeyBytes = serialize(e.getKey(), rowKeySerializer);
             writes.add(client
-                .mutateRow(METRICS, rowKeyBytes, e.getValue())
+                .mutateRow(table, rowKeyBytes, e.getValue())
                 .directTransform(result -> timer.end()));
         }
 
         for (final Map.Entry<RowKey, Mutations.Builder> e : building.entrySet()) {
             final ByteString rowKeyBytes = serialize(e.getKey(), rowKeySerializer);
             writes.add(client
-                .mutateRow(METRICS, rowKeyBytes, e.getValue().build())
+                .mutateRow(table, rowKeyBytes, e.getValue().build())
                 .directTransform(result -> timer.end()));
         }
 
@@ -351,7 +365,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
         final ByteString rowKeyBytes = serialize(rowKey, rowKeySerializer);
         return client
-            .mutateRow(METRICS, rowKeyBytes, builder.build())
+            .mutateRow(table, rowKeyBytes, builder.build())
             .directTransform(result -> timer.end());
     }
 
@@ -365,7 +379,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         final List<AsyncFuture<FetchData>> fetches = new ArrayList<>(prepared.size());
 
         for (final PreparedQuery p : prepared) {
-            final AsyncFuture<List<Row>> readRows = client.readRows(METRICS, ReadRowsRequest
+            final AsyncFuture<List<Row>> readRows = client.readRows(table, ReadRowsRequest
                 .builder()
                 .rowKey(p.keyBlob)
                 .filter(RowFilter

@@ -108,6 +108,13 @@ properties.
 | -D it.datastax.remote=true                          | Run Datastax tests against a remote database           |
 | -D it.datastax.seed=&lt;seed&gt;                    | Use the given seed (default: `localhost`)              |
 |-----------------------------------------------------|--------------------------------------------------------|
+| -D bigtable.version=&lt;version&gt;                 | Use the given client version when building the project |
+| -D it.bigtable.remote=true                          | Run Bigtable tests against a remote database           |
+| -D it.bigtable.project=&lt;project&gt;              | Use the given project                                  |
+| -D it.bigtable.zone=&lt;zone&gt;                    | Use the given zone                                     |
+| -D it.bigtable.cluster=&lt;cluster&gt;              | Use the given cluster                                  |
+| -D it.bigtable.credentials=&lt;credentials&gt;      | Use the given credentials file                         |
+|-----------------------------------------------------|--------------------------------------------------------|
 
 The following is an example Elasticsearch remote integration test:
 
