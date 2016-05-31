@@ -13,16 +13,16 @@ cluster:
   tags:
     site: london
   protocols:
-    - type: nativerpc
+    - type: grpc
   capabilities:
     - QUERY
   discovery:
     type: static
     nodes:
-      - "nativerpc://heroic-stockholm-a"
-      - "nativerpc://heroic-stockholm-b"
-      - "nativerpc://heroic-london-a"
-      - "nativerpc://heroic-london-b"
+      - "grpc://heroic-stockholm-a"
+      - "grpc://heroic-stockholm-b"
+      - "grpc://heroic-london-a"
+      - "grpc://heroic-london-b"
 </codeblock>
 
 <h3 id="tags"><code>tags</code></h3>
@@ -42,6 +42,28 @@ site: london
 
 <p>
   Contains a list of protocols that this node can speak.
+</p>
+
+<h4>grpc</h4>
+
+<codeblock language="yaml">
+host: &lt;host&gt;
+port: &lt;port&gt;
+</codeblock>
+
+<table class="table">
+  <tr>
+    <td><code>host</code></td>
+    <td>the address of the interface that this node will bind to.</td>
+  </tr>
+  <tr>
+    <td><code>port</code></td>
+    <td>the port number that this node will bind to.</td>
+  </tr>
+</table>
+
+<p>
+    <a href="https://grpc.io">gRPC</a> is an open source RPC protocol.
 </p>
 
 <h4>nativerpc</h4>

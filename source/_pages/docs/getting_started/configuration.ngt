@@ -106,11 +106,11 @@ port: 8080
 
 cluster:
   protocols:
-    - type: nativerpc
+    - type: grpc
   discovery:
     type: static
     nodes:
-      - "nativerpc://localhost:1394"
+      - "grpc://localhost"
 </pre></code>
 
 <h4 id="heroic-data-node">Data Node</h4>
@@ -136,11 +136,11 @@ port: 8080
 
 cluster:
   protocols:
-    - type: nativerpc
+    - type: grpc
   discovery:
     type: static
     nodes:
-      - "nativerpc://localhost:1394"
+      - "grpc://localhost"
 
 metrics:
   backends:
