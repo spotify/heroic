@@ -61,6 +61,11 @@ public class MetadataBackendGroup implements MetadataBackend {
     }
 
     @Override
+    public AsyncObservable<FindSeriesStream> findSeriesStream(final FindSeries.Request request) {
+        return AsyncObservable.chain(run(b -> b.findSeriesStream(request)));
+    }
+
+    @Override
     public AsyncFuture<DeleteSeries> deleteSeries(final DeleteSeries.Request request) {
         return async.collect(run(b -> b.deleteSeries(request)), DeleteSeries.reduce());
     }
