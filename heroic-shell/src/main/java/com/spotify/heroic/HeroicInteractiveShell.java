@@ -61,61 +61,73 @@ public class HeroicInteractiveShell {
         final PrintWriter out = new PrintWriter(reader.getOutput());
 
         while (running) {
-            final String line;
+            final String raw;
 
             try {
-                line = reader.readLine();
+                raw = reader.readLine();
             } catch (UserInterruptException e) {
                 out.println("Interrupted");
                 break;
             }
 
-            if (line == null) {
+            if (raw == null) {
                 break;
             }
 
-            final List<String> command;
+            final List<List<String>> lines;
 
             try {
-                command = QuoteParser.parse(line);
+                lines = QuoteParser.parse(raw);
             } catch (Exception e) {
                 log.error("Line syntax invalid", e);
-                continue;
+                return;
             }
 
-            if (command.isEmpty()) {
-                continue;
-            }
+            lines.forEach(command -> {
+                if (command.isEmpty()) {
+                    return;
+                }
 
-            final String commandName = command.iterator().next();
+                final String commandName = command.iterator().next();
 
-            if ("exit".equals(commandName)) {
-                running = false;
-                continue;
-            }
+                if ("exit".equals(commandName)) {
+                    running = false;
+                    return;
+                }
 
-            if ("help".equals(commandName)) {
-                printTasksHelp(out);
-                continue;
-            }
+                if ("help".equals(commandName)) {
+                    printTasksHelp(out);
+                    return;
+                }
 
-            if ("clear".equals(commandName)) {
-                reader.clearScreen();
-                continue;
-            }
+                if ("clear".equals(commandName)) {
+                    try {
+                        reader.clearScreen();
+                    } catch (IOException e) {
+                        log.error("Failed to clear screen", e);
+                    }
 
-            if ("timeout".equals(commandName)) {
-                internalTimeoutTask(out, command);
-                continue;
-            }
+                    return;
+                }
 
-            final ShellIO io = new DirectShellIO(out);
+                if ("timeout".equals(commandName)) {
+                    internalTimeoutTask(out, command);
+                    return;
+                }
 
-            final long start = System.nanoTime();
-            runTask(command, io, core);
-            final long diff = System.nanoTime() - start;
+                final ShellIO io = new DirectShellIO(out);
 
-            out.println(String.format("time: %s", Tasks.formatTimeNanos(diff)));
+                final long start = System.nanoTime();
+
+                try {
+                    runTask(command, io, core);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                final long diff = System.nanoTime() - start;
+
+                out.println(String.format("time: %s", Tasks.formatTimeNanos(diff)));
+            });
         }
 
         out.println();
@@ -200,7 +212,6 @@ public class HeroicInteractiveShell {
         }
 
         io.out().flush();
-        return;
     }
 
     Void awaitFinished(final AsyncFuture<Void> t)
