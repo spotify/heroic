@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.shell.task;
 
-import com.google.common.base.Charsets;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
@@ -37,19 +36,14 @@ import lombok.ToString;
 import org.kohsuke.args4j.Option;
 
 import javax.inject.Inject;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 
-@TaskUsage("Test read some stuff")
-@TaskName("reading")
-public class Reading implements ShellTask {
+@TaskUsage("(Test) Test to print some lines")
+@TaskName("test-print")
+public class TestPrint implements ShellTask {
     private final AsyncFramework async;
 
     @Inject
-    public Reading(AsyncFramework async) {
+    public TestPrint(AsyncFramework async) {
         this.async = async;
     }
 
@@ -62,21 +56,8 @@ public class Reading implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, final TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        try (final BufferedReader in = new BufferedReader(
-            new InputStreamReader(io.newInputStream(params.in, StandardOpenOption.READ),
-                Charsets.UTF_8))) {
-
-            long i = 0;
-
-            while (true) {
-                final String line = in.readLine();
-
-                if (line == null) {
-                    break;
-                }
-
-                io.out().println(String.format("Read: %d", i++));
-            }
+        for (long i = 0; i < params.count; i++) {
+            io.out().println(String.format("Count: %08d", i));
         }
 
         return async.resolved();
@@ -84,17 +65,17 @@ public class Reading implements ShellTask {
 
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
-        @Option(name = "-i", usage = "File to read from")
+        @Option(name = "--count", usage = "Number of lines to print")
         @Getter
-        private Path in = Paths.get("in.txt");
+        private long count = 10000;
     }
 
-    public static Reading setup(final CoreComponent core) {
-        return DaggerReading_C.builder().coreComponent(core).build().task();
+    public static TestPrint setup(final CoreComponent core) {
+        return DaggerTestPrint_C.builder().coreComponent(core).build().task();
     }
 
     @Component(dependencies = CoreComponent.class)
     interface C {
-        Reading task();
+        TestPrint task();
     }
 }
