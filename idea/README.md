@@ -13,7 +13,7 @@ After starting IDEA you can select the code style under
 
 IDEA requires you to run `mvn compile` prior to the first run in order to
 generate certain sources. In order to compile the project successfully, do not
-foget to follow the [building instructions](../README.md#Building).
+foget to follow the [building instructions](../README.md#building).
 
 * `heroic-parser` - Contains Antlr4 grammar files which are not generated
     automatically by IDEA.
