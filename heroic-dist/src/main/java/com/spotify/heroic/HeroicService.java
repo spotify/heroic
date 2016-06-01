@@ -241,13 +241,13 @@ public class HeroicService {
         private List<String> profiles = new ArrayList<>();
 
         @Option(name = "--port", usage = "Port number to bind to")
-        private final Integer port = null;
+        private Integer port = null;
 
         @Option(name = "--host", usage = "Host to bind to")
-        private final String host = null;
+        private String host = null;
 
         @Option(name = "--id", usage = "Heroic identifier")
-        private final String id = null;
+        private String id = null;
 
         @Option(name = "-h", aliases = {"--help"}, help = true, usage = "Display help.")
         private boolean help;
@@ -261,10 +261,10 @@ public class HeroicService {
         private String startupId;
 
         @Option(name = "-X", usage = "Define an extra parameter", metaVar = "<key>=<value>")
-        private final List<String> parameters = new ArrayList<>();
+        private List<String> parameters = new ArrayList<>();
 
         @Argument
-        private final List<String> extra = new ArrayList<>();
+        private List<String> extra = new ArrayList<>();
     }
     // @formatter:on
 }
