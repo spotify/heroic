@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.shell.task;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.QueryOptions;
@@ -101,12 +102,16 @@ public class Keys implements ShellTask {
             final AtomicLong total = new AtomicLong();
 
             @Override
-            public AsyncFuture<Void> observe(BackendKeySet keys) throws Exception {
+            public AsyncFuture<Void> observe(BackendKeySet keys) {
                 failedKeys.addAndGet(keys.getFailedKeys());
                 total.addAndGet(keys.getKeys().size() + keys.getFailedKeys());
 
                 for (final BackendKey key : keys.getKeys()) {
-                    io.out().println(mapper.writeValueAsString(key));
+                    try {
+                        io.out().println(mapper.writeValueAsString(key));
+                    } catch (final JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
 
                 io.out().flush();
@@ -114,19 +119,19 @@ public class Keys implements ShellTask {
             }
 
             @Override
-            public void cancel() throws Exception {
+            public void cancel() {
                 log.error("Cancelled");
                 end();
             }
 
             @Override
-            public void fail(final Throwable cause) throws Exception {
+            public void fail(final Throwable cause) {
                 log.warn("Exception when pulling keys", cause);
                 end();
             }
 
             @Override
-            public void end() throws Exception {
+            public void end() {
                 io.out().println("Failed Keys: " + failedKeys.get() + "/" + total.get());
                 future.resolve(null);
             }

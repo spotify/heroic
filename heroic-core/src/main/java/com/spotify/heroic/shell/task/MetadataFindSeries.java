@@ -22,13 +22,14 @@
 package com.spotify.heroic.shell.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.spotify.heroic.async.AsyncObserver;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
-import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.FindSeries;
+import com.spotify.heroic.metadata.FindSeriesStream;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.shell.ShellIO;
@@ -40,6 +41,7 @@ import com.spotify.heroic.shell.Tasks;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.ResolvableFuture;
 import lombok.Data;
 import lombok.Getter;
 import lombok.ToString;
@@ -94,7 +96,7 @@ public class MetadataFindSeries implements ShellTask {
                 try {
                     io.out().println(mapper.writeValueAsString(series));
                 } catch (final Exception e) {
-                    log.error("Failed to print series: {}", series, e);
+                    throw new RuntimeException(e);
                 }
             };
         } else {
@@ -106,21 +108,40 @@ public class MetadataFindSeries implements ShellTask {
                             new AnalyticsSeries(series.getHashCode().toString(),
                                 mapper.writeValueAsString(series))));
                 } catch (final Exception e) {
-                    log.error("Failed to print series: {}", series, e);
+                    throw new RuntimeException(e);
                 }
             };
         }
 
-        return group
-            .countSeries(new CountSeries.Request(filter, params.getRange(), params.getLimit()))
-            .lazyTransform(c -> group
-                .findSeries(new FindSeries.Request(filter, params.getRange(), params.getLimit()))
-                .lazyTransform(series -> {
-                    series.getSeries().forEach(printer);
-                    io.out().println("Found " + series.getSeries().size() + " series (limited: " +
-                        series.isLimited() + ")");
+        final ResolvableFuture<Void> future = async.future();
+
+        group
+            .findSeriesStream(new FindSeries.Request(filter, params.getRange(), params.getLimit()))
+            .observe(new AsyncObserver<FindSeriesStream>() {
+                @Override
+                public AsyncFuture<Void> observe(final FindSeriesStream value) {
+                    value.getSeries().forEach(printer);
+                    io.out().flush();
                     return async.resolved();
-                }));
+                }
+
+                @Override
+                public void cancel() {
+                    future.cancel();
+                }
+
+                @Override
+                public void fail(final Throwable cause) {
+                    future.fail(cause);
+                }
+
+                @Override
+                public void end() {
+                    future.resolve(null);
+                }
+            });
+
+        return future;
     }
 
     @ToString

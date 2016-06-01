@@ -33,18 +33,18 @@ public class Throwing {
      * @param b Second block to call.
      * @throws Exception If any of the blocks throw an exception.
      */
-    public static void call(final CanThrow a, final CanThrow b) throws Exception {
-        Exception inner = null;
+    public static void call(final Runnable a, final Runnable b) {
+        RuntimeException inner = null;
 
         try {
-            a.call();
-        } catch (final Exception e) {
+            a.run();
+        } catch (final RuntimeException e) {
             inner = e;
         }
 
         try {
-            b.call();
-        } catch (final Exception e) {
+            b.run();
+        } catch (final RuntimeException e) {
             if (inner != null) {
                 e.addSuppressed(inner);
             }
@@ -55,9 +55,5 @@ public class Throwing {
         if (inner != null) {
             throw inner;
         }
-    }
-
-    public static interface CanThrow {
-        public void call() throws Exception;
     }
 }

@@ -91,7 +91,7 @@ public abstract class AbstractMetricBackend implements MetricBackend {
     private void streamKeysNextPage(
         final AsyncObserver<BackendKeySet> observer, final BackendKeyFilter filter,
         final QueryOptions options, final long pageSize, final Optional<BackendKey> key
-    ) throws Exception {
+    ) {
         final BackendKeyFilter partial = key
             .map(BackendKeyFilter::gt)
             .map(filter::withStart)
@@ -104,23 +104,23 @@ public abstract class AbstractMetricBackend implements MetricBackend {
             private BackendKey lastSeen = null;
 
             @Override
-            public AsyncFuture<Void> observe(BackendKeySet value) throws Exception {
+            public AsyncFuture<Void> observe(BackendKeySet value) {
                 lastSeen = value.getKeys().get(value.getKeys().size() - 1);
                 return observer.observe(value);
             }
 
             @Override
-            public void cancel() throws Exception {
+            public void cancel() {
                 observer.cancel();
             }
 
             @Override
-            public void fail(Throwable cause) throws Exception {
+            public void fail(Throwable cause) {
                 observer.fail(cause);
             }
 
             @Override
-            public void end() throws Exception {
+            public void end() {
                 // no key seen, we are at the end of the sequence.
                 if (lastSeen == null) {
                     observer.end();

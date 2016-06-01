@@ -33,6 +33,7 @@ import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.async.AsyncObserver;
 import com.spotify.heroic.common.Groups;
+import com.spotify.heroic.common.Throwing;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.metric.AbstractMetricBackend;
@@ -178,7 +179,13 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
 
             final Connection c = b.get();
 
-            final SchemaBoundStatement select = c.schema.keyUtils().selectKeys(filter);
+            final SchemaBoundStatement select;
+
+            try {
+                select = c.schema.keyUtils().selectKeys(filter);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
 
             prepareCachedStatement(c, select).directTransform(stmt -> {
                 BoundStatement bound = stmt.bind(select.getBindings().toArray());
@@ -194,13 +201,13 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
                 final AsyncObserver<List<BackendKey>> helperObserver =
                     new AsyncObserver<List<BackendKey>>() {
                         @Override
-                        public AsyncFuture<Void> observe(List<BackendKey> keys) throws Exception {
+                        public AsyncFuture<Void> observe(List<BackendKey> keys) {
                             return observer.observe(
                                 new BackendKeySet(keys, failedKeys.getAndSet(0)));
                         }
 
                         @Override
-                        public void cancel() throws Exception {
+                        public void cancel() {
                             try {
                                 observer.cancel();
                             } finally {
@@ -209,7 +216,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
                         }
 
                         @Override
-                        public void fail(Throwable cause) throws Exception {
+                        public void fail(Throwable cause) {
                             try {
                                 observer.fail(cause);
                             } finally {
@@ -218,7 +225,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
                         }
 
                         @Override
-                        public void end() throws Exception {
+                        public void end() {
                             try {
                                 observer.end();
                             } finally {
@@ -310,39 +317,33 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
 
             final Connection c = b.get();
 
-            final Schema.PreparedFetch f = c.schema.row(key);
+            final PreparedFetch f;
+
+            try {
+                f = c.schema.row(key);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
 
             final AsyncObserver<List<Point>> helperObserver = new AsyncObserver<List<Point>>() {
                 @Override
-                public AsyncFuture<Void> observe(List<Point> value) throws Exception {
+                public AsyncFuture<Void> observe(List<Point> value) {
                     return observer.observe(MetricCollection.points(value));
                 }
 
                 @Override
-                public void cancel() throws Exception {
-                    try {
-                        observer.cancel();
-                    } finally {
-                        b.release();
-                    }
+                public void cancel() {
+                    Throwing.call(observer::cancel, b::release);
                 }
 
                 @Override
-                public void fail(Throwable cause) throws Exception {
-                    try {
-                        observer.fail(cause);
-                    } finally {
-                        b.release();
-                    }
+                public void fail(Throwable cause) {
+                    Throwing.call(() -> observer.fail(cause), b::release);
                 }
 
                 @Override
-                public void end() throws Exception {
-                    try {
-                        observer.end();
-                    } finally {
-                        b.release();
-                    }
+                public void end() {
+                    Throwing.call(observer::end, b::release);
                 }
             };
 

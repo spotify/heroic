@@ -130,8 +130,13 @@ public class BigtableMetricAnalytics implements MetricAnalytics, LifeCycles {
             .readRowsObserved(hitsTableName, ReadRowsRequest.builder().range(range).build())
             .transform(row -> {
                 final ByteString rowKey = row.getKey();
-                final SeriesKeyEncoding.SeriesKey k =
-                    fetchSeries.decode(rowKey, s -> mapper.readValue(s, Series.class));
+                final SeriesKeyEncoding.SeriesKey k;
+
+                try {
+                    k = fetchSeries.decode(rowKey, s -> mapper.readValue(s, Series.class));
+                } catch (final Exception e) {
+                    throw new RuntimeException(e);
+                }
 
                 final long value = row.getFamily(hitsColumnFamily).map(family -> {
                     final Family.LatestCellValueColumn col =

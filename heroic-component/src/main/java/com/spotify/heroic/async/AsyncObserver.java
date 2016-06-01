@@ -24,9 +24,9 @@ package com.spotify.heroic.async;
 import com.spotify.heroic.common.Throwing;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.FutureDone;
-import eu.toolchain.async.FutureResolved;
 import eu.toolchain.async.ResolvableFuture;
-import eu.toolchain.async.Transform;
+
+import java.util.function.Function;
 
 /**
  * XXX: consider replacing with RxJava at some point.
@@ -35,13 +35,13 @@ import eu.toolchain.async.Transform;
  * @author udoprog
  */
 public interface AsyncObserver<T> {
-    AsyncFuture<Void> observe(final T value) throws Exception;
+    AsyncFuture<Void> observe(final T value);
 
-    void cancel() throws Exception;
+    void cancel();
 
-    void fail(Throwable cause) throws Exception;
+    void fail(Throwable cause);
 
-    void end() throws Exception;
+    void end();
 
     /**
      * Bind a given future as an observeable. It can also be considered as converting a future into
@@ -55,59 +55,57 @@ public interface AsyncObserver<T> {
      * @return An observer bound to the given future.
      */
     static <T> AsyncObserver<T> bind(
-        final ResolvableFuture<Void> future, final Transform<T, AsyncFuture<Void>> transform
+        final ResolvableFuture<Void> future, final Function<T, AsyncFuture<Void>> transform
     ) {
         return new AsyncObserver<T>() {
             @Override
-            public AsyncFuture<Void> observe(T value) throws Exception {
-                return transform.transform(value);
+            public AsyncFuture<Void> observe(T value) {
+                return transform.apply(value);
             }
 
             @Override
-            public void cancel() throws Exception {
+            public void cancel() {
                 future.cancel();
             }
 
             @Override
-            public void fail(Throwable cause) throws Exception {
+            public void fail(Throwable cause) {
                 future.fail(cause);
             }
 
             @Override
-            public void end() throws Exception {
+            public void end() {
                 future.resolve(null);
             }
         };
     }
 
-    default AsyncObserver<T> onFinished(ObservableFinished finished) {
+    default AsyncObserver<T> onFinished(Runnable finished) {
         return new AsyncObserver<T>() {
             @Override
-            public AsyncFuture<Void> observe(T value) throws Exception {
+            public AsyncFuture<Void> observe(T value) {
                 return AsyncObserver.this.observe(value);
             }
 
             @Override
-            public void cancel() throws Exception {
-                Throwing.call(AsyncObserver.this::cancel, finished::finished);
+            public void cancel() {
+                Throwing.call(AsyncObserver.this::cancel, finished);
             }
 
             @Override
-            public void fail(Throwable cause) throws Exception {
-                Throwing.call(() -> AsyncObserver.this.fail(cause), finished::finished);
+            public void fail(Throwable cause) {
+                Throwing.call(() -> AsyncObserver.this.fail(cause), finished);
             }
 
             @Override
-            public void end() throws Exception {
-                Throwing.call(AsyncObserver.this::end, finished::finished);
+            public void end() {
+                Throwing.call(AsyncObserver.this::end, finished);
             }
         };
     }
 
-    default <R> FutureDone<R> bindResolved(
-        final FutureResolved<R> next
-    ) {
-        return new FutureDone<R>() {
+    default FutureDone<Void> onDone() {
+        return new FutureDone<Void>() {
             @Override
             public void failed(final Throwable cause) throws Exception {
                 fail(cause);
@@ -119,14 +117,9 @@ public interface AsyncObserver<T> {
             }
 
             @Override
-            public void resolved(final R result) throws Exception {
-                next.resolved(result);
+            public void resolved(final Void result) throws Exception {
+                end();
             }
         };
-    }
-
-    default FutureDone<Void> bindVoid() {
-        return bindResolved(v -> {
-        });
     }
 }

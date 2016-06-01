@@ -23,6 +23,7 @@ package com.spotify.heroic.metadata.elasticsearch;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.HashCode;
+import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.OptionalLimit;
@@ -50,6 +51,7 @@ import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.DeleteSeries;
 import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindSeries;
+import com.spotify.heroic.metadata.FindSeriesStream;
 import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.WriteMetadata;
@@ -65,6 +67,7 @@ import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
 import org.elasticsearch.action.index.IndexRequest.OpType;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
+import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -86,6 +89,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 
 import static org.elasticsearch.index.query.FilterBuilders.andFilter;
 import static org.elasticsearch.index.query.FilterBuilders.matchAllFilter;
@@ -242,6 +246,38 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
             return scrollOverSeries(c, builder, filter.getLimit());
         });
+    }
+
+    @Override
+    public AsyncObservable<FindSeriesStream> findSeriesStream(final FindSeries.Request filter) {
+        final OptionalLimit limit = filter.getLimit();
+        final FilterBuilder f = filter(filter.getFilter());
+
+        return observer -> connection.doto(c -> {
+            final SearchRequestBuilder builder = c
+                .search(filter.getRange(), TYPE_METADATA)
+                .setScroll(SCROLL_TIME)
+                .setSearchType(SearchType.SCAN);
+
+            builder.setSize(limit.asMaxInteger(SCROLL_SIZE));
+            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+
+            return bind(builder.execute()).lazyTransform((initial) -> {
+                if (initial.getScrollId() == null) {
+                    return async.resolved();
+                }
+
+                final String scrollId = initial.getScrollId();
+
+                final Supplier<AsyncFuture<SearchResponse>> scroller =
+                    () -> bind(c.prepareSearchScroll(scrollId).setScroll(SCROLL_TIME).execute());
+
+                return scroller
+                    .get()
+                    .lazyTransform(new ScrollTransformStream(limit, scroller,
+                        series -> observer.observe(new FindSeriesStream(series))));
+            });
+        }).onDone(observer.onDone());
     }
 
     @Override

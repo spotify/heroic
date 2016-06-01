@@ -51,6 +51,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 public abstract class AbstractElasticsearchMetadataBackend extends AbstractElasticsearchBackend
@@ -117,6 +118,39 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
             }
 
             return scroller.get().lazyTransform(this);
+        }
+    }
+
+    @RequiredArgsConstructor
+    public class ScrollTransformStream implements LazyTransform<SearchResponse, Void> {
+        private final OptionalLimit limit;
+        private final Supplier<AsyncFuture<SearchResponse>> scroller;
+        private final Function<Set<Series>, AsyncFuture<Void>> seriesFunction;
+
+        int size = 0;
+
+        @Override
+        public AsyncFuture<Void> transform(final SearchResponse response) throws Exception {
+            final SearchHit[] hits = response.getHits().getHits();
+
+            final Set<Series> batch = new HashSet<>();
+
+            for (final SearchHit hit : hits) {
+                if (limit.isGreaterOrEqual(size)) {
+                    break;
+                }
+
+                batch.add(toSeries(hit));
+                size += 1;
+            }
+
+            if (hits.length == 0 || limit.isGreaterOrEqual(size)) {
+                return seriesFunction.apply(batch);
+            }
+
+            return seriesFunction
+                .apply(batch)
+                .lazyTransform(v -> scroller.get().lazyTransform(this));
         }
     }
 

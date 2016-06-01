@@ -160,7 +160,7 @@ public class BigtableDataClientImpl implements BigtableDataClient {
         return new Row(row.getKey(), families.build());
     }
 
-    <T> void scanAsync(ResultScanner<T> scanner, AsyncObserver<T> observer) throws Exception {
+    <T> void scanAsync(ResultScanner<T> scanner, AsyncObserver<T> observer) {
         while (true) {
             final T n;
 

@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.shell.task;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.analytics.MetricAnalytics;
 import com.spotify.heroic.async.AsyncObserver;
@@ -75,11 +76,16 @@ public class AnalyticsDumpFetchSeries implements ShellTask {
         final LocalDate date = params.date.map(LocalDate::parse).orElseGet(LocalDate::now);
 
         metricAnalytics.seriesHits(date).observe(AsyncObserver.bind(future, series -> {
-            io
-                .out()
-                .println(mapper.writeValueAsString(
-                    new AnalyticsHits(series.getSeries().getHashCode().toString(),
-                        series.getHits())));
+            try {
+                io
+                    .out()
+                    .println(mapper.writeValueAsString(
+                        new AnalyticsHits(series.getSeries().getHashCode().toString(),
+                            series.getHits())));
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+
             io.out().flush();
             return async.resolved();
         }));

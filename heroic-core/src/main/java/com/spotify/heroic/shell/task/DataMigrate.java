@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.shell.task;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.async.AsyncObservable;
@@ -169,7 +170,7 @@ public class DataMigrate implements ShellTask {
         final AtomicLong totalKeys = new AtomicLong();
 
         @Override
-        public AsyncFuture<Void> observe(final BackendKeySet set) throws Exception {
+        public AsyncFuture<Void> observe(final BackendKeySet set) {
             if (next != null) {
                 return async.failed(new RuntimeException("next future is still set"));
             }
@@ -221,7 +222,7 @@ public class DataMigrate implements ShellTask {
             }
         }
 
-        void streamOne(final BackendKey key) throws Exception {
+        void streamOne(final BackendKey key) {
             if (!filter.apply(key.getSeries())) {
                 endOne(key);
                 return;
@@ -240,7 +241,7 @@ public class DataMigrate implements ShellTask {
             }
         }
 
-        void endOne(final BackendKey key) throws Exception {
+        void endOne(final BackendKey key) {
             streamDot(io, key, total.incrementAndGet());
 
             // opportunistically pick up the next available task without locking (if available).
@@ -265,7 +266,7 @@ public class DataMigrate implements ShellTask {
         }
 
         @Override
-        public void cancel() throws Exception {
+        public void cancel() {
             synchronized (io) {
                 io.out().println("Cancelled when reading keys");
             }
@@ -274,7 +275,7 @@ public class DataMigrate implements ShellTask {
         }
 
         @Override
-        public void fail(final Throwable cause) throws Exception {
+        public void fail(final Throwable cause) {
             synchronized (io) {
                 io.out().println("Error when reading keys: " + cause.getMessage());
                 cause.printStackTrace(io.out());
@@ -285,7 +286,7 @@ public class DataMigrate implements ShellTask {
         }
 
         @Override
-        public void end() throws Exception {
+        public void end() {
             synchronized (lock) {
                 done = true;
                 checkFinished();
@@ -298,11 +299,16 @@ public class DataMigrate implements ShellTask {
             }
         }
 
-        void streamDot(final ShellIO io, final BackendKey key, final long n) throws Exception {
+        void streamDot(final ShellIO io, final BackendKey key, final long n) {
             if (n % LINES == 0) {
                 synchronized (io) {
-                    io.out().println(" failedKeys: " + failedKeys.get() + ", last: " +
-                        mapper.writeValueAsString(key));
+                    try {
+                        io.out().println(" failedKeys: " + failedKeys.get() + ", last: " +
+                            mapper.writeValueAsString(key));
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
+
                     io.out().flush();
                 }
             } else if (n % DOTS == 0) {
@@ -324,7 +330,7 @@ public class DataMigrate implements ShellTask {
         final Consumer<BackendKey> end;
 
         @Override
-        public AsyncFuture<Void> observe(MetricCollection value) throws Exception {
+        public AsyncFuture<Void> observe(MetricCollection value) {
             if (future.isDone() || done.get()) {
                 return async.cancelled();
             }
@@ -338,18 +344,18 @@ public class DataMigrate implements ShellTask {
         }
 
         @Override
-        public void cancel() throws Exception {
+        public void cancel() {
             end();
         }
 
         @Override
-        public void fail(Throwable cause) throws Exception {
+        public void fail(Throwable cause) {
             errors.add(cause);
             end();
         }
 
         @Override
-        public void end() throws Exception {
+        public void end() {
             end.accept(key);
         }
     }
