@@ -23,6 +23,7 @@ package com.spotify.heroic;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
+import com.spotify.heroic.args4j.CmdLine;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.ShellTaskDefinition;
@@ -86,7 +87,7 @@ public class CoreShellTasks implements ShellTasks {
         final TaskParameters params = task.params();
 
         if (params != null) {
-            final CmdLineParser parser = new CmdLineParser(params);
+            final CmdLineParser parser = CmdLine.createParser(params);
 
             try {
                 parser.parseArgument(args);

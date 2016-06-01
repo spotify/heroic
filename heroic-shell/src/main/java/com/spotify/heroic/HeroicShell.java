@@ -24,11 +24,7 @@ package com.spotify.heroic;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicCore.Builder;
-import com.spotify.heroic.args4j.DurationOptionHandler;
-import com.spotify.heroic.args4j.OptionalLimitOptionHandler;
-import com.spotify.heroic.args4j.OptionalOptionHandler;
-import com.spotify.heroic.common.Duration;
-import com.spotify.heroic.common.OptionalLimit;
+import com.spotify.heroic.args4j.CmdLine;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.CoreInterface;
 import com.spotify.heroic.shell.RemoteCoreInterface;
@@ -63,7 +59,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.Executors;
 
 @Slf4j
@@ -361,11 +356,7 @@ public class HeroicShell {
      * it.
      */
     private static CmdLineParser setupParser(final TaskParameters params) {
-        final CmdLineParser parser = new CmdLineParser(params);
-        CmdLineParser.registerHandler(Duration.class, DurationOptionHandler.class);
-        CmdLineParser.registerHandler(Optional.class, OptionalOptionHandler.class);
-        CmdLineParser.registerHandler(OptionalLimit.class, OptionalLimitOptionHandler.class);
-        return parser;
+        return CmdLine.createParser(params);
     }
 
     @ToString
@@ -385,7 +376,7 @@ public class HeroicShell {
         private String connect = null;
 
         @Option(name = "-X", usage = "Define an extra parameter", metaVar = "<key>=<value>")
-        private final List<String> parameters = new ArrayList<>();
+        private List<String> parameters = new ArrayList<>();
     }
 
     @RequiredArgsConstructor

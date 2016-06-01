@@ -22,6 +22,7 @@
 package com.spotify.heroic;
 
 import com.spotify.heroic.HeroicCore.Builder;
+import com.spotify.heroic.args4j.CmdLine;
 import com.spotify.heroic.reflection.ResourceException;
 import com.spotify.heroic.reflection.ResourceFileLoader;
 import com.spotify.heroic.reflection.ResourceInstance;
@@ -210,7 +211,7 @@ public class HeroicService {
     private static Parameters parseArguments(final String[] args) {
         final Parameters params = new Parameters();
 
-        final CmdLineParser parser = new CmdLineParser(params);
+        final CmdLineParser parser = CmdLine.createParser(params);
 
         try {
             parser.parseArgument(args);
