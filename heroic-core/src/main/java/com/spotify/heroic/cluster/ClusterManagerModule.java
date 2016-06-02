@@ -26,7 +26,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import com.spotify.heroic.common.ServiceInfo;
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
@@ -61,13 +60,10 @@ import static java.util.Optional.of;
  */
 @Data
 public class ClusterManagerModule {
-    public static final Set<NodeCapability> DEFAULT_CAPABILITIES =
-        ImmutableSet.copyOf(Sets.newHashSet(NodeCapability.QUERY, NodeCapability.WRITE));
     public static final boolean DEFAULT_USE_LOCAL = true;
 
     private final UUID id;
     private final Map<String, String> tags;
-    private final Set<NodeCapability> capabilities;
     private final boolean useLocal;
     private final ClusterDiscoveryModule discovery;
     private final List<RpcProtocolModule> protocols;
@@ -118,7 +114,7 @@ public class ClusterManagerModule {
         @Provides
         @ClusterScope
         public NodeMetadata localMetadata(final ServiceInfo service) {
-            return new NodeMetadata(0, id, tags, capabilities, service);
+            return new NodeMetadata(0, id, tags, service);
         }
 
         @Provides
@@ -187,7 +183,6 @@ public class ClusterManagerModule {
     public static class Builder {
         private Optional<UUID> id = empty();
         private Optional<Map<String, String>> tags = empty();
-        private Optional<Set<NodeCapability>> capabilities = empty();
         private Optional<Boolean> useLocal = empty();
         private Optional<ClusterDiscoveryModule> discovery = empty();
         private Optional<List<RpcProtocolModule>> protocols = empty();
@@ -197,7 +192,6 @@ public class ClusterManagerModule {
         public Builder(
             @JsonProperty("id") Optional<UUID> id,
             @JsonProperty("tags") Optional<Map<String, String>> tags,
-            @JsonProperty("capabilities") Optional<Set<NodeCapability>> capabilities,
             @JsonProperty("useLocal") Optional<Boolean> useLocal,
             @JsonProperty("discovery") Optional<ClusterDiscoveryModule> discovery,
             @JsonProperty("protocols") Optional<List<RpcProtocolModule>> protocols,
@@ -205,7 +199,6 @@ public class ClusterManagerModule {
         ) {
             this.id = id;
             this.tags = tags;
-            this.capabilities = capabilities;
             this.useLocal = useLocal;
             this.discovery = discovery;
             this.protocols = protocols;
@@ -219,11 +212,6 @@ public class ClusterManagerModule {
 
         public Builder tags(Map<String, String> tags) {
             this.tags = of(tags);
-            return this;
-        }
-
-        public Builder capabilities(Set<NodeCapability> capabilities) {
-            this.capabilities = of(capabilities);
             return this;
         }
 
@@ -252,7 +240,6 @@ public class ClusterManagerModule {
             return new Builder(
                 pickOptional(id, o.id),
                 pickOptional(tags, o.tags),
-                pickOptional(capabilities, o.capabilities),
                 pickOptional(useLocal, o.useLocal),
                 pickOptional(discovery, o.discovery),
                 pickOptional(protocols, o.protocols),
@@ -266,7 +253,6 @@ public class ClusterManagerModule {
             return new ClusterManagerModule(
                 id.orElseGet(UUID::randomUUID),
                 tags.orElseGet(ImmutableMap::of),
-                capabilities.orElse(DEFAULT_CAPABILITIES),
                 useLocal.orElse(DEFAULT_USE_LOCAL),
                 discovery.orElseGet(ClusterDiscoveryModule::nullModule),
                 protocols.orElseGet(ImmutableList::of),

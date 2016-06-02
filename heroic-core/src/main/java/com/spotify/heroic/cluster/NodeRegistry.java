@@ -48,15 +48,11 @@ public class NodeRegistry {
     private final int totalNodes;
 
     private Multimap<Map<String, String>, ClusterNode> buildShards(
-        List<ClusterNode> entries, NodeCapability capability
+        List<ClusterNode> entries
     ) {
         final Multimap<Map<String, String>, ClusterNode> shards = LinkedListMultimap.create();
 
         for (final ClusterNode e : entries) {
-            if (!e.metadata().matchesCapability(capability)) {
-                continue;
-            }
-
             shards.put(e.metadata().getTags(), e);
         }
 
@@ -75,40 +71,18 @@ public class NodeRegistry {
         return totalNodes - entries.size();
     }
 
-    public List<ClusterNode> findAllShards(NodeCapability capability) {
-        final List<ClusterNode> result = Lists.newArrayList();
-
-        final Multimap<Map<String, String>, ClusterNode> shards = buildShards(entries, capability);
-
-        final Set<Entry<Map<String, String>, Collection<ClusterNode>>> entries =
-            shards.asMap().entrySet();
-
-        for (final Entry<Map<String, String>, Collection<ClusterNode>> e : entries) {
-            final ClusterNode one = pickOne(e.getValue());
-
-            if (one == null) {
-                continue;
-            }
-
-            result.add(one);
-        }
-
-        return result;
-    }
-
     /**
      * Find multiple registry entries from all shards.
      *
-     * @param capability Capability to find.
      * @param n Max number of entries to find.
      * @return An iterable of iterables, containing all found entries.
      */
     public List<Pair<Map<String, String>, List<ClusterNode>>> findFromAllShards(
-        NodeCapability capability, OptionalLimit n
+        OptionalLimit n
     ) {
         final List<Pair<Map<String, String>, List<ClusterNode>>> result = Lists.newArrayList();
 
-        final Multimap<Map<String, String>, ClusterNode> shards = buildShards(entries, capability);
+        final Multimap<Map<String, String>, ClusterNode> shards = buildShards(entries);
 
         final Set<Entry<Map<String, String>, Collection<ClusterNode>>> entries =
             shards.asMap().entrySet();

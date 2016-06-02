@@ -307,7 +307,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
     public List<ClusterShard> useOptionalGroup(final Optional<String> group) {
         final ImmutableList.Builder<ClusterShard> shards = ImmutableList.builder();
 
-        for (final Pair<Map<String, String>, List<ClusterNode>> e : findFromAllShards(null)) {
+        for (final Pair<Map<String, String>, List<ClusterNode>> e : findFromAllShards()) {
             shards.add(new ClusterShard(async, e.getKey(), ImmutableList.copyOf(
                 e.getValue().stream().map(c -> c.useOptionalGroup(group)).iterator())));
         }
@@ -361,16 +361,14 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
         return shards;
     }
 
-    private List<Pair<Map<String, String>, List<ClusterNode>>> findFromAllShards(
-        NodeCapability capability
-    ) {
+    private List<Pair<Map<String, String>, List<ClusterNode>>> findFromAllShards() {
         final NodeRegistry registry = this.registry.get();
 
         if (registry == null) {
             throw new IllegalStateException("Registry not ready");
         }
 
-        return registry.findFromAllShards(capability, OptionalLimit.empty());
+        return registry.findFromAllShards(OptionalLimit.empty());
     }
 
     private Set<Map<String, String>> extractKnownShards(Set<ClusterNode> entries) {

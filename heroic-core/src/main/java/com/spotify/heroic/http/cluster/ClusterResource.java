@@ -74,8 +74,7 @@ public class ClusterResource {
     private ClusterNodeStatus convert(ClusterNode node) {
         final NodeMetadata m = node.metadata();
 
-        return new ClusterNodeStatus(node.toString(), m.getId(), m.getVersion(), m.getTags(),
-            m.getCapabilities());
+        return new ClusterNodeStatus(node.toString(), m.getId(), m.getVersion(), m.getTags());
     }
 
     private static final Resume<Void, DataResponse<Boolean>> OK =

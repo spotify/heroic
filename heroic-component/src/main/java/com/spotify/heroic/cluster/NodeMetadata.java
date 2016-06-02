@@ -27,7 +27,6 @@ import com.spotify.heroic.common.ServiceInfo;
 import lombok.Data;
 
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 @Data
@@ -35,51 +34,28 @@ public class NodeMetadata {
     private final int version;
     private final UUID id;
     private final Map<String, String> tags;
-    private final Set<NodeCapability> capabilities;
     private final ServiceInfo service;
 
     @JsonCreator
     public NodeMetadata(
         @JsonProperty("version") Integer version, @JsonProperty("id") UUID id,
-        @JsonProperty("tags") Map<String, String> tags,
-        @JsonProperty("capabilities") Set<NodeCapability> capabilities,
-        @JsonProperty("service") ServiceInfo service
+        @JsonProperty("tags") Map<String, String> tags, @JsonProperty("service") ServiceInfo service
     ) {
         this.version = version;
         this.id = id;
         this.tags = tags;
-        this.capabilities = capabilities;
         this.service = service;
     }
 
     /**
      * Checks if both the given tags and capability matches.
      */
-    public boolean matches(Map<String, String> tags, NodeCapability capability) {
+    public boolean matches(Map<String, String> tags) {
         if (!matchesTags(tags)) {
             return false;
         }
 
-        if (!matchesCapability(capability)) {
-            return false;
-        }
-
         return true;
-    }
-
-    /**
-     * Capabilities match if the node capabilities are not set, or if it is set and contains the
-     * specified value.
-     *
-     * @param capability The capability to match, or <code>null</code> for any capability.
-     * @return <code>bool</code> indicating if the capabiltiy matches or not.
-     */
-    public boolean matchesCapability(NodeCapability capability) {
-        if (this.capabilities == null || capability == null) {
-            return true;
-        }
-
-        return capabilities.contains(capability);
     }
 
     /**
@@ -112,9 +88,5 @@ public class NodeMetadata {
         }
 
         return true;
-    }
-
-    public NodeMetadata forVersion(int version) {
-        return new NodeMetadata(version, id, tags, capabilities, service);
     }
 }
