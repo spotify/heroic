@@ -44,6 +44,15 @@ public interface ClusterNode extends UsableGroupManager<ClusterNode.Group> {
 
     AsyncFuture<Void> close();
 
+    /**
+     * Perform a check to see if this node connection should be considered alive or not.
+     *
+     * @return {@code true} if this node should be used for requests, {@code false} otherwise.
+     */
+    default boolean isAlive() {
+        return true;
+    }
+
     interface Group {
         ClusterNode node();
 

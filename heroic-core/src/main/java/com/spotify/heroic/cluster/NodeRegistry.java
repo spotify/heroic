@@ -25,11 +25,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
+import com.spotify.heroic.common.OptionalLimit;
 import eu.toolchain.async.AsyncFramework;
 import lombok.Data;
 import org.apache.commons.lang3.tuple.Pair;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Data
 public class NodeRegistry {
@@ -64,32 +65,6 @@ public class NodeRegistry {
 
     public List<ClusterNode> getEntries() {
         return ImmutableList.copyOf(entries);
-    }
-
-    /**
-     * Find an entry that matches the given tags depending on its metadata.
-     *
-     * @param tags The tags to match.
-     * @return A random matching entry.
-     */
-    public ClusterNode findEntry(Map<String, String> tags, NodeCapability capability) {
-        final List<ClusterNode> matches = new ArrayList<>();
-
-        for (final ClusterNode entry : entries) {
-            if (entry.metadata().matches(tags, capability)) {
-                matches.add(entry);
-            }
-        }
-
-        if (matches.isEmpty()) {
-            return null;
-        }
-
-        if (matches.size() == 1) {
-            return matches.get(0);
-        }
-
-        return matches.get(random.nextInt(matches.size()));
     }
 
     public int getOnlineNodes() {
@@ -128,8 +103,8 @@ public class NodeRegistry {
      * @param n Max number of entries to find.
      * @return An iterable of iterables, containing all found entries.
      */
-    public List<Pair<Map<String, String>, List<ClusterNode>>> findManyFromAllShards(
-        NodeCapability capability, int n
+    public List<Pair<Map<String, String>, List<ClusterNode>>> findFromAllShards(
+        NodeCapability capability, OptionalLimit n
     ) {
         final List<Pair<Map<String, String>, List<ClusterNode>>> result = Lists.newArrayList();
 
@@ -139,13 +114,7 @@ public class NodeRegistry {
             shards.asMap().entrySet();
 
         for (final Entry<Map<String, String>, Collection<ClusterNode>> e : entries) {
-            final List<ClusterNode> many = pickN(e.getValue(), n);
-
-            if (many.isEmpty()) {
-                continue;
-            }
-
-            result.add(Pair.of(e.getKey(), many));
+            result.add(Pair.of(e.getKey(), pickN(e.getValue(), n)));
         }
 
         return result;
@@ -174,19 +143,16 @@ public class NodeRegistry {
         return null;
     }
 
-    private List<ClusterNode> pickN(final Collection<ClusterNode> options, int n) {
+    private List<ClusterNode> pickN(final Collection<ClusterNode> options, OptionalLimit n) {
         if (options.isEmpty()) {
             return ImmutableList.of();
         }
 
-        final List<ClusterNode> entries = new ArrayList<>(options);
+        final List<ClusterNode> entries =
+            options.stream().filter(ClusterNode::isAlive).collect(Collectors.toList());
 
         Collections.shuffle(entries, random);
 
-        if (options.size() <= n) {
-            return ImmutableList.copyOf(options);
-        }
-
-        return entries.subList(0, n);
+        return n.limitList(entries);
     }
 }

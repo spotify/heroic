@@ -182,6 +182,11 @@ public class GrpcRpcProtocol implements RpcProtocol {
         }
 
         @Override
+        public boolean isAlive() {
+            return client.isAlive();
+        }
+
+        @Override
         public String toString() {
             return client.toString();
         }

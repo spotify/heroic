@@ -23,6 +23,7 @@ package com.spotify.heroic.rpc.grpc;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.spotify.heroic.metrics.Meter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
@@ -45,6 +46,7 @@ public class GrpcRpcClient {
     private final InetSocketAddress address;
     private final ObjectMapper mapper;
     private final Managed<ManagedChannel> channel;
+    private final Meter errors = new Meter();
 
     private static final GrpcRpcEmptyBody EMPTY = new GrpcRpcEmptyBody();
 
@@ -117,8 +119,12 @@ public class GrpcRpcClient {
             call.request(1);
             call.halfClose();
 
-            return future;
+            return future.onFailed(e -> errors.mark());
         });
+    }
+
+    public boolean isAlive() {
+        return errors.getFiveMinuteRate() < 1.0D;
     }
 
     @Override

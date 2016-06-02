@@ -27,6 +27,7 @@ import com.google.common.collect.Iterables;
 import com.spotify.heroic.HeroicConfiguration;
 import com.spotify.heroic.HeroicContext;
 import com.spotify.heroic.async.MaybeError;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.scheduler.Scheduler;
@@ -306,7 +307,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
     public List<ClusterShard> useOptionalGroup(final Optional<String> group) {
         final ImmutableList.Builder<ClusterShard> shards = ImmutableList.builder();
 
-        for (final Pair<Map<String, String>, List<ClusterNode>> e : findManyFromAllShards(null)) {
+        for (final Pair<Map<String, String>, List<ClusterNode>> e : findFromAllShards(null)) {
             shards.add(new ClusterShard(async, e.getKey(), ImmutableList.copyOf(
                 e.getValue().stream().map(c -> c.useOptionalGroup(group)).iterator())));
         }
@@ -360,7 +361,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
         return shards;
     }
 
-    private List<Pair<Map<String, String>, List<ClusterNode>>> findManyFromAllShards(
+    private List<Pair<Map<String, String>, List<ClusterNode>>> findFromAllShards(
         NodeCapability capability
     ) {
         final NodeRegistry registry = this.registry.get();
@@ -369,17 +370,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
             throw new IllegalStateException("Registry not ready");
         }
 
-        return registry.findManyFromAllShards(capability, Integer.MAX_VALUE);
-    }
-
-    private Collection<ClusterNode> findAllShards(NodeCapability capability) {
-        final NodeRegistry registry = this.registry.get();
-
-        if (registry == null) {
-            throw new IllegalStateException("Registry not ready");
-        }
-
-        return registry.findAllShards(capability);
+        return registry.findFromAllShards(capability, OptionalLimit.empty());
     }
 
     private Set<Map<String, String>> extractKnownShards(Set<ClusterNode> entries) {
