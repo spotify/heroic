@@ -22,6 +22,7 @@
 package com.spotify.heroic.aggregation;
 
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Point;
@@ -39,6 +40,8 @@ public interface AggregationSession {
     void updateSpreads(Map<String, String> key, Set<Series> series, List<Spread> values);
 
     void updateGroup(Map<String, String> key, Set<Series> series, List<MetricGroup> values);
+
+    void updatePayload(Map<String, String> key, Set<Series> series, List<Payload> values);
 
     /**
      * Get the result of this aggregator.

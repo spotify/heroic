@@ -28,6 +28,7 @@ import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.aggregation.EmptyInstance;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Point;
@@ -116,6 +117,13 @@ public class FilterAggregation implements AggregationInstance {
             Map<String, String> key, Set<Series> series, List<MetricGroup> values
         ) {
             childSession.updateGroup(key, series, values);
+        }
+
+        @Override
+        public void updatePayload(
+            Map<String, String> key, Set<Series> series, List<Payload> values
+        ) {
+            childSession.updatePayload(key, series, values);
         }
 
         @Override

@@ -19,36 +19,38 @@
  * under the License.
  */
 
-package com.spotify.heroic.aggregation;
+package com.spotify.heroic.metric;
 
-import com.spotify.heroic.metric.Event;
-import com.spotify.heroic.metric.Metric;
-import com.spotify.heroic.metric.MetricGroup;
-import com.spotify.heroic.metric.Point;
-import com.spotify.heroic.metric.Spread;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Ordering;
+import com.google.common.hash.Hasher;
+import lombok.Data;
 
+import java.beans.ConstructorProperties;
 import java.util.Map;
 
-public abstract class AbstractAnyBucket implements Bucket {
-    @Override
-    public void updatePoint(Map<String, String> tags, Point sample) {
-        update(tags, sample);
+@Data
+public class Payload implements Metric {
+    private static final Map<String, String> EMPTY_PAYLOAD = ImmutableMap.of();
+
+    private final long timestamp;
+    private final byte[] state;
+
+    @ConstructorProperties({"timestamp", "state"})
+    public Payload(final long timestamp, final byte[] state) {
+        this.timestamp = timestamp;
+        this.state = state;
     }
 
-    @Override
-    public void updateEvent(Map<String, String> tags, Event sample) {
-        update(tags, sample);
+    public boolean valid() {
+        return true;
     }
 
-    @Override
-    public void updateSpread(Map<String, String> tags, Spread sample) {
-        update(tags, sample);
-    }
+    private static final Ordering<String> KEY_ORDER = Ordering.from(String::compareTo);
 
     @Override
-    public void updateGroup(Map<String, String> tags, MetricGroup sample) {
-        update(tags, sample);
+    public void hash(final Hasher hasher) {
+        hasher.putInt(MetricType.EVENT.ordinal());
+        hasher.putBytes(state);
     }
-
-    public abstract void update(Map<String, String> tags, Metric sample);
 }

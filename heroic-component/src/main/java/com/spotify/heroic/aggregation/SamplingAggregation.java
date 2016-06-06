@@ -19,12 +19,9 @@
  * under the License.
  */
 
-package com.spotify.heroic.aggregation.simple;
+package com.spotify.heroic.aggregation;
 
 import com.google.common.base.Joiner;
-import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.aggregation.AggregationContext;
-import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.common.Duration;
 import lombok.Data;
 

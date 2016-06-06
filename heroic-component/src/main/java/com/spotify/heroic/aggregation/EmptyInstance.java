@@ -29,17 +29,16 @@ import com.google.common.collect.Iterators;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricGroup;
-import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
 import lombok.Data;
 import lombok.ToString;
 
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -112,6 +111,13 @@ public class EmptyInstance implements AggregationInstance {
             session(key).groups.update(s, values);
         }
 
+        @Override
+        public void updatePayload(
+            final Map<String, String> key, final Set<Series> s, final List<Payload> values
+        ) {
+            session(key).cardinality.update(s, values);
+        }
+
         private SubSession session(Map<String, String> key) {
             final SubSession session = sessions.get(key);
 
@@ -141,23 +147,19 @@ public class EmptyInstance implements AggregationInstance {
                 final SubSession sub = e.getValue();
 
                 if (!sub.groups.isEmpty()) {
-                    groups.add(collectGroup(group, sub.groups, MetricType.GROUP.comparator(),
-                        MetricCollection::groups));
+                    groups.add(collectGroup(group, sub.groups, MetricCollection::groups));
                 }
 
                 if (!sub.points.isEmpty()) {
-                    groups.add(collectGroup(group, sub.points, MetricType.POINT.comparator(),
-                        MetricCollection::points));
+                    groups.add(collectGroup(group, sub.points, MetricCollection::points));
                 }
 
                 if (!sub.events.isEmpty()) {
-                    groups.add(collectGroup(group, sub.events, MetricType.EVENT.comparator(),
-                        MetricCollection::events));
+                    groups.add(collectGroup(group, sub.events, MetricCollection::events));
                 }
 
                 if (!sub.spreads.isEmpty()) {
-                    groups.add(collectGroup(group, sub.spreads, MetricType.SPREAD.comparator(),
-                        MetricCollection::spreads));
+                    groups.add(collectGroup(group, sub.spreads, MetricCollection::spreads));
                 }
             }
 
@@ -166,7 +168,6 @@ public class EmptyInstance implements AggregationInstance {
 
         private <T extends Metric> AggregationOutput collectGroup(
             final Map<String, String> key, final SessionPair<T> collected,
-            final Comparator<? super T> comparator,
             final Function<List<T>, MetricCollection> builder
         ) {
             final ImmutableList.Builder<List<T>> iterables = ImmutableList.builder();
@@ -185,7 +186,7 @@ public class EmptyInstance implements AggregationInstance {
 
             final ImmutableList<Iterator<T>> iterators =
                 ImmutableList.copyOf(iterables.build().stream().map(Iterable::iterator).iterator());
-            final Iterator<T> metrics = Iterators.mergeSorted(iterators, comparator);
+            final Iterator<T> metrics = Iterators.mergeSorted(iterators, Metric.comparator());
 
             return new AggregationOutput(key, series, builder.apply(ImmutableList.copyOf(metrics)));
         }
@@ -210,5 +211,6 @@ public class EmptyInstance implements AggregationInstance {
         private final SessionPair<Event> events = new SessionPair<>();
         private final SessionPair<Spread> spreads = new SessionPair<>();
         private final SessionPair<MetricGroup> groups = new SessionPair<>();
+        private final SessionPair<Payload> cardinality = new SessionPair<>();
     }
 }

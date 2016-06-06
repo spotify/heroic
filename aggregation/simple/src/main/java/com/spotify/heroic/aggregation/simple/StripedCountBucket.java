@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import com.spotify.heroic.aggregation.AbstractAnyBucket;
+import com.spotify.heroic.aggregation.AnyBucket;
 import com.spotify.heroic.metric.Metric;
 import lombok.RequiredArgsConstructor;
 
@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.LongAdder;
  * @author udoprog
  */
 @RequiredArgsConstructor
-public class StripedCountBucket extends AbstractAnyBucket {
+public class StripedCountBucket implements AnyBucket {
     private final long timestamp;
 
     private final LongAdder count = new LongAdder();
@@ -46,7 +46,7 @@ public class StripedCountBucket extends AbstractAnyBucket {
     }
 
     @Override
-    public void update(Map<String, String> tags, Metric d) {
+    public void update(Map<String, String> key, Metric d) {
         count.increment();
     }
 

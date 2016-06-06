@@ -24,8 +24,10 @@ package com.spotify.heroic.aggregation.simple;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 @Data
+@EqualsAndHashCode(callSuper = true)
 public class BelowKInstance extends FilterAggregation {
     @JsonCreator
     public BelowKInstance(@JsonProperty("k") double k) {

@@ -25,8 +25,7 @@ public class BasicSerializationTest {
 
     @Test
     public void testEvent() throws Exception {
-        final Event expected = new Event(1024L,
-            ImmutableMap.<String, Object>of("int", 1234, "float", 0.25d, "string", "foo"));
+        final Event expected = new Event(1024L, ImmutableMap.of("string", "foo"));
         assertSerialization("Event.json", expected, Event.class);
     }
 

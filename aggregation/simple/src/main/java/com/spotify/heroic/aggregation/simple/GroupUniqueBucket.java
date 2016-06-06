@@ -25,9 +25,9 @@ import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.aggregation.AbstractBucket;
 import com.spotify.heroic.aggregation.Bucket;
 import com.spotify.heroic.metric.Event;
+import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricGroup;
-import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
 import lombok.RequiredArgsConstructor;
@@ -39,12 +39,10 @@ import java.util.concurrent.ConcurrentSkipListSet;
 
 @RequiredArgsConstructor
 public class GroupUniqueBucket extends AbstractBucket implements Bucket {
-    final SortedSet<Point> points = new ConcurrentSkipListSet<Point>(MetricType.POINT.comparator());
-    final SortedSet<Event> events = new ConcurrentSkipListSet<Event>(MetricType.EVENT.comparator());
-    final SortedSet<Spread> spreads =
-        new ConcurrentSkipListSet<Spread>(MetricType.SPREAD.comparator());
-    final SortedSet<MetricGroup> groups =
-        new ConcurrentSkipListSet<MetricGroup>(MetricType.GROUP.comparator());
+    final SortedSet<Point> points = new ConcurrentSkipListSet<>(Metric.comparator());
+    final SortedSet<Event> events = new ConcurrentSkipListSet<>(Metric.comparator());
+    final SortedSet<Spread> spreads = new ConcurrentSkipListSet<>(Metric.comparator());
+    final SortedSet<MetricGroup> groups = new ConcurrentSkipListSet<>(Metric.comparator());
 
     final long timestamp;
 
@@ -71,22 +69,22 @@ public class GroupUniqueBucket extends AbstractBucket implements Bucket {
     }
 
     @Override
-    public void updatePoint(Map<String, String> tags, Point sample) {
+    public void updatePoint(Map<String, String> key, Point sample) {
         points.add(sample);
     }
 
     @Override
-    public void updateEvent(Map<String, String> tags, Event sample) {
+    public void updateEvent(Map<String, String> key, Event sample) {
         events.add(sample);
     }
 
     @Override
-    public void updateSpread(Map<String, String> tags, Spread sample) {
+    public void updateSpread(Map<String, String> key, Spread sample) {
         spreads.add(sample);
     }
 
     @Override
-    public void updateGroup(Map<String, String> tags, MetricGroup sample) {
+    public void updateGroup(Map<String, String> key, MetricGroup sample) {
         groups.add(sample);
     }
 

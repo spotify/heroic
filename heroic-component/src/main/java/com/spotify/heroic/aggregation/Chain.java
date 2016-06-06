@@ -77,7 +77,7 @@ public class Chain implements Aggregation {
         while (it.hasPrevious()) {
             final AggregationInstance instance = it.previous().apply(current);
             tags.addAll(instance.requiredTags());
-            current = AggregationContext.withRequiredTags(context, tags.build());
+            current = AggregationContext.withRequiredTags(current, tags.build());
             chain.add(instance);
         }
 

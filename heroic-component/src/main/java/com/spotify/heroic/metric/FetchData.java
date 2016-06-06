@@ -81,9 +81,8 @@ public class FetchData {
             final List<MetricCollection> groups = fetchGroups
                 .entrySet()
                 .stream()
-                .map((e) -> MetricCollection.build(e.getKey(), Ordering
-                    .from(e.getKey().comparator())
-                    .immutableSortedCopy(e.getValue().build())))
+                .map((e) -> MetricCollection.build(e.getKey(),
+                    Ordering.from(Metric.comparator()).immutableSortedCopy(e.getValue().build())))
                 .collect(Collectors.toList());
 
             return new FetchData(w.end(traces.build()), ImmutableList.of(), times.build(), groups);

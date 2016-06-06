@@ -28,6 +28,7 @@ import com.google.common.collect.Iterables;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
@@ -68,7 +69,8 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
     private static final Map<String, String> EMPTY = ImmutableMap.of();
 
     public static final Set<MetricType> ALL_TYPES =
-        ImmutableSet.of(MetricType.POINT, MetricType.EVENT, MetricType.SPREAD, MetricType.GROUP);
+        ImmutableSet.of(MetricType.POINT, MetricType.EVENT, MetricType.SPREAD, MetricType.GROUP,
+            MetricType.CARDINALITY);
 
     protected final long size;
     protected final long extent;
@@ -117,6 +119,14 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
         ) {
             series.add(s);
             feed(MetricType.GROUP, values, (bucket, m) -> bucket.updateGroup(key, m));
+        }
+
+        @Override
+        public void updatePayload(
+            Map<String, String> key, Set<Series> s, List<Payload> values
+        ) {
+            series.add(s);
+            feed(MetricType.CARDINALITY, values, (bucket, m) -> bucket.updatePayload(key, m));
         }
 
         private <T extends Metric> void feed(

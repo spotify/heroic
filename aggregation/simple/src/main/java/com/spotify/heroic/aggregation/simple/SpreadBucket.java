@@ -60,7 +60,7 @@ public class SpreadBucket extends AbstractBucket {
     }
 
     @Override
-    public void updateSpread(Map<String, String> tags, Spread d) {
+    public void updateSpread(Map<String, String> key, Spread d) {
         count.add(d.getCount());
         sum.add(d.getSum());
         sum2.add(d.getSum2());
@@ -69,7 +69,7 @@ public class SpreadBucket extends AbstractBucket {
     }
 
     @Override
-    public void updatePoint(Map<String, String> tags, Point d) {
+    public void updatePoint(Map<String, String> key, Point d) {
         final double value = d.getValue();
 
         if (!Double.isFinite(value)) {

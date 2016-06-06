@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Point;
@@ -143,6 +144,14 @@ public abstract class GroupingAggregation implements AggregationInstance {
         ) {
             final Map<String, String> key = key(group);
             session(key).updateGroup(key, series, values);
+        }
+
+        @Override
+        public void updatePayload(
+            Map<String, String> group, Set<Series> series, List<Payload> values
+        ) {
+            final Map<String, String> key = key(group);
+            session(key).updatePayload(key, series, values);
         }
 
         private AggregationSession session(final Map<String, String> key) {

@@ -106,8 +106,8 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     private final MetricBackendReporter reporter;
     private final ObjectMapper mapper;
 
-    private static final TypeReference<Map<String, Object>> PAYLOAD_TYPE =
-        new TypeReference<Map<String, Object>>() {
+    private static final TypeReference<Map<String, String>> PAYLOAD_TYPE =
+        new TypeReference<Map<String, String>>() {
         };
 
     private final Meter written = new Meter();
@@ -226,7 +226,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                     });
                 case EVENT:
                     return fetchBatch(watcher, type, EVENTS, prepared, c, (t, d) -> {
-                        final Map<String, Object> payload;
+                        final Map<String, String> payload;
 
                         try {
                             payload = mapper.readValue(d.toByteArray(), PAYLOAD_TYPE);
@@ -410,7 +410,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                 final QueryTrace trace = w.end();
                 final ImmutableList<Long> times = ImmutableList.of(trace.getElapsed());
                 final List<T> data =
-                    ImmutableList.copyOf(Iterables.mergeSorted(points, type.comparator()));
+                    ImmutableList.copyOf(Iterables.mergeSorted(points, Metric.comparator()));
                 final List<MetricCollection> groups =
                     ImmutableList.of(MetricCollection.build(type, data));
 

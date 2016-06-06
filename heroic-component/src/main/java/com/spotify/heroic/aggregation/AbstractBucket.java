@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.aggregation;
 
+import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Point;
@@ -30,18 +31,22 @@ import java.util.Map;
 
 public abstract class AbstractBucket implements Bucket {
     @Override
-    public void updatePoint(Map<String, String> tags, Point sample) {
+    public void updatePoint(Map<String, String> key, Point sample) {
     }
 
     @Override
-    public void updateEvent(Map<String, String> tags, Event sample) {
+    public void updateEvent(Map<String, String> key, Event sample) {
     }
 
     @Override
-    public void updateSpread(Map<String, String> tags, Spread sample) {
+    public void updateSpread(Map<String, String> key, Spread sample) {
     }
 
     @Override
-    public void updateGroup(Map<String, String> tags, MetricGroup sample) {
+    public void updateGroup(Map<String, String> key, MetricGroup sample) {
+    }
+
+    @Override
+    public void updatePayload(Map<String, String> key, Payload sample) {
     }
 }

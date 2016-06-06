@@ -19,43 +19,42 @@
  * under the License.
  */
 
-package com.spotify.heroic.aggregation.simple;
+package com.spotify.heroic.aggregation;
 
-import com.spotify.heroic.aggregation.AbstractAnyBucket;
+import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.Metric;
-import lombok.RequiredArgsConstructor;
+import com.spotify.heroic.metric.MetricGroup;
+import com.spotify.heroic.metric.Payload;
+import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.Spread;
 
-import java.util.Collections;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * Bucket that counts the number of seen events.
- *
- * @author udoprog
- */
-@RequiredArgsConstructor
-public class CountUniqueBucket extends AbstractAnyBucket {
-    private final long timestamp;
-
-    private final AtomicInteger count = new AtomicInteger(0);
-    private final Set<Integer> seen =
-        Collections.newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
-
-    public long timestamp() {
-        return timestamp;
+public interface AnyBucket extends Bucket {
+    @Override
+    default void updatePoint(Map<String, String> key, Point sample) {
+        update(key, sample);
     }
 
     @Override
-    public void update(Map<String, String> tags, Metric d) {
-        if (seen.add(tags.hashCode() ^ d.valueHash())) {
-            count.incrementAndGet();
-        }
+    default void updateEvent(Map<String, String> key, Event sample) {
+        update(key, sample);
     }
 
-    public long count() {
-        return count.get();
+    @Override
+    default void updateSpread(Map<String, String> key, Spread sample) {
+        update(key, sample);
     }
+
+    @Override
+    default void updateGroup(Map<String, String> key, MetricGroup sample) {
+        update(key, sample);
+    }
+
+    @Override
+    default void updatePayload(Map<String, String> key, Payload sample) {
+        update(key, sample);
+    }
+
+    void update(Map<String, String> key, Metric sample);
 }

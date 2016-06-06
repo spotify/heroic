@@ -44,7 +44,7 @@ public class StdDevBucket extends AbstractBucket implements DoubleBucket {
     private AtomicReference<Cell> cell = new AtomicReference<>(ZERO);
 
     @Override
-    public void updatePoint(Map<String, String> tags, Point d) {
+    public void updatePoint(Map<String, String> key, Point d) {
         final double value = d.getValue();
 
         while (true) {

@@ -21,57 +21,45 @@
 
 package com.spotify.heroic.metric;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Ordering;
+import com.google.common.hash.Hasher;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import java.util.Comparator;
 import java.util.Map;
 
 @Data
-@EqualsAndHashCode(exclude = {"valueHash"})
+@EqualsAndHashCode
 public class Event implements Metric {
-    private static final Map<String, Object> EMPTY_PAYLOAD = ImmutableMap.of();
+    private static final Map<String, String> EMPTY_PAYLOAD = ImmutableMap.of();
 
-    final long timestamp;
-    final Map<String, Object> payload;
-    final int valueHash;
+    private final long timestamp;
+    private final Map<String, String> payload;
 
-    public Event(long timestamp) {
+    public Event(final long timestamp) {
         this(timestamp, EMPTY_PAYLOAD);
     }
 
-    public Event(long timestamp, Map<String, Object> payload) {
+    public Event(final long timestamp, final Map<String, String> payload) {
         this.timestamp = timestamp;
         this.payload = Optional.fromNullable(payload).or(EMPTY_PAYLOAD);
-        this.valueHash = calculateValueHash(this.payload);
-    }
-
-    @Override
-    public int valueHash() {
-        return valueHash;
     }
 
     public boolean valid() {
         return true;
     }
 
-    static int calculateValueHash(Map<String, Object> payload) {
-        final int prime = 31;
-        int result = 1;
-        result = result * prime + payload.hashCode();
-        return result;
-    }
+    private static final Ordering<String> KEY_ORDER = Ordering.from(String::compareTo);
 
-    public static Comparator<Metric> comparator() {
-        return comparator;
-    }
+    @Override
+    public void hash(final Hasher hasher) {
+        hasher.putInt(MetricType.EVENT.ordinal());
 
-    static final Comparator<Metric> comparator = new Comparator<Metric>() {
-        @Override
-        public int compare(Metric a, Metric b) {
-            return Long.compare(a.getTimestamp(), b.getTimestamp());
+        for (final String k : KEY_ORDER.sortedCopy(payload.keySet())) {
+            hasher.putString(k, Charsets.UTF_8).putString(payload.get(k), Charsets.UTF_8);
         }
-    };
+    }
 }

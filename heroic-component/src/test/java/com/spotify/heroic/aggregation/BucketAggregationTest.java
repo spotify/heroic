@@ -41,7 +41,7 @@ public class BucketAggregationTest {
         private final long timestamp;
         private double sum;
 
-        public void updatePoint(Map<String, String> tags, Point d) {
+        public void updatePoint(Map<String, String> key, Point d) {
             sum += d.getValue();
         }
 

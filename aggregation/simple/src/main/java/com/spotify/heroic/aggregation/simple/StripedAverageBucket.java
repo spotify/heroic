@@ -48,13 +48,13 @@ public class StripedAverageBucket extends AbstractBucket implements DoubleBucket
     }
 
     @Override
-    public void updatePoint(Map<String, String> tags, Point d) {
+    public void updatePoint(Map<String, String> key, Point d) {
         value.add(d.getValue());
         count.increment();
     }
 
     @Override
-    public void updateSpread(Map<String, String> tags, Spread sample) {
+    public void updateSpread(Map<String, String> key, Spread sample) {
         value.add(sample.getSum());
         count.add(sample.getCount());
     }

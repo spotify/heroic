@@ -30,6 +30,7 @@ import lombok.Data;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Data
 @JsonTypeName("function")
@@ -68,5 +69,9 @@ public class FunctionExpression implements Expression {
 
     public AggregationArguments arguments() {
         return new AggregationArguments(getArguments(), getKeywords());
+    }
+
+    public Optional<Expression> keyword(final String key) {
+        return Optional.ofNullable(keywords.get(key));
     }
 }

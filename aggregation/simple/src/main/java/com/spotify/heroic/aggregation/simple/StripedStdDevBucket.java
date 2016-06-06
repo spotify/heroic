@@ -47,14 +47,14 @@ public class StripedStdDevBucket extends AbstractBucket implements DoubleBucket 
     private final long timestamp;
 
     @Override
-    public void updateSpread(Map<String, String> tags, Spread d) {
+    public void updateSpread(Map<String, String> key, Spread d) {
         sum.add(d.getSum());
         sum2.add(d.getSum2());
         count.add(d.getCount());
     }
 
     @Override
-    public void updatePoint(Map<String, String> tags, Point d) {
+    public void updatePoint(Map<String, String> key, Point d) {
         final double v = d.getValue();
 
         sum.add(v);

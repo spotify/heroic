@@ -22,25 +22,22 @@
 package com.spotify.heroic.metric;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import com.google.common.hash.Hasher;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import java.util.Comparator;
 import java.util.List;
 
 @Data
-@EqualsAndHashCode(exclude = {"valueHash"})
+@EqualsAndHashCode
 public class MetricGroup implements Metric {
     static final List<MetricCollection> EMPTY_GROUPS = ImmutableList.of();
 
     private final long timestamp;
     private final List<MetricCollection> groups;
-    @JsonIgnore
-    private final int valueHash;
 
     @JsonCreator
     public MetricGroup(
@@ -49,7 +46,6 @@ public class MetricGroup implements Metric {
     ) {
         this.timestamp = timestamp;
         this.groups = Optional.fromNullable(groups).or(EMPTY_GROUPS);
-        this.valueHash = calculateValueHash(this.groups);
     }
 
     @Override
@@ -58,36 +54,18 @@ public class MetricGroup implements Metric {
     }
 
     @Override
-    public int valueHash() {
-        return valueHash;
+    public void hash(final Hasher hasher) {
+        hasher.putInt(MetricType.GROUP.ordinal());
+
+        for (final MetricCollection c : groups) {
+            for (final Metric m : c.getData()) {
+                m.hash(hasher);
+            }
+        }
     }
 
     @Override
     public boolean valid() {
         return true;
-    }
-
-    public static Comparator<Metric> comparator() {
-        return comparator;
-    }
-
-    private static final Comparator<Metric> comparator = new Comparator<Metric>() {
-        @Override
-        public int compare(Metric a, Metric b) {
-            return Long.compare(a.getTimestamp(), b.getTimestamp());
-        }
-    };
-
-    static int calculateValueHash(List<MetricCollection> groups) {
-        final int prime = 31;
-        int result = 1;
-
-        for (final MetricCollection g : groups) {
-            for (final Metric d : g.getData()) {
-                result = prime * result + d.valueHash();
-            }
-        }
-
-        return result;
     }
 }

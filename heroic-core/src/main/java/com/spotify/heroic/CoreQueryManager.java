@@ -376,7 +376,7 @@ public class CoreQueryManager implements QueryManager {
         final SortedSet<Long> results = INTERVAL_FACTORS.headSet(nominal);
 
         if (results.isEmpty()) {
-            return Duration.of(nominal, TimeUnit.MILLISECONDS);
+            return Duration.of(Math.max(nominal, 1L), TimeUnit.MILLISECONDS);
         }
 
         return Duration.of(results.last(), TimeUnit.MILLISECONDS);

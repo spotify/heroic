@@ -26,6 +26,7 @@ import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationArguments;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.aggregation.AggregationRegistry;
+import com.spotify.heroic.aggregation.SamplingAggregationDSL;
 import com.spotify.heroic.aggregation.SamplingQuery;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.dagger.LoadingComponent;
@@ -65,52 +66,45 @@ public class Module implements HeroicModule {
             this.factory = factory;
         }
 
-        // @formatter:off
         @Override
         public void setup() {
             /* example aggregation, if used only returns zeroes. */
-            c.register(Template.NAME, Template.class, TemplateInstance.class, samplingBuilder
-                (Template::new));
+            c.register(Template.NAME, Template.class, TemplateInstance.class,
+                samplingBuilder(Template::new));
 
-            c.register(Spread.NAME, Spread.class, SpreadInstance.class, samplingBuilder
-                (Spread::new));
+            c.register(Spread.NAME, Spread.class, SpreadInstance.class,
+                samplingBuilder(Spread::new));
 
-            c.register(Sum.NAME, Sum.class, SumInstance.class,
-                samplingBuilder(Sum::new));
+            c.register(Sum.NAME, Sum.class, SumInstance.class, samplingBuilder(Sum::new));
 
-            c.register(Average.NAME, Average.class, AverageInstance.class, samplingBuilder
-                (Average::new));
+            c.register(Average.NAME, Average.class, AverageInstance.class,
+                samplingBuilder(Average::new));
 
-            c.register(Min.NAME, Min.class, MinInstance.class,
-                samplingBuilder(Min::new));
+            c.register(Min.NAME, Min.class, MinInstance.class, samplingBuilder(Min::new));
 
-            c.register(Max.NAME, Max.class, MaxInstance.class,
-                samplingBuilder(Max::new));
+            c.register(Max.NAME, Max.class, MaxInstance.class, samplingBuilder(Max::new));
 
-            c.register(StdDev.NAME, StdDev.class, StdDevInstance.class,samplingBuilder
-                (StdDev::new));
-
-            c.register(CountUnique.NAME, CountUnique.class, CountUniqueInstance.class,
-                samplingBuilder(CountUnique::new));
+            c.register(StdDev.NAME, StdDev.class, StdDevInstance.class,
+                samplingBuilder(StdDev::new));
 
             c.register(Count.NAME, Count.class, CountInstance.class, samplingBuilder(Count::new));
 
             c.register(GroupUnique.NAME, GroupUnique.class, GroupUniqueInstance.class,
                 samplingBuilder(GroupUnique::new));
 
-            c.register(Quantile.NAME, Quantile.class, QuantileInstance.class, new
-                SamplingAggregationDSL<Quantile>(factory) {
+            c.register(Quantile.NAME, Quantile.class, QuantileInstance.class,
+                new SamplingAggregationDSL<Quantile>(factory) {
                     @Override
                     protected Quantile buildWith(
                         final AggregationArguments args, final Optional<Duration> size,
                         final Optional<Duration> extent
                     ) {
-                        final Optional<Double> q =
-                            args.getNext("q", DoubleExpression.class).map
-                                (DoubleExpression::getValue);
-                        final Optional<Double> error =
-                            args.getNext("error", DoubleExpression.class).map
-                                (DoubleExpression::getValue);
+                        final Optional<Double> q = args
+                            .getNext("q", DoubleExpression.class)
+                            .map(DoubleExpression::getValue);
+                        final Optional<Double> error = args
+                            .getNext("error", DoubleExpression.class)
+                            .map(DoubleExpression::getValue);
                         return new Quantile(Optional.empty(), size, extent, q, error);
                     }
                 });
@@ -119,7 +113,7 @@ public class Module implements HeroicModule {
                 args -> new TopK(fetchK(args, IntegerExpression.class).getValue()));
 
             c.register(BottomK.NAME, BottomK.class, BottomKInstance.class,
-                 args -> new BottomK(fetchK(args, IntegerExpression.class).getValue()));
+                args -> new BottomK(fetchK(args, IntegerExpression.class).getValue()));
 
             c.register(AboveK.NAME, AboveK.class, AboveKInstance.class,
                 args -> new AboveK(fetchK(args, DoubleExpression.class).getValue()));
@@ -127,7 +121,6 @@ public class Module implements HeroicModule {
             c.register(BelowK.NAME, BelowK.class, BelowKInstance.class,
                 args -> new BelowK(fetchK(args, DoubleExpression.class).getValue()));
         }
-        // @formatter:on
 
         private <T extends Expression> T fetchK(AggregationArguments args, Class<T> doubleClass) {
             return args

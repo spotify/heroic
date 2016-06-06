@@ -24,9 +24,9 @@ package com.spotify.heroic.metric;
 import com.google.common.collect.ImmutableMap;
 
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -37,22 +37,19 @@ import java.util.stream.Collectors;
  */
 public enum MetricType {
     // @formatter:off
-    POINT(Point.class, "points", Point.comparator()),
-    EVENT(Event.class, "events", Event.comparator()),
-    SPREAD(Spread.class, "spreads", Spread.comparator()),
-    GROUP(MetricGroup.class, "groups", MetricGroup.comparator());
+    POINT(Point.class, "points"),
+    EVENT(Event.class, "events"),
+    SPREAD(Spread.class, "spreads"),
+    GROUP(MetricGroup.class, "groups"),
+    CARDINALITY(Payload.class, "cardinality");
     // @formatter:on
 
     private final Class<? extends Metric> type;
     private final String identifier;
-    private final Comparator<Metric> comparator;
 
-    private MetricType(
-        Class<? extends Metric> type, String identifier, Comparator<Metric> comparator
-    ) {
+    MetricType(Class<? extends Metric> type, String identifier) {
         this.type = type;
         this.identifier = identifier;
-        this.comparator = comparator;
     }
 
     public Class<? extends Metric> type() {
@@ -65,7 +62,7 @@ public enum MetricType {
 
     static final Map<String, MetricType> mapping = ImmutableMap.copyOf(Arrays
         .stream(MetricType.values())
-        .collect(Collectors.toMap((MetricType m) -> m.identifier(), (m) -> m)));
+        .collect(Collectors.toMap(MetricType::identifier, Function.identity())));
 
     public static Optional<MetricType> fromIdentifier(String identifier) {
         return Optional.ofNullable(mapping.get(identifier));
@@ -73,10 +70,6 @@ public enum MetricType {
 
     public boolean isAssignableFrom(MetricType other) {
         return type.isAssignableFrom(other.type);
-    }
-
-    public Comparator<Metric> comparator() {
-        return comparator;
     }
 
     @Override

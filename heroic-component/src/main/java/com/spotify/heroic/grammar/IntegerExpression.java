@@ -37,6 +37,14 @@ public final class IntegerExpression implements Expression {
     private final Context context;
     private final long value;
 
+    public int getValueAsInteger() {
+        if (value > Integer.MAX_VALUE || value < Integer.MIN_VALUE) {
+            throw context.error("cannot be converted to integer");
+        }
+
+        return (int) value;
+    }
+
     @Override
     public <R> R visit(final Visitor<R> visitor) {
         return visitor.visitInteger(this);

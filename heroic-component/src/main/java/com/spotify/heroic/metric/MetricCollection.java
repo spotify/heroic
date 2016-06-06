@@ -116,7 +116,8 @@ public abstract class MetricCollection {
         MetricType.GROUP, GroupCollection::new,
         MetricType.POINT, PointCollection::new,
         MetricType.EVENT, EventCollection::new,
-        MetricType.SPREAD, SpreadCollection::new
+        MetricType.SPREAD, SpreadCollection::new,
+        MetricType.CARDINALITY, CardinalityCollection::new
     );
     // @formatter:on
 
@@ -136,11 +137,15 @@ public abstract class MetricCollection {
         return new SpreadCollection(metrics);
     }
 
+    public static MetricCollection cardinality(List<Payload> metrics) {
+        return new CardinalityCollection(metrics);
+    }
+
     public static MetricCollection build(
         final MetricType key, final List<? extends Metric> metrics
     ) {
         final Function<List<? extends Metric>, MetricCollection> adapter =
-            checkNotNull(adapters.get(key), "applier does not exist for type");
+            checkNotNull(adapters.get(key), "adapter does not exist for type");
         return adapter.apply(metrics);
     }
 
@@ -149,7 +154,7 @@ public abstract class MetricCollection {
     ) {
         final List<Metric> data = ImmutableList.copyOf(Iterators.mergeSorted(
             ImmutableList.copyOf(values.stream().map(Iterable::iterator).iterator()),
-            type.comparator()));
+            Metric.comparator()));
         return build(type, data);
     }
 
@@ -222,6 +227,24 @@ public abstract class MetricCollection {
 
         private List<MetricGroup> adapt() {
             return (List<MetricGroup>) data;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static class CardinalityCollection extends MetricCollection {
+        CardinalityCollection(List<? extends Metric> cardinality) {
+            super(MetricType.CARDINALITY, cardinality);
+        }
+
+        @Override
+        public void updateAggregation(
+            AggregationSession session, Map<String, String> tags, Set<Series> series
+        ) {
+            session.updatePayload(tags, series, adapt());
+        }
+
+        private List<Payload> adapt() {
+            return (List<Payload>) data;
         }
     }
 }

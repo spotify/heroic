@@ -58,8 +58,8 @@ import java.util.Map;
 @TaskUsage("Write a single, or a set of events")
 @TaskName("write")
 public class Write implements ShellTask {
-    private static final TypeReference<Map<String, Object>> PAYLOAD_TYPE =
-        new TypeReference<Map<String, Object>>() {
+    private static final TypeReference<Map<String, String>> PAYLOAD_TYPE =
+        new TypeReference<Map<String, String>>() {
         };
 
     private final IngestionManager ingestion;
@@ -166,7 +166,7 @@ public class Write implements ShellTask {
             final String[] parts = p.split("=");
 
             final long timestamp;
-            final Map<String, Object> payload;
+            final Map<String, String> payload;
 
             if (parts.length == 1) {
                 timestamp = now;

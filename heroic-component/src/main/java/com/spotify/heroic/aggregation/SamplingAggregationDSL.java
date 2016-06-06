@@ -19,29 +19,29 @@
  * under the License.
  */
 
-package com.spotify.heroic.aggregation.simple;
+package com.spotify.heroic.aggregation;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.aggregation.BucketAggregationInstance;
-import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.common.Duration;
+import com.spotify.heroic.grammar.DurationExpression;
 
-public class CountUniqueInstance extends BucketAggregationInstance<CountUniqueBucket> {
-    @JsonCreator
-    public CountUniqueInstance(
-        @JsonProperty("size") final long size, @JsonProperty("extent") final long extent
-    ) {
-        super(size, extent, ALL_TYPES, MetricType.POINT);
+import java.util.Optional;
+
+public abstract class SamplingAggregationDSL<T> extends AbstractAggregationDSL {
+    public SamplingAggregationDSL(AggregationFactory factory) {
+        super(factory);
     }
 
     @Override
-    protected CountUniqueBucket buildBucket(long timestamp) {
-        return new CountUniqueBucket(timestamp);
+    public Aggregation build(final AggregationArguments args) {
+        final Optional<Duration> size =
+            args.getNext("size", DurationExpression.class).map(DurationExpression::toDuration);
+        final Optional<Duration> extent =
+            args.getNext("extent", DurationExpression.class).map(DurationExpression::toDuration);
+
+        return buildWith(args, size, extent);
     }
 
-    @Override
-    protected Point build(CountUniqueBucket bucket) {
-        return new Point(bucket.timestamp(), bucket.count());
-    }
+    protected abstract Aggregation buildWith(
+        AggregationArguments args, Optional<Duration> size, Optional<Duration> extent
+    );
 }
