@@ -99,6 +99,16 @@ public interface Expression {
         return new IntegerExpression(ctx, value);
     }
 
+    static LetExpression let(
+        Context ctx, ReferenceExpression reference, Expression value
+    ) {
+        return new LetExpression(ctx, reference, value);
+    }
+
+    static ReferenceExpression reference(Context ctx, String name) {
+        return new ReferenceExpression(ctx, name);
+    }
+
     static EmptyExpression empty(Context ctx) {
         return new EmptyExpression(ctx);
     }

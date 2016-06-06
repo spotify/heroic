@@ -1,6 +1,7 @@
 package com.spotify.heroic.grammar;
 
-import com.spotify.heroic.aggregation.AggregationFactory;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.filter.AndFilter;
 import com.spotify.heroic.filter.FalseFilter;
 import com.spotify.heroic.filter.Filter;
@@ -13,15 +14,17 @@ import com.spotify.heroic.filter.RegexFilter;
 import com.spotify.heroic.filter.StartsWithFilter;
 import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.metric.MetricType;
-import org.junit.Before;
+import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.tuple.Pair;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
-import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -29,8 +32,10 @@ import static com.spotify.heroic.grammar.Expression.duration;
 import static com.spotify.heroic.grammar.Expression.empty;
 import static com.spotify.heroic.grammar.Expression.function;
 import static com.spotify.heroic.grammar.Expression.integer;
+import static com.spotify.heroic.grammar.Expression.let;
 import static com.spotify.heroic.grammar.Expression.list;
 import static com.spotify.heroic.grammar.Expression.range;
+import static com.spotify.heroic.grammar.Expression.reference;
 import static com.spotify.heroic.grammar.Expression.string;
 import static org.junit.Assert.assertEquals;
 
@@ -39,42 +44,31 @@ public class QueryParserTest {
     @Rule
     public final ExpectedException exception = ExpectedException.none();
 
-    private CoreQueryParser parser;
-    private AggregationFactory aggregations;
-
-    Expression.Scope scope;
-
-    @Before
-    public void setupFilters() {
-        aggregations = Mockito.mock(AggregationFactory.class);
-        parser = new CoreQueryParser();
-        scope = new DefaultScope(10000);
-    }
+    private final CoreQueryParser parser = new CoreQueryParser();
 
     @Test
     public void testString() {
-        assertEquals(string(ctx(0, 2), "foo"), parseExpression("foo"));
-        assertEquals(string(ctx(0, 4), "foo"), parseExpression("\"foo\""));
-        assertEquals(string(ctx(0, 2), "\u4040"), parseExpression("\"\u4040\""));
+        assertEquals(string(cols(0, 2), "foo"), parseExpression("foo"));
+        assertEquals(string(cols(0, 4), "foo"), parseExpression("\"foo\""));
+        assertEquals(string(cols(0, 2), "\u4040"), parseExpression("\"\u4040\""));
 
         // test all possible escape sequences
-        assertEquals(string(ctx(0, 17), "\b\t\n\f\r\"\'\\"),
+        assertEquals(string(cols(0, 17), "\b\t\n\f\r\"\'\\"),
             parseExpression("\"\\b\\t\\n\\f\\r\\\"\\'\\\\\""));
     }
 
     @Test
     public void testStringEscapes() {
-        final String escapes = "btnfr\"'\\";
-        final String references = "\b\t\n\f\r\"\'\\";
+        final List<Pair<String, String>> tests =
+            ImmutableList.of(Pair.of("b", "\b"), Pair.of("t", "\t"), Pair.of("n", "\n"),
+                Pair.of("f", "\f"), Pair.of("r", "\r"), Pair.of("\"", "\""), Pair.of("\'", "'"),
+                Pair.of("\\", "\\"));
 
-        for (int i = 0; i < escapes.length(); i++) {
-            final char c = escapes.charAt(i);
-            final String ref = Character.toString(references.charAt(i));
+        for (final Pair<String, String> test : tests) {
+            final String input = "\"\\" + test.getLeft() + "\"";
+            final String ref = test.getRight();
 
-            final String input = "\"\\" + Character.toString(c) + "\"";
-            final StringExpression s = string(ctx(0, input.length() - 1), ref);
-
-            assertEquals(s, parseExpression(input));
+            assertEquals(string(cols(0, input.length() - 1), ref), parseExpression(input));
         }
     }
 
@@ -83,15 +77,15 @@ public class QueryParserTest {
         for (char c = 0; c < Character.MAX_VALUE; c++) {
             final String input = "\"" + String.format("\\u%04x", (int) c) + "\"";
 
-            assertEquals(string(ctx(0, input.length() - 1), Character.toString(c)),
+            assertEquals(string(cols(0, input.length() - 1), Character.toString(c)),
                 parseExpression(input));
         }
     }
 
     @Test
     public void testList() {
-        final Expression ref =
-            list(ctx(0, 8), integer(ctx(1, 1), 1), integer(ctx(4, 4), 2), integer(ctx(7, 7), 3));
+        final Expression ref = list(cols(0, 8), integer(cols(1, 1), 1), integer(cols(4, 4), 2),
+            integer(cols(7, 7), 3));
 
         assertEquals(ref, parseExpression("[1, 2, 3]"));
         assertEquals(ref, parseExpression("{1, 2, 3}"));
@@ -99,42 +93,43 @@ public class QueryParserTest {
 
     @Test
     public void testFunction1() {
-        assertEquals(function(ctx(0, 11), "average", duration(ctx(8, 10), TimeUnit.HOURS, 30)),
+        assertEquals(function(cols(0, 11), "average", duration(cols(8, 10), TimeUnit.HOURS, 30)),
             parseFunction("average(30H)"));
 
-        assertEquals(function(ctx(0, 7), "sum", duration(ctx(4, 6), TimeUnit.HOURS, 30)),
+        assertEquals(function(cols(0, 7), "sum", duration(cols(4, 6), TimeUnit.HOURS, 30)),
             parseFunction("sum(30H)"));
     }
 
     @Test
     public void testFunction2a() {
-        final FunctionExpression chain = function(ctx(0, 43), "chain",
-            function(ctx(6, 32), "group", list(ctx(12, 17), string(ctx(13, 16), "host")),
-                function(ctx(20, 31), "average", duration(ctx(28, 30), TimeUnit.HOURS, 30))),
-            function(ctx(35, 42), "sum", duration(ctx(39, 41), TimeUnit.HOURS, 30)));
+        final FunctionExpression chain = function(cols(0, 43), "chain",
+            function(cols(6, 32), "group", list(cols(12, 17), string(cols(13, 16), "host")),
+                function(cols(20, 31), "average", duration(cols(28, 30), TimeUnit.HOURS, 30))),
+            function(cols(35, 42), "sum", duration(cols(39, 41), TimeUnit.HOURS, 30)));
 
         assertEquals(chain, parseFunction("chain(group([host], average(30H)), sum(30H))"));
     }
 
     @Test
     public void testFunction2b() {
-        final FunctionExpression chain = function(ctx(0, 30), "chain",
-            function(ctx(0, 19), "group", string(ctx(16, 19), "host"),
-                function(ctx(0, 11), "average", duration(ctx(8, 10), TimeUnit.HOURS, 30))),
-            function(ctx(23, 30), "sum", duration(ctx(27, 29), TimeUnit.HOURS, 30)));
+        final FunctionExpression chain = function(cols(0, 30), "chain",
+            function(cols(0, 19), "group", string(cols(16, 19), "host"),
+                function(cols(0, 11), "average", duration(cols(8, 10), TimeUnit.HOURS, 30))),
+            function(cols(23, 30), "sum", duration(cols(27, 29), TimeUnit.HOURS, 30)));
 
         assertEquals(chain, parseFunction("average(30H) by host | sum(30H)"));
     }
 
     @Test
     public void testFunction3() {
-        final FunctionExpression arg1 = function(ctx(0, 14), "group", string(ctx(11, 14), "host"),
-            function(ctx(0, 6), "average"));
+        final FunctionExpression arg1 = function(cols(0, 14), "group", string(cols(11, 14), "host"),
+            function(cols(0, 6), "average"));
 
-        final FunctionExpression arg2 = function(ctx(18, 28), "group", string(ctx(25, 28), "site"),
-            function(ctx(18, 20), "sum"));
+        final FunctionExpression arg2 =
+            function(cols(18, 28), "group", string(cols(25, 28), "site"),
+                function(cols(18, 20), "sum"));
 
-        assertEquals(function(ctx(0, 28), "chain", arg1, arg2),
+        assertEquals(function(cols(0, 28), "chain", arg1, arg2),
             parseFunction("average by host | sum by site"));
     }
 
@@ -142,20 +137,20 @@ public class QueryParserTest {
     public void testFunction4() {
         final FunctionExpression parsed = parseFunction("(average by host | sum) by site");
 
-        final Expression arg1 = string(ctx(27, 30), "site");
+        final Expression arg1 = string(cols(27, 30), "site");
 
-        final Expression arg2 = function(ctx(1, 21), "chain",
-            function(ctx(1, 15), "group", string(ctx(12, 15), "host"),
-                function(ctx(1, 7), "average")), string(ctx(19, 21), "sum"));
+        final Expression arg2 = function(cols(1, 21), "chain",
+            function(cols(1, 15), "group", string(cols(12, 15), "host"),
+                function(cols(1, 7), "average")), string(cols(19, 21), "sum"));
 
         // test grouping
-        assertEquals(function(ctx(0, 30), "group", arg1, arg2), parsed);
+        assertEquals(function(cols(0, 30), "group", arg1, arg2), parsed);
     }
 
     @Test
     public void testByAll() {
         final FunctionExpression reference =
-            function(ctx(0, 11), "group", empty(ctx(0, 11)), function(ctx(0, 6), "average"));
+            function(cols(0, 11), "group", empty(cols(0, 11)), function(cols(0, 6), "average"));
         assertEquals(reference, parseExpression("average by *"));
     }
 
@@ -208,13 +203,15 @@ public class QueryParserTest {
             parser.parseExpression("{2014-01-01 00:00:00.000} + {00:01}").eval(scope);
 
         final InstantExpression expected =
-            new InstantExpression(ctx(0, 34), Instant.parse("2014-01-01T00:01:00.000Z"));
+            new InstantExpression(cols(0, 34), Instant.parse("2014-01-01T00:01:00.000Z"));
 
         assertEquals(expected, e);
     }
 
     @Test
     public void testArithmetics() {
+        final DefaultScope scope = new DefaultScope(10000);
+
         // numbers
         assertEquals(3L,
             parseExpression("1 + 2 + 3 - 3").eval(scope).cast(IntegerExpression.class).getValue());
@@ -224,39 +221,53 @@ public class QueryParserTest {
             parseExpression("foo + bar").eval(scope).cast(StringExpression.class).getString());
 
         // two lists
-        assertEquals(list(ctx(0, 12), string(ctx(1, 3), "foo"), string(ctx(9, 11), "bar")),
+        assertEquals(list(cols(0, 12), string(cols(1, 3), "foo"), string(cols(9, 11), "bar")),
             parseExpression("[foo] + [bar]").eval(scope).cast(ListExpression.class));
 
         // durations
-        assertEquals(duration(ctx(0, 6), TimeUnit.MINUTES, 55),
+        assertEquals(duration(cols(0, 6), TimeUnit.MINUTES, 55),
             parseExpression("1H - 5m").eval(scope));
-        assertEquals(duration(ctx(0, 6), TimeUnit.HOURS, 7),
+        assertEquals(duration(cols(0, 6), TimeUnit.HOURS, 7),
             parseExpression("3H + 4H").eval(scope));
-        assertEquals(duration(ctx(0, 8), TimeUnit.MINUTES, 59),
+        assertEquals(duration(cols(0, 8), TimeUnit.MINUTES, 59),
             parseExpression("119m - 1H").eval(scope));
-        assertEquals(duration(ctx(0, 17), TimeUnit.MINUTES, 60 * 11),
+        assertEquals(duration(cols(0, 17), TimeUnit.MINUTES, 60 * 11),
             parseExpression("1H + 1m - 1m + 10H").eval(scope));
     }
 
     @Test
     public void testFrom() {
+        final DefaultScope scope = new DefaultScope(10000);
+
         checkFrom(MetricType.POINT, Optional.empty(), parseFrom("from points"));
         checkFrom(MetricType.EVENT, Optional.empty(), parseFrom("from events"));
 
         final Optional<Expression> r1 =
-            Optional.of(range(ctx(11, 24), integer(ctx(12, 12), 0), integer(ctx(15, 23), 1000)));
+            Optional.of(range(cols(11, 24), integer(col(12), 0), integer(cols(15, 23), 1000)));
 
         // absolute
         checkFrom(MetricType.POINT, r1, parseFrom("from points(0, 400 + 600)").eval(scope));
 
         final Optional<Expression> r2 = Optional.of(
-            range(ctx(11, 18), integer(ctx(11, 18), 9000), integer(ctx(11, 18), 10000)));
+            range(cols(11, 18), integer(cols(11, 18), 9000), integer(cols(11, 18), 10000)));
 
         // relative
         checkFrom(MetricType.POINT, r2, parseFrom("from points(1000ms)").eval(scope));
     }
 
-    Context ctx(int start, int end) {
+    @Test
+    public void testLetStatement() {
+        final Expression expected =
+            let(cols(0, 9), reference(cols(4, 5), "a"), query(col(9)).build());
+
+        assertEquals(ImmutableList.of(expected), parser.parse("let $a = *"));
+    }
+
+    Context col(int col) {
+        return new Context(0, col, 0, col);
+    }
+
+    Context cols(int start, int end) {
         return new Context(0, start, 0, end);
     }
 
@@ -288,39 +299,53 @@ public class QueryParserTest {
         return parser.parseFrom(input);
     }
 
-    /*
-    TO BE PORTED TESTS:
-
-    @Test
-    public void testMultipleStatements() {
-        final StringBuilder query = new StringBuilder();
-        query.append("let $a = * from points(1d);\n");
-        query.append("let $b = * from points($now - 2d, $now - 1d);\n");
-        query.append("$a + $b as key = \"value\";");
-
-        // @formatter:off
-        final List<Expression> expected = new ArrayList<>();
-
-        expected.add(let(reference("a"),
-                query(empty(), of(MetricType.POINT),
-                    of(range(
-                        minus(reference("now"),
-                            duration(TimeUnit.DAYS, 1)),
-                        reference("now"))), empty(), ImmutableMap.of(), ImmutableMap.of())));
-        expected.add(
-            let(reference("b"),
-                query(empty(), of(MetricType.POINT),
-                    of(range(
-                        minus(reference("now"), duration(TimeUnit.DAYS, 2)),
-                        minus(reference("now"), duration(TimeUnit.DAYS, 1)))),
-                    empty(), ImmutableMap.of(), ImmutableMap.of())));
-
-        expected.add(
-            query(of(plus(reference("a"), reference("b"))), empty(), empty(), empty(),
-                ImmutableMap.of(), ImmutableMap.of("key", string("value"))));
-        // @formatter:on
-
-        assertEquals(expected, parser.parse(query.toString()));
+    static QueryBuilder query(Context ctx) {
+        return new QueryBuilder(ctx);
     }
-    */
+
+    @RequiredArgsConstructor
+    static class QueryBuilder {
+        private final Context context;
+
+        private Optional<Expression> select = Optional.empty();
+        private Optional<MetricType> source = Optional.empty();
+        private Optional<RangeExpression> range = Optional.empty();
+        private Optional<Filter> filter = Optional.empty();
+        private Map<String, Expression> with = ImmutableMap.of();
+        private Map<String, Expression> as = ImmutableMap.of();
+
+        public QueryBuilder select(final Expression select) {
+            this.select = Optional.of(select);
+            return this;
+        }
+
+        public QueryBuilder source(final MetricType source) {
+            this.source = Optional.of(source);
+            return this;
+        }
+
+        public QueryBuilder range(final RangeExpression range) {
+            this.range = Optional.of(range);
+            return this;
+        }
+
+        public QueryBuilder filter(final Filter filter) {
+            this.filter = Optional.of(filter);
+            return this;
+        }
+
+        public QueryBuilder with(final Map<String, Expression> with) {
+            this.with = with;
+            return this;
+        }
+
+        public QueryBuilder as(final Map<String, Expression> as) {
+            this.as = as;
+            return this;
+        }
+
+        public QueryExpression build() {
+            return new QueryExpression(context, select, source, range, filter, with, as);
+        }
+    }
 }

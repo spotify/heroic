@@ -79,10 +79,6 @@ public class Context {
     }
 
     public String toStringCol() {
-        if (col != colEnd) {
-            return col + "-" + colEnd;
-        }
-
-        return Integer.toString(col);
+        return col + "-" + colEnd;
     }
 }
