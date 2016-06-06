@@ -22,7 +22,7 @@
 package com.spotify.heroic.filter;
 
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.grammar.QueryParser;
+import com.spotify.heroic.grammar.DSL;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -70,6 +70,6 @@ public class MatchKeyFilter implements Filter {
 
     @Override
     public String toDSL() {
-        return "$key = " + QueryParser.escapeString(value);
+        return "$key = " + DSL.dumpString(value);
     }
 }

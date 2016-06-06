@@ -22,7 +22,7 @@
 package com.spotify.heroic.filter;
 
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.grammar.QueryParser;
+import com.spotify.heroic.grammar.DSL;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -81,6 +81,6 @@ public class RegexFilter implements Filter {
 
     @Override
     public String toDSL() {
-        return QueryParser.escapeString(tag) + " ~ " + QueryParser.escapeString(value);
+        return DSL.dumpString(tag) + " ~ " + DSL.dumpString(value);
     }
 }

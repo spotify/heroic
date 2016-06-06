@@ -25,10 +25,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
+import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
+import com.spotify.heroic.grammar.DSL;
 import eu.toolchain.serializer.AutoSerialize;
 import lombok.ToString;
 
@@ -221,5 +223,15 @@ public class Series implements Comparable<Series> {
         }
 
         return 0;
+    }
+
+    public static final Joiner TAGS_JOINER = Joiner.on(", ");
+
+    public String toDSL() {
+        final Iterator<String> tags =
+            this.tags.entrySet().stream().map(e -> DSL.dumpString(e.getKey()) + "=" +
+                DSL.dumpString(e.getValue())).iterator();
+
+        return DSL.dumpString(key) + " " + "{" + TAGS_JOINER.join(tags) + "}";
     }
 }

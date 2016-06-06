@@ -67,6 +67,6 @@ public final class StringExpression implements Expression {
 
     @Override
     public String toRepr() {
-        return QueryParser.escapeString(string);
+        return DSL.dumpString(string);
     }
 }
