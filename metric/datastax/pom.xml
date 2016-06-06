@@ -29,11 +29,6 @@
     </dependency>
 
     <dependency>
-      <groupId>eu.toolchain.async</groupId>
-      <artifactId>tiny-async-core</artifactId>
-    </dependency>
-
-    <dependency>
       <groupId>com.datastax.cassandra</groupId>
       <artifactId>cassandra-driver-core</artifactId>
       <classifier>shaded</classifier>
