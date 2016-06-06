@@ -91,26 +91,34 @@ public class MetadataFindSeries implements ShellTask {
 
         final Consumer<Series> printer;
 
-        if (!params.analytics) {
-            printer = series -> {
-                try {
-                    io.out().println(mapper.writeValueAsString(series));
-                } catch (final Exception e) {
-                    throw new RuntimeException(e);
-                }
-            };
-        } else {
-            printer = series -> {
-                try {
-                    io
-                        .out()
-                        .println(mapper.writeValueAsString(
-                            new AnalyticsSeries(series.getHashCode().toString(),
-                                mapper.writeValueAsString(series))));
-                } catch (final Exception e) {
-                    throw new RuntimeException(e);
-                }
-            };
+        switch (params.format) {
+            case "dsl":
+                printer = series -> io.out().println(series.toDSL());
+                break;
+            case "analytics":
+                printer = series -> {
+                    try {
+                        io
+                            .out()
+                            .println(mapper.writeValueAsString(
+                                new AnalyticsSeries(series.getHashCode().toString(),
+                                    mapper.writeValueAsString(series))));
+                    } catch (final Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                };
+                break;
+            case "json":
+                printer = series -> {
+                    try {
+                        io.out().println(mapper.writeValueAsString(series));
+                    } catch (final Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                };
+                break;
+            default:
+                throw new IllegalArgumentException("bad format: " + params.format);
         }
 
         final ResolvableFuture<Void> future = async.future();
@@ -159,8 +167,9 @@ public class MetadataFindSeries implements ShellTask {
         @Getter
         private List<String> query = new ArrayList<>();
 
-        @Option(name = "--analytics", usage = "Format the output according to the analytics schema")
-        private boolean analytics = false;
+        @Option(name = "-F", aliases = {"--format"},
+            usage = "Format of the output (available: json, analytics, dsl) (default: dsl)")
+        private String format = "dsl";
     }
 
     @Data
