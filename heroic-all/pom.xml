@@ -68,6 +68,10 @@
       <groupId>com.spotify.heroic.aggregation</groupId>
       <artifactId>heroic-aggregation-simple</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.spotify.heroic.aggregation</groupId>
+      <artifactId>heroic-aggregation-cardinality</artifactId>
+    </dependency>
 
     <!-- consumer implementations -->
     <dependency>

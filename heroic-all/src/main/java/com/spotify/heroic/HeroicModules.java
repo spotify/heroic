@@ -60,6 +60,7 @@ public class HeroicModules {
         new com.spotify.heroic.cluster.discovery.simple.Module(),
 
         new com.spotify.heroic.aggregation.simple.Module(),
+        new com.spotify.heroic.aggregation.cardinality.Module(),
 
         new com.spotify.heroic.consumer.kafka.Module(),
 

@@ -29,6 +29,7 @@
     <module>suggest/memory</module>
     <module>discovery/simple</module>
     <module>aggregation/simple</module>
+    <module>aggregation/cardinality</module>
     <module>consumer/kafka</module>
     <module>consumer/collectd</module>
     <module>rpc/nativerpc</module>
@@ -340,6 +341,11 @@
       <dependency>
         <groupId>com.spotify.heroic.aggregation</groupId>
         <artifactId>heroic-aggregation-simple</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.spotify.heroic.aggregation</groupId>
+        <artifactId>heroic-aggregation-cardinality</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
