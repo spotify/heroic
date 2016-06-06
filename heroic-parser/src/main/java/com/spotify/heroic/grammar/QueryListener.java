@@ -431,7 +431,7 @@ public class QueryListener extends HeroicQueryBaseListener {
             return;
         }
 
-        push(new StringExpression(c, parseQuotedString(child.getText())));
+        push(new StringExpression(c, parseQuotedString(c, child.getText())));
     }
 
     @Override
@@ -648,16 +648,30 @@ public class QueryListener extends HeroicQueryBaseListener {
         throw ctx.error("illegal unit: " + text);
     }
 
-    private String parseQuotedString(String text) {
+    private String parseQuotedString(Context ctx, String text) {
         int i = 0;
         boolean escapeNext = false;
+        int unicodeEscape = 0;
+        char unicodeChar = 0;
 
         final StringBuilder builder = new StringBuilder();
 
         while (i < text.length()) {
             final char c = text.charAt(i++);
 
+            // skip first and last
             if (i == 1 || i == text.length()) {
+                continue;
+            }
+
+            if (unicodeEscape > 0) {
+                unicodeEscape--;
+                unicodeChar += (hexDigit(c) << (unicodeEscape * 4));
+
+                if (unicodeEscape == 0) {
+                    builder.append(unicodeChar);
+                }
+
                 continue;
             }
 
@@ -672,6 +686,8 @@ public class QueryListener extends HeroicQueryBaseListener {
                     builder.append("\f");
                 } else if (c == 'r') {
                     builder.append("\r");
+                } else if (c == 'u') {
+                    unicodeEscape = 4;
                 } else {
                     builder.append(c);
                 }
@@ -688,7 +704,27 @@ public class QueryListener extends HeroicQueryBaseListener {
             builder.append(c);
         }
 
+        if (escapeNext) {
+            throw ctx.error("expected escape sequence");
+        }
+
+        if (unicodeEscape > 0) {
+            throw ctx.error("open unicode escape sequence");
+        }
+
         return builder.toString();
+    }
+
+    private int hexDigit(final char c) {
+        if (c >= 'a' && c <= 'f') {
+            return c - 'a' + 10;
+        }
+
+        if (c >= '0' && c <= '9') {
+            return c - '0';
+        }
+
+        throw new IllegalArgumentException("bad character: " + c);
     }
 
     public <T> T pop(Class<T> type) {

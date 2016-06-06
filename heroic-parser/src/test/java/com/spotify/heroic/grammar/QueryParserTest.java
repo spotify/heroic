@@ -52,6 +52,43 @@ public class QueryParserTest {
     }
 
     @Test
+    public void testString() {
+        assertEquals(string(ctx(0, 2), "foo"), parseExpression("foo"));
+        assertEquals(string(ctx(0, 4), "foo"), parseExpression("\"foo\""));
+        assertEquals(string(ctx(0, 2), "\u4040"), parseExpression("\"\u4040\""));
+
+        // test all possible escape sequences
+        assertEquals(string(ctx(0, 17), "\b\t\n\f\r\"\'\\"),
+            parseExpression("\"\\b\\t\\n\\f\\r\\\"\\'\\\\\""));
+    }
+
+    @Test
+    public void testStringEscapes() {
+        final String escapes = "btnfr\"'\\";
+        final String references = "\b\t\n\f\r\"\'\\";
+
+        for (int i = 0; i < escapes.length(); i++) {
+            final char c = escapes.charAt(i);
+            final String ref = Character.toString(references.charAt(i));
+
+            final String input = "\"\\" + Character.toString(c) + "\"";
+            final StringExpression s = string(ctx(0, input.length() - 1), ref);
+
+            assertEquals(s, parseExpression(input));
+        }
+    }
+
+    @Test
+    public void testStringUnicodeEscape() {
+        for (char c = 0; c < Character.MAX_VALUE; c++) {
+            final String input = "\"" + String.format("\\u%04x", (int) c) + "\"";
+
+            assertEquals(string(ctx(0, input.length() - 1), Character.toString(c)),
+                parseExpression(input));
+        }
+    }
+
+    @Test
     public void testList() {
         final Expression ref =
             list(ctx(0, 8), integer(ctx(1, 1), 1), integer(ctx(4, 4), 2), integer(ctx(7, 7), 3));
