@@ -28,6 +28,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.hash.HashCode;
+import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import com.spotify.heroic.grammar.DSL;
@@ -45,6 +46,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 @AutoSerialize
 @ToString(of = {"key", "tags"})
 public class Series implements Comparable<Series> {
+    static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
+
     static final SortedMap<String, String> EMPTY_TAGS = ImmutableSortedMap.<String, String>of();
     static final String EMPTY_STRING = "";
 
@@ -81,7 +84,7 @@ public class Series implements Comparable<Series> {
     }
 
     private HashCode generateHash() {
-        final Hasher hasher = Hashing.murmur3_128().newHasher();
+        final Hasher hasher = HASH_FUNCTION.newHasher();
 
         if (key != null) {
             hasher.putString(key, Charsets.UTF_8);
