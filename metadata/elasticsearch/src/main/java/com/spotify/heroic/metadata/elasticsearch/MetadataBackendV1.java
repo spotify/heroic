@@ -51,6 +51,7 @@ import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.DeleteSeries;
 import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindSeries;
+import com.spotify.heroic.metadata.FindSeriesIds;
 import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.WriteMetadata;
@@ -60,6 +61,7 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
+import eu.toolchain.async.Transform;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
@@ -101,6 +103,8 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 import static org.elasticsearch.index.query.FilterBuilders.andFilter;
 import static org.elasticsearch.index.query.FilterBuilders.boolFilter;
@@ -115,11 +119,8 @@ import static org.elasticsearch.index.query.FilterBuilders.termFilter;
 @ToString(of = {"connection"})
 public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
     implements MetadataBackend, LifeCycles {
-    // private static final TimeValue TIMEOUT = TimeValue.timeValueMillis(10000);
     private static final TimeValue SCROLL_TIME = TimeValue.timeValueMillis(5000);
     private static final int SCROLL_SIZE = 1000;
-
-    public static final String TEMPLATE_NAME = "heroic";
 
     private final Groups groups;
     private final MetadataBackendReporter reporter;
@@ -167,6 +168,10 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
         return ElasticsearchUtils.toSeries(hit.getSource());
     }
 
+    private String toId(SearchHit source) {
+        return source.getId();
+    }
+
     @Override
     public AsyncFuture<Void> configure() {
         return doto(c -> c.configure());
@@ -199,7 +204,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
         return doto(c -> {
             final Series series = request.getSeries();
             final DateRange range = request.getRange();
-            final String id = Integer.toHexString(series.hashCode());
+            final String id = series.hash();
 
             final String[] indices = c.writeIndices(range);
 
@@ -251,21 +256,17 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
 
     @Override
     public AsyncFuture<FindSeries> findSeries(final FindSeries.Request request) {
-        return doto(c -> {
-            final OptionalLimit limit = request.getLimit();
-            final FilterBuilder f = CTX.filter(request.getFilter());
+        return entries(request.getFilter(), request.getLimit(), request.getRange(), this::toSeries,
+            l -> FindSeries.of(l.getSet(), l.isLimited()), builder -> {
+            });
+    }
 
-            final SearchRequestBuilder builder = c
-                .search(request.getRange(), ElasticsearchUtils.TYPE_METADATA)
-                .setScroll(SCROLL_TIME)
-                .setSearchType(SearchType.SCAN);
-
-            builder.setSize(limit.asMaxInteger(SCROLL_SIZE));
-
-            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
-
-            return scrollOverSeries(c, builder, request.getLimit());
-        });
+    @Override
+    public AsyncFuture<FindSeriesIds> findSeriesIds(final FindSeriesIds.Request request) {
+        return entries(request.getFilter(), request.getLimit(), request.getRange(), this::toId,
+            l -> FindSeriesIds.of(l.getSet(), l.isLimited()), builder -> {
+                builder.setFetchSource(false);
+            });
     }
 
     @Override
@@ -369,6 +370,28 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
         }
 
         return future.lazyTransform(v -> configure());
+    }
+
+    private <T, O> AsyncFuture<O> entries(
+        final Filter filter, final OptionalLimit limit, final DateRange range,
+        final Function<SearchHit, T> converter, final Transform<LimitedSet<T>, O> collector,
+        final Consumer<SearchRequestBuilder> modifier
+    ) {
+        return doto(c -> {
+            final FilterBuilder f = CTX.filter(filter);
+
+            final SearchRequestBuilder builder = c
+                .search(range, ElasticsearchUtils.TYPE_METADATA)
+                .setScroll(SCROLL_TIME)
+                .setSearchType(SearchType.SCAN);
+
+            builder.setSize(limit.asMaxInteger(SCROLL_SIZE));
+            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+
+            modifier.accept(builder);
+
+            return scrollEntries(c, builder, limit, converter).directTransform(collector);
+        });
     }
 
     private AsyncFuture<Void> stop() {

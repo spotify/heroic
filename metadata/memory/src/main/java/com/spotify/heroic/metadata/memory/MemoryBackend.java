@@ -33,6 +33,9 @@ import com.spotify.heroic.metadata.DeleteSeries;
 import com.spotify.heroic.metadata.Entries;
 import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindSeries;
+import com.spotify.heroic.metadata.FindSeriesIds;
+import com.spotify.heroic.metadata.FindSeriesIdsStream;
+import com.spotify.heroic.metadata.FindSeriesStream;
 import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.WriteMetadata;
@@ -46,6 +49,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @MemoryScope
@@ -115,6 +119,44 @@ public class MemoryBackend implements MetadataBackend {
             ImmutableSet.copyOf(lookup(request.getFilter(), limit.add(1)).iterator());
 
         return async.resolved(FindSeries.of(limit.limitSet(s), limit.isGreater(s.size())));
+    }
+
+    @Override
+    public AsyncObservable<FindSeriesStream> findSeriesStream(
+        final FindSeries.Request request
+    ) {
+        return observer -> {
+            final OptionalLimit limit = request.getLimit();
+
+            final FindSeriesStream result = FindSeriesStream.of(
+                lookup(request.getFilter(), limit.add(1)).collect(Collectors.toSet()));
+
+            observer.observe(result).onDone(observer.onDone());
+        };
+    }
+
+    @Override
+    public AsyncFuture<FindSeriesIds> findSeriesIds(final FindSeriesIds.Request request) {
+        final OptionalLimit limit = request.getLimit();
+
+        final Set<String> s =
+            ImmutableSet.copyOf(lookup(request.getFilter(), limit).map(Series::hash).iterator());
+
+        return async.resolved(FindSeriesIds.of(limit.limitSet(s), limit.isGreater(s.size())));
+    }
+
+    @Override
+    public AsyncObservable<FindSeriesIdsStream> findSeriesIdsStream(
+        final FindSeriesIds.Request request
+    ) {
+        return observer -> {
+            final OptionalLimit limit = request.getLimit();
+
+            final FindSeriesIdsStream result = FindSeriesIdsStream.of(
+                lookup(request.getFilter(), limit).map(Series::hash).collect(Collectors.toSet()));
+
+            observer.observe(result).onDone(observer.onDone());
+        };
     }
 
     @Override

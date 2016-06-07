@@ -50,6 +50,7 @@ import com.spotify.heroic.shell.task.MetadataDelete;
 import com.spotify.heroic.shell.task.MetadataEntries;
 import com.spotify.heroic.shell.task.MetadataFetch;
 import com.spotify.heroic.shell.task.MetadataFindSeries;
+import com.spotify.heroic.shell.task.MetadataFindSeriesIds;
 import com.spotify.heroic.shell.task.MetadataLoad;
 import com.spotify.heroic.shell.task.MetadataMigrate;
 import com.spotify.heroic.shell.task.MetadataTags;
@@ -119,6 +120,7 @@ public final class Tasks {
         shellTask(MetadataCount::setup, MetadataCount.class);
         shellTask(MetadataEntries::setup, MetadataEntries.class);
         shellTask(MetadataFindSeries::setup, MetadataFindSeries.class);
+        shellTask(MetadataFindSeriesIds::setup, MetadataFindSeriesIds.class);
         shellTask(MetadataMigrate::setup, MetadataMigrate.class);
         shellTask(MetadataLoad::setup, MetadataLoad.class);
         shellTask(SuggestTag::setup, SuggestTag.class);

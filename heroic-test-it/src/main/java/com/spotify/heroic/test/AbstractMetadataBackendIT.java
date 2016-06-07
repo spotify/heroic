@@ -36,6 +36,7 @@ import com.spotify.heroic.filter.MatchKeyFilter;
 import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.FindSeries;
+import com.spotify.heroic.metadata.FindSeriesIds;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManagerModule;
 import com.spotify.heroic.metadata.MetadataModule;
@@ -139,6 +140,15 @@ public abstract class AbstractMetadataBackendIT {
 
         final CountSeries result = backend.countSeries(f).get();
         assertEquals(2L, result.getCount());
+    }
+
+    @Test
+    public void findSeriesIdsTest() throws Exception {
+        final FindSeriesIds.Request f =
+            new FindSeriesIds.Request(not(matchKey(s2.getKey())), range, OptionalLimit.empty());
+
+        final FindSeriesIds result = backend.findSeriesIds(f).get();
+        assertEquals(ImmutableSet.of(s1.hash(), s3.hash()), result.getIds());
     }
 
     private AsyncFuture<Void> writeSeries(

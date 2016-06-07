@@ -53,6 +53,14 @@ public interface MetadataBackend extends Grouped, Initializing, Collected {
         return AsyncObservable.empty();
     }
 
+    AsyncFuture<FindSeriesIds> findSeriesIds(FindSeriesIds.Request request);
+
+    default AsyncObservable<FindSeriesIdsStream> findSeriesIdsStream(
+        FindSeriesIds.Request request
+    ) {
+        return AsyncObservable.empty();
+    }
+
     AsyncFuture<CountSeries> countSeries(CountSeries.Request request);
 
     AsyncFuture<DeleteSeries> deleteSeries(DeleteSeries.Request request);

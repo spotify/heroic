@@ -31,6 +31,7 @@ import com.spotify.heroic.metadata.DeleteSeries;
 import com.spotify.heroic.metadata.Entries;
 import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindSeries;
+import com.spotify.heroic.metadata.FindSeriesIds;
 import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.WriteMetadata;
@@ -48,6 +49,7 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
 
     private final FutureReporter findTags;
     private final FutureReporter findSeries;
+    private final FutureReporter findSeriesIds;
     private final FutureReporter countSeries;
     private final FutureReporter deleteSeries;
     private final FutureReporter findKeys;
@@ -68,6 +70,8 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
             base.tagged("what", "find-tags", "unit", Units.QUERY));
         findSeries = new SemanticFutureReporter(registry,
             base.tagged("what", "find-series", "unit", Units.QUERY));
+        findSeriesIds = new SemanticFutureReporter(registry,
+            base.tagged("what", "find-series-ids", "unit", Units.QUERY));
         countSeries = new SemanticFutureReporter(registry,
             base.tagged("what", "count-series", "unit", Units.QUERY));
         deleteSeries = new SemanticFutureReporter(registry,
@@ -142,6 +146,13 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
         @Override
         public AsyncFuture<FindSeries> findSeries(final FindSeries.Request request) {
             return delegate.findSeries(request).onDone(findSeries.setup());
+        }
+
+        @Override
+        public AsyncFuture<FindSeriesIds> findSeriesIds(
+            final FindSeriesIds.Request request
+        ) {
+            return delegate.findSeriesIds(request).onDone(findSeriesIds.setup());
         }
 
         @Override

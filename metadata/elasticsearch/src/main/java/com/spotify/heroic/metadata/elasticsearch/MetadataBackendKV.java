@@ -51,6 +51,8 @@ import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.DeleteSeries;
 import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindSeries;
+import com.spotify.heroic.metadata.FindSeriesIds;
+import com.spotify.heroic.metadata.FindSeriesIdsStream;
 import com.spotify.heroic.metadata.FindSeriesStream;
 import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.MetadataBackend;
@@ -60,6 +62,7 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
+import eu.toolchain.async.Transform;
 import lombok.ToString;
 import org.apache.commons.lang3.tuple.Pair;
 import org.elasticsearch.action.count.CountRequestBuilder;
@@ -89,6 +92,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static org.elasticsearch.index.query.FilterBuilders.andFilter;
@@ -231,53 +236,35 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     }
 
     @Override
-    public AsyncFuture<FindSeries> findSeries(final FindSeries.Request filter) {
-        return doto(c -> {
-            final OptionalLimit limit = filter.getLimit();
-            final FilterBuilder f = filter(filter.getFilter());
-
-            final SearchRequestBuilder builder = c
-                .search(filter.getRange(), TYPE_METADATA)
-                .setScroll(SCROLL_TIME)
-                .setSearchType(SearchType.SCAN);
-
-            builder.setSize(limit.asMaxInteger(SCROLL_SIZE));
-            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
-
-            return scrollOverSeries(c, builder, filter.getLimit());
-        });
+    public AsyncFuture<FindSeries> findSeries(final FindSeries.Request request) {
+        return entries(request.getFilter(), request.getLimit(), request.getRange(), this::toSeries,
+            l -> FindSeries.of(l.getSet(), l.isLimited()), builder -> {
+            });
     }
 
     @Override
-    public AsyncObservable<FindSeriesStream> findSeriesStream(final FindSeries.Request filter) {
-        final OptionalLimit limit = filter.getLimit();
-        final FilterBuilder f = filter(filter.getFilter());
-
-        return observer -> connection.doto(c -> {
-            final SearchRequestBuilder builder = c
-                .search(filter.getRange(), TYPE_METADATA)
-                .setScroll(SCROLL_TIME)
-                .setSearchType(SearchType.SCAN);
-
-            builder.setSize(limit.asMaxInteger(SCROLL_SIZE));
-            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
-
-            return bind(builder.execute()).lazyTransform((initial) -> {
-                if (initial.getScrollId() == null) {
-                    return async.resolved();
-                }
-
-                final String scrollId = initial.getScrollId();
-
-                final Supplier<AsyncFuture<SearchResponse>> scroller =
-                    () -> bind(c.prepareSearchScroll(scrollId).setScroll(SCROLL_TIME).execute());
-
-                return scroller
-                    .get()
-                    .lazyTransform(new ScrollTransformStream(limit, scroller,
-                        series -> observer.observe(new FindSeriesStream(series))));
+    public AsyncObservable<FindSeriesStream> findSeriesStream(final FindSeries.Request request) {
+        return entriesStream(request.getLimit(), request.getFilter(), request.getRange(),
+            this::toSeries, FindSeriesStream::of, builder -> {
             });
-        }).onDone(observer.onDone());
+    }
+
+    @Override
+    public AsyncFuture<FindSeriesIds> findSeriesIds(final FindSeriesIds.Request request) {
+        return entries(request.getFilter(), request.getLimit(), request.getRange(), this::toId,
+            l -> FindSeriesIds.of(l.getSet(), l.isLimited()), builder -> {
+                builder.setFetchSource(false);
+            });
+    }
+
+    @Override
+    public AsyncObservable<FindSeriesIdsStream> findSeriesIdsStream(
+        final FindSeriesIds.Request request
+    ) {
+        return entriesStream(request.getLimit(), request.getFilter(), request.getRange(),
+            this::toId, FindSeriesIdsStream::of, builder -> {
+                builder.setFetchSource(false);
+            });
     }
 
     @Override
@@ -341,6 +328,68 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         final Iterator<Map.Entry<String, String>> tags =
             ((List<String>) source.get(TAGS)).stream().map(this::buildTag).iterator();
         return Series.of(key, tags);
+    }
+
+    private <T, O> AsyncFuture<O> entries(
+        final Filter filter, final OptionalLimit limit, final DateRange range,
+        final Function<SearchHit, T> converter, final Transform<LimitedSet<T>, O> collector,
+        final Consumer<SearchRequestBuilder> modifier
+    ) {
+        final FilterBuilder f = filter(filter);
+
+        return doto(c -> {
+            final SearchRequestBuilder builder = c
+                .search(range, TYPE_METADATA)
+                .setScroll(SCROLL_TIME)
+                .setSearchType(SearchType.SCAN);
+
+            builder.setSize(limit.asMaxInteger(SCROLL_SIZE));
+            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+
+            modifier.accept(builder);
+
+            return scrollEntries(c, builder, limit, converter).directTransform(collector);
+        });
+    }
+
+    private <T, O> AsyncObservable<O> entriesStream(
+        final OptionalLimit limit, final Filter f, final DateRange range,
+        final Function<SearchHit, T> converter, final Function<Set<T>, O> collector,
+        final Consumer<SearchRequestBuilder> modifier
+    ) {
+        final FilterBuilder filter = filter(f);
+
+        return observer -> connection.doto(c -> {
+            final SearchRequestBuilder builder = c
+                .search(range, TYPE_METADATA)
+                .setScroll(SCROLL_TIME)
+                .setSearchType(SearchType.SCAN);
+
+            builder.setSize(limit.asMaxInteger(SCROLL_SIZE));
+            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), filter));
+
+            modifier.accept(builder);
+
+            return bind(builder.execute()).lazyTransform((initial) -> {
+                if (initial.getScrollId() == null) {
+                    return async.resolved();
+                }
+
+                final String scrollId = initial.getScrollId();
+
+                final Supplier<AsyncFuture<SearchResponse>> scroller =
+                    () -> bind(c.prepareSearchScroll(scrollId).setScroll(SCROLL_TIME).execute());
+
+                return scroller
+                    .get()
+                    .lazyTransform(new ScrollTransformStream<>(limit, scroller,
+                        set -> observer.observe(collector.apply(set)), converter));
+            });
+        }).onDone(observer.onDone());
+    }
+
+    private String toId(SearchHit hit) {
+        return hit.getId();
     }
 
     private <T> AsyncFuture<T> doto(ManagedAction<Connection, T> action) {
