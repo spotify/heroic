@@ -28,6 +28,7 @@ import com.spotify.heroic.ParameterSpecification;
 import com.spotify.heroic.cluster.ClusterManagerModule;
 import com.spotify.heroic.cluster.discovery.simple.SrvRecordDiscoveryModule;
 import com.spotify.heroic.cluster.discovery.simple.StaticListDiscoveryModule;
+import com.spotify.heroic.rpc.grpc.GrpcRpcProtocolModule;
 import com.spotify.heroic.rpc.nativerpc.NativeRpcProtocolModule;
 
 import java.net.URI;
@@ -38,11 +39,24 @@ import java.util.Optional;
 import static com.spotify.heroic.ParameterSpecification.parameter;
 
 public class ClusterProfile extends HeroicProfileBase {
+    public static final String DEFAULT_PROTOCOL = "grpc";
+
     @Override
     public HeroicConfig.Builder build(final ExtraParameters params) throws Exception {
         final ClusterManagerModule.Builder module = ClusterManagerModule.builder();
 
-        module.protocols(ImmutableList.of(NativeRpcProtocolModule.builder().build()));
+        final String protocol = params.get("protocol").orElse(DEFAULT_PROTOCOL);
+
+        switch (protocol) {
+            case "grpc":
+                module.protocols(ImmutableList.of(GrpcRpcProtocolModule.builder().build()));
+                break;
+            case "nativerpc":
+                module.protocols(ImmutableList.of(NativeRpcProtocolModule.builder().build()));
+                break;
+            default:
+                throw new IllegalArgumentException("illegal value for protocol (" + protocol + ")");
+        }
 
         switch (params.get("discovery").orElse("static")) {
             case "static":
@@ -54,7 +68,7 @@ public class ClusterProfile extends HeroicProfileBase {
                 final List<String> records = params.getAsList("record");
                 final SrvRecordDiscoveryModule.Builder sd =
                     SrvRecordDiscoveryModule.builder().records(records);
-                params.get("protocol").ifPresent(sd::protocol);
+                sd.protocol(protocol);
                 params.getInteger("port").ifPresent(sd::port);
                 module.discovery(sd.build());
                 break;
@@ -97,8 +111,7 @@ public class ClusterProfile extends HeroicProfileBase {
                     "used multiple times", "<uri>"),
             parameter("record", "Record to add to lookup through SRV, can be used " +
                     "multiple times", "<srv>"),
-            parameter("protocol", "Protocol to use for looked up SRV records, default: " +
-                    "nativerpc", "<protocol>"),
+            parameter("protocol", "Protocol to use default: " + DEFAULT_PROTOCOL, "<protocol>"),
             parameter("port", "Port to use for looked up SRV records, default: 1394",
                 "<port>")
         );
