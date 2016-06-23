@@ -37,6 +37,10 @@
     <Logger name="kafka.consumer" level="INFO" additivity="false">
       <AppenderRef ref="primary" />
     </Logger>
+    <Logger name="io.grpc" level="WARN">
+      <AppenderRef ref="primary" />
+    </Logger>
+
     <Root level="INFO">
       <AppenderRef ref="primary" />
     </Root>

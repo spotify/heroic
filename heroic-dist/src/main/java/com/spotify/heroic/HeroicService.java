@@ -62,6 +62,8 @@ public class HeroicService {
 
     public static void main(final String[] args, final Configuration configuration)
         throws Exception {
+        HeroicLogging.configure();
+
         Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
             @Override
             public void uncaughtException(Thread t, Throwable e) {

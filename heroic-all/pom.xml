@@ -23,6 +23,12 @@
       <artifactId>heroic-core</artifactId>
     </dependency>
 
+    <!-- redirect java.util.logging to SLF4J -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>jul-to-slf4j</artifactId>
+    </dependency>
+
     <!-- metric backends -->
     <dependency>
       <groupId>com.spotify.heroic.metric</groupId>
