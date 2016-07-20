@@ -3,14 +3,14 @@
   <modelVersion>4.0.0</modelVersion>
 
   <properties>
-    <bigtable.version>0.2.4</bigtable.version>
+    <bigtable.version>0.3.0</bigtable.version>
     <tcnative.classifier>linux-x86_64</tcnative.classifier>
   </properties>
 
   <groupId>com.spotify.heroic.repackaged</groupId>
   <artifactId>bigtable-client-core</artifactId>
   <packaging>jar</packaging>
-  <version>0.2.4</version>
+  <version>0.3.0</version>
 
   <name>Heroic: Re-Packaging of Bigtable Client Utilities</name>
 
