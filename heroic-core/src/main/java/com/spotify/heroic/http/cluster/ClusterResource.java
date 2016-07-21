@@ -23,15 +23,15 @@ package com.spotify.heroic.http.cluster;
 
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.cluster.ClusterManager;
+import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.cluster.NodeMetadata;
-import com.spotify.heroic.cluster.NodeRegistryEntry;
 import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.common.JavaxRestFramework.Resume;
 import com.spotify.heroic.http.DataResponse;
-import eu.toolchain.async.AsyncFuture;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -67,24 +67,40 @@ public class ClusterResource {
         return Response.status(Response.Status.OK).entity(status).build();
     }
 
-    private List<ClusterNodeStatus> convert(List<NodeRegistryEntry> nodes) {
+    private List<ClusterNodeStatus> convert(List<ClusterNode> nodes) {
         return ImmutableList.copyOf(nodes.stream().map(this::convert).iterator());
     }
 
-    private ClusterNodeStatus convert(NodeRegistryEntry e) {
-        final NodeMetadata m = e.getMetadata();
+    private ClusterNodeStatus convert(ClusterNode node) {
+        final NodeMetadata m = node.metadata();
 
-        return new ClusterNodeStatus(e.getClusterNode().toString(), m.getId(), m.getVersion(),
-            m.getTags(), m.getCapabilities());
+        return new ClusterNodeStatus(node.toString(), m.getId(), m.getVersion(), m.getTags());
     }
 
-    private static final Resume<Void, DataResponse<Boolean>> ADD_NODE =
+    private static final Resume<Void, DataResponse<Boolean>> OK =
         (Void value) -> new DataResponse<>(true);
+
+    @GET
+    @Path("nodes")
+    public void getNodes(@Suspended AsyncResponse response, URI uri) {
+        httpAsync.bind(response, cluster.getStaticNodes());
+    }
+
+    @DELETE
+    @Path("nodes")
+    public void removeNode(@Suspended AsyncResponse response, URI uri) {
+        httpAsync.bind(response, cluster.removeStaticNode(uri), OK);
+    }
 
     @POST
     @Path("nodes")
     public void addNode(@Suspended AsyncResponse response, URI uri) {
-        AsyncFuture<Void> callback = cluster.addStaticNode(uri);
-        httpAsync.bind(response, callback, ADD_NODE);
+        httpAsync.bind(response, cluster.addStaticNode(uri), OK);
+    }
+
+    @POST
+    @Path("refresh")
+    public void refresh(@Suspended AsyncResponse response) {
+        httpAsync.bind(response, cluster.refresh());
     }
 }

@@ -27,7 +27,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.fasterxml.jackson.datatype.jdk7.Jdk7Module;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationInstance;
@@ -40,8 +39,10 @@ import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.GroupsSerialization;
 import com.spotify.heroic.common.TypeNameMixin;
 import com.spotify.heroic.consumer.ConsumerModule;
+import com.spotify.heroic.filter.FilterRegistry;
 import com.spotify.heroic.generator.MetadataGenerator;
 import com.spotify.heroic.generator.MetricGeneratorModule;
+import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.jetty.JettyConnectionFactory;
 import com.spotify.heroic.metadata.MetadataModule;
 import com.spotify.heroic.metric.Event;
@@ -88,27 +89,26 @@ public final class HeroicMappers {
 
         m.registerModule(commonSerializers());
 
-        /* support Path */
-        m.registerModule(new Jdk7Module());
         /* support Optional */
         m.registerModule(new Jdk8Module());
 
         return m;
     }
 
-    public static ObjectMapper json() {
+    public static ObjectMapper json(final QueryParser parser) {
         final ObjectMapper mapper = new ObjectMapper();
 
         mapper.addMixIn(AggregationInstance.class, TypeNameMixin.class);
         mapper.addMixIn(Aggregation.class, TypeNameMixin.class);
 
-        mapper.registerModule(new Jdk7Module());
         mapper.registerModule(new Jdk8Module().configureAbsentsAsNulls(true));
         mapper.registerModule(commonSerializers());
         mapper.registerModule(jsonSerializers());
 
         mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+
+        mapper.registerModule(FilterRegistry.registry().module(parser));
 
         return mapper;
     }

@@ -21,175 +21,141 @@
 
 package com.spotify.heroic.suggest;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.cluster.ClusterNode;
-import com.spotify.heroic.cluster.NodeMetadata;
-import com.spotify.heroic.cluster.NodeRegistryEntry;
-import com.spotify.heroic.metric.NodeError;
+import com.spotify.heroic.cluster.ClusterShard;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.OptionalLimit;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.RequestError;
+import com.spotify.heroic.metric.ShardError;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
 import lombok.Data;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedSet;
 import java.util.TreeSet;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 @Data
 public class TagValuesSuggest {
-    public static final List<RequestError> EMPTY_ERRORS = new ArrayList<>();
-    public static final List<Suggestion> EMPTY_SUGGESTIONS = new ArrayList<>();
-
     private final List<RequestError> errors;
     private final List<Suggestion> suggestions;
     private final boolean limited;
 
-    @JsonCreator
-    public TagValuesSuggest(
-        @JsonProperty("errors") List<RequestError> errors,
-        @JsonProperty("suggestions") List<Suggestion> suggestions,
-        @JsonProperty("limited") Boolean limited
-    ) {
-        this.errors = checkNotNull(errors, "errors");
-        this.suggestions = checkNotNull(suggestions, "suggestions");
-        this.limited = checkNotNull(limited, "limited");
-    }
-
-    public TagValuesSuggest(List<Suggestion> suggestions, boolean limited) {
-        this(EMPTY_ERRORS, suggestions, limited);
+    public static TagValuesSuggest of(List<Suggestion> suggestions, boolean limited) {
+        return new TagValuesSuggest(ImmutableList.of(), suggestions, limited);
     }
 
     public static Collector<TagValuesSuggest, TagValuesSuggest> reduce(
-        final int limit, final int groupLimit
+        final OptionalLimit limit, final OptionalLimit groupLimit
     ) {
-        return new Collector<TagValuesSuggest, TagValuesSuggest>() {
-            @Override
-            public TagValuesSuggest collect(Collection<TagValuesSuggest> groups) throws Exception {
-                final Map<String, MidFlight> midflights = new HashMap<>();
-                boolean limited = false;
+        return groups -> {
+            final ImmutableList.Builder<RequestError> errors = ImmutableList.builder();
+            final Map<String, MidFlight> midflights = new HashMap<>();
+            boolean limited1 = false;
 
-                for (final TagValuesSuggest g : groups) {
-                    for (final Suggestion s : g.suggestions) {
-                        MidFlight m = midflights.get(s.key);
+            for (final TagValuesSuggest g : groups) {
+                errors.addAll(g.getErrors());
 
-                        if (m == null) {
-                            m = new MidFlight();
-                            midflights.put(s.key, m);
-                        }
+                for (final Suggestion s : g.suggestions) {
+                    MidFlight m = midflights.get(s.key);
 
-                        m.values.addAll(s.values);
-                        m.limited = m.limited || s.limited;
+                    if (m == null) {
+                        m = new MidFlight();
+                        midflights.put(s.key, m);
                     }
 
-                    limited = limited || g.limited;
+                    m.values.addAll(s.values);
+                    m.limited = m.limited || s.limited;
                 }
 
-                final ArrayList<Suggestion> suggestions = new ArrayList<>(midflights.size());
-
-                for (final Map.Entry<String, MidFlight> e : midflights.entrySet()) {
-                    final String key = e.getKey();
-                    final MidFlight m = e.getValue();
-
-                    final ImmutableList<String> values = ImmutableList.copyOf(m.values);
-                    final boolean sLimited = m.limited || values.size() >= groupLimit;
-
-                    suggestions.add(
-                        new Suggestion(key, values.subList(0, Math.min(values.size(), groupLimit)),
-                            sLimited));
-                }
-
-                limited = limited || suggestions.size() >= limit;
-                return new TagValuesSuggest(
-                    suggestions.subList(0, Math.min(suggestions.size(), limit)), limited);
+                limited1 = limited1 || g.limited;
             }
-        };
-    }
 
-    public static Transform<Throwable, ? extends TagValuesSuggest> nodeError(
-        final NodeRegistryEntry node
-    ) {
-        return new Transform<Throwable, TagValuesSuggest>() {
-            @Override
-            public TagValuesSuggest transform(Throwable e) throws Exception {
-                final NodeMetadata m = node.getMetadata();
-                final ClusterNode c = node.getClusterNode();
-                return new TagValuesSuggest(ImmutableList.<RequestError>of(
-                    NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
-                    EMPTY_SUGGESTIONS, false);
+            final SortedSet<Suggestion> suggestions1 = new TreeSet<>();
+
+            for (final Map.Entry<String, MidFlight> e : midflights.entrySet()) {
+                final String key = e.getKey();
+                final MidFlight m = e.getValue();
+
+                final boolean sLimited = m.limited || groupLimit.isGreater(m.values.size());
+
+                suggestions1.add(
+                    new Suggestion(key, groupLimit.limitSortedSet(m.values), sLimited));
             }
+
+            return new TagValuesSuggest(errors.build(),
+                limit.limitList(ImmutableList.copyOf(suggestions1)),
+                limited1 || limit.isGreater(suggestions1.size()));
         };
     }
 
     @Data
-    public static final class Suggestion {
+    public static final class Suggestion implements Comparable<Suggestion> {
         private final String key;
-        private final List<String> values;
+        private final SortedSet<String> values;
         private final boolean limited;
 
-        @JsonCreator
-        public Suggestion(
-            @JsonProperty("key") String key, @JsonProperty("values") List<String> values,
-            @JsonProperty("limited") Boolean limited
-        ) {
-            this.key = checkNotNull(key, "key");
-            this.values = ImmutableList.copyOf(checkNotNull(values, "values"));
-            this.limited = checkNotNull(limited, "limited");
-        }
+        @Override
+        public int compareTo(final Suggestion o) {
+            final int v = -Integer.compare(values.size(), o.values.size());
 
-        // sort suggestions descending by score.
-        public static final Comparator<Suggestion> COMPARATOR = new Comparator<Suggestion>() {
-            @Override
-            public int compare(Suggestion a, Suggestion b) {
-                final int v = Integer.compare(b.values.size(), a.values.size());
-
-                if (v != 0) {
-                    return v;
-                }
-
-                return compareKey(a, b);
+            if (v != 0) {
+                return v;
             }
 
-            private int compareKey(Suggestion a, Suggestion b) {
-                if (a.key == null && b.key == null) {
-                    return 0;
-                }
+            final int k = key.compareTo(o.key);
 
-                if (a.key == null) {
-                    return 1;
-                }
+            if (k != 0) {
+                return k;
+            }
 
-                if (b.key == null) {
+            final Iterator<String> left = values.iterator();
+            final Iterator<String> right = o.values.iterator();
+
+            while (left.hasNext()) {
+                final String l = left.next();
+
+                if (!right.hasNext()) {
                     return -1;
                 }
 
-                return a.key.compareTo(b.key);
+                final String r = right.next();
+
+                final int kv = l.compareTo(r);
+
+                if (kv != 0) {
+                    return kv;
+                }
             }
-        };
+
+            if (right.hasNext()) {
+                return 1;
+            }
+
+            return Boolean.compare(limited, o.limited);
+        }
     }
 
     private static class MidFlight {
-        private final TreeSet<String> values = new TreeSet<>();
+        private final SortedSet<String> values = new TreeSet<>();
         private boolean limited;
     }
 
-    public static Transform<Throwable, ? extends TagValuesSuggest> nodeError(
-        final ClusterNode.Group group
-    ) {
-        return new Transform<Throwable, TagValuesSuggest>() {
-            @Override
-            public TagValuesSuggest transform(Throwable e) throws Exception {
-                final List<RequestError> errors =
-                    ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
-                return new TagValuesSuggest(errors, EMPTY_SUGGESTIONS, false);
-            }
-        };
+    public static Transform<Throwable, TagValuesSuggest> shardError(final ClusterShard shard) {
+        return e -> new TagValuesSuggest(ImmutableList.of(ShardError.fromThrowable(shard, e)),
+            ImmutableList.of(), false);
+    }
+
+    @Data
+    public static class Request {
+        private final Filter filter;
+        private final DateRange range;
+        private final OptionalLimit limit;
+        private final OptionalLimit groupLimit;
+        private final List<String> exclude;
     }
 }

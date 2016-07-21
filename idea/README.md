@@ -19,10 +19,18 @@ generate certain sources.
 
 ## Running HeroicShell in IDEA
 
-Create a new run configuration where you run the
-`com.spotify.heroic.HeroicShell` class from the `heroic-dist` module.
+Create a new `Application` run configuration where you use the following
+parameters:
 
-You can see the list of options available by running `tools/heroic-shell
+| Option                       | Value                                  |
+|------------------------------|----------------------------------------|
+| **Name**:                    | `HeroicShell` (or per your preference) |
+| **Main class:**              | `com.spotify.heroic.HeroicShell`       |
+| **Program arguments:**       | `-P memory --server`                   |
+| **Use classpath of module:** | `heroic-dist`                          |
+
+The above configuration sets up an in-memory configuration of Heroic, running
+it will cause an interactive prompt to become available in the `Run` window.
+
+You can see the list of available arguments by running `tools/heroic-shell
 --help`.
-A popular combination is to run the `memory` profile and enable the server with
-`-P memory --server`.

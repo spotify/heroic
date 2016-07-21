@@ -31,7 +31,8 @@ import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.bigtable.BigtableConnection;
-import com.spotify.heroic.metric.bigtable.api.Column;
+import com.spotify.heroic.metric.bigtable.api.Family;
+import com.spotify.heroic.metric.bigtable.api.ReadModifyWriteRules;
 import com.spotify.heroic.metric.bigtable.api.ReadRowsRequest;
 import com.spotify.heroic.metric.bigtable.api.Row;
 import com.spotify.heroic.metric.bigtable.api.RowRange;
@@ -92,12 +93,12 @@ public class BigtableMetricAnalytics implements MetricAnalytics, LifeCycles {
     @Override
     public AsyncFuture<Void> configure() {
         return connection.doto(c -> async.call(() -> {
-            final Table table = c.adminClient().getTable(hitsTableName).orElseGet(() -> {
-                return c.adminClient().createTable(hitsTableName);
+            final Table table = c.tableAdminClient().getTable(hitsTableName).orElseGet(() -> {
+                return c.tableAdminClient().createTable(hitsTableName);
             });
 
             table.getColumnFamily(hitsColumnFamily).orElseGet(() -> {
-                return c.adminClient().createColumnFamily(table, hitsColumnFamily);
+                return c.tableAdminClient().createColumnFamily(table, hitsColumnFamily);
             });
 
             return null;
@@ -125,15 +126,21 @@ public class BigtableMetricAnalytics implements MetricAnalytics, LifeCycles {
         final RowRange range = RowRange.rowRange(Optional.of(start), Optional.of(end));
 
         return c
-            .client()
+            .dataClient()
             .readRowsObserved(hitsTableName, ReadRowsRequest.builder().range(range).build())
             .transform(row -> {
                 final ByteString rowKey = row.getKey();
-                final SeriesKeyEncoding.SeriesKey k =
-                    fetchSeries.decode(rowKey, s -> mapper.readValue(s, Series.class));
+                final SeriesKeyEncoding.SeriesKey k;
+
+                try {
+                    k = fetchSeries.decode(rowKey, s -> mapper.readValue(s, Series.class));
+                } catch (final Exception e) {
+                    throw new RuntimeException(e);
+                }
 
                 final long value = row.getFamily(hitsColumnFamily).map(family -> {
-                    final Column col = family.getColumns().iterator().next();
+                    final Family.LatestCellValueColumn col =
+                        family.latestCellValue().iterator().next();
                     final ByteBuffer buf = ByteBuffer.wrap(col.getValue().toByteArray());
                     buf.order(ByteOrder.BIG_ENDIAN);
                     return buf.getLong();
@@ -158,10 +165,9 @@ public class BigtableMetricAnalytics implements MetricAnalytics, LifeCycles {
                 mapper::writeValueAsString);
 
             final AsyncFuture<Row> request = c
-                .client()
-                .readModifyWriteRow(hitsTableName, key, c
-                    .client()
-                    .readModifyWriteRules()
+                .dataClient()
+                .readModifyWriteRow(hitsTableName, key, ReadModifyWriteRules
+                    .builder()
                     .increment(hitsColumnFamily, ByteString.EMPTY, 1L)
                     .build());
 

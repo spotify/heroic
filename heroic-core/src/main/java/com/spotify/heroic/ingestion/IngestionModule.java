@@ -21,13 +21,11 @@
 
 package com.spotify.heroic.ingestion;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.common.Optionals;
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.FilterFactory;
+import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metadata.MetadataComponent;
 import com.spotify.heroic.metric.MetricComponent;
@@ -48,7 +46,6 @@ import java.util.Optional;
 import static com.spotify.heroic.common.Optionals.pickOptional;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
-import static java.util.Optional.ofNullable;
 
 @RequiredArgsConstructor
 public class IngestionModule {
@@ -129,12 +126,12 @@ public class IngestionModule {
         @Provides
         @IngestionScope
         public Filter filter(
-            final QueryParser parser, final FilterFactory filters, final ExtraParameters params
+            final QueryParser parser, final ExtraParameters params
         ) {
             return Optionals
                 .pickOptional(filter.map(parser::parseFilter),
                     params.getFilter(INGESTION_FILTER_PARAM, parser))
-                .orElseGet(filters::t);
+                .orElseGet(TrueFilter::get);
         }
     }
 
@@ -143,28 +140,13 @@ public class IngestionModule {
     }
 
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
-    @AllArgsConstructor(access = AccessLevel.PRIVATE)
+    @AllArgsConstructor
     public static class Builder {
         private Optional<Boolean> updateMetrics = empty();
         private Optional<Boolean> updateMetadata = empty();
         private Optional<Boolean> updateSuggestions = empty();
         private Optional<Integer> maxConcurrentWrites = empty();
         private Optional<String> filter = empty();
-
-        @JsonCreator
-        public Builder(
-            @JsonProperty("updateMetrics") Boolean updateMetrics,
-            @JsonProperty("updateMetadata") Boolean updateMetadata,
-            @JsonProperty("updateSuggestions") Boolean updateSuggestions,
-            @JsonProperty("maxConcurrentWrites") Integer maxConcurrentWrites,
-            @JsonProperty("filter") String filter
-        ) {
-            this.updateMetadata = ofNullable(updateMetadata);
-            this.updateMetrics = ofNullable(updateMetrics);
-            this.updateSuggestions = ofNullable(updateSuggestions);
-            this.maxConcurrentWrites = ofNullable(maxConcurrentWrites);
-            this.filter = ofNullable(filter);
-        }
 
         public Builder updateAll() {
             this.updateMetrics = of(true);

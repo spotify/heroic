@@ -3,28 +3,31 @@
 root=$(dirname $(dirname $0))
 dist="$root/heroic-dist"
 
-CLASSPATH=
-
 JVM_OPTS=${JVM_OPTS:-""}
 
+MVN=${MVN:-mvn}
+MVN_OPTS=${MVN_OPTS:-"-B -V"}
+
+dist_jar="$dist/target/heroic-dist-0.0.1-SNAPSHOT-shaded.jar"
+
+CLASSPATH="$dist_jar"
+
 if [[ $1 == '-debug' ]]; then
-    JVM_OPTS="$JVM_OPTS -agentlib:jdwp=transport=dt_socket,server=y,address=8000,suspend=n"
+    JVM_OPTS="$JVM_OPTS -agentlib:jdwp=transport=dt_socket,server=y,address=5005,suspend=y"
+    JVM_OPTS="$JVM_OPTS -Dloglevel=TRACE"
     shift
 fi
 
 if [[ -d $dist ]]; then
-    jar="$dist/target/heroic-dist-0.0.1-SNAPSHOT-shaded.jar"
-
-    if [[ ! -f $jar ]]; then
-        (cd $root && mvn clean package)
+    if [[ ! -f $dist_jar ]]; then
+        $root/tools/install-repackaged
+        (cd $root && $MVN $MVN_OPTS -D maven.test.skip=true clean package)
     fi
 
-    if [[ ! -f $jar ]]; then
-        echo "No such jar: $jar" 1>&2
+    if [[ ! -f $dist_jar ]]; then
+        echo "No such jar: $dist_jar" 1>&2
         exit 1
     fi
-
-    CLASSPATH="$root/heroic-dist/target/heroic-dist-0.0.1-SNAPSHOT-shaded.jar"
 fi
 
-exec env CLASSPATH="$CLASSPATH" java $JVM_OPTS com.spotify.heroic.HeroicShell "$@"
+exec java -cp "$CLASSPATH" $JVM_OPTS com.spotify.heroic.HeroicShell "$@"

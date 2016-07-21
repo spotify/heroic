@@ -25,11 +25,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
+import com.spotify.heroic.common.OptionalLimit;
 import eu.toolchain.async.AsyncFramework;
-import eu.toolchain.async.AsyncFuture;
 import lombok.Data;
+import org.apache.commons.lang3.tuple.Pair;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -37,59 +37,30 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Data
 public class NodeRegistry {
     private static final Random random = new Random(System.currentTimeMillis());
 
     private final AsyncFramework async;
-    private final List<NodeRegistryEntry> entries;
+    private final List<ClusterNode> entries;
     private final int totalNodes;
 
-    private Multimap<Map<String, String>, NodeRegistryEntry> buildShards(
-        List<NodeRegistryEntry> entries, NodeCapability capability
+    private Multimap<Map<String, String>, ClusterNode> buildShards(
+        List<ClusterNode> entries
     ) {
-        final Multimap<Map<String, String>, NodeRegistryEntry> shards = LinkedListMultimap.create();
+        final Multimap<Map<String, String>, ClusterNode> shards = LinkedListMultimap.create();
 
-        for (final NodeRegistryEntry e : entries) {
-            if (!e.getMetadata().matchesCapability(capability)) {
-                continue;
-            }
-
-            shards.put(e.getMetadata().getTags(), e);
+        for (final ClusterNode e : entries) {
+            shards.put(e.metadata().getTags(), e);
         }
 
         return shards;
     }
 
-    public List<NodeRegistryEntry> getEntries() {
+    public List<ClusterNode> getEntries() {
         return ImmutableList.copyOf(entries);
-    }
-
-    /**
-     * Find an entry that matches the given tags depending on its metadata.
-     *
-     * @param tags The tags to match.
-     * @return A random matching entry.
-     */
-    public NodeRegistryEntry findEntry(Map<String, String> tags, NodeCapability capability) {
-        final List<NodeRegistryEntry> matches = new ArrayList<>();
-
-        for (final NodeRegistryEntry entry : entries) {
-            if (entry.getMetadata().matches(tags, capability)) {
-                matches.add(entry);
-            }
-        }
-
-        if (matches.isEmpty()) {
-            return null;
-        }
-
-        if (matches.size() == 1) {
-            return matches.get(0);
-        }
-
-        return matches.get(random.nextInt(matches.size()));
     }
 
     public int getOnlineNodes() {
@@ -100,60 +71,30 @@ public class NodeRegistry {
         return totalNodes - entries.size();
     }
 
-    public Collection<NodeRegistryEntry> findAllShards(NodeCapability capability) {
-        final List<NodeRegistryEntry> result = Lists.newArrayList();
-
-        final Multimap<Map<String, String>, NodeRegistryEntry> shards =
-            buildShards(entries, capability);
-
-        final Set<Entry<Map<String, String>, Collection<NodeRegistryEntry>>> entries =
-            shards.asMap().entrySet();
-
-        for (final Entry<Map<String, String>, Collection<NodeRegistryEntry>> e : entries) {
-            final NodeRegistryEntry one = pickOne(e.getValue());
-
-            if (one == null) {
-                continue;
-            }
-
-            result.add(one);
-        }
-
-        return result;
-    }
-
     /**
      * Find multiple registry entries from all shards.
      *
-     * @param capability Capability to find.
      * @param n Max number of entries to find.
      * @return An iterable of iterables, containing all found entries.
      */
-    public Collection<Collection<NodeRegistryEntry>> findMultipleFromAllShards(
-        NodeCapability capability, int n
+    public List<Pair<Map<String, String>, List<ClusterNode>>> findFromAllShards(
+        OptionalLimit n
     ) {
-        final Collection<Collection<NodeRegistryEntry>> result = Lists.newArrayList();
+        final List<Pair<Map<String, String>, List<ClusterNode>>> result = Lists.newArrayList();
 
-        final Multimap<Map<String, String>, NodeRegistryEntry> shards =
-            buildShards(entries, capability);
+        final Multimap<Map<String, String>, ClusterNode> shards = buildShards(entries);
 
-        final Set<Entry<Map<String, String>, Collection<NodeRegistryEntry>>> entries =
+        final Set<Entry<Map<String, String>, Collection<ClusterNode>>> entries =
             shards.asMap().entrySet();
 
-        for (final Entry<Map<String, String>, Collection<NodeRegistryEntry>> e : entries) {
-            final Collection<NodeRegistryEntry> many = pickN(e.getValue(), n);
-
-            if (many.isEmpty()) {
-                continue;
-            }
-
-            result.add(many);
+        for (final Entry<Map<String, String>, Collection<ClusterNode>> e : entries) {
+            result.add(Pair.of(e.getKey(), pickN(e.getValue(), n)));
         }
 
         return result;
     }
 
-    private NodeRegistryEntry pickOne(Collection<NodeRegistryEntry> options) {
+    private ClusterNode pickOne(Collection<ClusterNode> options) {
         if (options.isEmpty()) {
             return null;
         }
@@ -161,13 +102,13 @@ public class NodeRegistry {
         final int selection = random.nextInt(options.size());
 
         if (options instanceof List) {
-            final List<NodeRegistryEntry> list = (List<NodeRegistryEntry>) options;
+            final List<ClusterNode> list = (List<ClusterNode>) options;
             return list.get(selection);
         }
 
         int i = 0;
 
-        for (final NodeRegistryEntry e : options) {
+        for (final ClusterNode e : options) {
             if (i++ == selection) {
                 return e;
             }
@@ -176,34 +117,16 @@ public class NodeRegistry {
         return null;
     }
 
-    private Collection<NodeRegistryEntry> pickN(Collection<NodeRegistryEntry> options, int n) {
+    private List<ClusterNode> pickN(final Collection<ClusterNode> options, OptionalLimit n) {
         if (options.isEmpty()) {
-            return Collections.emptySet();
+            return ImmutableList.of();
         }
 
-        final List<NodeRegistryEntry> entries = new ArrayList<>(options);
+        final List<ClusterNode> entries =
+            options.stream().filter(ClusterNode::isAlive).collect(Collectors.toList());
 
         Collections.shuffle(entries, random);
 
-        if (options.size() <= n) {
-            return options;
-        }
-
-        return entries.subList(0, n);
-    }
-
-    /**
-     * Close all associated cluster nodes.
-     *
-     * @return Future indicating if all was closed successfully.
-     */
-    public AsyncFuture<Void> close() {
-        final List<AsyncFuture<Void>> futures = new ArrayList<>();
-
-        for (final NodeRegistryEntry entry : entries) {
-            futures.add(entry.getClusterNode().close());
-        }
-
-        return async.collectAndDiscard(futures);
+        return n.limitList(entries);
     }
 }

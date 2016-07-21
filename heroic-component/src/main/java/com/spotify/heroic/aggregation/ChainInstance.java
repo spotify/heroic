@@ -26,7 +26,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Point;
@@ -81,44 +83,81 @@ public class ChainInstance implements AggregationInstance {
         final Iterator<AggregationInstance> it = chain.iterator();
 
         final ImmutableList.Builder<AggregationInstance> chain = ImmutableList.builder();
+        AggregationInstance last = it.next();
 
-        do {
-            final AggregationInstance a = it.next();
-            chain.add(it.hasNext() ? a : a.distributed());
-        } while (it.hasNext());
+        if (!last.distributable()) {
+            return EmptyInstance.INSTANCE;
+        }
 
-        return new ChainInstance(chain.build());
+        while (it.hasNext()) {
+            final AggregationInstance next = it.next();
+
+            if (!next.distributable()) {
+                chain.add(last.distributed());
+                return fromList(chain.build());
+            }
+
+            chain.add(last);
+            last = next;
+        }
+
+        chain.add(last.distributed());
+        return fromList(chain.build());
     }
 
     @Override
-    public AggregationCombiner combiner(final DateRange range) {
-        return chain.get(chain.size() - 1).combiner(range);
+    public AggregationInstance reducer() {
+        final Iterator<AggregationInstance> it = chain.iterator();
+        AggregationInstance last = it.next();
+
+        final ImmutableList.Builder<AggregationInstance> chain = ImmutableList.builder();
+
+        if (!last.distributable()) {
+            chain.add(EmptyInstance.INSTANCE);
+            chain.add(last);
+
+            while (it.hasNext()) {
+                chain.add(it.next());
+            }
+
+            return fromList(chain.build());
+        }
+
+        while (it.hasNext()) {
+            final AggregationInstance next = it.next();
+
+            if (!next.distributable()) {
+                chain.add(last.reducer());
+                chain.add(next);
+
+                while (it.hasNext()) {
+                    chain.add(it.next());
+                }
+
+                return fromList(chain.build());
+            }
+
+            last = next;
+        }
+
+        return last.reducer();
     }
 
     @Override
-    public ReducerSession reducer(final DateRange range) {
-        return chain.get(chain.size() - 1).reducer(range);
-    }
+    public AggregationSession session(final DateRange range) {
+        final Iterator<AggregationInstance> it = chain.iterator();
 
-    @Override
-    public AggregationTraversal session(final List<AggregationState> input, final DateRange range) {
-        final Iterator<AggregationInstance> iter = chain.iterator();
-
-        final AggregationInstance first = iter.next();
-        final AggregationTraversal head = first.session(input, range);
-
-        AggregationTraversal prev = head;
+        final AggregationInstance first = it.next();
+        final AggregationSession head = first.session(range);
 
         final List<AggregationSession> tail = new ArrayList<>();
 
-        while (iter.hasNext()) {
-            final AggregationTraversal s = iter.next().session(prev.getStates(), range);
-            tail.add(s.getSession());
-            prev = s;
+        while (it.hasNext()) {
+            final AggregationSession s = it.next().session(range);
+            tail.add(s);
         }
 
-        return new AggregationTraversal(
-            prev.getStates(), new Session(head.getSession(), tail), prev.getEstimatedStatesSize());
+        return new Session(head, tail);
     }
 
     @Override
@@ -133,6 +172,34 @@ public class ChainInstance implements AggregationInstance {
         return "[" + CHAIN_JOINER.join(chain.stream().map(Object::toString).iterator()) + "]";
     }
 
+    public static AggregationInstance of(final AggregationInstance... aggregations) {
+        return fromList(ImmutableList.copyOf(aggregations));
+    }
+
+    public static AggregationInstance fromList(final List<AggregationInstance> chain) {
+        if (chain.size() == 1) {
+            return chain.iterator().next();
+        }
+
+        return new ChainInstance(flattenChain(chain));
+    }
+
+    private static List<AggregationInstance> flattenChain(
+        final List<AggregationInstance> chain
+    ) {
+        final ImmutableList.Builder<AggregationInstance> child = ImmutableList.builder();
+
+        for (final AggregationInstance i : chain) {
+            if (i instanceof ChainInstance) {
+                child.addAll(flattenChain(ChainInstance.class.cast(i).getChain()));
+            } else {
+                child.add(i);
+            }
+        }
+
+        return child.build();
+    }
+
     @RequiredArgsConstructor
     private static final class Session implements AggregationSession {
         private final AggregationSession first;
@@ -140,41 +207,48 @@ public class ChainInstance implements AggregationInstance {
 
         @Override
         public void updatePoints(
-            Map<String, String> group, List<Point> values
+            Map<String, String> key, Set<Series> series, List<Point> values
         ) {
-            first.updatePoints(group, values);
+            first.updatePoints(key, series, values);
         }
 
         @Override
         public void updateEvents(
-            Map<String, String> group, List<Event> values
+            Map<String, String> key, Set<Series> series, List<Event> values
         ) {
-            first.updateEvents(group, values);
+            first.updateEvents(key, series, values);
         }
 
         @Override
         public void updateSpreads(
-            Map<String, String> group, List<Spread> values
+            Map<String, String> key, Set<Series> series, List<Spread> values
         ) {
-            first.updateSpreads(group, values);
+            first.updateSpreads(key, series, values);
         }
 
         @Override
         public void updateGroup(
-            Map<String, String> group, List<MetricGroup> values
+            Map<String, String> key, Set<Series> series, List<MetricGroup> values
         ) {
-            first.updateGroup(group, values);
+            first.updateGroup(key, series, values);
+        }
+
+        @Override
+        public void updatePayload(
+            Map<String, String> key, Set<Series> series, List<Payload> values
+        ) {
+            first.updatePayload(key, series, values);
         }
 
         @Override
         public AggregationResult result() {
             final AggregationResult firstResult = first.result();
-            List<AggregationData> current = firstResult.getResult();
+            List<AggregationOutput> current = firstResult.getResult();
             Statistics statistics = firstResult.getStatistics();
 
             for (final AggregationSession session : rest) {
-                for (final AggregationData u : current) {
-                    u.getMetrics().updateAggregation(session, u.getGroup());
+                for (final AggregationOutput u : current) {
+                    u.getMetrics().updateAggregation(session, u.getKey(), u.getSeries());
                 }
 
                 final AggregationResult next = session.result();

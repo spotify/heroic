@@ -21,13 +21,9 @@
 
 package com.spotify.heroic.grammar;
 
-import com.google.common.base.Joiner;
-import com.spotify.heroic.Query;
-import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.filter.Filter;
 
 import java.util.List;
-import java.util.Optional;
 
 public interface QueryParser {
     /**
@@ -40,86 +36,11 @@ public interface QueryParser {
     Filter parseFilter(String filter);
 
     /**
-     * Parse the given aggregation using the Heroic Query DSL.
+     * Parse the given statements.
      *
-     * @param aggregation String to parse.
-     * @return ParseException if unable to parse string.
+     * @param statements String to parse as statements.
+     * @return The parsed statements.
+     * @throws ParseException if unable to parse.
      */
-    Optional<Aggregation> parseAggregation(String aggregation);
-
-    /**
-     * Parse the given query.
-     *
-     * @param query String to parse.
-     * @return The parse query.
-     * @throws ParseException if unable to parse string.
-     */
-    Query parseQuery(String query);
-
-    String stringifyQuery(Query query);
-
-    String stringifyQuery(Query query, Optional<Integer> indent);
-
-    static String escapeList(List<String> input) {
-        if (input.size() == 1) {
-            return escapeString(input.iterator().next());
-        }
-
-        return "[" +
-            Joiner.on(", ").join(input.stream().map(QueryParser::escapeString).iterator()) + "]";
-    }
-
-    static String escapeString(String input) {
-        boolean quoted = false;
-
-        final StringBuilder builder = new StringBuilder();
-
-        for (int i = 0; i < input.length(); i++) {
-            final char c = input.charAt(i);
-
-            if (Character.isDigit(c) || ('a' <= c && c <= 'z') || ('A' < c && c <= 'Z') ||
-                c == '-' || c == ':' || c == '/') {
-                builder.append(c);
-                continue;
-            }
-
-            quoted = true;
-
-            switch (c) {
-                case '\b':
-                    builder.append("\\b");
-                    break;
-                case '\t':
-                    builder.append("\\t");
-                    break;
-                case '\n':
-                    builder.append("\\n");
-                    break;
-                case '\f':
-                    builder.append("\\f");
-                    break;
-                case '\r':
-                    builder.append("\\r");
-                    break;
-                case '"':
-                    builder.append("\\\"");
-                    break;
-                case '\\':
-                    builder.append("\\\\");
-                    break;
-                case '\'':
-                    builder.append("\\'");
-                    break;
-                default:
-                    builder.append(c);
-                    break;
-            }
-        }
-
-        if (quoted) {
-            return "\"" + builder.toString() + "\"";
-        }
-
-        return builder.toString();
-    }
+    List<Expression> parse(String statements);
 }

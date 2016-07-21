@@ -24,8 +24,7 @@ package com.spotify.heroic;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicCore.Builder;
-import com.spotify.heroic.args4j.DurationOptionHandler;
-import com.spotify.heroic.common.Duration;
+import com.spotify.heroic.args4j.CmdLine;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.CoreInterface;
 import com.spotify.heroic.shell.RemoteCoreInterface;
@@ -53,7 +52,6 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
-import java.lang.Thread.UncaughtExceptionHandler;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -71,14 +69,13 @@ public class HeroicShell {
     public static final SerializerFramework serializer = ShellProtocol.setupSerializer();
 
     public static void main(String[] args) throws IOException {
-        Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
-            @Override
-            public void uncaughtException(Thread t, Throwable e) {
-                try {
-                    log.error("Uncaught exception in thread {}, exiting...", t, e);
-                } finally {
-                    System.exit(1);
-                }
+        HeroicLogging.configure();
+
+        Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
+            try {
+                log.error("Uncaught exception in thread {}, exiting...", t, e);
+            } finally {
+                System.exit(1);
             }
         });
 
@@ -361,9 +358,7 @@ public class HeroicShell {
      * it.
      */
     private static CmdLineParser setupParser(final TaskParameters params) {
-        final CmdLineParser parser = new CmdLineParser(params);
-        parser.registerHandler(Duration.class, DurationOptionHandler.class);
-        return parser;
+        return CmdLine.createParser(params);
     }
 
     @ToString
@@ -383,7 +378,7 @@ public class HeroicShell {
         private String connect = null;
 
         @Option(name = "-X", usage = "Define an extra parameter", metaVar = "<key>=<value>")
-        private final List<String> parameters = new ArrayList<>();
+        private List<String> parameters = new ArrayList<>();
     }
 
     @RequiredArgsConstructor

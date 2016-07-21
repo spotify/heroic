@@ -22,6 +22,7 @@
 package com.spotify.heroic.dagger;
 
 import com.spotify.heroic.HeroicStartupPinger;
+import com.spotify.heroic.http.HttpServer;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
 import dagger.Module;
@@ -30,12 +31,20 @@ import lombok.RequiredArgsConstructor;
 
 import javax.inject.Named;
 import java.net.URI;
+import java.util.Optional;
 
 @RequiredArgsConstructor
 @Module
 public class StartupPingerModule {
     private final URI ping;
     private final String id;
+    private final Optional<HttpServer> server;
+
+    @Provides
+    @StartupPingerScope
+    Optional<HttpServer> server() {
+        return server;
+    }
 
     @Provides
     @StartupPingerScope

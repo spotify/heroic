@@ -61,24 +61,14 @@ public class EventSerialization {
                     p.getCurrentToken()));
             }
 
-            ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
+            ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
 
             while (p.nextToken() == JsonToken.FIELD_NAME) {
                 final String key = p.getCurrentName();
 
                 switch (p.nextToken()) {
-                    case VALUE_NUMBER_INT:
-                        builder.put(key, p.getValueAsInt());
-                        break;
-                    case VALUE_NUMBER_FLOAT:
-                        builder.put(key, p.getValueAsDouble());
-                        break;
                     case VALUE_STRING:
                         builder.put(key, p.getValueAsString());
-                        break;
-                    case VALUE_FALSE:
-                    case VALUE_TRUE:
-                        builder.put(key, p.getValueAsBoolean());
                         break;
                     default:
                         throw c.mappingException(
@@ -98,14 +88,14 @@ public class EventSerialization {
     public static class Serializer extends JsonSerializer<Event> {
         @Override
         public void serialize(Event d, JsonGenerator g, SerializerProvider provider)
-            throws IOException, JsonProcessingException {
+            throws IOException {
             g.writeStartArray();
             g.writeNumber(d.getTimestamp());
 
             g.writeStartObject();
 
-            for (final Map.Entry<String, Object> e : d.getPayload().entrySet()) {
-                g.writeObjectField(e.getKey(), e.getValue());
+            for (final Map.Entry<String, String> e : d.getPayload().entrySet()) {
+                g.writeStringField(e.getKey(), e.getValue());
             }
 
             g.writeEndObject();

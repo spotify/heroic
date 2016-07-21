@@ -21,75 +21,65 @@
 
 package com.spotify.heroic.cluster;
 
-import com.spotify.heroic.QueryOptions;
-import com.spotify.heroic.aggregation.AggregationInstance;
-import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.RangeFilter;
-import com.spotify.heroic.common.Series;
-import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.common.UsableGroupManager;
 import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.DeleteSeries;
 import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.FindTags;
-import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.ResultGroups;
+import com.spotify.heroic.metadata.WriteMetadata;
+import com.spotify.heroic.metric.FullQuery;
 import com.spotify.heroic.metric.WriteMetric;
-import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.suggest.KeySuggest;
-import com.spotify.heroic.suggest.MatchOptions;
 import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
 import eu.toolchain.async.AsyncFuture;
 
-import java.util.List;
-import java.util.Optional;
-
-public interface ClusterNode {
+public interface ClusterNode extends UsableGroupManager<ClusterNode.Group> {
     NodeMetadata metadata();
+
+    AsyncFuture<NodeMetadata> fetchMetadata();
 
     AsyncFuture<Void> close();
 
-    Group useGroup(String group);
+    /**
+     * Perform a check to see if this node connection should be considered alive or not.
+     *
+     * @return {@code true} if this node should be used for requests, {@code false} otherwise.
+     */
+    default boolean isAlive() {
+        return true;
+    }
 
     interface Group {
         ClusterNode node();
 
-        AsyncFuture<ResultGroups> query(
-            MetricType source, Filter filter, DateRange range, AggregationInstance aggregation,
-            QueryOptions options
-        );
+        AsyncFuture<FullQuery> query(FullQuery.Request request);
 
-        AsyncFuture<FindTags> findTags(RangeFilter filter);
+        AsyncFuture<FindTags> findTags(FindTags.Request request);
 
-        AsyncFuture<FindKeys> findKeys(RangeFilter filter);
+        AsyncFuture<FindKeys> findKeys(FindKeys.Request request);
 
-        AsyncFuture<FindSeries> findSeries(RangeFilter filter);
+        AsyncFuture<FindSeries> findSeries(FindSeries.Request request);
 
-        AsyncFuture<DeleteSeries> deleteSeries(RangeFilter filter);
+        AsyncFuture<DeleteSeries> deleteSeries(DeleteSeries.Request request);
 
-        AsyncFuture<CountSeries> countSeries(RangeFilter filter);
+        AsyncFuture<CountSeries> countSeries(CountSeries.Request request);
 
-        AsyncFuture<TagKeyCount> tagKeyCount(RangeFilter filter);
+        AsyncFuture<TagKeyCount> tagKeyCount(TagKeyCount.Request request);
 
-        AsyncFuture<TagSuggest> tagSuggest(
-            RangeFilter filter, MatchOptions options, Optional<String> key, Optional<String> value
-        );
+        AsyncFuture<TagSuggest> tagSuggest(TagSuggest.Request request);
 
-        AsyncFuture<KeySuggest> keySuggest(
-            RangeFilter filter, MatchOptions options, Optional<String> key
-        );
+        AsyncFuture<KeySuggest> keySuggest(KeySuggest.Request request);
 
-        AsyncFuture<TagValuesSuggest> tagValuesSuggest(
-            RangeFilter filter, List<String> exclude, int groupLimit
-        );
+        AsyncFuture<TagValuesSuggest> tagValuesSuggest(TagValuesSuggest.Request request);
 
-        AsyncFuture<TagValueSuggest> tagValueSuggest(RangeFilter filter, Optional<String> key);
+        AsyncFuture<TagValueSuggest> tagValueSuggest(TagValueSuggest.Request request);
 
-        AsyncFuture<WriteResult> writeSeries(DateRange range, Series series);
+        AsyncFuture<WriteMetadata> writeSeries(WriteMetadata.Request request);
 
-        AsyncFuture<WriteResult> writeMetric(WriteMetric write);
+        AsyncFuture<WriteMetric> writeMetric(WriteMetric.Request request);
     }
 }

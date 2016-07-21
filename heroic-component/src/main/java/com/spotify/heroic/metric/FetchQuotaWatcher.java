@@ -27,8 +27,9 @@ public interface FetchQuotaWatcher {
      *
      * @param n The number of datapoints read by the backend.
      * @return A {@code boolean} indicating weither the operation may continue or not.
+     * @throws QuotaViolationException if quota has been violated.
      */
-    boolean readData(long n);
+    void readData(long n);
 
     /**
      * Indicates if readData quota has been breached or not.
@@ -48,4 +49,28 @@ public interface FetchQuotaWatcher {
      * @return {@code true} if any quota was violated, {@code false} otherwise.
      */
     boolean isQuotaViolated();
+
+    /**
+     * Special quota watcher indicating no quota should be applied.
+     */
+    FetchQuotaWatcher NO_QUOTA = new FetchQuotaWatcher() {
+        @Override
+        public void readData(long n) {
+        }
+
+        @Override
+        public boolean mayReadData() {
+            return true;
+        }
+
+        @Override
+        public int getReadDataQuota() {
+            return Integer.MAX_VALUE;
+        }
+
+        @Override
+        public boolean isQuotaViolated() {
+            return false;
+        }
+    };
 }

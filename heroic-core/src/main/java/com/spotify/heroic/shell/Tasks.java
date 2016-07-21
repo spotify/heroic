@@ -22,12 +22,14 @@
 package com.spotify.heroic.shell;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Charsets;
 import com.spotify.heroic.HeroicCoreInstance;
 import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.RangeFilter;
+import com.spotify.heroic.common.OptionalLimit;
+import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.FilterFactory;
+import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metric.BackendKeyFilter;
 import com.spotify.heroic.shell.task.AnalyticsDumpFetchSeries;
@@ -47,6 +49,8 @@ import com.spotify.heroic.shell.task.MetadataCount;
 import com.spotify.heroic.shell.task.MetadataDelete;
 import com.spotify.heroic.shell.task.MetadataEntries;
 import com.spotify.heroic.shell.task.MetadataFetch;
+import com.spotify.heroic.shell.task.MetadataFindSeries;
+import com.spotify.heroic.shell.task.MetadataFindSeriesIds;
 import com.spotify.heroic.shell.task.MetadataLoad;
 import com.spotify.heroic.shell.task.MetadataMigrate;
 import com.spotify.heroic.shell.task.MetadataTags;
@@ -54,16 +58,18 @@ import com.spotify.heroic.shell.task.ParseQuery;
 import com.spotify.heroic.shell.task.Pause;
 import com.spotify.heroic.shell.task.Query;
 import com.spotify.heroic.shell.task.ReadWriteTest;
+import com.spotify.heroic.shell.task.Refresh;
 import com.spotify.heroic.shell.task.Resume;
 import com.spotify.heroic.shell.task.SerializeKey;
 import com.spotify.heroic.shell.task.Statistics;
-import com.spotify.heroic.shell.task.StringifyQuery;
 import com.spotify.heroic.shell.task.SuggestKey;
 import com.spotify.heroic.shell.task.SuggestPerformance;
 import com.spotify.heroic.shell.task.SuggestTag;
 import com.spotify.heroic.shell.task.SuggestTagKeyCount;
 import com.spotify.heroic.shell.task.SuggestTagValue;
 import com.spotify.heroic.shell.task.SuggestTagValues;
+import com.spotify.heroic.shell.task.TestPrint;
+import com.spotify.heroic.shell.task.TestReadFile;
 import com.spotify.heroic.shell.task.Write;
 import com.spotify.heroic.shell.task.WritePerformance;
 import lombok.Getter;
@@ -76,18 +82,27 @@ import org.joda.time.format.DateTimeParser;
 import org.joda.time.format.DateTimeParserBucket;
 import org.kohsuke.args4j.Option;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 public final class Tasks {
     static final List<ShellTaskDefinition> available = new ArrayList<>();
     static final Map<Class<?>, ShellTaskDefinition> availableMap = new HashMap<>();
 
     static {
+        shellTask(TestReadFile::setup, TestReadFile.class);
+        shellTask(TestPrint::setup, TestPrint.class);
+        shellTask(Refresh::setup, Refresh.class);
         shellTask(Configure::setup, Configure.class);
         shellTask(Statistics::setup, Statistics.class);
         shellTask(Keys::setup, Keys.class);
@@ -104,6 +119,8 @@ public final class Tasks {
         shellTask(MetadataTags::setup, MetadataTags.class);
         shellTask(MetadataCount::setup, MetadataCount.class);
         shellTask(MetadataEntries::setup, MetadataEntries.class);
+        shellTask(MetadataFindSeries::setup, MetadataFindSeries.class);
+        shellTask(MetadataFindSeriesIds::setup, MetadataFindSeriesIds.class);
         shellTask(MetadataMigrate::setup, MetadataMigrate.class);
         shellTask(MetadataLoad::setup, MetadataLoad.class);
         shellTask(SuggestTag::setup, SuggestTag.class);
@@ -119,7 +136,6 @@ public final class Tasks {
         shellTask(IngestionFilter::setup, IngestionFilter.class);
         shellTask(DataMigrate::setup, DataMigrate.class);
         shellTask(ParseQuery::setup, ParseQuery.class);
-        shellTask(StringifyQuery::setup, StringifyQuery.class);
         shellTask(AnalyticsReportFetchSeries::setup, AnalyticsReportFetchSeries.class);
         shellTask(AnalyticsDumpFetchSeries::setup, AnalyticsDumpFetchSeries.class);
         shellTask(LoadGenerated::setup, LoadGenerated.class);
@@ -229,12 +245,12 @@ public final class Tasks {
     }
 
     public static Filter setupFilter(
-        FilterFactory filters, QueryParser parser, TaskQueryParameters params
+        QueryParser parser, TaskQueryParameters params
     ) {
         final List<String> query = params.getQuery();
 
         if (query.isEmpty()) {
-            return filters.t();
+            return TrueFilter.get();
         }
 
         return parser.parseFilter(StringUtils.join(query, " "));
@@ -272,11 +288,46 @@ public final class Tasks {
             filter = filter.withEnd(BackendKeyFilter.ltToken(params.endToken));
         }
 
-        if (params.limit >= 0) {
-            filter = filter.withLimit(params.limit);
-        }
-
+        filter = filter.withLimit(params.limit);
         return filter;
+    }
+
+    public static Series parseSeries(final ObjectMapper mapper, final Optional<String> series) {
+        return series.<Series>map(s -> {
+            try {
+                return mapper.readValue(s, Series.class);
+            } catch (IOException e) {
+                throw new RuntimeException("Bad series: " + s, e);
+            }
+        }).orElseGet(Series::empty);
+    }
+
+    public static <T> Stream<T> parseJsonLines(
+        final ObjectMapper mapper, final Optional<Path> file, final ShellIO io, final Class<T> type
+    ) {
+        return file.<Stream<T>>map(f -> {
+            try {
+                final BufferedReader reader =
+                    new BufferedReader(new InputStreamReader(io.newInputStream(f), Charsets.UTF_8));
+
+                return reader.lines().onClose(() -> {
+                    try {
+                        reader.close();
+                    } catch (IOException e) {
+                        throw new RuntimeException("Failed to close file", e);
+                    }
+                }).map(line -> {
+                    try {
+                        return mapper.readValue(line.trim(), type);
+                    } catch (IOException e) {
+                        throw new RuntimeException("Failed to decode line (" + line.trim() + ")",
+                            e);
+                    }
+                });
+            } catch (final IOException e) {
+                throw new RuntimeException("Failed to open file: " + f, e);
+            }
+        }).orElseGet(Stream::empty);
     }
 
     public abstract static class QueryParamsBase extends AbstractShellTaskParams
@@ -319,14 +370,7 @@ public final class Tasks {
 
         @Option(name = "--limit", usage = "Limit the number keys to operate on", metaVar = "<int>")
         @Getter
-        protected int limit = -1;
-    }
-
-    public static RangeFilter setupRangeFilter(
-        FilterFactory filters, QueryParser parser, TaskQueryParameters params
-    ) {
-        final Filter filter = setupFilter(filters, parser, params);
-        return new RangeFilter(filter, params.getRange(), params.getLimit());
+        protected OptionalLimit limit = OptionalLimit.empty();
     }
 
     private static final List<DateTimeParser> today = new ArrayList<>();

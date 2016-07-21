@@ -23,32 +23,46 @@ package com.spotify.heroic.metadata.elasticsearch;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.HashCode;
+import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
-import com.spotify.heroic.common.RangeFilter;
+import com.spotify.heroic.common.OptionalLimit;
+import com.spotify.heroic.common.RequestTimer;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.elasticsearch.AbstractElasticsearchMetadataBackend;
 import com.spotify.heroic.elasticsearch.BackendType;
-import com.spotify.heroic.elasticsearch.BackendTypeFactory;
 import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
 import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
+import com.spotify.heroic.filter.AndFilter;
+import com.spotify.heroic.filter.FalseFilter;
 import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.filter.HasTagFilter;
+import com.spotify.heroic.filter.MatchKeyFilter;
+import com.spotify.heroic.filter.MatchTagFilter;
+import com.spotify.heroic.filter.NotFilter;
+import com.spotify.heroic.filter.OrFilter;
+import com.spotify.heroic.filter.StartsWithFilter;
+import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.DeleteSeries;
 import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindSeries;
+import com.spotify.heroic.metadata.FindSeriesIds;
+import com.spotify.heroic.metadata.FindSeriesIdsStream;
+import com.spotify.heroic.metadata.FindSeriesStream;
 import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.MetadataBackend;
-import com.spotify.heroic.metric.WriteResult;
-import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
+import com.spotify.heroic.metadata.WriteMetadata;
+import com.spotify.heroic.statistics.MetadataBackendReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
+import eu.toolchain.async.Transform;
 import lombok.ToString;
 import org.apache.commons.lang3.tuple.Pair;
 import org.elasticsearch.action.count.CountRequestBuilder;
@@ -56,6 +70,7 @@ import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
 import org.elasticsearch.action.index.IndexRequest.OpType;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
+import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -77,6 +92,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static org.elasticsearch.index.query.FilterBuilders.andFilter;
 import static org.elasticsearch.index.query.FilterBuilders.matchAllFilter;
@@ -99,12 +117,10 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     static final String TYPE_METADATA = "metadata";
 
     static final TimeValue SCROLL_TIME = TimeValue.timeValueMillis(5000);
-    static final int MAX_SIZE = 1000;
-
-    public static final String TEMPLATE_NAME = "heroic";
+    static final int SCROLL_SIZE = 1000;
 
     private final Groups groups;
-    private final LocalMetadataBackendReporter reporter;
+    private final MetadataBackendReporter reporter;
     private final AsyncFramework async;
     private final Managed<Connection> connection;
     private final RateLimitedCache<Pair<String, HashCode>> writeCache;
@@ -112,7 +128,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
     @Inject
     public MetadataBackendKV(
-        Groups groups, LocalMetadataBackendReporter reporter, AsyncFramework async,
+        Groups groups, MetadataBackendReporter reporter, AsyncFramework async,
         Managed<Connection> connection, RateLimitedCache<Pair<String, HashCode>> writeCache,
         @Named("configure") boolean configure
     ) {
@@ -138,215 +154,166 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
     @Override
     public AsyncFuture<Void> configure() {
-        return doto(c -> c.configure());
+        return doto(Connection::configure);
     }
 
     @Override
-    public Groups getGroups() {
+    public Groups groups() {
         return groups;
     }
 
     @Override
-    public AsyncFuture<FindTags> findTags(final RangeFilter filter) {
-        return doto(new ManagedAction<Connection, FindTags>() {
-            @Override
-            public AsyncFuture<FindTags> action(final Connection c) throws Exception {
-                return async.resolved(FindTags.EMPTY).onDone(reporter.reportFindTags());
+    public AsyncFuture<FindTags> findTags(final FindTags.Request filter) {
+        return doto(c -> async.resolved(FindTags.EMPTY));
+    }
+
+    @Override
+    public AsyncFuture<WriteMetadata> write(final WriteMetadata.Request request) {
+        return doto(c -> {
+            final Series series = request.getSeries();
+            final DateRange range = request.getRange();
+            final String id = series.hash();
+
+            final String[] indices;
+
+            try {
+                indices = c.writeIndices(range);
+            } catch (NoIndexSelectedException e) {
+                return async.failed(e);
             }
+
+            final List<AsyncFuture<WriteMetadata>> writes = new ArrayList<>();
+
+            for (final String index : indices) {
+                if (!writeCache.acquire(Pair.of(index, series.getHashCode()))) {
+                    reporter.reportWriteDroppedByRateLimit();
+                    continue;
+                }
+
+                final XContentBuilder source = XContentFactory.jsonBuilder();
+
+                source.startObject();
+                buildContext(source, series);
+                source.endObject();
+
+                final IndexRequestBuilder builder = c
+                    .index(index, TYPE_METADATA)
+                    .setId(id)
+                    .setSource(source)
+                    .setOpType(OpType.CREATE);
+
+                final RequestTimer<WriteMetadata> timer = WriteMetadata.timer();
+
+                AsyncFuture<WriteMetadata> result =
+                    bind(builder.execute()).directTransform(response -> timer.end());
+
+                writes.add(result);
+            }
+
+            return async.collect(writes, WriteMetadata.reduce());
         });
     }
 
     @Override
-    public AsyncFuture<WriteResult> write(final Series series, final DateRange range) {
-        return doto(new ManagedAction<Connection, WriteResult>() {
-            @Override
-            public AsyncFuture<WriteResult> action(final Connection c) throws Exception {
-                final String id = series.hash();
+    public AsyncFuture<CountSeries> countSeries(final CountSeries.Request filter) {
+        return doto(c -> {
+            final OptionalLimit limit = filter.getLimit();
 
-                final String[] indices;
+            if (limit.isZero()) {
+                return async.resolved(CountSeries.of());
+            }
 
-                try {
-                    indices = c.writeIndices(range);
-                } catch (NoIndexSelectedException e) {
-                    return async.failed(e);
-                }
+            final FilterBuilder f = filter(filter.getFilter());
 
-                final List<AsyncFuture<WriteResult>> writes = new ArrayList<>();
+            final CountRequestBuilder builder = c.count(filter.getRange(), TYPE_METADATA);
+            limit.asInteger().ifPresent(builder::setTerminateAfter);
 
-                for (final String index : indices) {
-                    if (!writeCache.acquire(Pair.of(index, series.getHashCode()))) {
-                        reporter.reportWriteDroppedByRateLimit();
-                        continue;
+            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+
+            return bind(builder.execute()).directTransform(
+                response -> CountSeries.of(response.getCount(), false));
+        });
+    }
+
+    @Override
+    public AsyncFuture<FindSeries> findSeries(final FindSeries.Request request) {
+        return entries(request.getFilter(), request.getLimit(), request.getRange(), this::toSeries,
+            l -> FindSeries.of(l.getSet(), l.isLimited()), builder -> {
+            });
+    }
+
+    @Override
+    public AsyncObservable<FindSeriesStream> findSeriesStream(final FindSeries.Request request) {
+        return entriesStream(request.getLimit(), request.getFilter(), request.getRange(),
+            this::toSeries, FindSeriesStream::of, builder -> {
+            });
+    }
+
+    @Override
+    public AsyncFuture<FindSeriesIds> findSeriesIds(final FindSeriesIds.Request request) {
+        return entries(request.getFilter(), request.getLimit(), request.getRange(), this::toId,
+            l -> FindSeriesIds.of(l.getSet(), l.isLimited()), builder -> {
+                builder.setFetchSource(false);
+            });
+    }
+
+    @Override
+    public AsyncObservable<FindSeriesIdsStream> findSeriesIdsStream(
+        final FindSeriesIds.Request request
+    ) {
+        return entriesStream(request.getLimit(), request.getFilter(), request.getRange(),
+            this::toId, FindSeriesIdsStream::of, builder -> {
+                builder.setFetchSource(false);
+            });
+    }
+
+    @Override
+    public AsyncFuture<DeleteSeries> deleteSeries(final DeleteSeries.Request request) {
+        return doto(c -> {
+            final FilterBuilder f = filter(request.getFilter());
+
+            final DeleteByQueryRequestBuilder builder =
+                c.deleteByQuery(request.getRange(), TYPE_METADATA);
+
+            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+
+            return bind(builder.execute()).directTransform(response -> DeleteSeries.of());
+        });
+    }
+
+    @Override
+    public AsyncFuture<FindKeys> findKeys(final FindKeys.Request request) {
+        return doto(c -> {
+            final FilterBuilder f = filter(request.getFilter());
+
+            final SearchRequestBuilder builder =
+                c.search(request.getRange(), TYPE_METADATA).setSearchType("count");
+
+            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+
+            {
+                final AggregationBuilder<?> terms =
+                    AggregationBuilders.terms("terms").field(KEY).size(0);
+                builder.addAggregation(terms);
+            }
+
+            return bind(builder.execute()).directTransform(response -> {
+                final Terms terms = (Terms) response.getAggregations().get("terms");
+
+                final Set<String> keys = new HashSet<String>();
+
+                int size = terms.getBuckets().size();
+                int duplicates = 0;
+
+                for (final Terms.Bucket bucket : terms.getBuckets()) {
+                    if (keys.add(bucket.getKey())) {
+                        duplicates += 1;
                     }
-
-                    final XContentBuilder source = XContentFactory.jsonBuilder();
-
-                    source.startObject();
-                    buildContext(source, series);
-                    source.endObject();
-
-                    final IndexRequestBuilder request = c
-                        .index(index, TYPE_METADATA)
-                        .setId(id)
-                        .setSource(source)
-                        .setOpType(OpType.CREATE);
-
-                    final long start = System.nanoTime();
-                    AsyncFuture<WriteResult> result = bind(request.execute()).directTransform(
-                        response -> WriteResult.of(System.nanoTime() - start));
-
-                    writes.add(result);
                 }
 
-                return async.collect(writes, WriteResult.merger());
-            }
+                return FindKeys.of(keys, size, duplicates);
+            });
         });
-    }
-
-    @Override
-    public AsyncFuture<CountSeries> countSeries(final RangeFilter filter) {
-        return doto(new ManagedAction<Connection, CountSeries>() {
-            @Override
-            public AsyncFuture<CountSeries> action(final Connection c) throws Exception {
-                if (filter.getLimit() <= 0) {
-                    return async.resolved(CountSeries.EMPTY);
-                }
-
-                final FilterBuilder f = filter(filter.getFilter());
-
-                if (f == null) {
-                    return async.resolved(CountSeries.EMPTY);
-                }
-
-                final CountRequestBuilder request;
-
-                try {
-                    request = c
-                        .count(filter.getRange(), TYPE_METADATA)
-                        .setTerminateAfter(filter.getLimit());
-                } catch (NoIndexSelectedException e) {
-                    return async.failed(e);
-                }
-
-                request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
-
-                return bind(request.execute()).directTransform(
-                    response -> new CountSeries(response.getCount(), false));
-            }
-        });
-    }
-
-    @Override
-    public AsyncFuture<FindSeries> findSeries(final RangeFilter filter) {
-        return doto(new ManagedAction<Connection, FindSeries>() {
-            @Override
-            public AsyncFuture<FindSeries> action(final Connection c) throws Exception {
-                if (filter.getLimit() <= 0) {
-                    return async.resolved(FindSeries.EMPTY);
-                }
-
-                final FilterBuilder f = filter(filter.getFilter());
-
-                if (f == null) {
-                    return async.resolved(FindSeries.EMPTY);
-                }
-
-                final SearchRequestBuilder request;
-
-                try {
-                    request = c
-                        .search(filter.getRange(), TYPE_METADATA)
-                        .setSize(Math.min(MAX_SIZE, filter.getLimit()))
-                        .setScroll(SCROLL_TIME)
-                        .setSearchType(SearchType.SCAN);
-                } catch (NoIndexSelectedException e) {
-                    return async.failed(e);
-                }
-
-                request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
-
-                return scrollOverSeries(c, request, filter.getLimit()).onDone(
-                    reporter.reportFindTimeSeries());
-            }
-        });
-    }
-
-    @Override
-    public AsyncFuture<DeleteSeries> deleteSeries(final RangeFilter filter) {
-        return doto(new ManagedAction<Connection, DeleteSeries>() {
-            @Override
-            public AsyncFuture<DeleteSeries> action(final Connection c) throws Exception {
-                final FilterBuilder f = filter(filter.getFilter());
-
-                if (f == null) {
-                    return async.resolved(DeleteSeries.EMPTY);
-                }
-
-                final DeleteByQueryRequestBuilder request;
-
-                try {
-                    request = c.deleteByQuery(filter.getRange(), TYPE_METADATA);
-                } catch (NoIndexSelectedException e) {
-                    return async.failed(e);
-                }
-
-                request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
-
-                return bind(request.execute()).directTransform(response -> new DeleteSeries(0, 0));
-            }
-        });
-    }
-
-    @Override
-    public AsyncFuture<FindKeys> findKeys(final RangeFilter filter) {
-        return doto(new ManagedAction<Connection, FindKeys>() {
-            @Override
-            public AsyncFuture<FindKeys> action(final Connection c) throws Exception {
-                final FilterBuilder f = filter(filter.getFilter());
-
-                if (f == null) {
-                    return async.resolved(FindKeys.EMPTY);
-                }
-
-                final SearchRequestBuilder request;
-
-                try {
-                    request = c.search(filter.getRange(), TYPE_METADATA).setSearchType("count");
-                } catch (NoIndexSelectedException e) {
-                    return async.failed(e);
-                }
-
-                request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
-
-                {
-                    final AggregationBuilder<?> terms =
-                        AggregationBuilders.terms("terms").field(KEY).size(0);
-                    request.addAggregation(terms);
-                }
-
-                return bind(request.execute()).directTransform(response -> {
-                    final Terms terms = (Terms) response.getAggregations().get("terms");
-
-                    final Set<String> keys = new HashSet<String>();
-
-                    int size = terms.getBuckets().size();
-                    int duplicates = 0;
-
-                    for (final Terms.Bucket bucket : terms.getBuckets()) {
-                        if (keys.add(bucket.getKey())) {
-                            duplicates += 1;
-                        }
-                    }
-
-                    return new FindKeys(keys, size, duplicates);
-                }).onDone(reporter.reportFindKeys());
-            }
-        });
-    }
-
-    @Override
-    public AsyncFuture<Void> refresh() {
-        return async.resolved(null);
     }
 
     @Override
@@ -363,12 +330,74 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         return Series.of(key, tags);
     }
 
+    private <T, O> AsyncFuture<O> entries(
+        final Filter filter, final OptionalLimit limit, final DateRange range,
+        final Function<SearchHit, T> converter, final Transform<LimitedSet<T>, O> collector,
+        final Consumer<SearchRequestBuilder> modifier
+    ) {
+        final FilterBuilder f = filter(filter);
+
+        return doto(c -> {
+            final SearchRequestBuilder builder = c
+                .search(range, TYPE_METADATA)
+                .setScroll(SCROLL_TIME)
+                .setSearchType(SearchType.SCAN);
+
+            builder.setSize(limit.asMaxInteger(SCROLL_SIZE));
+            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+
+            modifier.accept(builder);
+
+            return scrollEntries(c, builder, limit, converter).directTransform(collector);
+        });
+    }
+
+    private <T, O> AsyncObservable<O> entriesStream(
+        final OptionalLimit limit, final Filter f, final DateRange range,
+        final Function<SearchHit, T> converter, final Function<Set<T>, O> collector,
+        final Consumer<SearchRequestBuilder> modifier
+    ) {
+        final FilterBuilder filter = filter(f);
+
+        return observer -> connection.doto(c -> {
+            final SearchRequestBuilder builder = c
+                .search(range, TYPE_METADATA)
+                .setScroll(SCROLL_TIME)
+                .setSearchType(SearchType.SCAN);
+
+            builder.setSize(limit.asMaxInteger(SCROLL_SIZE));
+            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), filter));
+
+            modifier.accept(builder);
+
+            return bind(builder.execute()).lazyTransform((initial) -> {
+                if (initial.getScrollId() == null) {
+                    return async.resolved();
+                }
+
+                final String scrollId = initial.getScrollId();
+
+                final Supplier<AsyncFuture<SearchResponse>> scroller =
+                    () -> bind(c.prepareSearchScroll(scrollId).setScroll(SCROLL_TIME).execute());
+
+                return scroller
+                    .get()
+                    .lazyTransform(new ScrollTransformStream<>(limit, scroller,
+                        set -> observer.observe(collector.apply(set)), converter));
+            });
+        }).onDone(observer.onDone());
+    }
+
+    private String toId(SearchHit hit) {
+        return hit.getId();
+    }
+
     private <T> AsyncFuture<T> doto(ManagedAction<Connection, T> action) {
         return connection.doto(action);
     }
 
-    private AsyncFuture<Void> start() {
-        AsyncFuture<Void> future = connection.start();
+    AsyncFuture<Void> start() {
+        final AsyncFuture<Void> future = connection.start();
 
         if (!configure) {
             return future;
@@ -377,7 +406,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         return future.lazyTransform(v -> configure());
     }
 
-    private AsyncFuture<Void> stop() {
+    AsyncFuture<Void> stop() {
         return connection.stop();
     }
 
@@ -413,68 +442,74 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         b.endArray();
     }
 
+    private static final Filter.Visitor<FilterBuilder> FILTER_CONVERTER =
+        new Filter.Visitor<FilterBuilder>() {
+            @Override
+            public FilterBuilder visitTrue(final TrueFilter t) {
+                return matchAllFilter();
+            }
+
+            @Override
+            public FilterBuilder visitFalse(final FalseFilter f) {
+                return notFilter(matchAllFilter());
+            }
+
+            @Override
+            public FilterBuilder visitAnd(final AndFilter and) {
+                return andFilter(convertTerms(and.terms()));
+            }
+
+            @Override
+            public FilterBuilder visitOr(final OrFilter or) {
+                return orFilter(convertTerms(or.terms()));
+            }
+
+            @Override
+            public FilterBuilder visitNot(final NotFilter not) {
+                return notFilter(not.getFilter().visit(this));
+            }
+
+            @Override
+            public FilterBuilder visitMatchTag(final MatchTagFilter matchTag) {
+                return termFilter(TAGS, matchTag.getTag() + TAG_DELIMITER + matchTag.getValue());
+            }
+
+            @Override
+            public FilterBuilder visitStartsWith(final StartsWithFilter startsWith) {
+                return prefixFilter(TAGS,
+                    startsWith.getTag() + TAG_DELIMITER + startsWith.getValue());
+            }
+
+            @Override
+            public FilterBuilder visitHasTag(final HasTagFilter hasTag) {
+                return termFilter(TAG_KEYS, hasTag.getTag());
+            }
+
+            @Override
+            public FilterBuilder visitMatchKey(final MatchKeyFilter matchKey) {
+                return termFilter(KEY, matchKey.getValue());
+            }
+
+            @Override
+            public FilterBuilder defaultAction(final Filter filter) {
+                throw new IllegalArgumentException("Unsupported filter statement: " + filter);
+            }
+
+            private FilterBuilder[] convertTerms(final List<Filter> terms) {
+                final FilterBuilder[] filters = new FilterBuilder[terms.size()];
+                int i = 0;
+
+                for (final Filter stmt : terms) {
+                    filters[i++] = stmt.visit(this);
+                }
+
+                return filters;
+            }
+        };
+
     @Override
     protected FilterBuilder filter(final Filter filter) {
-        if (filter instanceof Filter.True) {
-            return matchAllFilter();
-        }
-
-        if (filter instanceof Filter.False) {
-            return notFilter(matchAllFilter());
-        }
-
-        if (filter instanceof Filter.And) {
-            final Filter.And and = (Filter.And) filter;
-            final List<FilterBuilder> filters = new ArrayList<>(and.terms().size());
-
-            for (final Filter stmt : and.terms()) {
-                filters.add(filter(stmt));
-            }
-
-            return andFilter(filters.toArray(new FilterBuilder[0]));
-        }
-
-        if (filter instanceof Filter.Or) {
-            final Filter.Or or = (Filter.Or) filter;
-            final List<FilterBuilder> filters = new ArrayList<>(or.terms().size());
-
-            for (final Filter stmt : or.terms()) {
-                filters.add(filter(stmt));
-            }
-
-            return orFilter(filters.toArray(new FilterBuilder[0]));
-        }
-
-        if (filter instanceof Filter.Not) {
-            final Filter.Not not = (Filter.Not) filter;
-            return notFilter(filter(not.first()));
-        }
-
-        if (filter instanceof Filter.MatchTag) {
-            final Filter.MatchTag matchTag = (Filter.MatchTag) filter;
-            return termFilter(TAGS, matchTag.first() + '\0' + matchTag.second());
-        }
-
-        if (filter instanceof Filter.StartsWith) {
-            final Filter.StartsWith startsWith = (Filter.StartsWith) filter;
-            return prefixFilter(TAGS, startsWith.first() + '\0' + startsWith.second());
-        }
-
-        if (filter instanceof Filter.Regex) {
-            throw new IllegalArgumentException("regex not supported");
-        }
-
-        if (filter instanceof Filter.HasTag) {
-            final Filter.HasTag hasTag = (Filter.HasTag) filter;
-            return termFilter(TAG_KEYS, hasTag.first());
-        }
-
-        if (filter instanceof Filter.MatchKey) {
-            final Filter.MatchKey matchKey = (Filter.MatchKey) filter;
-            return termFilter(KEY, matchKey.first());
-        }
-
-        throw new IllegalArgumentException("Invalid filter statement: " + filter);
+        return filter.visit(FILTER_CONVERTER);
     }
 
     @Override
@@ -482,30 +517,9 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         return Statistics.of(WRITE_CACHE_SIZE, writeCache.size());
     }
 
-    public static BackendTypeFactory<MetadataBackend> factory() {
-        return new BackendTypeFactory<MetadataBackend>() {
-            @Override
-            public BackendType<MetadataBackend> setup() {
-                return new BackendType<MetadataBackend>() {
-                    @Override
-                    public Map<String, Map<String, Object>> mappings() {
-                        final Map<String, Map<String, Object>> mappings = new HashMap<>();
-                        mappings.put("metadata",
-                            ElasticsearchMetadataUtils.loadJsonResource("kv/metadata.json"));
-                        return mappings;
-                    }
-
-                    @Override
-                    public Map<String, Object> settings() {
-                        return ImmutableMap.of();
-                    }
-
-                    @Override
-                    public Class<? extends MetadataBackend> type() {
-                        return MetadataBackendKV.class;
-                    }
-                };
-            }
-        };
+    public static BackendType backendType() {
+        final Map<String, Map<String, Object>> mappings = new HashMap<>();
+        mappings.put("metadata", ElasticsearchMetadataUtils.loadJsonResource("kv/metadata.json"));
+        return new BackendType(mappings, ImmutableMap.of(), MetadataBackendKV.class);
     }
 }

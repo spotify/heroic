@@ -21,21 +21,9 @@
 
 package com.spotify.heroic.dagger;
 
-import com.spotify.heroic.HeroicServer;
-import com.spotify.heroic.jetty.JettyServerConnector;
-import com.spotify.heroic.lifecycle.LifeCycle;
 import dagger.Component;
-
-import javax.inject.Named;
-import java.util.List;
 
 @PrimaryScope
 @Component(modules = PrimaryModule.class, dependencies = CoreEarlyComponent.class)
 public interface CorePrimaryComponent extends PrimaryComponent {
-    @Named("heroicServer")
-    LifeCycle heroicServerLife();
-
-    HeroicServer heroicServer();
-
-    List<JettyServerConnector> connectors();
 }

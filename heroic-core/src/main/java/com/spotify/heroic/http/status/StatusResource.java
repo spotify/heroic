@@ -22,10 +22,13 @@
 package com.spotify.heroic.http.status;
 
 import com.spotify.heroic.cluster.ClusterManager;
+import com.spotify.heroic.common.GroupMember;
 import com.spotify.heroic.common.ServiceInfo;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.consumer.Consumer;
+import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
+import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricManager;
 
 import javax.inject.Inject;
@@ -92,9 +95,9 @@ public class StatusResource {
     }
 
     private StatusResponse.Backend buildBackendStatus() {
-        final int available = metric.getBackends().size();
-        int ready =
-            (int) metric.getBackends().stream().filter(b -> b.getMember().isReady()).count();
+        final Set<GroupMember<MetricBackend>> members = metric.groupSet().inspectAll();
+        final int available = members.size();
+        int ready = (int) members.stream().filter(b -> b.getMember().isReady()).count();
         return new StatusResponse.Backend(available == ready, available, ready);
     }
 
@@ -129,8 +132,9 @@ public class StatusResource {
     }
 
     private StatusResponse.MetadataBackend buildMetadataBackendStatus() {
-        final int available = metadata.getBackends().size();
-        int ready = (int) metadata.getBackends().stream().map(b -> b.getMember().isReady()).count();
+        final Set<GroupMember<MetadataBackend>> members = metadata.groupSet().inspectAll();
+        final int available = members.size();
+        int ready = (int) members.stream().map(b -> b.getMember().isReady()).count();
         return new StatusResponse.MetadataBackend(available == ready, available, ready);
     }
 }

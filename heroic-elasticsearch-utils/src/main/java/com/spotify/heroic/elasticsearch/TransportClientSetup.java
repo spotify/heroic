@@ -63,10 +63,6 @@ public class TransportClientSetup implements ClientSetup {
         return client;
     }
 
-    @Override
-    public void stop() throws Exception {
-    }
-
     private static List<InetSocketTransportAddress> seeds(final List<String> rawSeeds) {
         return ImmutableList.copyOf(rawSeeds
             .stream()

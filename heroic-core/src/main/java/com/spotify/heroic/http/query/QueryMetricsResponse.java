@@ -31,6 +31,7 @@ import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.RequestError;
+import com.spotify.heroic.metric.ResultLimits;
 import com.spotify.heroic.metric.SeriesValues;
 import com.spotify.heroic.metric.ShardLatency;
 import com.spotify.heroic.metric.ShardedResultGroup;
@@ -71,6 +72,9 @@ public class QueryMetricsResponse {
     @Getter
     private final QueryTrace trace;
 
+    @Getter
+    private final ResultLimits limits;
+
     public static class Serializer extends JsonSerializer<QueryMetricsResponse> {
         @Override
         public void serialize(
@@ -83,6 +87,7 @@ public class QueryMetricsResponse {
 
             g.writeObjectField("range", response.getRange());
             g.writeObjectField("trace", response.getTrace());
+            g.writeObjectField("limits", response.getLimits());
 
             g.writeFieldName("commonTags");
             serializeCommonTags(g, common);
@@ -135,7 +140,7 @@ public class QueryMetricsResponse {
 
             for (final ShardedResultGroup r : result) {
                 final Set<Map.Entry<String, SortedSet<String>>> entries =
-                    r.getSeries().getTags().entrySet();
+                    SeriesValues.fromSeries(r.getSeries().iterator()).getTags().entrySet();
 
                 for (final Map.Entry<String, SortedSet<String>> e : entries) {
                     if (blacklist.contains(e.getKey())) {
@@ -170,15 +175,14 @@ public class QueryMetricsResponse {
             for (final ShardedResultGroup group : result) {
                 g.writeStartObject();
 
-                final MetricCollection collection = group.getGroup();
-                final SeriesValues series = group.getSeries();
+                final MetricCollection collection = group.getMetrics();
+                final SeriesValues series = SeriesValues.fromSeries(group.getSeries().iterator());
 
                 g.writeStringField("type", collection.getType().identifier());
                 g.writeStringField("hash", Integer.toHexString(group.hashCode()));
                 g.writeObjectField("shard", group.getShard());
                 g.writeNumberField("cadence", group.getCadence());
                 g.writeObjectField("values", collection.getData());
-                g.writeNumberField("keyCount", group.getSeries().getKeys().size());
 
                 writeKey(g, series.getKeys());
                 writeTags(g, common, series.getTags());
@@ -209,9 +213,10 @@ public class QueryMetricsResponse {
             g.writeStartObject();
 
             for (final Map.Entry<String, SortedSet<String>> pair : tags.entrySet()) {
-                if (common.containsKey(pair.getKey())) {
+                // TODO: enable this when commonTags is used.
+                /*if (common.containsKey(pair.getKey())) {
                     continue;
-                }
+                }*/
 
                 final SortedSet<String> values = pair.getValue();
 

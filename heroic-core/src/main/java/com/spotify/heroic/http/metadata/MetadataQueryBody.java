@@ -25,8 +25,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.QueryDateRange;
+import com.spotify.heroic.filter.AndFilter;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.FilterFactory;
+import com.spotify.heroic.filter.HasTagFilter;
+import com.spotify.heroic.filter.MatchKeyFilter;
+import com.spotify.heroic.filter.MatchTagFilter;
+import com.spotify.heroic.filter.TrueFilter;
 import lombok.Data;
 
 import java.util.ArrayList;
@@ -68,7 +72,7 @@ public class MetadataQueryBody {
 
     private final int limit;
 
-    public Filter makeFilter(FilterFactory filters) {
+    public Filter makeFilter() {
         final List<Filter> statements = new ArrayList<>();
 
         if (filter.isPresent()) {
@@ -79,26 +83,26 @@ public class MetadataQueryBody {
             matchTags
                 .get()
                 .entrySet()
-                .forEach(e -> statements.add(filters.matchTag(e.getKey(), e.getValue())));
+                .forEach(e -> statements.add(new MatchTagFilter(e.getKey(), e.getValue())));
         }
 
         if (hasTags.isPresent()) {
-            hasTags.get().forEach(t -> statements.add(filters.hasTag(t)));
+            hasTags.get().forEach(t -> statements.add(new HasTagFilter(t)));
         }
 
         if (matchKey.isPresent()) {
-            statements.add(filters.matchKey(matchKey.get()));
+            statements.add(new MatchKeyFilter(matchKey.get()));
         }
 
         if (statements.size() == 0) {
-            return filters.t();
+            return TrueFilter.get();
         }
 
         if (statements.size() == 1) {
             return statements.get(0).optimize();
         }
 
-        return filters.and(statements).optimize();
+        return new AndFilter(statements).optimize();
     }
 
     @JsonCreator

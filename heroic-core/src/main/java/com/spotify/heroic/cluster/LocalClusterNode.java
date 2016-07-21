@@ -21,12 +21,6 @@
 
 package com.spotify.heroic.cluster;
 
-import com.spotify.heroic.QueryOptions;
-import com.spotify.heroic.aggregation.AggregationInstance;
-import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.RangeFilter;
-import com.spotify.heroic.common.Series;
-import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.DeleteSeries;
 import com.spotify.heroic.metadata.FindKeys;
@@ -34,14 +28,12 @@ import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
+import com.spotify.heroic.metadata.WriteMetadata;
+import com.spotify.heroic.metric.FullQuery;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
-import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.ResultGroups;
 import com.spotify.heroic.metric.WriteMetric;
-import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.suggest.KeySuggest;
-import com.spotify.heroic.suggest.MatchOptions;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestManager;
 import com.spotify.heroic.suggest.TagKeyCount;
@@ -54,7 +46,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 import javax.inject.Inject;
-import java.util.List;
 import java.util.Optional;
 
 @ToString(exclude = {"async", "metrics", "metadata", "suggest"})
@@ -83,18 +74,23 @@ public class LocalClusterNode implements ClusterNode {
     }
 
     @Override
+    public AsyncFuture<NodeMetadata> fetchMetadata() {
+        return async.resolved(localMetadata);
+    }
+
+    @Override
     public AsyncFuture<Void> close() {
         return async.resolved(null);
     }
 
     @Override
-    public Group useGroup(String group) {
+    public Group useOptionalGroup(final Optional<String> group) {
         return new TracingClusterNodeGroup(LocalClusterNode.class, new LocalGroup(group));
     }
 
     @RequiredArgsConstructor
     private final class LocalGroup implements ClusterNode.Group {
-        private final String group;
+        private final Optional<String> group;
 
         @Override
         public ClusterNode node() {
@@ -102,91 +98,82 @@ public class LocalClusterNode implements ClusterNode {
         }
 
         @Override
-        public AsyncFuture<ResultGroups> query(
-            MetricType source, Filter filter, DateRange range, AggregationInstance aggregation,
-            QueryOptions options
-        ) {
-            return metrics().query(source, filter, range, aggregation, options);
+        public AsyncFuture<FullQuery> query(final FullQuery.Request request) {
+            return metrics().query(request);
         }
 
         @Override
-        public AsyncFuture<FindTags> findTags(RangeFilter filter) {
-            return metadata().findTags(filter);
+        public AsyncFuture<FindTags> findTags(final FindTags.Request request) {
+            return metadata().findTags(request);
         }
 
         @Override
-        public AsyncFuture<FindKeys> findKeys(RangeFilter filter) {
-            return metadata().findKeys(filter);
+        public AsyncFuture<FindKeys> findKeys(final FindKeys.Request request) {
+            return metadata().findKeys(request);
         }
 
         @Override
-        public AsyncFuture<FindSeries> findSeries(RangeFilter filter) {
-            return metadata().findSeries(filter);
+        public AsyncFuture<FindSeries> findSeries(final FindSeries.Request request) {
+            return metadata().findSeries(request);
         }
 
         @Override
-        public AsyncFuture<DeleteSeries> deleteSeries(RangeFilter filter) {
-            return metadata().deleteSeries(filter);
+        public AsyncFuture<DeleteSeries> deleteSeries(final DeleteSeries.Request request) {
+            return metadata().deleteSeries(request);
         }
 
         @Override
-        public AsyncFuture<CountSeries> countSeries(RangeFilter filter) {
-            return metadata().countSeries(filter);
+        public AsyncFuture<CountSeries> countSeries(final CountSeries.Request request) {
+            return metadata().countSeries(request);
         }
 
         @Override
-        public AsyncFuture<TagKeyCount> tagKeyCount(RangeFilter filter) {
-            return suggest().tagKeyCount(filter);
+        public AsyncFuture<TagKeyCount> tagKeyCount(final TagKeyCount.Request request) {
+            return suggest().tagKeyCount(request);
         }
 
         @Override
-        public AsyncFuture<TagSuggest> tagSuggest(
-            RangeFilter filter, MatchOptions options, Optional<String> key, Optional<String> value
-        ) {
-            return suggest().tagSuggest(filter, options, key, value);
+        public AsyncFuture<TagSuggest> tagSuggest(final TagSuggest.Request request) {
+            return suggest().tagSuggest(request);
         }
 
         @Override
-        public AsyncFuture<KeySuggest> keySuggest(
-            RangeFilter filter, MatchOptions options, Optional<String> key
-        ) {
-            return suggest().keySuggest(filter, options, key);
+        public AsyncFuture<KeySuggest> keySuggest(final KeySuggest.Request request) {
+            return suggest().keySuggest(request);
         }
 
         @Override
         public AsyncFuture<TagValuesSuggest> tagValuesSuggest(
-            RangeFilter filter, List<String> exclude, int groupLimit
+            final TagValuesSuggest.Request request
         ) {
-            return suggest().tagValuesSuggest(filter, exclude, groupLimit);
+            return suggest().tagValuesSuggest(request);
         }
 
         @Override
-        public AsyncFuture<TagValueSuggest> tagValueSuggest(
-            RangeFilter filter, Optional<String> key
-        ) {
-            return suggest().tagValueSuggest(filter, key);
+        public AsyncFuture<TagValueSuggest> tagValueSuggest(final TagValueSuggest.Request request) {
+            return suggest().tagValueSuggest(request);
         }
 
         @Override
-        public AsyncFuture<WriteResult> writeSeries(DateRange range, Series series) {
-            return metadata().write(series, range);
+        public AsyncFuture<WriteMetadata> writeSeries(final WriteMetadata.Request request) {
+            return metadata().write(request);
         }
 
         @Override
-        public AsyncFuture<WriteResult> writeMetric(WriteMetric write) {
-            return metrics().write(write);
+        public AsyncFuture<WriteMetric> writeMetric(final WriteMetric.Request request) {
+            return metrics().write(request);
         }
 
         private SuggestBackend suggest() {
-            return suggest.useGroup(group);
+            return suggest.useOptionalGroup(group);
         }
 
         private MetadataBackend metadata() {
-            return metadata.useGroup(group);
+            return metadata.useOptionalGroup(group);
         }
 
         private MetricBackendGroup metrics() {
-            return metrics.useGroup(group);
+            return metrics.useOptionalGroup(group);
         }
     }
 }

@@ -26,14 +26,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.CoreComponent;
+import com.spotify.heroic.ingestion.Ingestion;
 import com.spotify.heroic.ingestion.IngestionGroup;
 import com.spotify.heroic.ingestion.IngestionManager;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.Point;
-import com.spotify.heroic.metric.WriteMetric;
-import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
@@ -59,8 +58,8 @@ import java.util.Map;
 @TaskUsage("Write a single, or a set of events")
 @TaskName("write")
 public class Write implements ShellTask {
-    private static final TypeReference<Map<String, Object>> PAYLOAD_TYPE =
-        new TypeReference<Map<String, Object>>() {
+    private static final TypeReference<Map<String, String>> PAYLOAD_TYPE =
+        new TypeReference<Map<String, String>>() {
         };
 
     private final IngestionManager ingestion;
@@ -135,14 +134,14 @@ public class Write implements ShellTask {
 
         for (final MetricCollection group : groups.build()) {
             writes.add(g
-                .write(new WriteMetric(series, group))
+                .write(new Ingestion.Request(series, group))
                 .directTransform(reportResult("metrics", io.out())));
         }
 
         return async.collectAndDiscard(writes);
     }
 
-    private Transform<WriteResult, Void> reportResult(final String title, final PrintWriter out) {
+    private Transform<Ingestion, Void> reportResult(final String title, final PrintWriter out) {
         return (result) -> {
             synchronized (out) {
                 int i = 0;
@@ -167,7 +166,7 @@ public class Write implements ShellTask {
             final String[] parts = p.split("=");
 
             final long timestamp;
-            final Map<String, Object> payload;
+            final Map<String, String> payload;
 
             if (parts.length == 1) {
                 timestamp = now;

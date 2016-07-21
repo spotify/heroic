@@ -36,7 +36,6 @@ import eu.toolchain.async.AsyncFuture;
 import javax.inject.Inject;
 import javax.inject.Named;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Function;
@@ -91,19 +90,9 @@ public class IngestionManagerImpl implements IngestionManager {
     }
 
     @Override
-    public IngestionGroup useGroup(final String group) {
-        return buildGroup(group, metric::useGroup, metadata::useGroup, suggest::useGroup);
-    }
-
-    @Override
-    public IngestionGroup useGroups(final Set<String> groups) {
-        return buildGroup(groups, metric::useGroups, metadata::useGroups, suggest::useGroups);
-    }
-
-    @Override
-    public IngestionGroup useDefaultGroup() {
-        return supplyGroup(metric::useDefaultGroup, metadata::useDefaultGroup,
-            suggest::useDefaultGroup);
+    public IngestionGroup useOptionalGroup(final Optional<String> group) {
+        return buildGroup(group, metric::useOptionalGroup, metadata::useOptionalGroup,
+            suggest::useOptionalGroup);
     }
 
     @Override
@@ -121,25 +110,6 @@ public class IngestionManagerImpl implements IngestionManager {
     public Statistics getStatistics() {
         return Statistics.of(INGESTED, ingested.sum(), AVAILABLE_WRITE_PERMITS,
             writePermits.availablePermits());
-    }
-
-    private <I> IngestionGroup supplyGroup(
-        Supplier<MetricBackend> metric, Supplier<MetadataBackend> metadata,
-        Supplier<SuggestBackend> suggest
-    ) {
-        // @formatter:off
-        return new CoreIngestionGroup(
-            async,
-            () -> filter,
-            writePermits,
-            reporter,
-            ingested,
-
-            optionally(updateMetrics, metric),
-            optionally(updateMetadata, metadata),
-            optionally(updateSuggestions, suggest)
-        );
-        // @formatter:on
     }
 
     private <I> IngestionGroup buildGroup(

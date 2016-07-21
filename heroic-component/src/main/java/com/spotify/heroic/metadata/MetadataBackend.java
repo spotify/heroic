@@ -22,49 +22,50 @@
 package com.spotify.heroic.metadata;
 
 import com.spotify.heroic.async.AsyncObservable;
-import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Collected;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Initializing;
-import com.spotify.heroic.common.RangeFilter;
-import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
-import com.spotify.heroic.metric.WriteResult;
 import eu.toolchain.async.AsyncFuture;
 
-import java.util.List;
-
-public interface MetadataBackend extends Grouped, Initializing {
+public interface MetadataBackend extends Grouped, Initializing, Collected {
     AsyncFuture<Void> configure();
 
     /**
      * Buffer a write for the specified series.
-     *
-     * @param id Id of series to write.
-     * @param series Series to write.
-     * @throws MetadataException If write could not be buffered.
      */
-    AsyncFuture<WriteResult> write(Series series, DateRange range);
-
-    AsyncFuture<Void> refresh();
+    AsyncFuture<WriteMetadata> write(WriteMetadata.Request request);
 
     /**
      * Iterate <em>all</em> available metadata.
      * <p>
      * This should perform pagination internally to avoid using too much memory.
      */
-    default AsyncObservable<List<Series>> entries(RangeFilter filter) {
+    default AsyncObservable<Entries> entries(Entries.Request request) {
         return AsyncObservable.empty();
     }
 
-    AsyncFuture<FindTags> findTags(RangeFilter filter);
+    AsyncFuture<FindTags> findTags(FindTags.Request request);
 
-    AsyncFuture<FindSeries> findSeries(RangeFilter filter);
+    AsyncFuture<FindSeries> findSeries(FindSeries.Request request);
 
-    AsyncFuture<CountSeries> countSeries(RangeFilter filter);
+    default AsyncObservable<FindSeriesStream> findSeriesStream(FindSeries.Request request) {
+        return AsyncObservable.empty();
+    }
 
-    AsyncFuture<DeleteSeries> deleteSeries(RangeFilter filter);
+    AsyncFuture<FindSeriesIds> findSeriesIds(FindSeriesIds.Request request);
 
-    AsyncFuture<FindKeys> findKeys(RangeFilter filter);
+    default AsyncObservable<FindSeriesIdsStream> findSeriesIdsStream(
+        FindSeriesIds.Request request
+    ) {
+        return AsyncObservable.empty();
+    }
+
+    AsyncFuture<CountSeries> countSeries(CountSeries.Request request);
+
+    AsyncFuture<DeleteSeries> deleteSeries(DeleteSeries.Request request);
+
+    AsyncFuture<FindKeys> findKeys(FindKeys.Request request);
 
     default Statistics getStatistics() {
         return Statistics.empty();

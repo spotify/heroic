@@ -30,10 +30,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.hash.HashCode;
 import com.google.common.util.concurrent.RateLimiter;
 import com.spotify.heroic.ExtraParameters;
+import com.spotify.heroic.common.DynamicModuleId;
 import com.spotify.heroic.common.Groups;
+import com.spotify.heroic.common.ModuleId;
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.elasticsearch.BackendType;
-import com.spotify.heroic.elasticsearch.BackendTypeFactory;
 import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.ConnectionModule;
 import com.spotify.heroic.elasticsearch.DefaultRateLimitedCache;
@@ -58,6 +59,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Optional.empty;
@@ -65,7 +67,8 @@ import static java.util.Optional.of;
 import static java.util.Optional.ofNullable;
 
 @Data
-public final class ElasticsearchMetadataModule implements MetadataModule {
+@ModuleId("elasticsearch")
+public final class ElasticsearchMetadataModule implements MetadataModule, DynamicModuleId {
     private static final double DEFAULT_WRITES_PER_SECOND = 3000d;
     private static final long DEFAULT_WRITES_CACHE_DURATION_MINUTES = 240L;
     public static final String DEFAULT_GROUP = "elasticsearch";
@@ -77,15 +80,15 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
     private final String templateName;
     private final Double writesPerSecond;
     private final Long writeCacheDurationMinutes;
+    private final boolean configure;
 
-    private static BackendTypeFactory<MetadataBackend> defaultSetup = MetadataBackendKV.factory();
+    private static Supplier<BackendType> defaultSetup = MetadataBackendKV::backendType;
 
-    private static final Map<String, BackendTypeFactory<MetadataBackend>> backendTypes =
-        new HashMap<>();
+    private static final Map<String, Supplier<BackendType>> backendTypes = new HashMap<>();
 
     static {
         backendTypes.put("kv", defaultSetup);
-        backendTypes.put("v1", MetadataBackendV1.factory());
+        backendTypes.put("v1", MetadataBackendV1::backendType);
     }
 
     public static List<String> types() {
@@ -93,7 +96,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
     }
 
     @JsonIgnore
-    private final BackendTypeFactory<MetadataBackend> backendTypeBuilder;
+    private final Supplier<BackendType> backendTypeBuilder;
 
     @JsonCreator
     public ElasticsearchMetadataModule(
@@ -102,7 +105,8 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
         @JsonProperty("writesPerSecond") Optional<Double> writesPerSecond,
         @JsonProperty("writeCacheDurationMinutes") Optional<Long> writeCacheDurationMinutes,
         @JsonProperty("templateName") Optional<String> templateName,
-        @JsonProperty("backendType") Optional<String> backendType
+        @JsonProperty("backendType") Optional<String> backendType,
+        @JsonProperty("configure") Optional<Boolean> configure
     ) {
         this.id = id;
         this.groups = groups.orElseGet(Groups::empty).or(DEFAULT_GROUP);
@@ -113,11 +117,17 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
         this.templateName = templateName.orElse(DEFAULT_TEMPLATE_NAME);
         this.backendTypeBuilder =
             backendType.flatMap(bt -> ofNullable(backendTypes.get(bt))).orElse(defaultSetup);
+        this.configure = configure.orElse(false);
+    }
+
+    @Override
+    public Optional<String> id() {
+        return id;
     }
 
     @Override
     public Exposed module(final PrimaryComponent primary, final Depends depends, final String id) {
-        final BackendType<MetadataBackend> backendType = backendTypeBuilder.setup();
+        final BackendType backendType = backendTypeBuilder.get();
 
         return DaggerElasticsearchMetadataModule_C
             .builder()
@@ -146,7 +156,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
 
         private final Groups groups;
         private final String templateName;
-        private final BackendType<MetadataBackend> backendType;
+        private final BackendType backendType;
         private final Double writesPerSecond;
         private final Long writeCacheDurationMinutes;
 
@@ -159,14 +169,14 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
         @Provides
         @ElasticsearchScope
         public Managed<Connection> connection(ConnectionModule.Provider provider) {
-            return provider.construct(templateName, backendType.mappings());
+            return provider.construct(templateName, backendType);
         }
 
         @Provides
         @ElasticsearchScope
         @Named("configure")
         public boolean configure(ExtraParameters params) {
-            return params.contains(ExtraParameters.CONFIGURE) ||
+            return configure || params.contains(ExtraParameters.CONFIGURE) ||
                 params.contains(ELASTICSEARCH_CONFIGURE_PARAM);
         }
 
@@ -190,7 +200,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
         @Provides
         @ElasticsearchScope
         MetadataBackend backend(Lazy<MetadataBackendKV> kv, Lazy<MetadataBackendV1> v1) {
-            if (backendType.type().equals(MetadataBackendV1.class)) {
+            if (backendType.getType().equals(MetadataBackendV1.class)) {
                 return v1.get();
             }
 
@@ -202,22 +212,12 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
         LifeCycle life(
             LifeCycleManager manager, Lazy<MetadataBackendKV> kv, Lazy<MetadataBackendV1> v1
         ) {
-            if (backendType.type().equals(MetadataBackendV1.class)) {
+            if (backendType.getType().equals(MetadataBackendV1.class)) {
                 return manager.build(v1.get());
             }
 
             return manager.build(kv.get());
         }
-    }
-
-    @Override
-    public Optional<String> id() {
-        return id;
-    }
-
-    @Override
-    public String buildId(int i) {
-        return String.format("elasticsearch#%d", i);
     }
 
     public static Builder builder() {
@@ -232,6 +232,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
         private Optional<Long> writeCacheDurationMinutes = empty();
         private Optional<String> templateName = empty();
         private Optional<String> backendType = empty();
+        private Optional<Boolean> configure = empty();
 
         public Builder id(final String id) {
             checkNotNull(id, "id");
@@ -275,9 +276,14 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
             return this;
         }
 
+        public Builder configure(final boolean configure) {
+            this.configure = of(configure);
+            return this;
+        }
+
         public ElasticsearchMetadataModule build() {
             return new ElasticsearchMetadataModule(id, groups, connection, writesPerSecond,
-                writeCacheDurationMinutes, templateName, backendType);
+                writeCacheDurationMinutes, templateName, backendType, configure);
         }
     }
 }

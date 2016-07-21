@@ -23,32 +23,41 @@ package com.spotify.heroic.suggest.elasticsearch;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.HashCode;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Groups;
-import com.spotify.heroic.common.RangeFilter;
+import com.spotify.heroic.common.OptionalLimit;
+import com.spotify.heroic.common.RequestTimer;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.elasticsearch.AbstractElasticsearchBackend;
 import com.spotify.heroic.elasticsearch.BackendType;
-import com.spotify.heroic.elasticsearch.BackendTypeFactory;
 import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
 import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
+import com.spotify.heroic.filter.AndFilter;
+import com.spotify.heroic.filter.FalseFilter;
 import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.filter.HasTagFilter;
+import com.spotify.heroic.filter.MatchKeyFilter;
+import com.spotify.heroic.filter.MatchTagFilter;
+import com.spotify.heroic.filter.NotFilter;
+import com.spotify.heroic.filter.OrFilter;
+import com.spotify.heroic.filter.StartsWithFilter;
+import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
-import com.spotify.heroic.metric.WriteResult;
-import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
+import com.spotify.heroic.statistics.SuggestBackendReporter;
 import com.spotify.heroic.suggest.KeySuggest;
-import com.spotify.heroic.suggest.MatchOptions;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagSuggest.Suggestion;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
+import com.spotify.heroic.suggest.WriteSuggest;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
@@ -69,6 +78,7 @@ import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.Aggregations;
+import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
 import org.elasticsearch.search.aggregations.bucket.terms.StringTerms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms.Bucket;
@@ -92,9 +102,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestUtils.loadJsonResource;
+import static com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestUtils.variables;
 import static org.elasticsearch.index.query.FilterBuilders.andFilter;
 import static org.elasticsearch.index.query.FilterBuilders.boolFilter;
 import static org.elasticsearch.index.query.FilterBuilders.matchAllFilter;
@@ -113,9 +127,10 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     implements SuggestBackend, Grouped, LifeCycles {
     public static final String WRITE_CACHE_SIZE = "write-cache-size";
 
+    static final String TAG_TYPE = "tag";
+    static final String SERIES_TYPE = "series";
+
     private static final String TAG_DELIMITER = "\0";
-    private static final String SERIES_TYPE = "series";
-    private static final String TAG_TYPE = "tag";
     private static final String KEY = "key";
     private static final String TAG_KEYS = "tag_keys";
     private static final String TAGS = "tags";
@@ -138,8 +153,9 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     private static final String[] KEY_SUGGEST_SOURCES = new String[]{KEY};
     private static final String[] TAG_SUGGEST_SOURCES = new String[]{TAG_SKEY, TAG_SVAL};
 
-    private final Managed<Connection> connection;
-    private final LocalMetadataBackendReporter reporter;
+    final Managed<Connection> connection;
+
+    private final SuggestBackendReporter reporter;
 
     /**
      * prevent unnecessary writes if entry is already in cache. Integer is the hashCode of the
@@ -152,7 +168,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     @Inject
     public SuggestBackendKV(
         final AsyncFramework async, final Managed<Connection> connection,
-        final LocalMetadataBackendReporter reporter,
+        final SuggestBackendReporter reporter,
         final RateLimitedCache<Pair<String, HashCode>> writeCache, final Groups groups,
         @Named("configure") boolean configure
     ) {
@@ -176,7 +192,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     }
 
     @Override
-    public Groups getGroups() {
+    public Groups groups() {
         return groups;
     }
 
@@ -186,51 +202,53 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     }
 
     @Override
-    public AsyncFuture<TagValuesSuggest> tagValuesSuggest(
-        final RangeFilter filter, final List<String> exclude, final int groupLimit
-    ) {
+    public AsyncFuture<TagValuesSuggest> tagValuesSuggest(final TagValuesSuggest.Request request) {
         return connection.doto((final Connection c) -> {
             final BoolFilterBuilder bool = boolFilter();
 
-            if (!(filter.getFilter() instanceof Filter.True)) {
-                bool.must(filter(filter.getFilter()));
+            if (!(request.getFilter() instanceof TrueFilter)) {
+                bool.must(filter(request.getFilter()));
             }
 
-            for (final String e : exclude) {
+            for (final String e : request.getExclude()) {
                 bool.mustNot(termFilter(TAG_SKEY_RAW, e));
             }
 
             final QueryBuilder query =
                 bool.hasClauses() ? filteredQuery(matchAllQuery(), bool) : matchAllQuery();
 
-            final SearchRequestBuilder request = c
-                .search(filter.getRange(), TAG_TYPE)
+            final SearchRequestBuilder builder = c
+                .search(request.getRange(), TAG_TYPE)
                 .setSearchType(SearchType.COUNT)
                 .setQuery(query)
                 .setTimeout(TIMEOUT);
 
+            final OptionalLimit limit = request.getLimit();
+            final OptionalLimit groupLimit = request.getGroupLimit();
+
             {
-                final TermsBuilder terms = AggregationBuilders
-                    .terms("keys")
-                    .field(TAG_SKEY_RAW)
-                    .size(filter.getLimit() + 1);
-                request.addAggregation(terms);
+                final TermsBuilder terms = AggregationBuilders.terms("keys").field(TAG_SKEY_RAW);
+
+                limit.asInteger().ifPresent(l -> terms.size(l + 1));
+
+                builder.addAggregation(terms);
                 // make value bucket one entry larger than necessary to figure out when limiting
                 // is applied.
                 final TermsBuilder cardinality =
-                    AggregationBuilders.terms("values").field(TAG_SVAL_RAW).size(groupLimit + 1);
+                    AggregationBuilders.terms("values").field(TAG_SVAL_RAW);
+
+                groupLimit.asInteger().ifPresent(l -> cardinality.size(l + 1));
                 terms.subAggregation(cardinality);
             }
 
-            return bind(request.execute()).directTransform((SearchResponse response) -> {
+            return bind(builder.execute()).directTransform((SearchResponse response) -> {
                 final List<TagValuesSuggest.Suggestion> suggestions = new ArrayList<>();
 
                 final Terms terms = response.getAggregations().get("keys");
 
                 final List<Bucket> buckets = terms.getBuckets();
 
-                for (final Terms.Bucket bucket : buckets.subList(0,
-                    Math.min(buckets.size(), filter.getLimit()))) {
+                for (final Terms.Bucket bucket : limit.limitList(buckets)) {
                     final Terms valueTerms = bucket.getAggregations().get("values");
 
                     final List<Bucket> valueBuckets = valueTerms.getBuckets();
@@ -241,28 +259,25 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                         result.add(valueBucket.getKey());
                     }
 
-                    final boolean limited = valueBuckets.size() > groupLimit;
-
-                    final ImmutableList<String> values = ImmutableList
-                        .copyOf(result)
-                        .subList(0, Math.min(result.size(), groupLimit));
+                    final SortedSet<String> values = groupLimit.limitSortedSet(result);
+                    final boolean limited = groupLimit.isGreater(valueBuckets.size());
 
                     suggestions.add(
                         new TagValuesSuggest.Suggestion(bucket.getKey(), values, limited));
                 }
 
-                return new TagValuesSuggest(new ArrayList<>(suggestions),
-                    buckets.size() > filter.getLimit());
+                return TagValuesSuggest.of(ImmutableList.copyOf(suggestions),
+                    limit.isGreater(buckets.size()));
             });
         });
     }
 
     @Override
-    public AsyncFuture<TagValueSuggest> tagValueSuggest(
-        final RangeFilter filter, final Optional<String> key
-    ) {
+    public AsyncFuture<TagValueSuggest> tagValueSuggest(final TagValueSuggest.Request request) {
         return connection.doto((final Connection c) -> {
             final BoolQueryBuilder bool = boolQuery();
+
+            final Optional<String> key = request.getKey();
 
             key.ifPresent(k -> {
                 if (!k.isEmpty()) {
@@ -272,101 +287,123 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
             QueryBuilder query = bool.hasClauses() ? bool : matchAllQuery();
 
-            if (!(filter.getFilter() instanceof Filter.True)) {
-                query = filteredQuery(query, filter(filter.getFilter()));
+            if (!(request.getFilter() instanceof TrueFilter)) {
+                query = filteredQuery(query, filter(request.getFilter()));
             }
 
-            final SearchRequestBuilder request = c
-                .search(filter.getRange(), TAG_TYPE)
+            final SearchRequestBuilder builder = c
+                .search(request.getRange(), TAG_TYPE)
                 .setSearchType(SearchType.COUNT)
                 .setQuery(query);
 
+            final OptionalLimit limit = request.getLimit();
+
             {
-                final TermsBuilder terms = AggregationBuilders
-                    .terms("values")
-                    .field(TAG_SVAL_RAW)
-                    .size(filter.getLimit() + 1)
-                    .order(Order.term(true));
-                request.addAggregation(terms);
+                final TermsBuilder terms =
+                    AggregationBuilders.terms("values").field(TAG_SVAL_RAW).order(Order.term(true));
+
+                limit.asInteger().ifPresent(l -> terms.size(l + 1));
+                builder.addAggregation(terms);
             }
 
-            return bind(request.execute()).directTransform((SearchResponse response) -> {
-                final List<String> suggestions = new ArrayList<>();
+            return bind(builder.execute()).directTransform((SearchResponse response) -> {
+                final ImmutableList.Builder<String> suggestions = ImmutableList.builder();
 
                 final Terms terms = response.getAggregations().get("values");
 
                 final List<Bucket> buckets = terms.getBuckets();
 
-                for (final Terms.Bucket bucket : buckets.subList(0,
-                    Math.min(buckets.size(), filter.getLimit()))) {
+                for (final Terms.Bucket bucket : limit.limitList(buckets)) {
                     suggestions.add(bucket.getKey());
                 }
 
-                boolean limited = buckets.size() > filter.getLimit();
-
-                return new TagValueSuggest(new ArrayList<>(suggestions), limited);
+                return TagValueSuggest.of(suggestions.build(), limit.isGreater(buckets.size()));
             });
         });
     }
 
     @Override
-    public AsyncFuture<TagKeyCount> tagKeyCount(final RangeFilter filter) {
+    public AsyncFuture<TagKeyCount> tagKeyCount(final TagKeyCount.Request request) {
         return connection.doto((final Connection c) -> {
-            final QueryBuilder root = filteredQuery(matchAllQuery(), filter(filter.getFilter()));
+            final QueryBuilder root = filteredQuery(matchAllQuery(), filter(request.getFilter()));
 
-            final SearchRequestBuilder request = c
-                .search(filter.getRange(), TAG_TYPE)
+            final SearchRequestBuilder builder = c
+                .search(request.getRange(), TAG_TYPE)
                 .setSearchType(SearchType.COUNT)
                 .setQuery(root);
 
-            final int limit = filter.getLimit();
+            final OptionalLimit limit = request.getLimit();
+            final OptionalLimit exactLimit = request.getExactLimit();
 
             {
-                final TermsBuilder terms = AggregationBuilders
-                    .terms("keys")
-                    .field(TAG_SKEY_RAW)
-                    .size(limit + 1);
-                request.addAggregation(terms);
+                final TermsBuilder keys = AggregationBuilders.terms("keys").field(TAG_SKEY_RAW);
+                limit.asInteger().ifPresent(l -> keys.size(l + 1));
+                builder.addAggregation(keys);
+
                 final CardinalityBuilder cardinality =
                     AggregationBuilders.cardinality("cardinality").field(TAG_SVAL_RAW);
-                terms.subAggregation(cardinality);
+
+                keys.subAggregation(cardinality);
+
+                exactLimit.asInteger().ifPresent(size -> {
+                    final TermsBuilder values =
+                        AggregationBuilders.terms("values").field(TAG_SVAL_RAW).size(size + 1);
+
+                    keys.subAggregation(values);
+                });
             }
 
-            return bind(request.execute()).directTransform((SearchResponse response) -> {
+            return bind(builder.execute()).directTransform((SearchResponse response) -> {
                 final Set<TagKeyCount.Suggestion> suggestions = new LinkedHashSet<>();
 
-                final Terms terms = response.getAggregations().get("keys");
+                final Terms keys = response.getAggregations().get("keys");
 
-                final List<Bucket> buckets = terms.getBuckets();
+                final List<Bucket> buckets = keys.getBuckets();
 
-                for (final Terms.Bucket bucket : buckets.subList(0,
-                    Math.min(buckets.size(), limit))) {
+                for (final Terms.Bucket bucket : limit.limitList(buckets)) {
                     final Cardinality cardinality = bucket.getAggregations().get("cardinality");
+                    final Terms values = bucket.getAggregations().get("values");
+
+                    final Optional<Set<String>> exactValues;
+
+                    if (values != null) {
+                        exactValues = Optional
+                            .of(values
+                                .getBuckets()
+                                .stream()
+                                .map(MultiBucketsAggregation.Bucket::getKey)
+                                .collect(Collectors.toSet()))
+                            .filter(sets -> !exactLimit.isGreater(sets.size()));
+                    } else {
+                        exactValues = Optional.empty();
+                    }
+
                     suggestions.add(
-                        new TagKeyCount.Suggestion(bucket.getKey(), cardinality.getValue()));
+                        new TagKeyCount.Suggestion(bucket.getKey(), cardinality.getValue(),
+                            exactValues));
                 }
 
-                return new TagKeyCount(new ArrayList<>(suggestions),
-                    terms.getBuckets().size() < limit);
+                return TagKeyCount.of(ImmutableList.copyOf(suggestions),
+                    limit.isGreater(buckets.size()));
             });
         });
     }
 
     @Override
-    public AsyncFuture<TagSuggest> tagSuggest(
-        final RangeFilter filter, final MatchOptions options, final Optional<String> key,
-        final Optional<String> value
-    ) {
+    public AsyncFuture<TagSuggest> tagSuggest(TagSuggest.Request request) {
         return connection.doto((final Connection c) -> {
             final BoolQueryBuilder bool = boolQuery();
+
+            final Optional<String> key = request.getKey();
+            final Optional<String> value = request.getValue();
 
             // special case: key and value are equal, which indicates that _any_ match should be
             // in effect.
             // XXX: Enhance API to allow for this to be intentional instead of this by
             // introducing an 'any' field.
             if (key.isPresent() && value.isPresent() && key.equals(value)) {
-                bool.should(matchTermValue(value.get()));
                 bool.should(matchTermKey(key.get()));
+                bool.should(matchTermValue(value.get()));
             } else {
                 key.ifPresent(k -> {
                     if (!k.isEmpty()) {
@@ -383,12 +420,12 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
             QueryBuilder query = bool.hasClauses() ? bool : matchAllQuery();
 
-            if (!(filter.getFilter() instanceof Filter.True)) {
-                query = filteredQuery(query, filter(filter.getFilter()));
+            if (!(request.getFilter() instanceof TrueFilter)) {
+                query = filteredQuery(query, filter(request.getFilter()));
             }
 
-            final SearchRequestBuilder request = c
-                .search(filter.getRange(), TAG_TYPE)
+            final SearchRequestBuilder builder = c
+                .search(request.getRange(), TAG_TYPE)
                 .setSearchType(SearchType.COUNT)
                 .setQuery(query)
                 .setTimeout(TIMEOUT);
@@ -400,22 +437,21 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                     .setSize(1)
                     .setFetchSource(TAG_SUGGEST_SOURCES, new String[0]);
 
-                final TermsBuilder terms = AggregationBuilders
-                    .terms("terms")
-                    .field(TAG_KV)
-                    .size(filter.getLimit())
-                    .subAggregation(hits);
+                final TermsBuilder terms =
+                    AggregationBuilders.terms("terms").field(TAG_KV).subAggregation(hits);
 
-                request.addAggregation(terms);
+                request.getLimit().asInteger().ifPresent(terms::size);
+
+                builder.addAggregation(terms);
             }
 
-            return bind(request.execute()).directTransform((SearchResponse response) -> {
-                final Set<Suggestion> suggestions = new LinkedHashSet<>();
+            return bind(builder.execute()).directTransform((SearchResponse response) -> {
+                final ImmutableList.Builder<Suggestion> suggestions = ImmutableList.builder();
 
-                Aggregations aggregations = response.getAggregations();
+                final Aggregations aggregations = response.getAggregations();
 
                 if (aggregations == null) {
-                    return TagSuggest.empty();
+                    return TagSuggest.of();
                 }
 
                 final StringTerms terms = aggregations.get("terms");
@@ -432,19 +468,17 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                     suggestions.add(new Suggestion(hits.getMaxScore(), k, v));
                 }
 
-                return new TagSuggest(new ArrayList<>(suggestions));
+                return TagSuggest.of(suggestions.build());
             });
         });
     }
 
     @Override
-    public AsyncFuture<KeySuggest> keySuggest(
-        final RangeFilter filter, final MatchOptions options, final Optional<String> key
-    ) {
+    public AsyncFuture<KeySuggest> keySuggest(final KeySuggest.Request request) {
         return connection.doto((final Connection c) -> {
             BoolQueryBuilder bool = boolQuery();
 
-            key.ifPresent(k -> {
+            request.getKey().ifPresent(k -> {
                 if (!k.isEmpty()) {
                     final String l = k.toLowerCase();
                     final BoolQueryBuilder b = boolQuery();
@@ -457,12 +491,12 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
             QueryBuilder query = bool.hasClauses() ? bool : matchAllQuery();
 
-            if (!(filter.getFilter() instanceof Filter.True)) {
-                query = filteredQuery(query, filter(filter.getFilter()));
+            if (!(request.getFilter() instanceof TrueFilter)) {
+                query = filteredQuery(query, filter(request.getFilter()));
             }
 
-            final SearchRequestBuilder request = c
-                .search(filter.getRange(), "series")
+            final SearchRequestBuilder builder = c
+                .search(request.getRange(), SERIES_TYPE)
                 .setSearchType(SearchType.COUNT)
                 .setQuery(query);
 
@@ -473,19 +507,17 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                     .setSize(1)
                     .setFetchSource(KEY_SUGGEST_SOURCES, new String[0]);
 
-                final TermsBuilder terms = AggregationBuilders
-                    .terms("terms")
-                    .field(KEY)
-                    .size(filter.getLimit())
-                    .subAggregation(hits);
+                final TermsBuilder keys =
+                    AggregationBuilders.terms("keys").field(KEY).subAggregation(hits);
 
-                request.addAggregation(terms);
+                request.getLimit().asInteger().ifPresent(keys::size);
+                builder.addAggregation(keys);
             }
 
-            return bind(request.execute()).directTransform((SearchResponse response) -> {
+            return bind(builder.execute()).directTransform((SearchResponse response) -> {
                 final Set<KeySuggest.Suggestion> suggestions = new LinkedHashSet<>();
 
-                final StringTerms terms = response.getAggregations().get("terms");
+                final StringTerms terms = response.getAggregations().get("keys");
 
                 for (final Terms.Bucket bucket : terms.getBuckets()) {
                     final TopHits topHits = bucket.getAggregations().get("hits");
@@ -493,14 +525,17 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                     suggestions.add(new KeySuggest.Suggestion(hits.getMaxScore(), bucket.getKey()));
                 }
 
-                return new KeySuggest(new ArrayList<>(suggestions));
+                return KeySuggest.of(ImmutableList.copyOf(suggestions));
             });
         });
     }
 
     @Override
-    public AsyncFuture<WriteResult> write(final Series s, final DateRange range) {
+    public AsyncFuture<WriteSuggest> write(final WriteSuggest.Request request) {
         return connection.doto((final Connection c) -> {
+            final Series s = request.getSeries();
+            final DateRange range = request.getRange();
+
             final String[] indices;
 
             try {
@@ -509,7 +544,8 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 return async.failed(e);
             }
 
-            final List<AsyncFuture<WriteResult>> writes = new ArrayList<>();
+            final RequestTimer<WriteSuggest> timer = WriteSuggest.timer();
+            final List<AsyncFuture<WriteSuggest>> writes = new ArrayList<>();
 
             for (final String index : indices) {
                 final Pair<String, HashCode> key = Pair.of(index, s.getHashCode());
@@ -521,23 +557,18 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
                 final String seriesId = s.hash();
 
-                final List<AsyncFuture<WriteResult>> w = new ArrayList<>();
-
                 final XContentBuilder series = XContentFactory.jsonBuilder();
 
                 series.startObject();
                 buildContext(series, s);
                 series.endObject();
 
-                final long start = System.nanoTime();
-
-                w.add(bind(c
+                writes.add(bind(c
                     .index(index, SERIES_TYPE)
                     .setId(seriesId)
                     .setSource(series)
                     .setOpType(OpType.CREATE)
-                    .execute()).directTransform(
-                    (response) -> WriteResult.of(System.nanoTime() - start)));
+                    .execute()).directTransform(response -> timer.end()));
 
                 for (final Map.Entry<String, String> e : s.getTags().entrySet()) {
                     final XContentBuilder suggest = XContentFactory.jsonBuilder();
@@ -549,19 +580,16 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
                     final String suggestId = seriesId + ":" + Integer.toHexString(e.hashCode());
 
-                    w.add(bind(c
+                    writes.add(bind(c
                         .index(index, TAG_TYPE)
                         .setId(suggestId)
                         .setSource(suggest)
                         .setOpType(OpType.CREATE)
-                        .execute()).directTransform(
-                        (response) -> WriteResult.of(System.nanoTime() - start)));
+                        .execute()).directTransform(response -> timer.end()));
                 }
-
-                writes.add(async.collect(w, WriteResult.merger()));
             }
 
-            return async.collect(writes, WriteResult.merger());
+            return async.collect(writes, WriteSuggest.reduce());
         });
     }
 
@@ -641,88 +669,89 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
         b.field(TAG_KV, e.getKey() + TAG_DELIMITER + e.getValue());
     }
 
+    private static final Filter.Visitor<FilterBuilder> FILTER_CONVERTER =
+        new Filter.Visitor<FilterBuilder>() {
+            @Override
+            public FilterBuilder visitTrue(final TrueFilter t) {
+                return matchAllFilter();
+            }
+
+            @Override
+            public FilterBuilder visitFalse(final FalseFilter f) {
+                return notFilter(matchAllFilter());
+            }
+
+            @Override
+            public FilterBuilder visitAnd(final AndFilter and) {
+                final List<FilterBuilder> filters = new ArrayList<>(and.terms().size());
+
+                for (final Filter stmt : and.terms()) {
+                    filters.add(filter(stmt));
+                }
+
+                return andFilter(filters.toArray(new FilterBuilder[0]));
+            }
+
+            @Override
+            public FilterBuilder visitOr(final OrFilter or) {
+                final List<FilterBuilder> filters = new ArrayList<>(or.terms().size());
+
+                for (final Filter stmt : or.terms()) {
+                    filters.add(filter(stmt));
+                }
+
+                return orFilter(filters.toArray(new FilterBuilder[0]));
+            }
+
+            @Override
+            public FilterBuilder visitNot(final NotFilter not) {
+                return notFilter(filter(not.getFilter()));
+            }
+
+            @Override
+            public FilterBuilder visitMatchTag(final MatchTagFilter matchTag) {
+                return termFilter(TAGS, matchTag.getTag() + '\0' + matchTag.getValue());
+            }
+
+            @Override
+            public FilterBuilder visitStartsWith(final StartsWithFilter startsWith) {
+                return prefixFilter(TAGS, startsWith.getTag() + '\0' + startsWith.getValue());
+            }
+
+            @Override
+            public FilterBuilder visitHasTag(final HasTagFilter hasTag) {
+                return termFilter(TAG_KEYS, hasTag.getTag());
+            }
+
+            @Override
+            public FilterBuilder visitMatchKey(final MatchKeyFilter matchKey) {
+                return termFilter(KEY, matchKey.getValue());
+            }
+
+            @Override
+            public FilterBuilder defaultAction(Filter filter) {
+                throw new IllegalArgumentException("Unsupported filter: " + filter);
+            }
+        };
+
     public static FilterBuilder filter(final Filter filter) {
-        if (filter instanceof Filter.True) {
-            return matchAllFilter();
-        }
-
-        if (filter instanceof Filter.False) {
-            return null;
-        }
-
-        if (filter instanceof Filter.And) {
-            final Filter.And and = (Filter.And) filter;
-            final List<FilterBuilder> filters = new ArrayList<>(and.terms().size());
-
-            for (final Filter stmt : and.terms()) {
-                filters.add(filter(stmt));
-            }
-
-            return andFilter(filters.toArray(new FilterBuilder[0]));
-        }
-
-        if (filter instanceof Filter.Or) {
-            final Filter.Or or = (Filter.Or) filter;
-            final List<FilterBuilder> filters = new ArrayList<>(or.terms().size());
-
-            for (final Filter stmt : or.terms()) {
-                filters.add(filter(stmt));
-            }
-
-            return orFilter(filters.toArray(new FilterBuilder[0]));
-        }
-
-        if (filter instanceof Filter.Not) {
-            final Filter.Not not = (Filter.Not) filter;
-            return notFilter(filter(not.first()));
-        }
-
-        if (filter instanceof Filter.MatchTag) {
-            final Filter.MatchTag matchTag = (Filter.MatchTag) filter;
-            return termFilter(TAGS, matchTag.first() + '\0' + matchTag.second());
-        }
-
-        if (filter instanceof Filter.StartsWith) {
-            final Filter.StartsWith startsWith = (Filter.StartsWith) filter;
-            return prefixFilter(TAGS, startsWith.first() + '\0' + startsWith.second());
-        }
-
-        if (filter instanceof Filter.Regex) {
-            throw new IllegalArgumentException("regex not supported");
-        }
-
-        if (filter instanceof Filter.HasTag) {
-            final Filter.HasTag hasTag = (Filter.HasTag) filter;
-            return termFilter(TAG_KEYS, hasTag.first());
-        }
-
-        if (filter instanceof Filter.MatchKey) {
-            final Filter.MatchKey matchKey = (Filter.MatchKey) filter;
-            return termFilter(KEY, matchKey.first());
-        }
-
-        throw new IllegalArgumentException("Invalid filter statement: " + filter);
+        return filter.visit(FILTER_CONVERTER);
     }
 
-    public static BackendTypeFactory<SuggestBackend> factory() {
-        return () -> new BackendType<SuggestBackend>() {
-            @Override
-            public Map<String, Map<String, Object>> mappings() {
-                final Map<String, Map<String, Object>> mappings = new HashMap<>();
-                mappings.put("tag", loadJsonResource("kv/tag.json"));
-                mappings.put("series", loadJsonResource("kv/series.json"));
-                return mappings;
-            }
+    public static Supplier<BackendType> factory() {
+        return () -> {
+            final Map<String, Map<String, Object>> mappings = new HashMap<>();
 
-            @Override
-            public Map<String, Object> settings() {
-                return loadJsonResource("kv/settings.json");
-            }
+            mappings.put(TAG_TYPE,
+                loadJsonResource("kv/tag.json", variables(ImmutableMap.of("type", TAG_TYPE))));
 
-            @Override
-            public Class<? extends SuggestBackend> type() {
-                return SuggestBackendKV.class;
-            }
+            mappings.put(SERIES_TYPE, loadJsonResource("kv/series.json",
+                variables(ImmutableMap.of("type", SERIES_TYPE))));
+
+            final Map<String, Object> settings =
+                loadJsonResource("kv/settings.json", Function.identity());
+
+            return new BackendType(mappings, settings, SuggestBackendKV.class);
         };
     }
 }

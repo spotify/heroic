@@ -25,6 +25,7 @@ import com.spotify.heroic.shell.protocol.Acknowledge;
 import com.spotify.heroic.shell.protocol.CommandDefinition;
 import com.spotify.heroic.shell.protocol.CommandDone;
 import com.spotify.heroic.shell.protocol.CommandOutput;
+import com.spotify.heroic.shell.protocol.CommandOutputFlush;
 import com.spotify.heroic.shell.protocol.CommandsRequest;
 import com.spotify.heroic.shell.protocol.CommandsResponse;
 import com.spotify.heroic.shell.protocol.EvaluateRequest;
@@ -49,6 +50,7 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -63,6 +65,7 @@ import static java.util.Optional.of;
 @Slf4j
 public class RemoteCoreInterface implements CoreInterface {
     public static final int DEFAULT_PORT = 9190;
+    public static final int MAX_READ = 4096;
 
     final InetSocketAddress address;
     final AsyncFramework async;
@@ -132,6 +135,11 @@ public class RemoteCoreInterface implements CoreInterface {
             @Override
             public Optional<Message> visitCommandOutput(CommandOutput m) {
                 io.out().write(m.getData());
+                return empty();
+            }
+
+            @Override
+            public Optional<Message> visitCommandOutputFlush(CommandOutputFlush m) {
                 io.out().flush();
                 return empty();
             }
@@ -145,13 +153,10 @@ public class RemoteCoreInterface implements CoreInterface {
                 final int h = fileCounter.incrementAndGet();
 
                 reading.put(h, in);
-                closers.put(h, new Callable<Void>() {
-                    @Override
-                    public Void call() throws Exception {
-                        in.close();
-                        reading.remove(h);
-                        return null;
-                    }
+                closers.put(h, () -> {
+                    in.close();
+                    reading.remove(h);
+                    return null;
                 });
 
                 return of(new FileOpened(h));
@@ -166,13 +171,10 @@ public class RemoteCoreInterface implements CoreInterface {
                 final int h = fileCounter.incrementAndGet();
 
                 writing.put(h, out);
-                closers.put(h, new Callable<Void>() {
-                    @Override
-                    public Void call() throws Exception {
-                        out.close();
-                        writing.remove(h);
-                        return null;
-                    }
+                closers.put(h, () -> {
+                    out.close();
+                    writing.remove(h);
+                    return null;
                 });
 
                 return of(new FileOpened(h));
@@ -194,14 +196,20 @@ public class RemoteCoreInterface implements CoreInterface {
             public Optional<Message> visitFileWrite(FileWrite m) throws Exception {
                 final byte[] data = m.getData();
                 writer(m.getHandle()).write(data, 0, data.length);
-                return of(new Acknowledge());
+                return empty();
             }
 
             @Override
             public Optional<Message> visitFileRead(FileRead m) throws Exception {
-                final byte[] buffer = new byte[m.getLength()];
-                reader(m.getHandle()).read(buffer, 0, m.getLength());
-                return of(new FileReadResult(buffer));
+                final byte[] buffer = new byte[Math.min(MAX_READ, m.getLength())];
+
+                int read = reader(m.getHandle()).read(buffer);
+
+                if (read == 0) {
+                    return of(new FileReadResult(new byte[0]));
+                }
+
+                return of(new FileReadResult(Arrays.copyOf(buffer, read)));
             }
 
             @Override

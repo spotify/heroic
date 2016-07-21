@@ -24,7 +24,6 @@ package com.spotify.heroic.elasticsearch.index;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
-import com.google.common.base.Supplier;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Duration;
 import lombok.ToString;
@@ -121,7 +120,7 @@ public class RotatingIndexMapping implements IndexMapping {
 
     @Override
     public String[] readIndices(DateRange range) throws NoIndexSelectedException {
-        return readIndices(System.currentTimeMillis());
+        return readIndices(range.end());
     }
 
     protected String[] writeIndices(long now) {
@@ -130,7 +129,7 @@ public class RotatingIndexMapping implements IndexMapping {
 
     @Override
     public String[] writeIndices(DateRange range) {
-        return writeIndices(System.currentTimeMillis());
+        return writeIndices(range.end());
     }
 
     @Override
@@ -158,15 +157,6 @@ public class RotatingIndexMapping implements IndexMapping {
 
     private IndicesOptions options() {
         return IndicesOptions.fromOptions(true, true, false, false);
-    }
-
-    public static Supplier<IndexMapping> defaultSupplier() {
-        return new Supplier<IndexMapping>() {
-            @Override
-            public IndexMapping get() {
-                return new RotatingIndexMapping(null, null, null, null);
-            }
-        };
     }
 
     public static Builder builder() {

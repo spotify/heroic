@@ -24,9 +24,11 @@ package com.spotify.heroic.aggregation;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
@@ -41,11 +43,11 @@ import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.LongAdder;
 
 /**
@@ -61,13 +63,14 @@ import java.util.concurrent.atomic.LongAdder;
 @Data
 @EqualsAndHashCode(of = {"size", "extent"})
 public abstract class BucketAggregationInstance<B extends Bucket> implements AggregationInstance {
-    public static final Map<String, String> EMPTY_GROUP = ImmutableMap.of();
+    public static final Map<String, String> EMPTY_KEY = ImmutableMap.of();
     public static final long MAX_BUCKET_COUNT = 100000L;
 
     private static final Map<String, String> EMPTY = ImmutableMap.of();
 
     public static final Set<MetricType> ALL_TYPES =
-        ImmutableSet.of(MetricType.POINT, MetricType.EVENT, MetricType.SPREAD, MetricType.GROUP);
+        ImmutableSet.of(MetricType.POINT, MetricType.EVENT, MetricType.SPREAD, MetricType.GROUP,
+            MetricType.CARDINALITY);
 
     protected final long size;
     protected final long extent;
@@ -80,38 +83,50 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
 
     @Data
     private final class Session implements AggregationSession {
+        private final ConcurrentLinkedQueue<Set<Series>> series = new ConcurrentLinkedQueue<>();
         private final LongAdder sampleSize = new LongAdder();
 
         private final List<B> buckets;
-
         private final long offset;
 
         @Override
         public void updatePoints(
-            Map<String, String> group, List<Point> values
+            Map<String, String> key, Set<Series> s, List<Point> values
         ) {
-            feed(MetricType.POINT, values, (bucket, m) -> bucket.updatePoint(group, m));
+            series.add(s);
+            feed(MetricType.POINT, values, (bucket, m) -> bucket.updatePoint(key, m));
         }
 
         @Override
         public void updateEvents(
-            Map<String, String> group, List<Event> values
+            Map<String, String> key, Set<Series> s, List<Event> values
         ) {
-            feed(MetricType.EVENT, values, (bucket, m) -> bucket.updateEvent(group, m));
+            series.add(s);
+            feed(MetricType.EVENT, values, (bucket, m) -> bucket.updateEvent(key, m));
         }
 
         @Override
         public void updateSpreads(
-            Map<String, String> group, List<Spread> values
+            Map<String, String> key, Set<Series> s, List<Spread> values
         ) {
-            feed(MetricType.SPREAD, values, (bucket, m) -> bucket.updateSpread(group, m));
+            series.add(s);
+            feed(MetricType.SPREAD, values, (bucket, m) -> bucket.updateSpread(key, m));
         }
 
         @Override
         public void updateGroup(
-            Map<String, String> group, List<MetricGroup> values
+            Map<String, String> key, Set<Series> s, List<MetricGroup> values
         ) {
-            feed(MetricType.GROUP, values, (bucket, m) -> bucket.updateGroup(group, m));
+            series.add(s);
+            feed(MetricType.GROUP, values, (bucket, m) -> bucket.updateGroup(key, m));
+        }
+
+        @Override
+        public void updatePayload(
+            Map<String, String> key, Set<Series> s, List<Payload> values
+        ) {
+            series.add(s);
+            feed(MetricType.CARDINALITY, values, (bucket, m) -> bucket.updatePayload(key, m));
         }
 
         private <T extends Metric> void feed(
@@ -186,12 +201,14 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
                 result.add(d);
             }
 
+            final Set<Series> series = ImmutableSet.copyOf(Iterables.concat(this.series));
             final MetricCollection metrics = MetricCollection.build(out, result);
+
             final Statistics statistics =
                 new Statistics(ImmutableMap.of(AggregationInstance.SAMPLE_SIZE, sampleSize.sum()));
-            final List<AggregationData> updates =
-                ImmutableList.of(new AggregationData(EMPTY_GROUP, metrics));
-            return new AggregationResult(updates, statistics);
+
+            final AggregationOutput d = new AggregationOutput(EMPTY_KEY, series, metrics);
+            return new AggregationResult(ImmutableList.of(d), statistics);
         }
     }
 
@@ -205,15 +222,14 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
     }
 
     @Override
-    public AggregationTraversal session(List<AggregationState> states, DateRange range) {
-        final Set<Series> series = new HashSet<Series>();
+    public AggregationSession session(DateRange range) {
+        final List<B> buckets = buildBuckets(range, size);
+        return new Session(buckets, range.start());
+    }
 
-        for (final AggregationState s : states) {
-            series.addAll(s.getSeries());
-        }
-
-        final List<AggregationState> out = ImmutableList.of(new AggregationState(EMPTY, series));
-        return new AggregationTraversal(out, session(range));
+    @Override
+    public AggregationInstance distributed() {
+        return this;
     }
 
     @Override
@@ -222,18 +238,8 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
     }
 
     @Override
-    public ReducerSession reducer(DateRange range) {
-        return new BucketReducerSession<B>(out, size, this::buildBucket, this::build, range);
-    }
-
-    @Override
     public String toString() {
         return String.format("%s(size=%d, extent=%d)", getClass().getSimpleName(), size, extent);
-    }
-
-    public Session session(final DateRange range) {
-        final List<B> buckets = buildBuckets(range, size);
-        return new Session(buckets, range.start());
     }
 
     private List<B> buildBuckets(final DateRange range, long size) {
@@ -257,7 +263,7 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
 
     protected abstract Metric build(B bucket);
 
-    private static interface BucketConsumer<B extends Bucket, M extends Metric> {
+    private interface BucketConsumer<B extends Bucket, M extends Metric> {
         void apply(B bucket, M metric);
     }
 }

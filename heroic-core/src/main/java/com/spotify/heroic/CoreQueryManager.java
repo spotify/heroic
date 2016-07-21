@@ -21,42 +21,68 @@
 
 package com.spotify.heroic;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationCombiner;
 import com.spotify.heroic.aggregation.AggregationContext;
+import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.DefaultAggregationContext;
+import com.spotify.heroic.aggregation.DistributedAggregationCombiner;
 import com.spotify.heroic.aggregation.Empty;
 import com.spotify.heroic.cache.QueryCache;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.ClusterNode;
+import com.spotify.heroic.cluster.ClusterShard;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Duration;
+import com.spotify.heroic.common.Feature;
+import com.spotify.heroic.common.Features;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.FilterFactory;
+import com.spotify.heroic.filter.TrueFilter;
+import com.spotify.heroic.grammar.DefaultScope;
+import com.spotify.heroic.grammar.Expression;
+import com.spotify.heroic.grammar.FunctionExpression;
+import com.spotify.heroic.grammar.IntegerExpression;
+import com.spotify.heroic.grammar.QueryExpression;
 import com.spotify.heroic.grammar.QueryParser;
+import com.spotify.heroic.grammar.RangeExpression;
+import com.spotify.heroic.grammar.StringExpression;
+import com.spotify.heroic.metadata.CountSeries;
+import com.spotify.heroic.metadata.DeleteSeries;
+import com.spotify.heroic.metadata.FindKeys;
+import com.spotify.heroic.metadata.FindSeries;
+import com.spotify.heroic.metadata.FindTags;
+import com.spotify.heroic.metadata.WriteMetadata;
+import com.spotify.heroic.metric.FullQuery;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.QueryResultPart;
 import com.spotify.heroic.metric.QueryTrace;
-import com.spotify.heroic.metric.ResultGroups;
+import com.spotify.heroic.metric.WriteMetric;
+import com.spotify.heroic.suggest.KeySuggest;
+import com.spotify.heroic.suggest.TagKeyCount;
+import com.spotify.heroic.suggest.TagSuggest;
+import com.spotify.heroic.suggest.TagValueSuggest;
+import com.spotify.heroic.suggest.TagValuesSuggest;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.Collector;
+import eu.toolchain.async.Transform;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
+@Slf4j
 public class CoreQueryManager implements QueryManager {
     public static final long SHIFT_TOLERANCE = TimeUnit.MILLISECONDS.convert(10, TimeUnit.SECONDS);
     public static final QueryTrace.Identifier QUERY_NODE =
@@ -64,96 +90,94 @@ public class CoreQueryManager implements QueryManager {
     public static final QueryTrace.Identifier QUERY =
         QueryTrace.identifier(CoreQueryManager.class, "query");
 
-    private final Set<String> features;
+    private final Features features;
     private final AsyncFramework async;
     private final ClusterManager cluster;
-    private final FilterFactory filters;
     private final QueryParser parser;
     private final QueryCache queryCache;
+    private final AggregationFactory aggregations;
+    private final OptionalLimit groupLimit;
 
     @Inject
     public CoreQueryManager(
-        @Named("features") final Set<String> features, final AsyncFramework async,
-        final ClusterManager cluster, final FilterFactory filters, final QueryParser parser,
-        final QueryCache queryCache
+        @Named("features") final Features features, final AsyncFramework async,
+        final ClusterManager cluster, final QueryParser parser, final QueryCache queryCache,
+        final AggregationFactory aggregations, @Named("groupLimit") final OptionalLimit groupLimit
     ) {
         this.features = features;
         this.async = async;
         this.cluster = cluster;
-        this.filters = filters;
         this.parser = parser;
         this.queryCache = queryCache;
+        this.aggregations = aggregations;
+        this.groupLimit = groupLimit;
     }
 
     @Override
-    public Group useGroup(String group) {
-        return new Group(cluster.useGroup(group));
-    }
-
-    @Override
-    public Collection<Group> useGroupPerNode(String group) {
-        final List<Group> result = new ArrayList<>();
-
-        for (ClusterNode.Group g : cluster.useGroup(group)) {
-            result.add(new Group(ImmutableList.of(g)));
-        }
-
-        return result;
-    }
-
-    @Override
-    public Group useDefaultGroup() {
-        return new Group(cluster.useDefaultGroup());
-    }
-
-    @Override
-    public Collection<Group> useDefaultGroupPerNode() {
-        final List<Group> result = new ArrayList<>();
-
-        for (ClusterNode.Group g : cluster.useDefaultGroup()) {
-            result.add(new Group(ImmutableList.of(g)));
-        }
-
-        return result;
+    public QueryManager.Group useOptionalGroup(final Optional<String> group) {
+        return new Group(cluster.useOptionalGroup(group));
     }
 
     @Override
     public QueryBuilder newQuery() {
-        return new QueryBuilder(filters);
+        return new QueryBuilder();
     }
 
     @Override
     public QueryBuilder newQueryFromString(final String queryString) {
-        final Query q = parser.parseQuery(queryString);
+        final List<Expression> expressions = parser.parse(queryString);
 
-        /* get aggregation that is part of statement, if any */
-        final Optional<Aggregation> aggregation = q.getAggregation();
+        final Expression.Scope scope = new DefaultScope(System.currentTimeMillis());
 
-        return newQuery()
-            .source(q.getSource())
-            .range(q.getRange())
-            .aggregation(aggregation)
-            .filter(q.getFilter());
-    }
+        if (expressions.size() != 1) {
+            throw new IllegalArgumentException("Expected exactly one expression");
+        }
 
-    @Override
-    public String queryToString(final Query q) {
-        return parser.stringifyQuery(q);
-    }
+        return expressions.get(0).eval(scope).visit(new Expression.Visitor<QueryBuilder>() {
+            @Override
+            public QueryBuilder visitQuery(final QueryExpression e) {
+                final Optional<MetricType> source = e.getSource();
 
-    @Override
-    public String queryToString(final Query q, final Optional<Integer> indent) {
-        return parser.stringifyQuery(q, indent);
-    }
+                final Optional<QueryDateRange> range =
+                    e.getRange().map(expr -> expr.visit(new Expression.Visitor<QueryDateRange>() {
+                        @Override
+                        public QueryDateRange visitRange(final RangeExpression e) {
+                            final long start =
+                                e.getStart().cast(IntegerExpression.class).getValue();
+                            final long end = e.getEnd().cast(IntegerExpression.class).getValue();
 
-    @Override
-    public AsyncFuture<Void> initialized() {
-        return cluster.initialized();
+                            return new QueryDateRange.Absolute(start, end);
+                        }
+                    }));
+
+                final Optional<Aggregation> aggregation =
+                    e.getSelect().map(expr -> expr.visit(new Expression.Visitor<Aggregation>() {
+                        @Override
+                        public Aggregation visitFunction(final FunctionExpression e) {
+                            return aggregations.build(e.getName(), e.getArguments(),
+                                e.getKeywords());
+                        }
+
+                        @Override
+                        public Aggregation visitString(final StringExpression e) {
+                            return visitFunction(e.cast(FunctionExpression.class));
+                        }
+                    }));
+
+                final Optional<Filter> filter = e.getFilter();
+
+                return newQuery()
+                    .source(source)
+                    .range(range)
+                    .aggregation(aggregation)
+                    .filter(filter);
+            }
+        });
     }
 
     @RequiredArgsConstructor
     public class Group implements QueryManager.Group {
-        private final Iterable<ClusterNode.Group> groups;
+        private final List<ClusterShard> shards;
 
         @Override
         public AsyncFuture<QueryResult> query(Query q) {
@@ -167,9 +191,11 @@ public class CoreQueryManager implements QueryManager {
             final Duration cadence = buildCadence(aggregation, rawRange);
 
             final long now = System.currentTimeMillis();
-            final DateRange range = buildShiftedRange(rawRange, cadence.toMilliseconds(), now);
 
-            final Filter filter = q.getFilter().orElseGet(filters::t);
+            final DateRange range = features.withFeature(Feature.SHIFT_RANGE,
+                () -> buildShiftedRange(rawRange, cadence.toMilliseconds(), now), () -> rawRange);
+
+            final Filter filter = q.getFilter().orElseGet(TrueFilter::get);
 
             final AggregationContext context = new DefaultAggregationContext(cadence);
             final AggregationInstance root = aggregation.apply(context);
@@ -177,29 +203,123 @@ public class CoreQueryManager implements QueryManager {
             final AggregationInstance aggregationInstance;
             final AggregationCombiner combiner;
 
-            if (features.contains(Query.DISTRIBUTED_AGGREGATIONS) ||
-                q.hasFeature(Query.DISTRIBUTED_AGGREGATIONS)) {
+            final Features features = CoreQueryManager.this.features.combine(q.getFeatures());
+
+            if (features.hasFeature(Feature.DISTRIBUTED_AGGREGATIONS)) {
                 aggregationInstance = root.distributed();
-                combiner = root.combiner(range);
+                combiner = new DistributedAggregationCombiner(root.reducer(), range);
             } else {
                 aggregationInstance = root;
                 combiner = AggregationCombiner.DEFAULT;
             }
 
-            return queryCache.load(source, filter, range, aggregationInstance, options, () -> {
-                for (ClusterNode.Group group : groups) {
-                    final ClusterNode c = group.node();
+            final FullQuery.Request request =
+                new FullQuery.Request(source, filter, range, aggregationInstance, options);
 
-                    final AsyncFuture<QueryResultPart> queryPart = group
-                        .query(source, filter, range, aggregationInstance, options)
-                        .catchFailed(ResultGroups.nodeError(QUERY_NODE, group))
-                        .directTransform(QueryResultPart.fromResultGroup(range, c));
+            return queryCache.load(request, () -> {
+                for (final ClusterShard shard : shards) {
+                    final AsyncFuture<QueryResultPart> queryPart = shard
+                        .apply(g -> g.query(request))
+                        .catchFailed(FullQuery.shardError(QUERY_NODE, shard))
+                        .directTransform(QueryResultPart.fromResultGroup(shard));
 
                     futures.add(queryPart);
                 }
 
-                return async.collect(futures, QueryResult.collectParts(QUERY, range, combiner));
+                final OptionalLimit limit = options.getGroupLimit().orElse(groupLimit);
+
+                return async.collect(futures,
+                    QueryResult.collectParts(QUERY, range, combiner, limit));
             });
+        }
+
+        @Override
+        public AsyncFuture<FindTags> findTags(final FindTags.Request request) {
+            return run(g -> g.findTags(request), FindTags::shardError, FindTags.reduce());
+        }
+
+        @Override
+        public AsyncFuture<FindKeys> findKeys(final FindKeys.Request request) {
+            return run(g -> g.findKeys(request), FindKeys::shardError, FindKeys.reduce());
+        }
+
+        @Override
+        public AsyncFuture<FindSeries> findSeries(final FindSeries.Request request) {
+            return run(g -> g.findSeries(request), FindSeries::shardError,
+                FindSeries.reduce(request.getLimit()));
+        }
+
+        @Override
+        public AsyncFuture<DeleteSeries> deleteSeries(final DeleteSeries.Request request) {
+            return run(g -> g.deleteSeries(request), DeleteSeries::shardError,
+                DeleteSeries.reduce());
+        }
+
+        @Override
+        public AsyncFuture<CountSeries> countSeries(final CountSeries.Request request) {
+            return run(g -> g.countSeries(request), CountSeries::shardError, CountSeries.reduce());
+        }
+
+        @Override
+        public AsyncFuture<TagKeyCount> tagKeyCount(final TagKeyCount.Request request) {
+            return run(g -> g.tagKeyCount(request), TagKeyCount::shardError,
+                TagKeyCount.reduce(request.getLimit(), request.getExactLimit()));
+        }
+
+        @Override
+        public AsyncFuture<TagSuggest> tagSuggest(final TagSuggest.Request request) {
+            return run(g -> g.tagSuggest(request), TagSuggest::shardError,
+                TagSuggest.reduce(request.getLimit()));
+        }
+
+        @Override
+        public AsyncFuture<KeySuggest> keySuggest(final KeySuggest.Request request) {
+            return run(g -> g.keySuggest(request), KeySuggest::shardError,
+                KeySuggest.reduce(request.getLimit()));
+        }
+
+        @Override
+        public AsyncFuture<TagValuesSuggest> tagValuesSuggest(
+            final TagValuesSuggest.Request request
+        ) {
+            return run(g -> g.tagValuesSuggest(request), TagValuesSuggest::shardError,
+                TagValuesSuggest.reduce(request.getLimit(), request.getGroupLimit()));
+        }
+
+        @Override
+        public AsyncFuture<TagValueSuggest> tagValueSuggest(final TagValueSuggest.Request request) {
+            return run(g -> g.tagValueSuggest(request), TagValueSuggest::shardError,
+                TagValueSuggest.reduce(request.getLimit()));
+        }
+
+        @Override
+        public AsyncFuture<WriteMetadata> writeSeries(final WriteMetadata.Request request) {
+            return run(g -> g.writeSeries(request), WriteMetadata::shardError,
+                WriteMetadata.reduce());
+        }
+
+        @Override
+        public AsyncFuture<WriteMetric> writeMetric(final WriteMetric.Request write) {
+            return run(g -> g.writeMetric(write), WriteMetric::shardError, WriteMetric.reduce());
+        }
+
+        @Override
+        public List<ClusterShard> shards() {
+            return shards;
+        }
+
+        private <T> AsyncFuture<T> run(
+            final Function<ClusterNode.Group, AsyncFuture<T>> function,
+            final Function<ClusterShard, Transform<Throwable, T>> catcher,
+            final Collector<T, T> collector
+        ) {
+            final List<AsyncFuture<T>> futures = new ArrayList<>(shards.size());
+
+            for (final ClusterShard shard : shards) {
+                futures.add(shard.apply(function::apply).catchFailed(catcher.apply(shard)));
+            }
+
+            return async.collect(futures, collector);
         }
 
         private Duration buildCadence(final Aggregation aggregation, final DateRange rawRange) {
@@ -216,16 +336,6 @@ public class CoreQueryManager implements QueryManager {
                 .getRange()
                 .map(r -> r.buildDateRange(now))
                 .orElseThrow(() -> new QueryStateException("Range must be present"));
-        }
-
-        @Override
-        public ClusterNode.Group first() {
-            return groups.iterator().next();
-        }
-
-        @Override
-        public Iterator<ClusterNode.Group> iterator() {
-            return groups.iterator();
         }
     }
 
@@ -266,41 +376,40 @@ public class CoreQueryManager implements QueryManager {
         final SortedSet<Long> results = INTERVAL_FACTORS.headSet(nominal);
 
         if (results.isEmpty()) {
-            return Duration.of(nominal, TimeUnit.MILLISECONDS);
+            return Duration.of(Math.max(nominal, 1L), TimeUnit.MILLISECONDS);
         }
 
         return Duration.of(results.last(), TimeUnit.MILLISECONDS);
     }
 
     /**
-     * Given a range and a cadence, return a range that might be shifted in case the end period
-     * is too close or after 'now'. This is useful to avoid querying non-complete buckets.
+     * Given a range and a cadence, return a range that might be shifted in case the end period is
+     * too close or after 'now'. This is useful to avoid querying non-complete buckets.
      *
      * @param rawRange Original range.
      * @return A possibly shifted range.
-     *
      */
-     DateRange buildShiftedRange(DateRange rawRange, long cadence, long now) {
-         if (rawRange.getStart() > now) {
-             throw new IllegalArgumentException("start is greater than now");
-         }
+    DateRange buildShiftedRange(DateRange rawRange, long cadence, long now) {
+        if (rawRange.getStart() > now) {
+            throw new IllegalArgumentException("start is greater than now");
+        }
 
-         final DateRange rounded = rawRange.rounded(cadence);
+        final DateRange rounded = rawRange.rounded(cadence);
 
-         final long nowDelta = now - rounded.getEnd();
+        final long nowDelta = now - rounded.getEnd();
 
-         if (nowDelta > SHIFT_TOLERANCE) {
-             return rounded;
-         }
+        if (nowDelta > SHIFT_TOLERANCE) {
+            return rounded;
+        }
 
-         final long diff = Math.abs(Math.min(nowDelta, 0)) + SHIFT_TOLERANCE;
+        final long diff = Math.abs(Math.min(nowDelta, 0)) + SHIFT_TOLERANCE;
 
-         return rounded.shift(-toleranceShiftPeriod(diff, cadence));
-     }
+        return rounded.shift(-toleranceShiftPeriod(diff, cadence));
+    }
 
     /**
-     * Calculate a tolerance shift period that corresponds to the given difference that needs
-     * to be applied to the range to honor the tolerance shift period.
+     * Calculate a tolerance shift period that corresponds to the given difference that needs to be
+     * applied to the range to honor the tolerance shift period.
      *
      * @param diff The time difference to apply.
      * @param cadence The cadence period.

@@ -68,10 +68,10 @@ public final class RenderUtils {
         int intervalCount = 0;
 
         for (final ShardedResultGroup resultGroup : groups) {
-            final MetricCollection group = resultGroup.getGroup();
+            final MetricCollection group = resultGroup.getMetrics();
 
             if (group.getType() == MetricType.POINT) {
-                final XYSeries series = new XYSeries(resultGroup.getGroup().toString());
+                final XYSeries series = new XYSeries(resultGroup.getMetrics().toString());
 
                 final List<Point> data = group.getDataAs(Point.class);
 
@@ -88,7 +88,7 @@ public final class RenderUtils {
 
             if (group.getType() == MetricType.SPREAD) {
                 final YIntervalSeries series =
-                    new YIntervalSeries(resultGroup.getGroup().toString());
+                    new YIntervalSeries(resultGroup.getMetrics().toString());
 
                 final List<Spread> data = group.getDataAs(Spread.class);
 

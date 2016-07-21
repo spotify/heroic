@@ -32,7 +32,5 @@ import org.elasticsearch.client.Client;
     name = "node"), @JsonSubTypes.Type(value = TransportClientSetup.class, name = "transport")
 })
 public interface ClientSetup {
-    public Client setup() throws Exception;
-
-    public void stop() throws Exception;
+    Client setup() throws Exception;
 }

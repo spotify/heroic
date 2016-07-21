@@ -23,6 +23,7 @@ package com.spotify.heroic.shell.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.QueryManager;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.dagger.CoreComponent;
@@ -46,6 +47,7 @@ import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @TaskUsage("Execute a query")
@@ -74,18 +76,33 @@ public class Query implements ShellTask {
         final ObjectMapper indent = mapper.copy();
         indent.configure(SerializationFeature.INDENT_OUTPUT, true);
 
-        final QueryOptions options = QueryOptions.builder().tracing(params.tracing).build();
+        final QueryOptions.Builder optionsBuilder = QueryOptions.builder().tracing(params.tracing);
+
+        params.dataLimit.ifPresent(optionsBuilder::dataLimit);
+        params.groupLimit.ifPresent(optionsBuilder::groupLimit);
+        params.seriesLimit.ifPresent(optionsBuilder::seriesLimit);
+
+        final QueryOptions options = optionsBuilder.build();
+
+        final Optional<QueryDateRange> range =
+            Optional.of(new QueryDateRange.Relative(TimeUnit.DAYS, 1));
 
         return query
             .useGroup(params.group)
-            .query(query.newQueryFromString(queryString).options(Optional.of(options)).build())
+            .query(query
+                .newQueryFromString(queryString)
+                .options(Optional.of(options))
+                .rangeIfAbsent(range)
+                .build())
             .directTransform(result -> {
                 for (final RequestError e : result.getErrors()) {
                     io.out().println(String.format("ERR: %s", e.toString()));
                 }
 
+                io.out().println(String.format("LIMITS: %s", result.getLimits().getLimits()));
+
                 for (final ShardedResultGroup resultGroup : result.getGroups()) {
-                    final MetricCollection group = resultGroup.getGroup();
+                    final MetricCollection group = resultGroup.getMetrics();
 
                     io
                         .out()
@@ -114,6 +131,15 @@ public class Query implements ShellTask {
 
         @Option(name = "--tracing", usage = "Enable extensive tracing")
         private boolean tracing = false;
+
+        @Option(name = "--data-limit", usage = "Enable data limiting")
+        private Optional<Long> dataLimit = Optional.empty();
+
+        @Option(name = "--group-limit", usage = "Enable limiting number of groups")
+        private Optional<Long> groupLimit = Optional.empty();
+
+        @Option(name = "--series-limit", usage = "Enable number of series used")
+        private Optional<Long> seriesLimit = Optional.empty();
     }
 
     public static Query setup(final CoreComponent core) {

@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.shell.task;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.QueryOptions;
@@ -49,6 +50,7 @@ import org.kohsuke.args4j.Option;
 import javax.inject.Inject;
 import javax.inject.Named;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 @TaskUsage("List available metric keys for all backends")
@@ -81,11 +83,9 @@ public class Keys implements ShellTask {
 
         final QueryOptions.Builder options = QueryOptions.builder().tracing(params.tracing);
 
-        if (params.fetchSize != null) {
-            options.fetchSize(params.fetchSize);
-        }
+        params.fetchSize.ifPresent(options::fetchSize);
 
-        final MetricBackendGroup group = metrics.useGroup(params.group);
+        final MetricBackendGroup group = metrics.useOptionalGroup(params.group);
 
         final ResolvableFuture<Void> future = async.future();
 
@@ -102,12 +102,16 @@ public class Keys implements ShellTask {
             final AtomicLong total = new AtomicLong();
 
             @Override
-            public AsyncFuture<Void> observe(BackendKeySet keys) throws Exception {
+            public AsyncFuture<Void> observe(BackendKeySet keys) {
                 failedKeys.addAndGet(keys.getFailedKeys());
                 total.addAndGet(keys.getKeys().size() + keys.getFailedKeys());
 
                 for (final BackendKey key : keys.getKeys()) {
-                    io.out().println(mapper.writeValueAsString(key));
+                    try {
+                        io.out().println(mapper.writeValueAsString(key));
+                    } catch (final JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
 
                 io.out().flush();
@@ -115,19 +119,19 @@ public class Keys implements ShellTask {
             }
 
             @Override
-            public void cancel() throws Exception {
+            public void cancel() {
                 log.error("Cancelled");
                 end();
             }
 
             @Override
-            public void fail(final Throwable cause) throws Exception {
+            public void fail(final Throwable cause) {
                 log.warn("Exception when pulling keys", cause);
                 end();
             }
 
             @Override
-            public void end() throws Exception {
+            public void end() {
                 io.out().println("Failed Keys: " + failedKeys.get() + "/" + total.get());
                 future.resolve(null);
             }
@@ -140,7 +144,7 @@ public class Keys implements ShellTask {
     private static class Parameters extends Tasks.KeyspaceBase {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")
-        private String group = null;
+        private Optional<String> group = Optional.empty();
 
         @Option(name = "--tracing",
             usage = "Trace the queries for more debugging when things go wrong")
@@ -154,7 +158,7 @@ public class Keys implements ShellTask {
         private int keysPageSize = 10;
 
         @Option(name = "--fetch-size", usage = "Use the given fetch size")
-        private Integer fetchSize = null;
+        private Optional<Integer> fetchSize = Optional.empty();
 
         @Override
         public List<String> getQuery() {

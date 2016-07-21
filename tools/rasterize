@@ -1,0 +1,24 @@
+#!/bin/bash
+
+set -e
+
+SIZES="42 64 128 256"
+
+in="$1"
+out="$2"
+
+if [[ -z $in || -z $out ]]; then
+    echo "Usage: $0 <in> <out>"
+    exit 1
+fi
+
+b=$(basename $in)
+b=${b%.svg}
+
+for s in $SIZES; do
+    o=$out/$b.$s.png
+    echo "Writing: $o"
+    convert $in -resize ${s}x $o
+done
+
+exit 0

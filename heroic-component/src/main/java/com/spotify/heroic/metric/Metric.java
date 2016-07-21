@@ -21,19 +21,16 @@
 
 package com.spotify.heroic.metric;
 
+import com.google.common.hash.Hasher;
+
 import java.util.Comparator;
 
 public interface Metric {
     long getTimestamp();
 
-    /**
-     * A has implementation that should only take the sample value into account.
-     *
-     * @return The hash of the sample value.
-     */
-    int valueHash();
-
     boolean valid();
+
+    void hash(Hasher hasher);
 
     static Comparator<Metric> comparator() {
         return comparator;
@@ -43,12 +40,7 @@ public interface Metric {
         return invalid;
     }
 
-    Comparator<Metric> comparator = new Comparator<Metric>() {
-        @Override
-        public int compare(Metric a, Metric b) {
-            return Long.compare(a.getTimestamp(), b.getTimestamp());
-        }
-    };
+    Comparator<Metric> comparator = (a, b) -> Long.compare(a.getTimestamp(), b.getTimestamp());
 
     Metric invalid = new Metric() {
         @Override
@@ -57,13 +49,12 @@ public interface Metric {
         }
 
         @Override
-        public int valueHash() {
-            return 1;
+        public boolean valid() {
+            return false;
         }
 
         @Override
-        public boolean valid() {
-            return false;
+        public void hash(final Hasher hasher) {
         }
     };
 }

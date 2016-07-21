@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.metric;
 
+import com.spotify.heroic.common.OptionalLimit;
 import lombok.Data;
 
 import java.util.Optional;
@@ -29,10 +30,10 @@ import java.util.Optional;
 public class BackendKeyFilter {
     private final Optional<Start> start;
     private final Optional<End> end;
-    private final Optional<Integer> limit;
+    private final OptionalLimit limit;
 
     public static BackendKeyFilter of() {
-        return new BackendKeyFilter(Optional.empty(), Optional.empty(), Optional.empty());
+        return new BackendKeyFilter(Optional.empty(), Optional.empty(), OptionalLimit.empty());
     }
 
     public BackendKeyFilter withStart(Start start) {
@@ -43,15 +44,15 @@ public class BackendKeyFilter {
         return new BackendKeyFilter(start, Optional.of(end), limit);
     }
 
-    public BackendKeyFilter withLimit(int limit) {
-        return new BackendKeyFilter(start, end, Optional.of(limit));
+    public BackendKeyFilter withLimit(OptionalLimit limit) {
+        return new BackendKeyFilter(start, end, limit);
     }
 
     /**
      * Match keys strictly smaller than the given key.
      *
      * @param key Key to match against.
-     * @return A {@link BackendKeyClause} matching if a key is strictly smaller than the given key.
+     * @return A {@link BackendKeyFilter} matching if a key is strictly smaller than the given key.
      */
     public static LT lt(final BackendKey key) {
         return new LT(key);
@@ -61,7 +62,7 @@ public class BackendKeyFilter {
      * Match keys strictly greater than the given key.
      *
      * @param key Key to match against.
-     * @return A {@link BackendKeyClause} matching if a key is strictly greater than the given key.
+     * @return A {@link BackendKeyFilter} matching if a key is strictly greater than the given key.
      */
     public static GT gt(final BackendKey key) {
         return new GT(key);
@@ -71,7 +72,7 @@ public class BackendKeyFilter {
      * Match keys greater or equal to the given key.
      *
      * @param key The key to match against.
-     * @return A {@link BackendKeyClause} matching if a key is greater or equal to the given key.
+     * @return A {@link BackendKeyFilter} matching if a key is greater or equal to the given key.
      */
     public static GTE gte(final BackendKey key) {
         return new GTE(key);
@@ -80,8 +81,8 @@ public class BackendKeyFilter {
     /**
      * Match keys smaller than the given percentage.
      *
-     * @param key The percentage to match against, should be a value between {@code [0, 1]}
-     * @return A {@link BackendKeyClause} matching if a key is smaller than a given percentage.
+     * @param percentage The percentage to match against, should be a value between {@code [0, 1]}
+     * @return A {@link BackendKeyFilter} matching if a key is smaller than a given percentage.
      */
     public static LTPercentage ltPercentage(final float percentage) {
         return new LTPercentage(percentage);
@@ -91,7 +92,7 @@ public class BackendKeyFilter {
      * Match keys larger or equal to the given percentage.
      *
      * @param percentage The percentage to match against, should be a value between {@code [0, 1]}.
-     * @return A {@link BackendKeyClause} matching if a key is larger or equal to the given
+     * @return A {@link BackendKeyFilter} matching if a key is larger or equal to the given
      * percentage.
      */
     public static GTEPercentage gtePercentage(final float percentage) {
@@ -102,7 +103,7 @@ public class BackendKeyFilter {
      * Match keys smaller than the given token.
      *
      * @param token The token to match against.
-     * @return A {@link BackendKeyClause} matching if a key is smaller than the given token.
+     * @return A {@link BackendKeyFilter} matching if a key is smaller than the given token.
      */
     public static LTToken ltToken(final long token) {
         return new LTToken(token);
@@ -112,7 +113,7 @@ public class BackendKeyFilter {
      * Match keys larger or equal to the given token.
      *
      * @param token The token to match against.
-     * @return A {@link BackendKeyClause} matching if a key is larger or equal to the given token.
+     * @return A {@link BackendKeyFilter} matching if a key is larger or equal to the given token.
      */
     public static GTEToken gteToken(final long token) {
         return new GTEToken(token);

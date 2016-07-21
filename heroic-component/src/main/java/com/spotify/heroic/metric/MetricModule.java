@@ -23,17 +23,10 @@ package com.spotify.heroic.metric;
 
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
-import com.spotify.heroic.statistics.LocalMetricManagerReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 import lombok.Data;
 
-import java.util.Optional;
-
 public interface MetricModule {
-    Optional<String> id();
-
-    String buildId(int i);
-
     Exposed module(PrimaryComponent primary, Depends backend, String id);
 
     /**
@@ -41,8 +34,7 @@ public interface MetricModule {
      */
     @Data
     class Depends {
-        private final LocalMetricManagerReporter managerReporter;
-        private final MetricBackendReporter backendReporter;
+        private final MetricBackendReporter reporter;
     }
 
     /**

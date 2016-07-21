@@ -21,17 +21,20 @@
 
 package com.spotify.heroic.ingestion;
 
+import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.common.Collected;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.MetadataBackend;
+import com.spotify.heroic.metadata.WriteMetadata;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.WriteMetric;
-import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.statistics.IngestionManagerReporter;
 import com.spotify.heroic.suggest.SuggestBackend;
+import com.spotify.heroic.suggest.WriteSuggest;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.RequiredArgsConstructor;
@@ -57,71 +60,86 @@ public class CoreIngestionGroup implements IngestionGroup {
     private final Optional<SuggestBackend> suggest;
 
     @Override
-    public Groups getGroups() {
-        return Groups.combine(metric.map(Grouped::getGroups).orElseGet(Groups::empty),
-            metadata.map(Grouped::getGroups).orElseGet(Groups::empty),
-            suggest.map(Grouped::getGroups).orElseGet(Groups::empty));
+    public Groups groups() {
+        return Groups.combine(metric.map(Grouped::groups).orElseGet(Groups::empty),
+            metadata.map(Grouped::groups).orElseGet(Groups::empty),
+            suggest.map(Grouped::groups).orElseGet(Groups::empty));
     }
 
     @Override
-    public int size() {
-        return metric.map(Grouped::size).orElse(0) + metadata.map(Grouped::size).orElse(0) +
-            suggest.map(Grouped::size).orElse(0);
+    public AsyncFuture<Ingestion> write(final Ingestion.Request request) {
+        ingested.increment();
+        return syncWrite(request);
     }
 
     @Override
     public boolean isEmpty() {
-        return metric.map(Grouped::isEmpty).orElse(true) &&
-            metadata.map(Grouped::isEmpty).orElse(true) &&
-            suggest.map(Grouped::isEmpty).orElse(true);
+        return metric.map(Collected::isEmpty).orElse(true) &&
+            metadata.map(Collected::isEmpty).orElse(true) &&
+            suggest.map(Collected::isEmpty).orElse(true);
     }
 
-    @Override
-    public AsyncFuture<WriteResult> write(final WriteMetric write) {
-        if (write.isEmpty()) {
-            return async.resolved(WriteResult.of());
-        }
-
-        ingested.increment();
-        return syncWrite(write);
-    }
-
-    protected AsyncFuture<WriteResult> syncWrite(final WriteMetric write) {
-        if (!filter.get().apply(write.getSeries())) {
+    protected AsyncFuture<Ingestion> syncWrite(final Ingestion.Request request) {
+        if (!filter.get().apply(request.getSeries())) {
             // XXX: report dropped-by-filter
-            return async.resolved(WriteResult.of());
+            return async.resolved(Ingestion.of(ImmutableList.of()));
         }
 
         try {
             writePermits.acquire();
         } catch (final InterruptedException e) {
-            return async.failed(new Exception("Failed to acquire semaphore for bounded write", e));
+            return async.failed(
+                new Exception("Failed to acquire semaphore for bounded request", e));
         }
 
         reporter.incrementConcurrentWrites();
 
-        return doWrite(write).onFinished(() -> {
+        return doWrite(request).onFinished(() -> {
             writePermits.release();
             reporter.decrementConcurrentWrites();
         });
     }
 
-    protected AsyncFuture<WriteResult> doWrite(final WriteMetric write) {
-        final List<AsyncFuture<WriteResult>> futures = new ArrayList<>();
+    protected AsyncFuture<Ingestion> doWrite(final Ingestion.Request request) {
+        final List<AsyncFuture<Ingestion>> futures = new ArrayList<>();
 
-        final Supplier<DateRange> range = rangeSupplier(write);
+        final Supplier<DateRange> range = rangeSupplier(request);
 
-        metric.map(m -> doMetricWrite(m, write)).ifPresent(futures::add);
-        metadata.map(m -> doMetadataWrite(m, write, range.get())).ifPresent(futures::add);
-        suggest.map(s -> doSuggestWrite(s, write, range.get())).ifPresent(futures::add);
+        metric.map(m -> doMetricWrite(m, request)).ifPresent(futures::add);
+        metadata.map(m -> doMetadataWrite(m, request, range.get())).ifPresent(futures::add);
+        suggest.map(s -> doSuggestWrite(s, request, range.get())).ifPresent(futures::add);
 
-        return async.collect(futures, WriteResult.merger());
+        return async.collect(futures, Ingestion.reduce());
+    }
+
+    protected AsyncFuture<Ingestion> doMetricWrite(
+        final MetricBackend metric, final Ingestion.Request write
+    ) {
+        return metric
+            .write(new WriteMetric.Request(write.getSeries(), write.getData()))
+            .directTransform(Ingestion::fromWriteMetric);
+    }
+
+    protected AsyncFuture<Ingestion> doMetadataWrite(
+        final MetadataBackend metadata, final Ingestion.Request write, final DateRange range
+    ) {
+        return metadata
+            .write(new WriteMetadata.Request(write.getSeries(), range))
+            .directTransform(Ingestion::fromWriteMetadata);
+    }
+
+    protected AsyncFuture<Ingestion> doSuggestWrite(
+        final SuggestBackend suggest, final Ingestion.Request write, final DateRange range
+    ) {
+        return suggest
+            .write(new WriteSuggest.Request(write.getSeries(), range))
+            .directTransform(Ingestion::fromWriteSuggest);
     }
 
     /**
      * Setup a range supplier that memoizes the result.
      */
-    protected Supplier<DateRange> rangeSupplier(final WriteMetric write) {
+    protected Supplier<DateRange> rangeSupplier(final Ingestion.Request request) {
         return new Supplier<DateRange>() {
             // memoized value.
             private DateRange calculated = null;
@@ -132,56 +150,26 @@ public class CoreIngestionGroup implements IngestionGroup {
                     return calculated;
                 }
 
-                calculated = rangeFrom(write);
+                calculated = rangeFrom(request);
                 return calculated;
             }
         };
     }
 
-    protected AsyncFuture<WriteResult> doMetricWrite(
-        final MetricBackend metric, final WriteMetric write
-    ) {
-        try {
-            return metric.write(write);
-        } catch (final Exception e) {
-            return async.failed(e);
-        }
-    }
+    protected DateRange rangeFrom(final Ingestion.Request request) {
+        final Iterator<? extends Metric> it = request.all();
 
-    protected AsyncFuture<WriteResult> doMetadataWrite(
-        final MetadataBackend metadata, final WriteMetric write, final DateRange range
-    ) {
-        try {
-            return metadata.write(write.getSeries(), range);
-        } catch (final Exception e) {
-            return async.failed(e);
-        }
-    }
-
-    protected AsyncFuture<WriteResult> doSuggestWrite(
-        final SuggestBackend suggest, final WriteMetric write, final DateRange range
-    ) {
-        try {
-            return suggest.write(write.getSeries(), range);
-        } catch (final Exception e) {
-            return async.failed(e);
-        }
-    }
-
-    protected DateRange rangeFrom(final WriteMetric write) {
-        final Iterator<Metric> iterator = write.all().iterator();
-
-        if (!iterator.hasNext()) {
+        if (!it.hasNext()) {
             throw new IllegalArgumentException("write batch must not be empty");
         }
 
-        final Metric first = iterator.next();
+        final Metric first = it.next();
 
         long start = first.getTimestamp();
         long end = first.getTimestamp();
 
-        while (iterator.hasNext()) {
-            final Metric d = iterator.next();
+        while (it.hasNext()) {
+            final Metric d = it.next();
             start = Math.min(d.getTimestamp(), start);
             end = Math.max(d.getTimestamp(), end);
         }

@@ -27,9 +27,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.ingestion.Ingestion;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.Point;
-import com.spotify.heroic.metric.WriteMetric;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -120,7 +120,7 @@ public class CollectdTypes {
             Optional.empty(), Optional.empty());
     }
 
-    public List<WriteMetric> convert(
+    public List<Ingestion.Request> convert(
         final CollectdSample sample, final Iterable<Map.Entry<String, String>> tags
     ) {
         final Mapper mapping = mappings.get(sample.getType());
@@ -136,13 +136,13 @@ public class CollectdTypes {
     /**
      * Default conversion of collectd samples.
      */
-    private List<WriteMetric> convertDefault(
+    private List<Ingestion.Request> convertDefault(
         final CollectdSample sample, final Iterable<Map.Entry<String, String>> tags
     ) {
         final long time = sample.getTime() * 1000;
 
         final Iterator<CollectdValue> values = sample.getValues().iterator();
-        final ImmutableList.Builder<WriteMetric> writes = ImmutableList.builder();
+        final ImmutableList.Builder<Ingestion.Request> ingestions = ImmutableList.builder();
         final Iterable<Map.Entry<String, String>> sampleTags = defaultTags(sample);
 
         while (values.hasNext()) {
@@ -153,10 +153,10 @@ public class CollectdTypes {
 
             final MetricCollection data = MetricCollection.points(ImmutableList.of(point));
 
-            writes.add(new WriteMetric(series, data));
+            ingestions.add(new Ingestion.Request(series, data));
         }
 
-        return writes.build();
+        return ingestions.build();
     }
 
     private Iterable<Map.Entry<String, String>> defaultTags(final CollectdSample sample) {
@@ -202,7 +202,7 @@ public class CollectdTypes {
     }
 
     interface Mapper {
-        List<WriteMetric> convert(
+        List<Ingestion.Request> convert(
             final CollectdSample sample, final Iterable<Map.Entry<String, String>> tags
         );
     }
@@ -223,7 +223,7 @@ public class CollectdTypes {
                 final Iterator<Field> fields = this.fields.iterator();
                 final Iterator<CollectdValue> values = sample.getValues().iterator();
 
-                final ImmutableList.Builder<WriteMetric> writes = ImmutableList.builder();
+                final ImmutableList.Builder<Ingestion.Request> ingestions = ImmutableList.builder();
 
                 final Map<String, String> base = plugin.tags(sample);
 
@@ -242,10 +242,10 @@ public class CollectdTypes {
 
                     final MetricCollection data = MetricCollection.points(ImmutableList.of(point));
 
-                    writes.add(new WriteMetric(series, data));
+                    ingestions.add(new Ingestion.Request(series, data));
                 }
 
-                return writes.build();
+                return ingestions.build();
             };
         }
     }

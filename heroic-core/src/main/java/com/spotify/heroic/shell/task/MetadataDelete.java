@@ -21,11 +21,12 @@
 
 package com.spotify.heroic.shell.task;
 
-import com.spotify.heroic.common.RangeFilter;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.dagger.CoreComponent;
-import com.spotify.heroic.filter.FilterFactory;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metadata.CountSeries;
+import com.spotify.heroic.metadata.DeleteSeries;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.shell.ShellIO;
@@ -46,6 +47,7 @@ import org.kohsuke.args4j.Option;
 import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @TaskUsage("Delete metadata matching the given query")
 @TaskName("metadata-delete")
@@ -53,16 +55,14 @@ public class MetadataDelete implements ShellTask {
     private final AsyncFramework async;
     private final MetadataManager metadata;
     private final QueryParser parser;
-    private final FilterFactory filters;
 
     @Inject
     public MetadataDelete(
-        AsyncFramework async, MetadataManager metadata, QueryParser parser, FilterFactory filters
+        AsyncFramework async, MetadataManager metadata, QueryParser parser
     ) {
         this.async = async;
         this.metadata = metadata;
         this.parser = parser;
-        this.filters = filters;
     }
 
     @Override
@@ -74,13 +74,13 @@ public class MetadataDelete implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
+        final Filter filter = Tasks.setupFilter(parser, params);
 
-        final MetadataBackend group = metadata.useGroup(params.group);
+        final MetadataBackend group = metadata.useOptionalGroup(params.group);
 
-        return group.countSeries(filter).lazyTransform(new LazyTransform<CountSeries, Void>() {
-            @Override
-            public AsyncFuture<Void> transform(CountSeries c) throws Exception {
+        return group
+            .countSeries(new CountSeries.Request(filter, params.getRange(), params.getLimit()))
+            .lazyTransform((LazyTransform<CountSeries, Void>) c -> {
                 io.out().println(String.format("Deleteing %d entrie(s)", c.getCount()));
 
                 if (!params.ok) {
@@ -88,23 +88,25 @@ public class MetadataDelete implements ShellTask {
                     return async.resolved(null);
                 }
 
-                return group.deleteSeries(filter).directTransform(r -> null);
-            }
-        });
+                return group
+                    .deleteSeries(
+                        new DeleteSeries.Request(filter, params.getRange(), params.getLimit()))
+                    .directTransform(r -> null);
+            });
     }
 
     @ToString
     private static class Parameters extends Tasks.QueryParamsBase {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")
-        private String group;
+        private Optional<String> group = Optional.empty();
 
         @Option(name = "--ok", usage = "Verify that you actually want to run")
         private boolean ok = false;
 
         @Option(name = "--limit", usage = "Limit the number of deletes (default: alot)")
         @Getter
-        private int limit = Integer.MAX_VALUE;
+        private OptionalLimit limit = OptionalLimit.empty();
 
         @Argument
         @Getter

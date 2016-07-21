@@ -95,7 +95,7 @@ public class CassandraProfile extends HeroicProfileBase {
 
         // @formatter:off
         return HeroicConfig.builder()
-            .metric(
+            .metrics(
                 MetricManagerModule.builder()
                     .backends(ImmutableList.<MetricModule>of(
                         module.build()

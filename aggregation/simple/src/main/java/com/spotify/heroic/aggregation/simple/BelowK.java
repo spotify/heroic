@@ -29,38 +29,29 @@ import lombok.Data;
 
 import java.util.Optional;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 @Data
 public class BelowK implements Aggregation {
     public static final String NAME = "belowk";
 
     private final double k;
-    private final Aggregation of;
 
     @JsonCreator
-    public BelowK(@JsonProperty("k") double k, @JsonProperty("of") Aggregation of) {
+    public BelowK(@JsonProperty("k") double k) {
         this.k = k;
-        this.of = checkNotNull(of, "of");
     }
 
     @Override
     public Optional<Long> size() {
-        return of.size();
+        return Optional.empty();
     }
 
     @Override
     public Optional<Long> extent() {
-        return of.extent();
+        return Optional.empty();
     }
 
     @Override
     public BelowKInstance apply(final AggregationContext context) {
-        return new BelowKInstance(k, of.apply(context));
-    }
-
-    @Override
-    public String toDSL() {
-        return String.format("%s(%s, %f)", NAME, of.toDSL(), k);
+        return new BelowKInstance(k);
     }
 }

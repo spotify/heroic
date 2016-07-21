@@ -31,6 +31,7 @@ import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
+import com.spotify.heroic.shell.Tasks;
 import dagger.Component;
 import eu.toolchain.async.AsyncFuture;
 import lombok.ToString;
@@ -64,17 +65,8 @@ public class AnalyticsReportFetchSeries implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        final Series series;
-
-        if (params.series == null) {
-            series = Series.empty();
-        } else {
-            series = mapper.readValue(params.series, Series.class);
-        }
-
-        final LocalDate date =
-            Optional.ofNullable(params.date).map(LocalDate::parse).orElseGet(LocalDate::now);
-
+        final Series series = Tasks.parseSeries(mapper, params.series);
+        final LocalDate date = params.date.map(LocalDate::parse).orElseGet(LocalDate::now);
         return metricAnalytics.reportFetchSeries(date, series);
     }
 
@@ -82,11 +74,11 @@ public class AnalyticsReportFetchSeries implements ShellTask {
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-s", aliases = {"--series"}, usage = "Series to report fetch for",
             metaVar = "<json>")
-        private String series;
+        private Optional<String> series = Optional.empty();
 
         @Option(name = "-d", aliases = {"--date"}, usage = "Date to fetch data for",
             metaVar = "<yyyy-MM-dd>")
-        private String date = null;
+        private Optional<String> date = Optional.empty();
     }
 
     public static AnalyticsReportFetchSeries setup(final CoreComponent core) {
@@ -94,7 +86,7 @@ public class AnalyticsReportFetchSeries implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         AnalyticsReportFetchSeries task();
     }
 }

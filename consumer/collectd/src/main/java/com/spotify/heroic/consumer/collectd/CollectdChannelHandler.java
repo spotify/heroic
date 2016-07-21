@@ -25,9 +25,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.spotify.heroic.common.GrokProcessor;
+import com.spotify.heroic.ingestion.Ingestion;
 import com.spotify.heroic.ingestion.IngestionGroup;
-import com.spotify.heroic.metric.WriteMetric;
-import com.spotify.heroic.metric.WriteResult;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -61,7 +60,7 @@ public class CollectdChannelHandler extends SimpleChannelInboundHandler<Datagram
             final Set<Map.Entry<String, String>> base =
                 ImmutableMap.of("host", s.getHost(), "plugin", s.getPlugin()).entrySet();
 
-            final List<WriteMetric> writes;
+            final List<Ingestion.Request> ingestions;
 
             if (hostProcessor.isPresent()) {
                 final Map<String, Object> parts = hostProcessor.get().parse(s.getHost());
@@ -70,14 +69,14 @@ public class CollectdChannelHandler extends SimpleChannelInboundHandler<Datagram
                     Iterables.transform(parts.entrySet(),
                         e -> Pair.of(e.getKey(), e.getValue().toString())));
 
-                writes = types.convert(s, Iterables.concat(base, tags));
+                ingestions = types.convert(s, Iterables.concat(base, tags));
             } else {
-                writes = types.convert(s, base);
+                ingestions = types.convert(s, base);
             }
 
-            final List<AsyncFuture<WriteResult>> futures = new ArrayList<>();
+            final List<AsyncFuture<Ingestion>> futures = new ArrayList<>();
 
-            for (final WriteMetric w : writes) {
+            for (final Ingestion.Request w : ingestions) {
                 futures.add(ingestion.write(w));
             }
 

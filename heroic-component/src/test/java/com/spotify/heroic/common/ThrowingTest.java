@@ -24,9 +24,9 @@ public class ThrowingTest {
         thrown.expectMessage("b");
 
         Throwing.call(() -> {
-            throw new Exception("a");
+            throw new RuntimeException("a");
         }, () -> {
-            throw new Exception("b");
+            throw new RuntimeException("b");
         });
     }
 
@@ -37,8 +37,8 @@ public class ThrowingTest {
 
         try {
             Throwing.call(() -> {
-                throw new Exception("a");
-            }, runnable::run);
+                throw new RuntimeException("a");
+            }, runnable);
         } catch (final Exception e) {
             verify(runnable).run();
             throw e;

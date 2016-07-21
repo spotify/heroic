@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.shell.task;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.analytics.MetricAnalytics;
 import com.spotify.heroic.async.AsyncObserver;
@@ -72,15 +73,19 @@ public class AnalyticsDumpFetchSeries implements ShellTask {
 
         final ResolvableFuture<Void> future = async.future();
 
-        final LocalDate date =
-            Optional.ofNullable(params.date).map(LocalDate::parse).orElseGet(LocalDate::now);
+        final LocalDate date = params.date.map(LocalDate::parse).orElseGet(LocalDate::now);
 
         metricAnalytics.seriesHits(date).observe(AsyncObserver.bind(future, series -> {
-            io
-                .out()
-                .println(mapper.writeValueAsString(
-                    new AnalyticsHits(series.getSeries().getHashCode().toString(),
-                        series.getHits())));
+            try {
+                io
+                    .out()
+                    .println(mapper.writeValueAsString(
+                        new AnalyticsHits(series.getSeries().getHashCode().toString(),
+                            series.getHits())));
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+
             io.out().flush();
             return async.resolved();
         }));
@@ -92,7 +97,7 @@ public class AnalyticsDumpFetchSeries implements ShellTask {
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-d", aliases = {"--date"}, usage = "Date to fetch data for",
             metaVar = "<yyyy-MM-dd>")
-        private String date = null;
+        private Optional<String> date = Optional.empty();
     }
 
     @Data
@@ -106,7 +111,7 @@ public class AnalyticsDumpFetchSeries implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         AnalyticsDumpFetchSeries task();
     }
 }

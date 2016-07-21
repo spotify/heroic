@@ -36,6 +36,7 @@ import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestManager;
+import com.spotify.heroic.suggest.WriteSuggest;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -115,7 +116,7 @@ public class MetadataLoad implements ShellTask {
                 total++;
 
                 try {
-                    target.write(series, now).get();
+                    target.write(new WriteSuggest.Request(series, now)).get();
                 } catch (Exception e) {
                     failed++;
                 }

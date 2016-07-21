@@ -21,45 +21,33 @@
 
 package com.spotify.heroic.suggest;
 
-import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Collected;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Initializing;
-import com.spotify.heroic.common.RangeFilter;
-import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
-import com.spotify.heroic.metric.WriteResult;
 import eu.toolchain.async.AsyncFuture;
 
-import java.util.List;
-import java.util.Optional;
-
-public interface SuggestBackend extends Grouped, Initializing {
+public interface SuggestBackend extends Grouped, Initializing, Collected {
     AsyncFuture<Void> configure();
 
     /**
      * Return a set of suggestions for the most relevant tag values (given the number of tags
      * available).
      */
-    AsyncFuture<TagValuesSuggest> tagValuesSuggest(
-        RangeFilter filter, List<String> exclude, int groupLimit
-    );
+    AsyncFuture<TagValuesSuggest> tagValuesSuggest(TagValuesSuggest.Request request);
 
     /**
      * Return an estimated count of the given tags.
      */
-    AsyncFuture<TagKeyCount> tagKeyCount(RangeFilter filter);
+    AsyncFuture<TagKeyCount> tagKeyCount(TagKeyCount.Request request);
 
-    AsyncFuture<TagSuggest> tagSuggest(
-        RangeFilter filter, MatchOptions options, Optional<String> key, Optional<String> value
-    );
+    AsyncFuture<TagSuggest> tagSuggest(TagSuggest.Request request);
 
-    AsyncFuture<KeySuggest> keySuggest(
-        RangeFilter filter, MatchOptions options, Optional<String> key
-    );
+    AsyncFuture<KeySuggest> keySuggest(KeySuggest.Request request);
 
-    AsyncFuture<TagValueSuggest> tagValueSuggest(RangeFilter filter, Optional<String> key);
+    AsyncFuture<TagValueSuggest> tagValueSuggest(TagValueSuggest.Request request);
 
-    AsyncFuture<WriteResult> write(Series series, DateRange range);
+    AsyncFuture<WriteSuggest> write(WriteSuggest.Request request);
 
     default Statistics getStatistics() {
         return Statistics.empty();

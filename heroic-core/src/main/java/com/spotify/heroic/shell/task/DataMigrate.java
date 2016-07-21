@@ -21,13 +21,13 @@
 
 package com.spotify.heroic.shell.task;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.async.AsyncObserver;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.BackendKeyFilter;
@@ -56,6 +56,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
@@ -69,7 +70,6 @@ public class DataMigrate implements ShellTask {
     public static final long ALLOWED_ERRORS = 5;
     public static final long ALLOWED_FAILED_KEYS = 100;
 
-    private final FilterFactory filters;
     private final QueryParser parser;
     private final MetricManager metric;
     private final AsyncFramework async;
@@ -77,10 +77,9 @@ public class DataMigrate implements ShellTask {
 
     @Inject
     public DataMigrate(
-        FilterFactory filters, QueryParser parser, MetricManager metric, AsyncFramework async,
+        QueryParser parser, MetricManager metric, AsyncFramework async,
         @Named("application/json") ObjectMapper mapper
     ) {
-        this.filters = filters;
         this.parser = parser;
         this.metric = metric;
         this.async = async;
@@ -98,13 +97,11 @@ public class DataMigrate implements ShellTask {
 
         final QueryOptions.Builder options = QueryOptions.builder().tracing(params.tracing);
 
-        if (params.fetchSize != null) {
-            options.fetchSize(params.fetchSize);
-        }
+        params.fetchSize.ifPresent(options::fetchSize);
 
-        final Filter filter = Tasks.setupFilter(filters, parser, params);
-        final MetricBackend from = metric.useGroup(params.from);
-        final MetricBackend to = metric.useGroup(params.to);
+        final Filter filter = Tasks.setupFilter(parser, params);
+        final MetricBackend from = metric.useOptionalGroup(params.from);
+        final MetricBackend to = metric.useOptionalGroup(params.to);
 
         final BackendKeyFilter keyFilter = Tasks.setupKeyFilter(params, mapper);
 
@@ -173,7 +170,7 @@ public class DataMigrate implements ShellTask {
         final AtomicLong totalKeys = new AtomicLong();
 
         @Override
-        public AsyncFuture<Void> observe(final BackendKeySet set) throws Exception {
+        public AsyncFuture<Void> observe(final BackendKeySet set) {
             if (next != null) {
                 return async.failed(new RuntimeException("next future is still set"));
             }
@@ -225,7 +222,7 @@ public class DataMigrate implements ShellTask {
             }
         }
 
-        void streamOne(final BackendKey key) throws Exception {
+        void streamOne(final BackendKey key) {
             if (!filter.apply(key.getSeries())) {
                 endOne(key);
                 return;
@@ -244,7 +241,7 @@ public class DataMigrate implements ShellTask {
             }
         }
 
-        void endOne(final BackendKey key) throws Exception {
+        void endOne(final BackendKey key) {
             streamDot(io, key, total.incrementAndGet());
 
             // opportunistically pick up the next available task without locking (if available).
@@ -269,7 +266,7 @@ public class DataMigrate implements ShellTask {
         }
 
         @Override
-        public void cancel() throws Exception {
+        public void cancel() {
             synchronized (io) {
                 io.out().println("Cancelled when reading keys");
             }
@@ -278,7 +275,7 @@ public class DataMigrate implements ShellTask {
         }
 
         @Override
-        public void fail(final Throwable cause) throws Exception {
+        public void fail(final Throwable cause) {
             synchronized (io) {
                 io.out().println("Error when reading keys: " + cause.getMessage());
                 cause.printStackTrace(io.out());
@@ -289,7 +286,7 @@ public class DataMigrate implements ShellTask {
         }
 
         @Override
-        public void end() throws Exception {
+        public void end() {
             synchronized (lock) {
                 done = true;
                 checkFinished();
@@ -302,11 +299,16 @@ public class DataMigrate implements ShellTask {
             }
         }
 
-        void streamDot(final ShellIO io, final BackendKey key, final long n) throws Exception {
+        void streamDot(final ShellIO io, final BackendKey key, final long n) {
             if (n % LINES == 0) {
                 synchronized (io) {
-                    io.out().println(" failedKeys: " + failedKeys.get() + ", last: " +
-                        mapper.writeValueAsString(key));
+                    try {
+                        io.out().println(" failedKeys: " + failedKeys.get() + ", last: " +
+                            mapper.writeValueAsString(key));
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
+
                     io.out().flush();
                 }
             } else if (n % DOTS == 0) {
@@ -328,31 +330,32 @@ public class DataMigrate implements ShellTask {
         final Consumer<BackendKey> end;
 
         @Override
-        public AsyncFuture<Void> observe(MetricCollection value) throws Exception {
+        public AsyncFuture<Void> observe(MetricCollection value) {
             if (future.isDone() || done.get()) {
                 return async.cancelled();
             }
 
-            final AsyncFuture<Void> write =
-                to.write(new WriteMetric(key.getSeries(), value)).directTransform(v -> null);
+            final AsyncFuture<Void> write = to
+                .write(new WriteMetric.Request(key.getSeries(), value))
+                .directTransform(v -> null);
 
             future.bind(write);
             return write;
         }
 
         @Override
-        public void cancel() throws Exception {
+        public void cancel() {
             end();
         }
 
         @Override
-        public void fail(Throwable cause) throws Exception {
+        public void fail(Throwable cause) {
             errors.add(cause);
             end();
         }
 
         @Override
-        public void end() throws Exception {
+        public void end() {
             end.accept(key);
         }
     }
@@ -361,11 +364,11 @@ public class DataMigrate implements ShellTask {
     private static class Parameters extends Tasks.KeyspaceBase {
         @Option(name = "-f", aliases = {"--from"}, usage = "Backend group to load data from",
             metaVar = "<group>")
-        private String from;
+        private Optional<String> from = Optional.empty();
 
         @Option(name = "-t", aliases = {"--to"}, usage = "Backend group to load data to",
             metaVar = "<group>")
-        private String to;
+        private Optional<String> to = Optional.empty();
 
         @Option(name = "--page-limit",
             usage = "Limit the number metadata entries to fetch per page (default: 100)")
@@ -380,7 +383,7 @@ public class DataMigrate implements ShellTask {
         private int keysPageSize = 10;
 
         @Option(name = "--fetch-size", usage = "Use the given fetch size")
-        private Integer fetchSize = null;
+        private Optional<Integer> fetchSize = Optional.empty();
 
         @Option(name = "--tracing",
             usage = "Trace the queries for more debugging when things go wrong")
@@ -401,7 +404,7 @@ public class DataMigrate implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         DataMigrate task();
     }
 }

@@ -1,0 +1,15 @@
+#!/bin/bash
+
+set -e
+
+root=$(dirname $(dirname $0))
+rasterize=$root/tools/rasterize
+assets=$root/assets
+out=$root/assets/out
+
+mkdir -p $out
+
+for f in $assets/*.svg; do
+    echo "Rasterize: $f"
+    $rasterize $f $out
+done

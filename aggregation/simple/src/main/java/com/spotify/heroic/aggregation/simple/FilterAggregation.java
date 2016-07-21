@@ -21,40 +21,31 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import com.spotify.heroic.aggregation.AggregationCombiner;
-import com.spotify.heroic.aggregation.AggregationData;
 import com.spotify.heroic.aggregation.AggregationInstance;
+import com.spotify.heroic.aggregation.AggregationOutput;
 import com.spotify.heroic.aggregation.AggregationResult;
 import com.spotify.heroic.aggregation.AggregationSession;
-import com.spotify.heroic.aggregation.AggregationState;
-import com.spotify.heroic.aggregation.AggregationTraversal;
-import com.spotify.heroic.aggregation.ReducerResult;
-import com.spotify.heroic.aggregation.ReducerSession;
+import com.spotify.heroic.aggregation.EmptyInstance;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Event;
-import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Point;
-import com.spotify.heroic.metric.ShardedResultGroup;
 import com.spotify.heroic.metric.Spread;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public class FilterAggregation implements AggregationInstance {
-    private final AggregationInstance of;
     private final FilterStrategy filterStrategy;
 
-    public FilterAggregation(final FilterStrategy filterStrategy, final AggregationInstance of) {
+    public FilterAggregation(final FilterStrategy filterStrategy) {
         this.filterStrategy = checkNotNull(filterStrategy, "filterStrategy");
-        this.of = checkNotNull(of, "of");
-    }
-
-    public AggregationInstance getOf() {
-        return of;
     }
 
     @Override
@@ -64,34 +55,31 @@ public class FilterAggregation implements AggregationInstance {
 
     @Override
     public long cadence() {
-        return of.cadence();
+        return -1;
     }
 
     @Override
-    public AggregationTraversal session(List<AggregationState> states, DateRange range) {
-        final AggregationTraversal traversal = of.session(states, range);
-        return new AggregationTraversal(traversal.getStates(),
-            new Session(filterStrategy, traversal.getSession()),
-            filterStrategy.getEstimatedStatesSize(states));
+    public AggregationInstance distributed() {
+        return EmptyInstance.INSTANCE;
     }
 
     @Override
-    public ReducerSession reducer(DateRange range) {
-        return new FilterKReducerSession(filterStrategy, of.reducer(range));
+    public AggregationInstance reducer() {
+        return EmptyInstance.INSTANCE;
+    }
+
+    /**
+     * Filtering aggregations are by definition <em>not</em> distributable since they are incapable
+     * of making a complete local decision.
+     */
+    @Override
+    public boolean distributable() {
+        return false;
     }
 
     @Override
-    public AggregationCombiner combiner(DateRange range) {
-        return all -> {
-            final List<FilterableMetrics<ShardedResultGroup>> filterableMetrics = of
-                .combiner(range)
-                .combine(all)
-                .stream()
-                .map(s -> new FilterableMetrics<>(s, s::getGroup))
-                .collect(Collectors.toList());
-
-            return filterStrategy.filter(filterableMetrics);
-        };
+    public AggregationSession session(DateRange range) {
+        return new Session(filterStrategy, EmptyInstance.INSTANCE.session(range));
     }
 
     private class Session implements AggregationSession {
@@ -104,83 +92,51 @@ public class FilterAggregation implements AggregationInstance {
         }
 
         @Override
-        public void updatePoints(Map<String, String> group, List<Point> values) {
-            childSession.updatePoints(group, values);
+        public void updatePoints(
+            Map<String, String> key, Set<Series> series, List<Point> values
+        ) {
+            childSession.updatePoints(key, series, values);
         }
 
         @Override
-        public void updateEvents(Map<String, String> group, List<Event> values) {
-            childSession.updateEvents(group, values);
+        public void updateEvents(
+            Map<String, String> key, Set<Series> series, List<Event> values
+        ) {
+            childSession.updateEvents(key, series, values);
         }
 
         @Override
-        public void updateSpreads(Map<String, String> group, List<Spread> values) {
-            childSession.updateSpreads(group, values);
+        public void updateSpreads(
+            Map<String, String> key, Set<Series> series, List<Spread> values
+        ) {
+            childSession.updateSpreads(key, series, values);
         }
 
         @Override
-        public void updateGroup(Map<String, String> group, List<MetricGroup> values) {
-            childSession.updateGroup(group, values);
+        public void updateGroup(
+            Map<String, String> key, Set<Series> series, List<MetricGroup> values
+        ) {
+            childSession.updateGroup(key, series, values);
+        }
+
+        @Override
+        public void updatePayload(
+            Map<String, String> key, Set<Series> series, List<Payload> values
+        ) {
+            childSession.updatePayload(key, series, values);
         }
 
         @Override
         public AggregationResult result() {
-            final List<FilterableMetrics<AggregationData>> aggData = getFilterableAggregationData();
-            final List<AggregationData> result = filterStrategy.filter(aggData);
-            return new AggregationResult(result, childSession.result().getStatistics());
-        }
+            final AggregationResult result = childSession.result();
 
-        private List<FilterableMetrics<AggregationData>> getFilterableAggregationData() {
-            return childSession
-                .result()
+            final List<FilterableMetrics<AggregationOutput>> filterable = result
                 .getResult()
                 .stream()
-                .map(a -> new AggregationData(a.getGroup(), a.getMetrics()))
                 .map(a -> new FilterableMetrics<>(a, a::getMetrics))
                 .collect(Collectors.toList());
-        }
-    }
 
-    private static class FilterKReducerSession implements ReducerSession {
-        private final ReducerSession childReducer;
-        private final FilterStrategy filterStrategy;
-
-        public FilterKReducerSession(FilterStrategy filterStrategy, ReducerSession reducer) {
-            this.filterStrategy = filterStrategy;
-            this.childReducer = reducer;
-        }
-
-        @Override
-        public void updatePoints(Map<String, String> group, List<Point> values) {
-            childReducer.updatePoints(group, values);
-        }
-
-        @Override
-        public void updateEvents(Map<String, String> group, List<Event> values) {
-            childReducer.updateEvents(group, values);
-        }
-
-        @Override
-        public void updateSpreads(Map<String, String> group, List<Spread> values) {
-            childReducer.updateSpreads(group, values);
-        }
-
-        @Override
-        public void updateGroup(Map<String, String> group, List<MetricGroup> values) {
-            childReducer.updateGroup(group, values);
-        }
-
-        @Override
-        public ReducerResult result() {
-            final List<FilterableMetrics<MetricCollection>> filterableMetrics = childReducer
-                .result()
-                .getResult()
-                .stream()
-                .map(m -> new FilterableMetrics<>(m, () -> m))
-                .collect(Collectors.toList());
-
-            return new ReducerResult(filterStrategy.filter(filterableMetrics),
-                childReducer.result().getStatistics());
+            return new AggregationResult(filterStrategy.filter(filterable), result.getStatistics());
         }
     }
 }

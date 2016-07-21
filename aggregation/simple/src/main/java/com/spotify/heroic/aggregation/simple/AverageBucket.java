@@ -44,13 +44,13 @@ public class AverageBucket extends AbstractBucket implements DoubleBucket {
     }
 
     @Override
-    public void updatePoint(Map<String, String> tags, Point d) {
+    public void updatePoint(Map<String, String> key, Point d) {
         value.addAndGet(d.getValue());
         count.incrementAndGet();
     }
 
     @Override
-    public void updateSpread(Map<String, String> tags, Spread sample) {
+    public void updateSpread(Map<String, String> key, Spread sample) {
         value.addAndGet(sample.getSum());
         count.addAndGet(sample.getCount());
     }

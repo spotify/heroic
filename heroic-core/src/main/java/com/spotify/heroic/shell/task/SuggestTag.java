@@ -22,9 +22,9 @@
 package com.spotify.heroic.shell.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.spotify.heroic.common.RangeFilter;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.dagger.CoreComponent;
-import com.spotify.heroic.filter.FilterFactory;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
@@ -52,17 +52,14 @@ import java.util.Optional;
 @TaskName("suggest-tag")
 public class SuggestTag implements ShellTask {
     private final SuggestManager suggest;
-    private final FilterFactory filters;
     private final QueryParser parser;
     private final ObjectMapper mapper;
 
     @Inject
     public SuggestTag(
-        SuggestManager suggest, FilterFactory filters, QueryParser parser,
-        @Named("application/json") ObjectMapper mapper
+        SuggestManager suggest, QueryParser parser, @Named("application/json") ObjectMapper mapper
     ) {
         this.suggest = suggest;
-        this.filters = filters;
         this.parser = parser;
         this.mapper = mapper;
     }
@@ -76,14 +73,15 @@ public class SuggestTag implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
+        final Filter filter = Tasks.setupFilter(parser, params);
 
         final MatchOptions fuzzyOptions = MatchOptions.builder().build();
 
         return suggest
-            .useGroup(params.group)
-            .tagSuggest(filter, fuzzyOptions, Optional.ofNullable(params.key),
-                Optional.ofNullable(params.value))
+            .useOptionalGroup(params.group)
+            .tagSuggest(
+                new TagSuggest.Request(filter, params.getRange(), params.getLimit(), fuzzyOptions,
+                    params.key, params.value))
             .directTransform(result -> {
                 int i = 0;
 
@@ -99,18 +97,18 @@ public class SuggestTag implements ShellTask {
     private static class Parameters extends Tasks.QueryParamsBase {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")
-        private String group;
+        private Optional<String> group = Optional.empty();
 
         @Option(name = "-k", aliases = {"--key"}, usage = "Provide key context for suggestion")
-        private String key = null;
+        private Optional<String> key = Optional.empty();
 
         @Option(name = "-v", aliases = {"--value"}, usage = "Provide value context for suggestion")
-        private String value = null;
+        private Optional<String> value = Optional.empty();
 
         @Option(name = "--limit", aliases = {"--limit"},
             usage = "Limit the number of printed entries")
         @Getter
-        private int limit = 10;
+        private OptionalLimit limit = OptionalLimit.empty();
 
         @Argument
         @Getter
@@ -122,7 +120,7 @@ public class SuggestTag implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         SuggestTag task();
     }
 }

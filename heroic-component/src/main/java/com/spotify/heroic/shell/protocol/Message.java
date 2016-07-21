@@ -29,6 +29,7 @@ import eu.toolchain.serializer.AutoSerialize.SubType;
 @AutoSerialize.SubTypes({
     @SubType(CommandDone.class),
     @SubType(CommandOutput.class),
+    @SubType(CommandOutputFlush.class),
     @SubType(CommandsResponse.class),
     @SubType(FileNewInputStream.class),
     @SubType(FileNewOutputStream.class),
@@ -46,10 +47,12 @@ import eu.toolchain.serializer.AutoSerialize.SubType;
 public interface Message {
     <R> R visit(Visitor<R> visitor) throws Exception;
 
-    public static interface Visitor<R> {
+    interface Visitor<R> {
         R visitCommandDone(CommandDone message) throws Exception;
 
         R visitCommandOutput(CommandOutput message) throws Exception;
+
+        R visitCommandOutputFlush(CommandOutputFlush commandOutputFlush) throws Exception;
 
         R visitCommandsResponse(CommandsResponse message) throws Exception;
 

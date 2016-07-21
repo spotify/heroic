@@ -22,13 +22,13 @@
 package com.spotify.heroic.common;
 
 public interface Grouped {
-    Groups getGroups();
-
-    default int size() {
-        return 1;
-    }
-
-    default boolean isEmpty() {
-        return false;
+    /**
+     * Indicated which groups the current object belongs to.
+     *
+     * @return A {@link com.spotify.heroic.common.Groups} instance containing all groups this object
+     * is a member of.
+     */
+    default Groups groups() {
+        return Groups.empty();
     }
 }

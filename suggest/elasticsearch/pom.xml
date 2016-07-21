@@ -33,8 +33,9 @@
     </dependency>
 
     <dependency>
-      <groupId>org.elasticsearch</groupId>
-      <artifactId>elasticsearch</artifactId>
+      <groupId>com.spotify.heroic</groupId>
+      <artifactId>heroic-elasticsearch-test</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 </project>

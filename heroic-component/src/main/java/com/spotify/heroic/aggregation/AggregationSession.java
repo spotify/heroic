@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.aggregation;
 
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Point;
@@ -28,15 +30,18 @@ import com.spotify.heroic.metric.Spread;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public interface AggregationSession {
-    void updatePoints(Map<String, String> group, List<Point> values);
+    void updatePoints(Map<String, String> key, Set<Series> series, List<Point> values);
 
-    void updateEvents(Map<String, String> group, List<Event> values);
+    void updateEvents(Map<String, String> key, Set<Series> series, List<Event> values);
 
-    void updateSpreads(Map<String, String> group, List<Spread> values);
+    void updateSpreads(Map<String, String> key, Set<Series> series, List<Spread> values);
 
-    void updateGroup(Map<String, String> group, List<MetricGroup> values);
+    void updateGroup(Map<String, String> key, Set<Series> series, List<MetricGroup> values);
+
+    void updatePayload(Map<String, String> key, Set<Series> series, List<Payload> values);
 
     /**
      * Get the result of this aggregator.

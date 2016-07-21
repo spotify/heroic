@@ -1,9 +1,9 @@
 package com.spotify.heroic.aggregation;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import lombok.Data;
@@ -15,6 +15,7 @@ import org.mockito.Mockito;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class BucketAggregationTest {
     public final class IterableBuilder {
@@ -40,7 +41,7 @@ public class BucketAggregationTest {
         private final long timestamp;
         private double sum;
 
-        public void updatePoint(Map<String, String> tags, Point d) {
+        public void updatePoint(Map<String, String> key, Point d) {
             sum += d.getValue();
         }
 
@@ -64,14 +65,19 @@ public class BucketAggregationTest {
             }
 
             @Override
-            public ReducerSession reducer(final DateRange range) {
-                return Mockito.mock(ReducerSession.class);
+            public AggregationInstance distributed() {
+                return this;
+            }
+
+            @Override
+            public AggregationInstance reducer() {
+                return Mockito.mock(AggregationInstance.class);
             }
         };
     }
 
     final Map<String, String> group = ImmutableMap.of();
-    final List<AggregationState> states = ImmutableList.of();
+    final Set<Series> series = ImmutableSet.of();
 
     @Test
     public void testSameSampling() {
@@ -100,9 +106,8 @@ public class BucketAggregationTest {
         List<Point> input, List<Point> expected, final long extent
     ) {
         final BucketAggregationInstance<TestBucket> a = setup(1000, extent);
-        final AggregationSession session =
-            a.session(states, new DateRange(1000, 3000)).getSession();
-        session.updatePoints(group, input);
+        final AggregationSession session = a.session(new DateRange(1000, 3000));
+        session.updatePoints(group, series, input);
 
         final AggregationResult result = session.result();
 
@@ -112,9 +117,8 @@ public class BucketAggregationTest {
     @Test
     public void testUnevenSampling() {
         final BucketAggregationInstance<TestBucket> a = setup(999, 499);
-        final AggregationSession session =
-            a.session(states, new DateRange(1000, 2998)).getSession();
-        session.updatePoints(group,
+        final AggregationSession session = a.session(new DateRange(1000, 2998));
+        session.updatePoints(group, series,
             build().add(501, 1.0).add(502, 1.0).add(1000, 1.0).add(1001, 1.0).result());
 
         final AggregationResult result = session.result();

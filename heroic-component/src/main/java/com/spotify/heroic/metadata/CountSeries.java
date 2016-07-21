@@ -21,35 +21,36 @@
 
 package com.spotify.heroic.metadata;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.cluster.ClusterNode;
-import com.spotify.heroic.cluster.NodeMetadata;
-import com.spotify.heroic.cluster.NodeRegistryEntry;
-import com.spotify.heroic.metric.NodeError;
+import com.spotify.heroic.cluster.ClusterShard;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.OptionalLimit;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.RequestError;
+import com.spotify.heroic.metric.ShardError;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
 import lombok.Data;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 @Data
 public class CountSeries {
-    public static final List<RequestError> EMPTY_ERRORS = new ArrayList<>();
-    public static final CountSeries EMPTY = new CountSeries(EMPTY_ERRORS, 0, false);
-
     private final List<RequestError> errors;
-    private final boolean limited;
     private final long count;
+    private final boolean limited;
 
-    public static class SelfReducer implements Collector<CountSeries, CountSeries> {
-        @Override
-        public CountSeries collect(Collection<CountSeries> results) throws Exception {
+    public static CountSeries of() {
+        return new CountSeries(ImmutableList.of(), 0, false);
+    }
+
+    public static CountSeries of(long count, boolean limited) {
+        return new CountSeries(ImmutableList.of(), count, limited);
+    }
+
+    public static Collector<CountSeries, CountSeries> reduce() {
+        return results -> {
             final List<RequestError> errors = new ArrayList<>();
             long count = 0;
             boolean limited = false;
@@ -57,57 +58,21 @@ public class CountSeries {
             for (final CountSeries result : results) {
                 errors.addAll(result.errors);
                 count += result.count;
-                limited &= result.limited;
+                limited |= result.limited;
             }
 
             return new CountSeries(errors, count, limited);
-        }
-    }
-
-    private static final SelfReducer reducer = new SelfReducer();
-
-    public static Collector<CountSeries, CountSeries> reduce() {
-        return reducer;
-    }
-
-    @JsonCreator
-    public CountSeries(
-        @JsonProperty("errors") List<RequestError> errors, @JsonProperty("count") long count,
-        @JsonProperty("limited") boolean limited
-    ) {
-        this.errors = Optional.fromNullable(errors).or(EMPTY_ERRORS);
-        this.count = count;
-        this.limited = limited;
-    }
-
-    public CountSeries(long count, boolean limited) {
-        this(EMPTY_ERRORS, count, limited);
-    }
-
-    public static Transform<Throwable, ? extends CountSeries> nodeError(
-        final NodeRegistryEntry node
-    ) {
-        return new Transform<Throwable, CountSeries>() {
-            @Override
-            public CountSeries transform(Throwable e) throws Exception {
-                final NodeMetadata m = node.getMetadata();
-                final ClusterNode c = node.getClusterNode();
-                return new CountSeries(ImmutableList.<RequestError>of(
-                    NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)), 0, false);
-            }
         };
     }
 
-    public static Transform<Throwable, ? extends CountSeries> nodeError(
-        final ClusterNode.Group group
-    ) {
-        return new Transform<Throwable, CountSeries>() {
-            @Override
-            public CountSeries transform(Throwable e) throws Exception {
-                final List<RequestError> errors =
-                    ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
-                return new CountSeries(errors, 0, false);
-            }
-        };
+    public static Transform<Throwable, CountSeries> shardError(final ClusterShard shard) {
+        return e -> new CountSeries(ImmutableList.of(ShardError.fromThrowable(shard, e)), 0, false);
+    }
+
+    @Data
+    public static class Request {
+        private final Filter filter;
+        private final DateRange range;
+        private final OptionalLimit limit;
     }
 }

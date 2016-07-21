@@ -65,4 +65,8 @@ public final class Groups implements Iterable<String> {
         Arrays.stream(other).forEach(all::addAll);
         return new Groups(all.build());
     }
+
+    public static Groups of(final String group) {
+        return new Groups(ImmutableSet.of(group));
+    }
 }

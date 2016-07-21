@@ -23,50 +23,14 @@ package com.spotify.heroic.aggregation.simple;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.aggregation.AggregationInstance;
-import com.spotify.heroic.aggregation.AggregationState;
-import com.spotify.heroic.aggregation.AggregationTraversal;
-import com.spotify.heroic.aggregation.ReducerSession;
-import com.spotify.heroic.common.DateRange;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-import java.util.List;
-
-public class TopKInstance implements FilterKInstance {
-    private final FilterKAreaStrategy strategy;
-    private final FilterAggregation aggregation;
-
+@Data
+@EqualsAndHashCode(callSuper = true)
+public class TopKInstance extends FilterAggregation {
     @JsonCreator
-    public TopKInstance(@JsonProperty("k") long k, @JsonProperty("of") AggregationInstance of) {
-        strategy = new FilterKAreaStrategy(FilterKAreaType.TOP, k);
-        aggregation = new FilterAggregation(strategy, of);
-    }
-
-    @Override
-    public long estimate(DateRange range) {
-        return aggregation.estimate(range);
-    }
-
-    @Override
-    public long cadence() {
-        return aggregation.cadence();
-    }
-
-    @Override
-    public AggregationTraversal session(List<AggregationState> states, DateRange range) {
-        return aggregation.session(states, range);
-    }
-
-    @Override
-    public ReducerSession reducer(DateRange range) {
-        return aggregation.reducer(range);
-    }
-
-    @Override
-    public AggregationInstance getOf() {
-        return aggregation.getOf();
-    }
-
-    public long getK() {
-        return strategy.getK();
+    public TopKInstance(@JsonProperty("k") long k) {
+        super(new FilterKAreaStrategy(FilterKAreaType.TOP, k));
     }
 }

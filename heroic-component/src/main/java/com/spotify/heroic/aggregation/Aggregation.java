@@ -55,11 +55,4 @@ public interface Aggregation extends Function<AggregationContext, AggregationIns
      * @return The extent if available, otherwise an empty result.
      */
     Optional<Long> extent();
-
-    /**
-     * Convert to Heroic DSL.
-     *
-     * @return A DSL version of the current aggregation.
-     */
-    String toDSL();
 }

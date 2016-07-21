@@ -24,6 +24,7 @@ package com.spotify.heroic;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.cluster.ClusterManager;
+import com.spotify.heroic.http.HttpServer;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
 import eu.toolchain.async.AsyncFramework;
@@ -41,6 +42,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Component that executes a startup 'ping' after the service has started.
@@ -53,7 +55,7 @@ import java.util.List;
 @Slf4j
 @ToString(of = {"ping", "id"})
 public class HeroicStartupPinger implements LifeCycles {
-    private final HeroicServer server;
+    private final Optional<HttpServer> server;
     private final ObjectMapper mapper;
     private final HeroicContext context;
     private final AsyncFramework async;
@@ -63,7 +65,7 @@ public class HeroicStartupPinger implements LifeCycles {
 
     @Inject
     public HeroicStartupPinger(
-        final HeroicServer server, @Named("application/json") final ObjectMapper mapper,
+        final Optional<HttpServer> server, @Named("application/json") final ObjectMapper mapper,
         final HeroicContext context, final AsyncFramework async, final ClusterManager cluster,
         @Named("pingURI") final URI ping, @Named("pingId") final String id
     ) {
@@ -90,7 +92,8 @@ public class HeroicStartupPinger implements LifeCycles {
 
             context.startedFuture().onResolved(n -> {
                 log.info("Sending startup ping to {}", ping);
-                sendStartupPing(new PingMessage(server.getPort(), id, protocols));
+                sendStartupPing(
+                    new PingMessage(server.map(HttpServer::getPort).orElse(0), id, protocols));
             });
 
             return null;

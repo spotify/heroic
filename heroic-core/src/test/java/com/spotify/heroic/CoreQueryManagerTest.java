@@ -1,10 +1,11 @@
 package com.spotify.heroic;
 
-import com.google.common.collect.ImmutableSet;
+import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.cache.QueryCache;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.filter.FilterFactory;
+import com.spotify.heroic.common.Features;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.grammar.QueryParser;
 import eu.toolchain.async.AsyncFramework;
 import org.junit.Before;
@@ -13,16 +14,11 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
-import java.util.Set;
-
 import static org.junit.Assert.assertEquals;
-
 
 @RunWith(MockitoJUnitRunner.class)
 public class CoreQueryManagerTest {
     private CoreQueryManager manager;
-
-    private final Set<String> features = ImmutableSet.of();
 
     @Mock
     private AsyncFramework async;
@@ -31,17 +27,19 @@ public class CoreQueryManagerTest {
     private ClusterManager cluster;
 
     @Mock
-    private FilterFactory filters;
-
-    @Mock
     private QueryParser parser;
 
     @Mock
     private QueryCache queryCache;
 
+    @Mock
+    private AggregationFactory aggregations;
+
     @Before
     public void setup() {
-        manager = new CoreQueryManager(features, async, cluster, filters, parser, queryCache);
+        manager =
+            new CoreQueryManager(Features.empty(), async, cluster, parser, queryCache, aggregations,
+                OptionalLimit.empty());
     }
 
     @Test
@@ -86,5 +84,4 @@ public class CoreQueryManagerTest {
 
         manager.buildShiftedRange(range, 5_000, 40_000L);
     }
-
 }

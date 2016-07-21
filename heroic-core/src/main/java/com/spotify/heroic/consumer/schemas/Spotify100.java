@@ -37,12 +37,11 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.consumer.ConsumerSchema;
 import com.spotify.heroic.consumer.ConsumerSchemaException;
 import com.spotify.heroic.consumer.ConsumerSchemaValidationException;
-import com.spotify.heroic.consumer.FatalSchemaException;
 import com.spotify.heroic.consumer.SchemaScope;
+import com.spotify.heroic.ingestion.Ingestion;
 import com.spotify.heroic.ingestion.IngestionGroup;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.Point;
-import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.statistics.ConsumerReporter;
 import dagger.Component;
 import lombok.Data;
@@ -170,12 +169,7 @@ public class Spotify100 implements ConsumerSchema {
             final List<Point> points = ImmutableList.of(p);
 
             reporter.reportMessageDrift(System.currentTimeMillis() - p.getTimestamp());
-
-            try {
-                ingestion.write(new WriteMetric(series, MetricCollection.points(points)));
-            } catch (final Exception e) {
-                throw new FatalSchemaException("Write failed", e);
-            }
+            ingestion.write(new Ingestion.Request(series, MetricCollection.points(points)));
         }
     }
 

@@ -1,5 +1,5 @@
 {
-  "tag": {
+  "{{type}}": {
     "properties": {
       "key": {
         "type": "string",

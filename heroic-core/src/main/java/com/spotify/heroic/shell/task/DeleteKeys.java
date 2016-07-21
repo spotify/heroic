@@ -22,9 +22,7 @@
 package com.spotify.heroic.shell.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.metric.BackendKey;
@@ -36,6 +34,7 @@ import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
+import com.spotify.heroic.shell.Tasks;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -48,22 +47,18 @@ import org.kohsuke.args4j.Option;
 
 import javax.inject.Inject;
 import javax.inject.Named;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 @TaskUsage("Delete all data for a set of keys")
 @TaskName("delete-keys")
 public class DeleteKeys implements ShellTask {
-    public static final Charset UTF8 = Charsets.UTF_8;
-
     private final MetricManager metrics;
     private final ObjectMapper mapper;
     private final AsyncFramework async;
@@ -86,15 +81,15 @@ public class DeleteKeys implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, final TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        final MetricBackendGroup group = metrics.useGroup(params.group);
+        final MetricBackendGroup group = metrics.useOptionalGroup(params.group);
 
         final QueryOptions options = QueryOptions.builder().tracing(params.tracing).build();
 
-        final ImmutableList.Builder<Iterable<BackendKey>> keys = ImmutableList.builder();
+        Stream<BackendKey> keys = Stream.empty();
 
-        if (params.file != null) {
-            keys.addAll(loadKeysFromFile(io, params.file));
-        }
+        keys = Stream.concat(keys, Tasks
+            .parseJsonLines(mapper, params.file, io, BackendKeyArgument.class)
+            .map(BackendKeyArgument::toBackendKey));
 
         final ImmutableList.Builder<BackendKey> arguments = ImmutableList.builder();
 
@@ -102,14 +97,19 @@ public class DeleteKeys implements ShellTask {
             arguments.add(mapper.readValue(k, BackendKeyArgument.class).toBackendKey());
         }
 
-        keys.add(arguments.build());
+        keys = Stream.concat(keys, arguments.build().stream());
 
         if (!params.ok) {
             return askForOk(io, keys);
         }
 
-        final Iterator<BackendKey> iterator = Iterables.concat(keys.build()).iterator();
+        return doDelete(io, params, group, options, keys);
+    }
 
+    private AsyncFuture<Void> doDelete(
+        final ShellIO io, final Parameters params, final MetricBackendGroup group,
+        final QueryOptions options, final Stream<BackendKey> keys
+    ) {
         final StreamCollector<Pair<BackendKey, Long>, Void> collector =
             new StreamCollector<Pair<BackendKey, Long>, Void>() {
                 @Override
@@ -151,7 +151,11 @@ public class DeleteKeys implements ShellTask {
 
         final AtomicInteger outstanding = new AtomicInteger(params.parallelism);
 
+        final Object lock = new Object();
+
         final ResolvableFuture<Void> future = async.future();
+
+        final Iterator<BackendKey> it = keys.iterator();
 
         for (int i = 0; i < params.parallelism; i++) {
             async.call(new Callable<Void>() {
@@ -159,8 +163,8 @@ public class DeleteKeys implements ShellTask {
                 public Void call() throws Exception {
                     final BackendKey k;
 
-                    synchronized (iterator) {
-                        k = iterator.hasNext() ? iterator.next() : null;
+                    synchronized (lock) {
+                        k = it.hasNext() ? it.next() : null;
                     }
 
                     if (k == null) {
@@ -193,81 +197,21 @@ public class DeleteKeys implements ShellTask {
             });
         }
 
-        return future;
-    }
-
-    private List<Iterable<BackendKey>> loadKeysFromFile(final ShellIO io, final Path file) {
-        final ImmutableList.Builder<Iterable<BackendKey>> keys = ImmutableList.builder();
-
-        keys.add(new Iterable<BackendKey>() {
-            @Override
-            public Iterator<BackendKey> iterator() {
-                final BufferedReader reader;
-
-                try {
-                    reader =
-                        new BufferedReader(new InputStreamReader(io.newInputStream(file), UTF8));
-                } catch (IOException e) {
-                    throw new RuntimeException("Failed to open file", e);
-                }
-
-                return new Iterator<BackendKey>() {
-                    private String line;
-
-                    @Override
-                    public boolean hasNext() {
-                        if (line != null) {
-                            return true;
-                        }
-
-                        try {
-                            line = reader.readLine();
-                        } catch (IOException e) {
-                            throw new RuntimeException("Failed to read line", e);
-                        }
-
-                        return line != null;
-                    }
-
-                    @Override
-                    public BackendKey next() {
-                        if (line == null) {
-                            throw new IllegalStateException("No line ready");
-                        }
-
-                        try {
-                            return mapper
-                                .readValue(line.trim(), BackendKeyArgument.class)
-                                .toBackendKey();
-                        } catch (IOException e) {
-                            throw new RuntimeException("Failed to read next line", e);
-                        } finally {
-                            line = null;
-                        }
-                    }
-                };
-            }
-        });
-
-        return keys.build();
+        return future.onFinished(keys::close);
     }
 
     private AsyncFuture<Void> askForOk(
-        final ShellIO io, final ImmutableList.Builder<Iterable<BackendKey>> keys
+        final ShellIO io, final Stream<BackendKey> keys
     ) {
-        io.out().println("Would have deleted the following keys (use --ok to perform):");
+        io
+            .out()
+            .println("Examples of keys that would have been deleted (use --ok to " + "perform):");
 
-        int index = 0;
-
-        for (final BackendKey k : Iterables.concat(keys.build())) {
+        keys.limit(100).forEach(k -> {
             io.out().println(k.toString());
+        });
 
-            if (index++ > 100) {
-                io.out().println("... more than 100");
-                break;
-            }
-        }
-
+        keys.close();
         return async.resolved();
     }
 
@@ -284,7 +228,7 @@ public class DeleteKeys implements ShellTask {
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-f", aliases = {"--file"}, usage = "File to read keys from",
             metaVar = "<file>")
-        private Path file;
+        private Optional<Path> file = Optional.empty();
 
         @Option(name = "-k", aliases = {"--key"}, usage = "Key to delete", metaVar = "<json>")
         private List<String> keys = new ArrayList<>();
@@ -297,7 +241,7 @@ public class DeleteKeys implements ShellTask {
 
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")
-        private String group = null;
+        private Optional<String> group = Optional.empty();
 
         @Option(name = "--tracing", usage = "Enable extensive tracing")
         private boolean tracing = false;
@@ -312,7 +256,7 @@ public class DeleteKeys implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         DeleteKeys task();
     }
 }

@@ -21,39 +21,56 @@
 
 package com.spotify.heroic.filter;
 
+import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.common.BiConsumerIO;
+import com.spotify.heroic.common.FunctionIO;
 import lombok.RequiredArgsConstructor;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Function;
 
 @RequiredArgsConstructor
-public abstract class MultiArgumentsFilterBase<T extends Filter.MultiArgs<A>, A>
-    implements MultiArgumentsFilter<T, A>, FilterJsonSerialization<T> {
-    private final FilterJsonSerialization<A> term;
+public class MultiArgumentsFilterBase<T extends Filter, A> implements FilterEncoding<T> {
+    private final Function<List<A>, T> builder;
+    private final Function<T, List<A>> argument;
 
-    @Override
-    public T deserialize(FilterJsonSerialization.Deserializer deserializer) throws IOException {
-        final List<A> terms = new ArrayList<>();
+    private final FunctionIO<Decoder, Optional<A>> decode;
+    private final BiConsumerIO<Encoder, A> encode;
 
-        A f = this.term.deserialize(deserializer);
+    public MultiArgumentsFilterBase(
+        final Function<List<A>, T> builder, final Function<T, List<A>> argument,
+        final FilterEncodingComponent<A> encoding
+    ) {
+        this.argument = argument;
+        this.builder = builder;
 
-        while (f != null) {
-            terms.add(f);
-            f = this.term.deserialize(deserializer);
-        }
-
-        return build(terms);
+        this.decode = encoding.getDecoder();
+        this.encode = encoding.getEncoder();
     }
 
     @Override
-    public void serialize(FilterJsonSerialization.Serializer serializer, T filter)
-        throws IOException {
-        for (final A term : filter.terms()) {
-            this.term.serialize(serializer, term);
+    public T deserialize(Decoder decoder) throws IOException {
+        final ImmutableList.Builder<A> terms = ImmutableList.builder();
+
+        while (true) {
+            final Optional<A> arg = decode.apply(decoder);
+
+            if (!arg.isPresent()) {
+                break;
+            }
+
+            terms.add(arg.get());
         }
+
+        return builder.apply(terms.build());
     }
 
-    public abstract T build(Collection<A> terms);
+    @Override
+    public void serialize(Encoder encoder, T filter) throws IOException {
+        for (final A term : argument.apply(filter)) {
+            encode.accept(encoder, term);
+        }
+    }
 }

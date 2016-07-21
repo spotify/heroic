@@ -24,14 +24,13 @@ package com.spotify.heroic.aggregation.simple;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.AggregationContext;
+import com.spotify.heroic.aggregation.SamplingAggregation;
 import com.spotify.heroic.aggregation.SamplingQuery;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.Optionals;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 @Data
@@ -62,16 +61,6 @@ public class Quantile extends SamplingAggregation {
     public QuantileInstance apply(AggregationContext context, final long size, final long extent) {
         return new QuantileInstance(size, extent, q.orElse(DEFAULT_QUANTILE),
             error.orElse(DEFAULT_ERROR));
-    }
-
-    @Override
-    public String toDSL() {
-        final List<String> extra = new ArrayList<>();
-
-        this.q.ifPresent(q -> extra.add("q=" + percentage(q)));
-        this.error.ifPresent(error -> extra.add("error=" + percentage(error)));
-
-        return samplingDSL(NAME, extra);
     }
 
     private String percentage(double v) {

@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.aggregation;
 
+import com.google.common.collect.ImmutableList;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -33,7 +35,7 @@ public abstract class Aggregations {
      * <p>
      * An empty chain is the same as an instance of {@link EmptyInstance}. A chain with a single
      * entry will return that single item. More than one entry will construct a new instance of
-     * {@link AggregationChain}.
+     * {@link com.spotify.heroic.aggregation.Chain}.
      *
      * @param input The input chain.
      * @return A new aggregation for the given chain.
@@ -49,7 +51,7 @@ public abstract class Aggregations {
      * @return An empty, or an aggregation.
      */
     public static Optional<Aggregation> chain(Iterable<Aggregation> input) {
-        final Iterator<Aggregation> it = input.iterator();
+        final Iterator<Aggregation> it = flattenChain(input).iterator();
 
         if (!it.hasNext()) {
             return Optional.empty();
@@ -69,6 +71,20 @@ public abstract class Aggregations {
         }
 
         return Optional.of(new Chain(chain));
+    }
+
+    private static List<Aggregation> flattenChain(final Iterable<Aggregation> chain) {
+        final ImmutableList.Builder<Aggregation> c = ImmutableList.builder();
+
+        for (final Aggregation a : chain) {
+            if (a instanceof Chain) {
+                c.addAll(flattenChain(Chain.class.cast(a).getChain()));
+            } else {
+                c.add(a);
+            }
+        }
+
+        return c.build();
     }
 
     /**

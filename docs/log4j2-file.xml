@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" shutdownHook="disable">
+  <Appenders>
+      <RollingFile name="primary" fileName="/var/log/heroic/heroic.log"
+              filePattern="/var/log/heroic/heroic-%d{MM-dd-yyyy}-%i.log.gz">
+      <PatternLayout>
+        <Pattern>%d %p %c{1.} [%t] %m %ex%n</Pattern>
+      </PatternLayout>
+      <Policies>
+        <TimeBasedTriggeringPolicy />
+        <SizeBasedTriggeringPolicy size="100 MB"/>
+      </Policies>
+      <DefaultRolloverStrategy max="100"/>
+    </RollingFile>
+    <RollingFile name="access" fileName="/var/log/heroic/heroic.access.log"
+            filePattern="/var/log/heroic/heroic-%d{MM-dd-yyyy}-%i.access.log.gz">
+      <PatternLayout>
+        <Pattern>%m%n</Pattern>
+      </PatternLayout>
+      <Policies>
+        <TimeBasedTriggeringPolicy />
+        <SizeBasedTriggeringPolicy size="100 MB"/>
+      </Policies>
+      <DefaultRolloverStrategy max="100"/>
+    </RollingFile>
+  </Appenders>
+  <Loggers>
+    <Logger name="org.eclipse.jetty.server.RequestLog" level="INFO" additivity="false">
+      <AppenderRef ref="access" />
+    </Logger>
+    <Logger name="com.spotify.heroic" level="INFO" additivity="false">
+      <AppenderRef ref="primary" />
+    </Logger>
+    <Logger name="org.elasticsearch" level="INFO" additivity="false">
+      <AppenderRef ref="primary" />
+    </Logger>
+    <Logger name="kafka.consumer" level="INFO" additivity="false">
+      <AppenderRef ref="primary" />
+    </Logger>
+    <Logger name="io.grpc" level="WARN">
+      <AppenderRef ref="primary" />
+    </Logger>
+
+    <Root level="INFO">
+      <AppenderRef ref="primary" />
+    </Root>
+  </Loggers>
+</Configuration>

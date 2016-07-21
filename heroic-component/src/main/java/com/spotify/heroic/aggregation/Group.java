@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.spotify.heroic.grammar.QueryParser;
 import lombok.Data;
 
 import java.util.List;
@@ -75,13 +74,5 @@ public class Group implements Aggregation {
         });
 
         return new GroupInstance(of, instance);
-    }
-
-    @Override
-    public String toDSL() {
-        final Aggregation each = this.each.orElse(Empty.INSTANCE);
-        final String eachDSL = each instanceof Chain ? "(" + each.toDSL() + ")" : each.toDSL();
-        final String ofDSL = of.map(QueryParser::escapeList).orElse(ALL);
-        return eachDSL + " by " + ofDSL;
     }
 }

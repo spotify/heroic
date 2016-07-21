@@ -24,13 +24,13 @@ package com.spotify.heroic.async;
 import com.spotify.heroic.analytics.SeriesHit;
 import com.spotify.heroic.common.Throwing;
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Transform;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.Function;
 
 public interface AsyncObservable<T> {
-    void observe(AsyncObserver<T> observer) throws Exception;
+    void observe(AsyncObserver<T> observer);
 
     /**
      * Transform this observable to another type.
@@ -38,53 +38,53 @@ public interface AsyncObservable<T> {
      * @param transform The transformation to perform.
      * @return A new Observable of the transformed type.
      */
-    default <S> AsyncObservable<S> transform(final Transform<T, S> transform) {
+    default <S> AsyncObservable<S> transform(final Function<T, S> transform) {
         return observer -> {
             observe(new AsyncObserver<T>() {
                 @Override
-                public AsyncFuture<Void> observe(T value) throws Exception {
-                    return observer.observe(transform.transform(value));
+                public AsyncFuture<Void> observe(T value) {
+                    return observer.observe(transform.apply(value));
                 }
 
                 @Override
-                public void cancel() throws Exception {
+                public void cancel() {
                     observer.cancel();
                 }
 
                 @Override
-                public void fail(Throwable cause) throws Exception {
+                public void fail(Throwable cause) {
                     observer.fail(cause);
                 }
 
                 @Override
-                public void end() throws Exception {
+                public void end() {
                     observer.end();
                 }
             });
         };
     }
 
-    default AsyncObservable<T> onFinished(final ObservableFinished end) {
+    default AsyncObservable<T> onFinished(final Runnable end) {
         return observer -> {
             observe(new AsyncObserver<T>() {
                 @Override
-                public AsyncFuture<Void> observe(T value) throws Exception {
+                public AsyncFuture<Void> observe(T value) {
                     return observer.observe(value);
                 }
 
                 @Override
-                public void cancel() throws Exception {
-                    Throwing.call(observer::cancel, end::finished);
+                public void cancel() {
+                    Throwing.call(observer::cancel, end);
                 }
 
                 @Override
-                public void fail(Throwable cause) throws Exception {
-                    Throwing.call(() -> observer.fail(cause), end::finished);
+                public void fail(Throwable cause) {
+                    Throwing.call(() -> observer.fail(cause), end);
                 }
 
                 @Override
-                public void end() throws Exception {
-                    Throwing.call(observer::end, end::finished);
+                public void end() {
+                    Throwing.call(observer::end, end);
                 }
             });
         };
@@ -93,7 +93,7 @@ public interface AsyncObservable<T> {
     static <T> AsyncObservable<T> chain(final List<AsyncObservable<T>> observables) {
         return new AsyncObservable<T>() {
             @Override
-            public void observe(final AsyncObserver<T> observer) throws Exception {
+            public void observe(final AsyncObserver<T> observer) {
                 final Iterator<AsyncObservable<T>> it = observables.iterator();
 
                 if (!it.hasNext()) {
@@ -103,22 +103,22 @@ public interface AsyncObservable<T> {
 
                 final AsyncObserver<T> chainer = new AsyncObserver<T>() {
                     @Override
-                    public AsyncFuture<Void> observe(T value) throws Exception {
+                    public AsyncFuture<Void> observe(T value) {
                         return observer.observe(value);
                     }
 
                     @Override
-                    public void cancel() throws Exception {
+                    public void cancel() {
                         observer.cancel();
                     }
 
                     @Override
-                    public void fail(Throwable cause) throws Exception {
+                    public void fail(Throwable cause) {
                         observer.fail(cause);
                     }
 
                     @Override
-                    public void end() throws Exception {
+                    public void end() {
                         if (!it.hasNext()) {
                             observer.end();
                             return;
@@ -134,12 +134,7 @@ public interface AsyncObservable<T> {
     }
 
     static <T> AsyncObservable<T> empty() {
-        return new AsyncObservable<T>() {
-            @Override
-            public void observe(final AsyncObserver<T> observer) throws Exception {
-                observer.end();
-            }
-        };
+        return AsyncObserver::end;
     }
 
     /**

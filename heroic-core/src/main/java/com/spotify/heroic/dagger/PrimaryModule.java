@@ -29,16 +29,13 @@ import com.spotify.heroic.HeroicContext;
 import com.spotify.heroic.HeroicCore;
 import com.spotify.heroic.HeroicCoreInstance;
 import com.spotify.heroic.HeroicMappers;
-import com.spotify.heroic.HeroicServer;
 import com.spotify.heroic.QueryManager;
 import com.spotify.heroic.ShellTasks;
 import com.spotify.heroic.aggregation.AggregationRegistry;
-import com.spotify.heroic.filter.FilterRegistry;
+import com.spotify.heroic.common.Features;
 import com.spotify.heroic.grammar.CoreQueryParser;
 import com.spotify.heroic.grammar.QueryParser;
-import com.spotify.heroic.jetty.JettyServerConnector;
 import com.spotify.heroic.lifecycle.CoreLifeCycleManager;
-import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.ShellTaskDefinition;
@@ -50,10 +47,7 @@ import eu.toolchain.async.AsyncFramework;
 import lombok.RequiredArgsConstructor;
 
 import javax.inject.Named;
-import java.net.InetSocketAddress;
 import java.util.List;
-import java.util.Optional;
-import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -61,12 +55,7 @@ import java.util.TreeMap;
 @Module
 public class PrimaryModule {
     private final HeroicCoreInstance instance;
-    private final InetSocketAddress bindAddress;
-    private final boolean enableCors;
-    private final Optional<String> corsAllowOrigin;
-    private final Set<String> features;
-    private final List<JettyServerConnector> connectors;
-
+    private final Features features;
     private final HeroicReporter reporter;
 
     @Provides
@@ -100,49 +89,21 @@ public class PrimaryModule {
     }
 
     @Provides
-    @Named("bindAddress")
-    @PrimaryScope
-    InetSocketAddress bindAddress() {
-        return bindAddress;
-    }
-
-    @Provides
-    @Named("enableCors")
-    @PrimaryScope
-    boolean enableCors() {
-        return enableCors;
-    }
-
-    @Provides
-    @Named("corsAllowOrigin")
-    @PrimaryScope
-    Optional<String> corsAllowOrigin() {
-        return corsAllowOrigin;
-    }
-
-    @Provides
     @Named("features")
     @PrimaryScope
-    Set<String> features() {
+    Features features() {
         return features;
-    }
-
-    @Provides
-    @PrimaryScope
-    List<JettyServerConnector> connectors() {
-        return connectors;
     }
 
     @Provides
     @Named(HeroicCore.APPLICATION_JSON_INTERNAL)
     @PrimaryScope
     ObjectMapper internalMapper(
-        FilterRegistry filterRegistry, QueryParser parser, AggregationRegistry aggregation
+        QueryParser parser, AggregationRegistry aggregation
     ) {
-        final ObjectMapper m = HeroicMappers.json();
+        final ObjectMapper m = HeroicMappers.json(parser);
 
         /* configuration determined at runtime, unsuitable for testing */
-        m.registerModule(filterRegistry.module(parser));
         m.registerModule(aggregation.module());
 
         return m;
@@ -171,13 +132,6 @@ public class PrimaryModule {
     @PrimaryScope
     HeroicContext context(CoreHeroicContext context) {
         return context;
-    }
-
-    @Provides
-    @PrimaryScope
-    @Named("heroicServer")
-    LifeCycle heroicServerLife(LifeCycleManager manager, HeroicServer server) {
-        return manager.build(server);
     }
 
     private SortedMap<String, ShellTask> setupTasks(

@@ -28,13 +28,9 @@ import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicLifeCycle;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.aggregation.AggregationRegistry;
-import com.spotify.heroic.aggregation.AggregationSerializer;
 import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.filter.FilterModifier;
-import com.spotify.heroic.filter.FilterRegistry;
-import com.spotify.heroic.filter.FilterSerializer;
 import com.spotify.heroic.scheduler.Scheduler;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.serializer.Serializer;
@@ -57,15 +53,9 @@ public interface LoadingComponent {
     @Named("common")
     SerializerFramework serializer();
 
-    FilterRegistry filterRegistry();
-
-    FilterSerializer filterSerializer();
-
     AggregationRegistry aggregationRegistry();
 
     AggregationFactory aggregationFactory();
-
-    AggregationSerializer aggregationSerializer();
 
     Serializer<Series> series();
 
@@ -77,8 +67,6 @@ public interface LoadingComponent {
     Scheduler scheduler();
 
     HeroicLifeCycle lifeCycle();
-
-    FilterFactory filterFactory();
 
     FilterModifier filterModifier();
 

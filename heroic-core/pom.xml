@@ -6,7 +6,6 @@
     <groupId>com.spotify.heroic</groupId>
     <artifactId>heroic-parent</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <relativePath>..</relativePath>
   </parent>
 
   <artifactId>heroic-core</artifactId>
@@ -24,12 +23,12 @@
       <artifactId>heroic-parser</artifactId>
     </dependency>
     <dependency>
-      <groupId>eu.toolchain.async</groupId>
-      <artifactId>tiny-async-core</artifactId>
-    </dependency>
-    <dependency>
       <groupId>eu.toolchain.serializer</groupId>
       <artifactId>tiny-serializer-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>eu.toolchain.async</groupId>
+      <artifactId>tiny-async-core</artifactId>
     </dependency>
     <dependency>
       <groupId>org.projectlombok</groupId>
@@ -43,10 +42,6 @@
     </dependency>
 
     <!-- used for rpc -->
-    <dependency>
-      <groupId>org.glassfish.jersey.core</groupId>
-      <artifactId>jersey-client</artifactId>
-    </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-webapp</artifactId>
@@ -105,10 +100,6 @@
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.datatype</groupId>
-      <artifactId>jackson-datatype-jdk7</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.datatype</groupId>
       <artifactId>jackson-datatype-jdk8</artifactId>
     </dependency>
 
@@ -147,13 +138,8 @@
 
     <!-- used for testing -->
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
+      <groupId>com.spotify.heroic</groupId>
+      <artifactId>heroic-test-base</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

@@ -21,27 +21,15 @@
 
 package com.spotify.heroic;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.metric.QueryTrace;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.Data;
 
 import java.util.Optional;
 
-import static java.util.Optional.ofNullable;
-
-@RequiredArgsConstructor
-@EqualsAndHashCode(of = {"tracing", "fetchSize"})
+@Data
 public class QueryOptions {
     public static final boolean DEFAULT_TRACING = false;
-
-    public static final QueryOptions DEFAULTS = new QueryOptions(DEFAULT_TRACING, Optional.empty());
-
-    // XXX: remove ones deployed everywhere.
-    @Getter
-    private final String type = "core";
 
     /**
      * Indicates if tracing is enabled.
@@ -51,24 +39,30 @@ public class QueryOptions {
      *
      * @return {@code true} if tracing is enabled.
      */
-    private final boolean tracing;
+    private final Optional<Boolean> tracing;
 
     /**
      * The number of entries to fetch for every batch.
      */
     private final Optional<Integer> fetchSize;
 
-    @JsonCreator
-    public QueryOptions(
-        @JsonProperty("tracing") Boolean tracing,
-        @JsonProperty("fetchSize") Optional<Integer> fetchSize
-    ) {
-        this.tracing = ofNullable(tracing).orElse(DEFAULT_TRACING);
-        this.fetchSize = fetchSize;
-    }
+    /**
+     * Limit the number of returned groups.
+     */
+    private final OptionalLimit dataLimit;
+
+    /**
+     * Limit the number of returned groups.
+     */
+    private final OptionalLimit groupLimit;
+
+    /**
+     * Limit the number of series used.
+     */
+    private final OptionalLimit seriesLimit;
 
     public boolean isTracing() {
-        return tracing;
+        return tracing.orElse(DEFAULT_TRACING);
     }
 
     public Optional<Integer> getFetchSize() {
@@ -76,7 +70,8 @@ public class QueryOptions {
     }
 
     public static QueryOptions defaults() {
-        return DEFAULTS;
+        return new QueryOptions(Optional.empty(), Optional.empty(), OptionalLimit.empty(),
+            OptionalLimit.empty(), OptionalLimit.empty());
     }
 
     public static Builder builder() {
@@ -84,11 +79,14 @@ public class QueryOptions {
     }
 
     public static class Builder {
-        private boolean tracing = false;
+        private Optional<Boolean> tracing = Optional.empty();
         private Optional<Integer> fetchSize = Optional.empty();
+        private OptionalLimit dataLimit = OptionalLimit.empty();
+        private OptionalLimit groupLimit = OptionalLimit.empty();
+        private OptionalLimit seriesLimit = OptionalLimit.empty();
 
         public Builder tracing(boolean tracing) {
-            this.tracing = tracing;
+            this.tracing = Optional.of(tracing);
             return this;
         }
 
@@ -97,8 +95,23 @@ public class QueryOptions {
             return this;
         }
 
+        public Builder dataLimit(long dataLimit) {
+            this.dataLimit = OptionalLimit.of(dataLimit);
+            return this;
+        }
+
+        public Builder groupLimit(long groupLimit) {
+            this.groupLimit = OptionalLimit.of(groupLimit);
+            return this;
+        }
+
+        public Builder seriesLimit(long seriesLimit) {
+            this.seriesLimit = OptionalLimit.of(seriesLimit);
+            return this;
+        }
+
         public QueryOptions build() {
-            return new QueryOptions(tracing, fetchSize);
+            return new QueryOptions(tracing, fetchSize, dataLimit, groupLimit, seriesLimit);
         }
     }
 }

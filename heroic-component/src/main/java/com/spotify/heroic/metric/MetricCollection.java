@@ -25,14 +25,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.spotify.heroic.aggregation.AggregationSession;
-import com.spotify.heroic.aggregation.Bucket;
-import com.spotify.heroic.aggregation.ReducerSession;
+import com.spotify.heroic.common.Series;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -43,8 +43,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * Metrics are constrained to the implemented types below, so far these are {@link Point}, {@link
  * Event}, {@link Spread} , and {@link MetricGroup}.
  * <p>
- * There is a JSON serialization available in {@link MetricCollectionSerialization} which correctly
- * preserves the type information of these collections.
+ * There is a JSON serialization available in {@link com.spotify.heroic.metric.MetricCollection}
+ * which correctly preserves the type information of these collections.
  * <p>
  * This class is a carrier for _any_ of these metrics, the canonical way for accessing the
  * underlying data is to first check it's type using {@link #getType()}, and then access the data
@@ -93,22 +93,7 @@ public abstract class MetricCollection {
      * Update the given aggregation with the content of this collection.
      */
     public abstract void updateAggregation(
-        final AggregationSession session, final Map<String, String> tags
-    );
-
-    /**
-     * Update the given bucket with the content of this collection.
-     *
-     * @param bucket The bucket to update.
-     * @param tags
-     */
-    public abstract void updateBucket(final Bucket bucket, final Map<String, String> tags);
-
-    /**
-     * Update the given reducer session.
-     */
-    public abstract void updateReducer(
-        final ReducerSession session, final Map<String, String> tags
+        AggregationSession session, Map<String, String> tags, Set<Series> series
     );
 
     public int size() {
@@ -131,7 +116,8 @@ public abstract class MetricCollection {
         MetricType.GROUP, GroupCollection::new,
         MetricType.POINT, PointCollection::new,
         MetricType.EVENT, EventCollection::new,
-        MetricType.SPREAD, SpreadCollection::new
+        MetricType.SPREAD, SpreadCollection::new,
+        MetricType.CARDINALITY, CardinalityCollection::new
     );
     // @formatter:on
 
@@ -151,11 +137,15 @@ public abstract class MetricCollection {
         return new SpreadCollection(metrics);
     }
 
+    public static MetricCollection cardinality(List<Payload> metrics) {
+        return new CardinalityCollection(metrics);
+    }
+
     public static MetricCollection build(
         final MetricType key, final List<? extends Metric> metrics
     ) {
         final Function<List<? extends Metric>, MetricCollection> adapter =
-            checkNotNull(adapters.get(key), "applier does not exist for type");
+            checkNotNull(adapters.get(key), "adapter does not exist for type");
         return adapter.apply(metrics);
     }
 
@@ -164,7 +154,7 @@ public abstract class MetricCollection {
     ) {
         final List<Metric> data = ImmutableList.copyOf(Iterators.mergeSorted(
             ImmutableList.copyOf(values.stream().map(Iterable::iterator).iterator()),
-            type.comparator()));
+            Metric.comparator()));
         return build(type, data);
     }
 
@@ -176,19 +166,9 @@ public abstract class MetricCollection {
 
         @Override
         public void updateAggregation(
-            AggregationSession session, Map<String, String> tags
+            AggregationSession session, Map<String, String> tags, Set<Series> series
         ) {
-            session.updatePoints(tags, adapt());
-        }
-
-        @Override
-        public void updateReducer(ReducerSession session, final Map<String, String> tags) {
-            session.updatePoints(tags, adapt());
-        }
-
-        @Override
-        public void updateBucket(Bucket bucket, Map<String, String> tags) {
-            adapt().forEach((m) -> bucket.updatePoint(tags, m));
+            session.updatePoints(tags, series, adapt());
         }
 
         private List<Point> adapt() {
@@ -204,19 +184,9 @@ public abstract class MetricCollection {
 
         @Override
         public void updateAggregation(
-            AggregationSession session, Map<String, String> tags
+            AggregationSession session, Map<String, String> tags, Set<Series> series
         ) {
-            session.updateEvents(tags, adapt());
-        }
-
-        @Override
-        public void updateReducer(ReducerSession session, final Map<String, String> tags) {
-            session.updateEvents(tags, adapt());
-        }
-
-        @Override
-        public void updateBucket(Bucket bucket, Map<String, String> tags) {
-            adapt().forEach((m) -> bucket.updateEvent(tags, m));
+            session.updateEvents(tags, series, adapt());
         }
 
         private List<Event> adapt() {
@@ -232,19 +202,9 @@ public abstract class MetricCollection {
 
         @Override
         public void updateAggregation(
-            AggregationSession session, Map<String, String> tags
+            AggregationSession session, Map<String, String> tags, Set<Series> series
         ) {
-            session.updateSpreads(tags, adapt());
-        }
-
-        @Override
-        public void updateReducer(ReducerSession session, final Map<String, String> tags) {
-            session.updateSpreads(tags, adapt());
-        }
-
-        @Override
-        public void updateBucket(Bucket bucket, Map<String, String> tags) {
-            adapt().forEach((m) -> bucket.updateSpread(tags, m));
+            session.updateSpreads(tags, series, adapt());
         }
 
         private List<Spread> adapt() {
@@ -260,23 +220,31 @@ public abstract class MetricCollection {
 
         @Override
         public void updateAggregation(
-            AggregationSession session, Map<String, String> tags
+            AggregationSession session, Map<String, String> tags, Set<Series> series
         ) {
-            session.updateGroup(tags, adapt());
-        }
-
-        @Override
-        public void updateReducer(ReducerSession session, final Map<String, String> tags) {
-            session.updateGroup(tags, adapt());
-        }
-
-        @Override
-        public void updateBucket(Bucket bucket, Map<String, String> tags) {
-            adapt().forEach((m) -> bucket.updateGroup(tags, m));
+            session.updateGroup(tags, series, adapt());
         }
 
         private List<MetricGroup> adapt() {
             return (List<MetricGroup>) data;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static class CardinalityCollection extends MetricCollection {
+        CardinalityCollection(List<? extends Metric> cardinality) {
+            super(MetricType.CARDINALITY, cardinality);
+        }
+
+        @Override
+        public void updateAggregation(
+            AggregationSession session, Map<String, String> tags, Set<Series> series
+        ) {
+            session.updatePayload(tags, series, adapt());
+        }
+
+        private List<Payload> adapt() {
+            return (List<Payload>) data;
         }
     }
 }

@@ -29,38 +29,48 @@ import java.util.Iterator;
 @Data
 public class Family {
     final String name;
-    final Iterable<Column> columns;
+    final Iterable<com.google.bigtable.v1.Column> columns;
 
-    public static Iterable<Column> makeColumnIterable(final com.google.bigtable.v1.Family family) {
-        return new Iterable<Column>() {
-            @Override
-            public Iterator<Column> iterator() {
-                final Iterator<com.google.bigtable.v1.Column> iterator =
-                    family.getColumnsList().iterator();
+    /**
+     * Get an iterable of the latest cells in a given column.
+     *
+     * @return An iterable over the latest cell in the available columns.
+     */
+    public Iterable<LatestCellValueColumn> latestCellValue() {
+        return () -> {
+            final Iterator<com.google.bigtable.v1.Column> iterator = columns.iterator();
 
-                return new Iterator<Column>() {
+            return new Iterator<LatestCellValueColumn>() {
+                @Override
+                public boolean hasNext() {
+                    return iterator.hasNext();
+                }
 
-                    @Override
-                    public boolean hasNext() {
-                        return iterator.hasNext();
+                @Override
+                public LatestCellValueColumn next() {
+                    final com.google.bigtable.v1.Column next = iterator.next();
+
+                    if (next.getCellsCount() < 1) {
+                        throw new IllegalStateException("empty cell");
                     }
 
-                    @Override
-                    public Column next() {
-                        final com.google.bigtable.v1.Column next = iterator.next();
+                    final ByteString qualifier = next.getQualifier();
+                    final ByteString value = next.getCells(0).getValue();
 
-                        final ByteString qualifier = next.getQualifier();
-                        final ByteString value = next.getCells(0).getValue();
+                    return new LatestCellValueColumn(qualifier, value);
+                }
 
-                        return new Column(qualifier, value);
-                    }
-
-                    @Override
-                    public void remove() {
-                        throw new IllegalStateException();
-                    }
-                };
-            }
+                @Override
+                public void remove() {
+                    throw new IllegalStateException();
+                }
+            };
         };
+    }
+
+    @Data
+    public static class LatestCellValueColumn {
+        final ByteString qualifier;
+        final ByteString value;
     }
 }

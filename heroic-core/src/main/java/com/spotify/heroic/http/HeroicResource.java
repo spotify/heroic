@@ -71,15 +71,15 @@ public class HeroicResource {
     public Response getBackends() {
         final List<String> results = new ArrayList<>();
 
-        for (final GroupMember<MetricBackend> b : metrics.getBackends()) {
+        for (final GroupMember<MetricBackend> b : metrics.groupSet().inspectAll()) {
             results.add(b.toString());
         }
 
-        for (final GroupMember<MetadataBackend> b : metadata.getBackends()) {
+        for (final GroupMember<MetadataBackend> b : metadata.groupSet().inspectAll()) {
             results.add(b.toString());
         }
 
-        for (final GroupMember<SuggestBackend> b : suggest.getBackends()) {
+        for (final GroupMember<SuggestBackend> b : suggest.groupSet().inspectAll()) {
             results.add(b.toString());
         }
 

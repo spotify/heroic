@@ -23,17 +23,15 @@ package com.spotify.heroic.metric;
 
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.async.AsyncObservable;
-import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Collected;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Initializing;
-import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import eu.toolchain.async.AsyncFuture;
 
-import java.util.Collection;
 import java.util.List;
 
-public interface MetricBackend extends Initializing, Grouped {
+public interface MetricBackend extends Initializing, Grouped, Collected {
     Statistics getStatistics();
 
     /**
@@ -51,33 +49,17 @@ public interface MetricBackend extends Initializing, Grouped {
      *
      * @param write
      * @return
-     * @throws MetricBackendException If the write cannot be performed.
      */
-    AsyncFuture<WriteResult> write(WriteMetric write);
-
-    /**
-     * Write a collection of datapoints for a specific time series.
-     *
-     * @param series Time serie to write to.
-     * @param data Datapoints to write.
-     * @return A callback indicating if the write was successful or not.
-     * @throws MetricBackendException If the write cannot be performed.
-     */
-    AsyncFuture<WriteResult> write(Collection<WriteMetric> writes);
+    AsyncFuture<WriteMetric> write(WriteMetric.Request write);
 
     /**
      * Query for data points that is part of the specified list of rows and range.
      *
-     * @param type The type of metric to fetch.
-     * @param series The series to fetch metrics for.
-     * @param range The range to fetch metrics for.
+     * @param request Fetch request to use.
      * @param watcher The watcher implementation to use when fetching metrics.
      * @return A future containing the fetched data wrapped in a {@link FetchData} structure.
      */
-    AsyncFuture<FetchData> fetch(
-        MetricType type, Series series, DateRange range, FetchQuotaWatcher watcher,
-        QueryOptions options
-    );
+    AsyncFuture<FetchData> fetch(FetchData.Request request, FetchQuotaWatcher watcher);
 
     /**
      * List all series directly from the database.
@@ -85,7 +67,6 @@ public interface MetricBackend extends Initializing, Grouped {
      * This will be incredibly slow.
      *
      * @return An iterator over all found time series.
-     * @throws MetricBackendException If listing of entries cannot be performed.
      */
     Iterable<BackendEntry> listEntries();
 
@@ -108,7 +89,7 @@ public interface MetricBackend extends Initializing, Grouped {
      * matching keys.
      */
     AsyncObservable<BackendKeySet> streamKeysPaged(
-        BackendKeyFilter filter, QueryOptions options, int pageSize
+        BackendKeyFilter filter, QueryOptions options, long pageSize
     );
 
     /**

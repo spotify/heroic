@@ -25,12 +25,14 @@ import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.async.AsyncObserver;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.Statistics;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
+import java.util.Optional;
 
 @RequiredArgsConstructor
 public abstract class AbstractMetricBackend implements MetricBackend {
@@ -75,31 +77,26 @@ public abstract class AbstractMetricBackend implements MetricBackend {
 
     @Override
     public AsyncObservable<MetricCollection> streamRow(BackendKey key) {
-        return observer -> {
-            observer.end();
-        };
+        return AsyncObserver::end;
     }
 
     @Override
     public AsyncObservable<BackendKeySet> streamKeysPaged(
-        BackendKeyFilter filter, final QueryOptions options, final int pageSize
+        BackendKeyFilter filter, final QueryOptions options, final long pageSize
     ) {
-        return observer -> {
-            streamKeysNextPage(observer, filter, options, pageSize, null);
-        };
+        return observer -> streamKeysNextPage(observer, filter, options, pageSize,
+            Optional.empty());
     }
 
     private void streamKeysNextPage(
         final AsyncObserver<BackendKeySet> observer, final BackendKeyFilter filter,
-        final QueryOptions options, final int pageSize, final BackendKey key
-    ) throws Exception {
-        BackendKeyFilter partial = filter;
-
-        if (key != null) {
-            partial = filter.withStart(BackendKeyFilter.gt(key));
-        }
-
-        partial = partial.withLimit(pageSize);
+        final QueryOptions options, final long pageSize, final Optional<BackendKey> key
+    ) {
+        final BackendKeyFilter partial = key
+            .map(BackendKeyFilter::gt)
+            .map(filter::withStart)
+            .orElse(filter)
+            .withLimit(OptionalLimit.of(pageSize));
 
         final AsyncObservable<BackendKeySet> observable = streamKeys(partial, options);
 
@@ -107,23 +104,23 @@ public abstract class AbstractMetricBackend implements MetricBackend {
             private BackendKey lastSeen = null;
 
             @Override
-            public AsyncFuture<Void> observe(BackendKeySet value) throws Exception {
+            public AsyncFuture<Void> observe(BackendKeySet value) {
                 lastSeen = value.getKeys().get(value.getKeys().size() - 1);
                 return observer.observe(value);
             }
 
             @Override
-            public void cancel() throws Exception {
+            public void cancel() {
                 observer.cancel();
             }
 
             @Override
-            public void fail(Throwable cause) throws Exception {
+            public void fail(Throwable cause) {
                 observer.fail(cause);
             }
 
             @Override
-            public void end() throws Exception {
+            public void end() {
                 // no key seen, we are at the end of the sequence.
                 if (lastSeen == null) {
                     observer.end();
@@ -132,7 +129,7 @@ public abstract class AbstractMetricBackend implements MetricBackend {
 
                 final BackendKey next = lastSeen;
                 lastSeen = null;
-                streamKeysNextPage(observer, filter, options, pageSize, next);
+                streamKeysNextPage(observer, filter, options, pageSize, Optional.of(next));
             }
         });
     }

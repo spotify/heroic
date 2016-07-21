@@ -23,11 +23,10 @@ package com.spotify.heroic.shell.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.RangeFilter;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
@@ -102,7 +101,7 @@ public class SuggestPerformance implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        final SuggestBackend s = suggest.useGroup(params.group);
+        final SuggestBackend s = suggest.useOptionalGroup(params.group);
 
         final ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
 
@@ -114,11 +113,11 @@ public class SuggestPerformance implements ShellTask {
             final TestSuite suite = mapper.readValue(input, TestSuite.class);
 
             for (final TestCase c : suite.getTests()) {
-                final Filter context = parser.parseFilter(c.getContext());
-                final RangeFilter filter = new RangeFilter(context, range, params.limit);
+                final Filter filter = parser.parseFilter(c.getContext());
 
                 for (final int concurrency : suite.getConcurrency()) {
-                    tests.add(setupTest(io.out(), c.getContext(), concurrency, filter, c, s));
+                    tests.add(setupTest(io.out(), c.getContext(), concurrency, filter, range,
+                        params.getLimit(), c, s));
                 }
             }
         }
@@ -141,111 +140,105 @@ public class SuggestPerformance implements ShellTask {
     }
 
     private Callable<TestResult> setupTest(
-        final PrintWriter out, final String context, final int concurrency,
-        final RangeFilter filter, final TestCase c, final SuggestBackend s
+        final PrintWriter out, final String context, final int concurrency, final Filter filter,
+        final DateRange range, final OptionalLimit limit, final TestCase c, final SuggestBackend s
     ) {
-        return new Callable<TestResult>() {
-            @Override
-            public TestResult call() throws Exception {
-                log.info("Running context {} with concurrency {}", context, concurrency);
-                final ExecutorService service = Executors.newFixedThreadPool(concurrency);
-                final List<Future<TestPartialResult>> futures = new ArrayList<>();
+        return () -> {
+            log.info("Running context {} with concurrency {}", context, concurrency);
+            final ExecutorService service = Executors.newFixedThreadPool(concurrency);
+            final List<Future<TestPartialResult>> futures = new ArrayList<>();
 
-                final AtomicInteger index = new AtomicInteger();
+            final AtomicInteger index = new AtomicInteger();
 
-                final int count = c.getCount();
-                final List<TestSuggestion> suggestions = c.getSuggestions();
+            final int count = c.getCount();
+            final List<TestSuggestion> suggestions = c.getSuggestions();
 
-                for (int i = 0; i < concurrency; i++) {
-                    futures.add(
-                        service.submit(setupTestThread(out, index, count, suggestions, filter, s)));
-                }
-
-                final List<Long> times = new ArrayList<>();
-                int errors = 0;
-                int mismatches = 0;
-                int matches = 0;
-
-                for (final Future<TestPartialResult> future : futures) {
-                    final TestPartialResult partial = future.get();
-                    times.addAll(partial.getTimes());
-                    errors += partial.getErrors();
-                    mismatches += partial.getMismatches();
-                    matches += partial.getMatches();
-                }
-
-                Collections.sort(times);
-
-                service.shutdown();
-                service.awaitTermination(10, TimeUnit.SECONDS);
-                return new TestResult(context, concurrency, times, errors, mismatches, matches,
-                    count);
+            for (int i = 0; i < concurrency; i++) {
+                futures.add(service.submit(
+                    setupTestThread(out, index, count, suggestions, filter, range, limit, s)));
             }
+
+            final List<Long> times = new ArrayList<>();
+            int errors = 0;
+            int mismatches = 0;
+            int matches = 0;
+
+            for (final Future<TestPartialResult> future : futures) {
+                final TestPartialResult partial = future.get();
+                times.addAll(partial.getTimes());
+                errors += partial.getErrors();
+                mismatches += partial.getMismatches();
+                matches += partial.getMatches();
+            }
+
+            Collections.sort(times);
+
+            service.shutdown();
+            service.awaitTermination(10, TimeUnit.SECONDS);
+            return new TestResult(context, concurrency, times, errors, mismatches, matches, count);
         };
     }
 
     private Callable<TestPartialResult> setupTestThread(
         final PrintWriter out, final AtomicInteger index, final int count,
-        final List<TestSuggestion> suggestions, final RangeFilter filter, final SuggestBackend s
+        final List<TestSuggestion> suggestions, final Filter filter, final DateRange range,
+        final OptionalLimit limit, final SuggestBackend s
     ) {
-        return new Callable<TestPartialResult>() {
-            @Override
-            public TestPartialResult call() throws Exception {
-                int i = 0;
+        return () -> {
+            int i = 0;
 
-                final List<Long> times = new ArrayList<>();
-                int errors = 0;
-                int mismatches = 0;
-                int matches = 0;
+            final List<Long> times = new ArrayList<>();
+            int errors = 0;
+            int mismatches = 0;
+            int matches = 0;
 
-                while ((i = index.getAndIncrement()) < count) {
-                    final TestSuggestion test = suggestions.get(i % suggestions.size());
-                    final long start = System.nanoTime();
+            while ((i = index.getAndIncrement()) < count) {
+                final TestSuggestion test = suggestions.get(i % suggestions.size());
+                final long start = System.nanoTime();
 
-                    final Suggestion input = test.getInput();
+                final Suggestion input = test.getInput();
 
-                    final AsyncFuture<TagSuggest> future =
-                        s.tagSuggest(filter, MatchOptions.builder().build(), input.getKey(),
-                            input.getValue());
+                final AsyncFuture<TagSuggest> future = s.tagSuggest(
+                    new TagSuggest.Request(filter, range, limit, MatchOptions.builder().build(),
+                        input.getKey(), input.getValue()));
 
-                    final TagSuggest result;
+                final TagSuggest result;
 
-                    try {
-                        result = future.get();
-                    } catch (ExecutionException e) {
-                        errors++;
-                        continue;
-                    }
-
-                    final Set<Suggestion> expect = new HashSet<>(test.getExpect());
-
-                    if (result.getSuggestions().isEmpty()) {
-                        log.error("no matches");
-                        mismatches++;
-                        continue;
-                    }
-
-                    for (TagSuggest.Suggestion s : result.getSuggestions()) {
-                        expect.remove(
-                            new Suggestion(Optional.of(s.getKey()), Optional.of(s.getValue())));
-
-                        if (expect.isEmpty()) {
-                            break;
-                        }
-                    }
-
-                    if (!expect.isEmpty()) {
-                        log.error("{} <> {}", expect, result.getSuggestions());
-                    }
-
-                    matches++;
-                    final long diff = System.nanoTime() - start;
-                    times.add(diff);
+                try {
+                    result = future.get();
+                } catch (ExecutionException e) {
+                    errors++;
+                    continue;
                 }
 
-                // put the service under load.
-                return new TestPartialResult(times, errors, mismatches, matches);
+                final Set<Suggestion> expect = new HashSet<>(test.getExpect());
+
+                if (result.getSuggestions().isEmpty()) {
+                    log.error("no matches");
+                    mismatches++;
+                    continue;
+                }
+
+                for (TagSuggest.Suggestion s1 : result.getSuggestions()) {
+                    expect.remove(
+                        new Suggestion(Optional.of(s1.getKey()), Optional.of(s1.getValue())));
+
+                    if (expect.isEmpty()) {
+                        break;
+                    }
+                }
+
+                if (!expect.isEmpty()) {
+                    log.error("{} <> {}", expect, result.getSuggestions());
+                }
+
+                matches++;
+                final long diff = System.nanoTime() - start;
+                times.add(diff);
             }
+
+            // put the service under load.
+            return new TestPartialResult(times, errors, mismatches, matches);
         };
     }
 
@@ -264,7 +257,7 @@ public class SuggestPerformance implements ShellTask {
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")
-        private String group;
+        private Optional<String> group = Optional.empty();
 
         @Option(name = "-f", usage = "File to load tests from", metaVar = "<yaml>")
         @Getter
@@ -272,7 +265,7 @@ public class SuggestPerformance implements ShellTask {
 
         @Option(name = "-l", usage = "Limit the number of results", metaVar = "<int>")
         @Getter
-        private int limit = 10;
+        private OptionalLimit limit = OptionalLimit.empty();
     }
 
     @Data
@@ -342,6 +335,7 @@ public class SuggestPerformance implements ShellTask {
         private final Suggestion input;
         private final Set<Suggestion> expect;
 
+        @JsonCreator
         public TestSuggestion(
             @JsonProperty("input") Suggestion input, @JsonProperty("expect") Set<Suggestion> expect
         ) {
@@ -355,14 +349,6 @@ public class SuggestPerformance implements ShellTask {
     public static class Suggestion {
         private final Optional<String> key;
         private final Optional<String> value;
-
-        @JsonCreator
-        public Suggestion(JsonNode node) {
-            final String text = node.asText();
-            final String[] split = text.split(":", 2);
-            this.key = Optional.of(split[0]);
-            this.value = split.length > 1 ? Optional.of(split[1]) : Optional.empty();
-        }
     }
 
     public static SuggestPerformance setup(final CoreComponent core) {
@@ -370,7 +356,7 @@ public class SuggestPerformance implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         SuggestPerformance task();
     }
 }

@@ -22,6 +22,7 @@
 package com.spotify.heroic.dagger;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.spotify.heroic.CoreHeroicConfigurationContext;
 import com.spotify.heroic.CoreHeroicLifeCycle;
 import com.spotify.heroic.ExtraParameters;
@@ -32,19 +33,13 @@ import com.spotify.heroic.HeroicLifeCycle;
 import com.spotify.heroic.HeroicMappers;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.aggregation.AggregationRegistry;
-import com.spotify.heroic.aggregation.AggregationSerializer;
 import com.spotify.heroic.aggregation.CoreAggregationRegistry;
 import com.spotify.heroic.common.CoreJavaxRestFramework;
 import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Series_Serializer;
-import com.spotify.heroic.filter.CoreFilterFactory;
 import com.spotify.heroic.filter.CoreFilterModifier;
-import com.spotify.heroic.filter.CoreFilterRegistry;
-import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.filter.FilterModifier;
-import com.spotify.heroic.filter.FilterRegistry;
-import com.spotify.heroic.filter.FilterSerializer;
 import com.spotify.heroic.scheduler.DefaultScheduler;
 import com.spotify.heroic.scheduler.Scheduler;
 import dagger.Module;
@@ -58,6 +53,8 @@ import lombok.RequiredArgsConstructor;
 
 import javax.inject.Named;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 @RequiredArgsConstructor
 @Module
@@ -87,18 +84,6 @@ public class LoadingModule {
 
     @Provides
     @LoadingScope
-    FilterRegistry filterRegistry(@Named("common") SerializerFramework s) {
-        return new CoreFilterRegistry(s, s.fixedInteger(), s.string());
-    }
-
-    @Provides
-    @LoadingScope
-    FilterSerializer filterSerializer(FilterRegistry filterRegistry) {
-        return filterRegistry.newFilterSerializer();
-    }
-
-    @Provides
-    @LoadingScope
     AggregationRegistry aggregationRegistry(@Named("common") SerializerFramework s) {
         return new CoreAggregationRegistry(s.string());
     }
@@ -111,20 +96,14 @@ public class LoadingModule {
 
     @Provides
     @LoadingScope
-    AggregationSerializer aggregationSerializer(AggregationRegistry configuration) {
-        return configuration.newAggregationSerializer();
-    }
-
-    @Provides
-    @LoadingScope
     Serializer<Series> series(@Named("common") SerializerFramework s) {
         return new Series_Serializer(s);
     }
 
     @Provides
     @LoadingScope
-    AsyncFramework async(ExecutorService executor) {
-        return TinyAsync.builder().executor(executor).build();
+    AsyncFramework async(ExecutorService executor, ScheduledExecutorService scheduler) {
+        return TinyAsync.builder().executor(executor).scheduler(scheduler).build();
     }
 
     @Provides
@@ -136,8 +115,15 @@ public class LoadingModule {
 
     @Provides
     @LoadingScope
-    Scheduler scheduler() {
-        return new DefaultScheduler();
+    ScheduledExecutorService scheduledExecutorService() {
+        return new ScheduledThreadPoolExecutor(10,
+            new ThreadFactoryBuilder().setNameFormat("heroic-scheduler#%d").build());
+    }
+
+    @Provides
+    @LoadingScope
+    Scheduler scheduler(final ScheduledExecutorService scheduler) {
+        return new DefaultScheduler(scheduler);
     }
 
     @Provides
@@ -148,14 +134,8 @@ public class LoadingModule {
 
     @Provides
     @LoadingScope
-    FilterFactory coreFilterFactory() {
-        return new CoreFilterFactory();
-    }
-
-    @Provides
-    @LoadingScope
-    FilterModifier coreFilterModifier(final FilterFactory factory) {
-        return new CoreFilterModifier(factory);
+    FilterModifier coreFilterModifier() {
+        return new CoreFilterModifier();
     }
 
     @Provides

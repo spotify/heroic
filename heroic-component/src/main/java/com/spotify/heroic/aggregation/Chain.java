@@ -66,7 +66,7 @@ public class Chain implements Aggregation {
     }
 
     @Override
-    public ChainInstance apply(final AggregationContext context) {
+    public AggregationInstance apply(final AggregationContext context) {
         ListIterator<Aggregation> it = chain.listIterator(chain.size());
 
         AggregationContext current = context;
@@ -77,20 +77,10 @@ public class Chain implements Aggregation {
         while (it.hasPrevious()) {
             final AggregationInstance instance = it.previous().apply(current);
             tags.addAll(instance.requiredTags());
-            current = AggregationContext.withRequiredTags(context, tags.build());
+            current = AggregationContext.withRequiredTags(current, tags.build());
             chain.add(instance);
         }
 
-        return new ChainInstance(Lists.reverse(chain.build()));
-    }
-
-    @Override
-    public String toDSL() {
-        return PIPE.join(chain.stream().map(Aggregation::toDSL).iterator());
-    }
-
-    @Override
-    public String toString() {
-        return toDSL();
+        return ChainInstance.fromList(Lists.reverse(chain.build()));
     }
 }

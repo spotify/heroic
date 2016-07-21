@@ -23,10 +23,12 @@ package com.spotify.heroic.metric;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.cluster.ClusterNode;
+import com.spotify.heroic.cluster.ClusterShard;
+import com.spotify.heroic.common.Series;
 import lombok.Data;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -34,7 +36,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 @Data
 public class ResultGroup {
     final Map<String, String> key;
-    final SeriesValues series;
+    final Set<Series> series;
     final MetricCollection group;
     /**
      * The interval in milliseconds for which a sample can be expected. A cadence of 0 indicates
@@ -44,7 +46,7 @@ public class ResultGroup {
 
     @JsonCreator
     public ResultGroup(
-        @JsonProperty("key") Map<String, String> key, @JsonProperty("series") SeriesValues series,
+        @JsonProperty("key") Map<String, String> key, @JsonProperty("series") Set<Series> series,
         @JsonProperty("group") MetricCollection group, @JsonProperty("cadence") Long cadence
     ) {
         this.key = checkNotNull(key, "key");
@@ -54,9 +56,9 @@ public class ResultGroup {
     }
 
     public static Function<? super ResultGroup, ? extends ShardedResultGroup> toShardedResultGroup(
-        final ClusterNode c
+        final ClusterShard shard
     ) {
-        return (g) -> new ShardedResultGroup(c.metadata().getTags(), g.getKey(), g.getSeries(),
+        return g -> new ShardedResultGroup(shard.getShard(), g.getKey(), g.getSeries(),
             g.getGroup(), g.getCadence());
     }
 }

@@ -23,13 +23,14 @@ package com.spotify.heroic.elasticsearch.index;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.spotify.heroic.common.DateRange;
 import lombok.ToString;
 import org.elasticsearch.action.count.CountRequestBuilder;
 import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.client.Client;
+
+import java.util.Optional;
 
 @ToString
 public class SingleIndexMapping implements IndexMapping {
@@ -39,13 +40,13 @@ public class SingleIndexMapping implements IndexMapping {
     private final String[] indices;
 
     @JsonCreator
-    public SingleIndexMapping(@JsonProperty("index") String index) {
-        this.index = Optional.fromNullable(index).or(DEFAULT_INDEX);
-        this.indices = new String[]{index};
+    public SingleIndexMapping(@JsonProperty("index") Optional<String> index) {
+        this.index = index.orElse(DEFAULT_INDEX);
+        this.indices = new String[]{this.index};
     }
 
     public static SingleIndexMapping createDefault() {
-        return new SingleIndexMapping(null);
+        return new SingleIndexMapping(Optional.empty());
     }
 
     @Override
@@ -64,12 +65,16 @@ public class SingleIndexMapping implements IndexMapping {
     }
 
     @Override
-    public SearchRequestBuilder search(final Client client, DateRange range, final String type) {
+    public SearchRequestBuilder search(
+        final Client client, final DateRange range, final String type
+    ) {
         return client.prepareSearch(index).setTypes(type);
     }
 
     @Override
-    public CountRequestBuilder count(final Client client, DateRange range, final String type) {
+    public CountRequestBuilder count(
+        final Client client, final DateRange range, final String type
+    ) {
         return client.prepareCount(index).setTypes(type);
     }
 
@@ -85,10 +90,10 @@ public class SingleIndexMapping implements IndexMapping {
     }
 
     public static class Builder {
-        private String index;
+        private Optional<String> index = Optional.empty();
 
         public Builder index(String index) {
-            this.index = index;
+            this.index = Optional.of(index);
             return this;
         }
 

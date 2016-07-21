@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.async;
 
-import eu.toolchain.async.Transform;
 import lombok.Data;
 
 /**
@@ -71,7 +70,7 @@ public final class MaybeError<T> {
      * @return
      */
     public static <A> MaybeError<A> just(A a) {
-        return new MaybeError<A>(true, a);
+        return new MaybeError<>(true, a);
     }
 
     /**
@@ -81,19 +80,6 @@ public final class MaybeError<T> {
      * @return
      */
     public static <A> MaybeError<A> error(Throwable error) {
-        return new MaybeError<A>(false, error);
-    }
-
-    private static final Transform<Object, ? extends MaybeError<? extends Object>> toJust =
-        new Transform<Object, MaybeError<Object>>() {
-            @Override
-            public MaybeError<Object> transform(Object result) throws Exception {
-                return MaybeError.just(result);
-            }
-        };
-
-    @SuppressWarnings("unchecked")
-    public static <A> Transform<A, MaybeError<A>> transformJust() {
-        return (Transform<A, MaybeError<A>>) toJust;
+        return new MaybeError<>(false, error);
     }
 }

@@ -31,10 +31,10 @@ import com.spotify.heroic.profile.ClusterProfile;
 import com.spotify.heroic.profile.CollectdConsumerProfile;
 import com.spotify.heroic.profile.ElasticsearchMetadataProfile;
 import com.spotify.heroic.profile.ElasticsearchSuggestProfile;
-import com.spotify.heroic.profile.GeneratedProfile;
 import com.spotify.heroic.profile.KafkaConsumerProfile;
 import com.spotify.heroic.profile.MemoryCacheProfile;
 import com.spotify.heroic.profile.MemoryProfile;
+import com.spotify.heroic.profile.WebProfile;
 
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
@@ -44,10 +44,8 @@ import java.util.Map;
 
 public class HeroicModules {
     // @formatter:off
-    public static final List<HeroicModule> ALL_MODULES = ImmutableList.<HeroicModule>of(
-        new com.spotify.heroic.metric.astyanax.Module(),
+    public static final List<HeroicModule> ALL_MODULES = ImmutableList.of(
         new com.spotify.heroic.metric.datastax.Module(),
-        new com.spotify.heroic.metric.generated.Module(),
         new com.spotify.heroic.metric.memory.Module(),
 
         new com.spotify.heroic.analytics.bigtable.Module(),
@@ -57,21 +55,26 @@ public class HeroicModules {
         new com.spotify.heroic.metadata.memory.Module(),
 
         new com.spotify.heroic.suggest.elasticsearch.Module(),
+        new com.spotify.heroic.suggest.memory.Module(),
 
         new com.spotify.heroic.cluster.discovery.simple.Module(),
 
         new com.spotify.heroic.aggregation.simple.Module(),
+        new com.spotify.heroic.aggregation.cardinality.Module(),
 
         new com.spotify.heroic.consumer.kafka.Module(),
 
         new com.spotify.heroic.consumer.collectd.Module(),
 
-        new com.spotify.heroic.rpc.nativerpc.Module()
+        new com.spotify.heroic.rpc.nativerpc.Module(),
+        new com.spotify.heroic.rpc.grpc.Module(),
+        new com.spotify.heroic.rpc.jvm.Module(),
+
+        new com.spotify.heroic.statistics.semantic.Module()
     );
 
     public static final Map<String, HeroicProfile> PROFILES = ImmutableMap.<String,
             HeroicProfile>builder()
-        .put("generated", new GeneratedProfile())
         .put("memory", new MemoryProfile())
         .put("cassandra", new CassandraProfile())
         .put("elasticsearch-metadata", new ElasticsearchMetadataProfile())
@@ -82,11 +85,12 @@ public class HeroicModules {
         .put("cluster", new ClusterProfile())
         .put("collectd", new CollectdConsumerProfile())
         .put("memory-cache", new MemoryCacheProfile())
+        .put("web", new WebProfile())
     .build();
     // @formatter:on
 
     public static void printAllUsage(final PrintWriter out, final String option) {
-        out.println(String.format("Available Extra Parameters:"));
+        out.println("Available Extra Parameters:");
 
         ExtraParameters.CONFIGURE.printHelp(out, "  ", 80);
 

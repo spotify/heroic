@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.cluster;
 
+import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.dagger.PrimaryComponent;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
@@ -29,7 +30,6 @@ import lombok.Data;
 
 import javax.inject.Inject;
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.List;
 
 public interface ClusterDiscoveryModule {
@@ -66,7 +66,7 @@ public interface ClusterDiscoveryModule {
 
         @Override
         public AsyncFuture<List<URI>> find() {
-            return async.<List<URI>>resolved(new ArrayList<URI>());
+            return async.resolved(ImmutableList.of());
         }
     }
 }

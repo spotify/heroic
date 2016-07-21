@@ -21,28 +21,42 @@
 
 package com.spotify.heroic.suggest.elasticsearch;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.base.Charsets;
+import com.google.common.io.CharStreams;
+import org.apache.commons.lang3.text.StrSubstitutor;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.Map;
+import java.util.function.Function;
 
 public class ElasticsearchSuggestUtils {
-    public static Map<String, Object> loadJsonResource(String path) {
+    public static Map<String, Object> loadJsonResource(
+        String path, Function<String, String> replace
+    ) {
         final String fullPath =
             ElasticsearchSuggestModule.class.getPackage().getName() + "/" + path;
 
         try (final InputStream input = ElasticsearchSuggestModule.class
             .getClassLoader()
             .getResourceAsStream(fullPath)) {
+
             if (input == null) {
-                return ImmutableMap.of();
+                throw new IllegalArgumentException("No such resource: " + fullPath);
             }
 
-            return JsonXContent.jsonXContent.createParser(input).map();
+            final String content =
+                replace.apply(CharStreams.toString(new InputStreamReader(input, Charsets.UTF_8)));
+
+            return JsonXContent.jsonXContent.createParser(content).map();
         } catch (final IOException e) {
             throw new RuntimeException("Failed to load json resource: " + path);
         }
+    }
+
+    public static Function<String, String> variables(final Map<String, String> variables) {
+        return new StrSubstitutor(variables, "{{", "}}")::replace;
     }
 }

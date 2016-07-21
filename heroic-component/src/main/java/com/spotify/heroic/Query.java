@@ -23,10 +23,10 @@ package com.spotify.heroic;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.Aggregations;
 import com.spotify.heroic.aggregation.Group;
+import com.spotify.heroic.common.Features;
 import com.spotify.heroic.common.Optionals;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.MetricType;
@@ -34,13 +34,9 @@ import lombok.Data;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 @Data
 public class Query {
-    public static final String DISTRIBUTED_AGGREGATIONS =
-        "com.spotify.heroic.distributed_aggregations";
-
     private final Optional<Aggregation> aggregation;
     private final Optional<MetricType> source;
     private final Optional<QueryDateRange> range;
@@ -48,7 +44,7 @@ public class Query {
     private final Optional<QueryOptions> options;
     private final Optional<List<String>> groupBy;
     /* set of experimental features to enable */
-    private final Set<String> features;
+    private final Features features;
 
     @JsonCreator
     public Query(
@@ -59,7 +55,7 @@ public class Query {
         @JsonProperty("filter") final Optional<Filter> filter,
         @JsonProperty("options") final Optional<QueryOptions> options,
         @JsonProperty("groupBy") final Optional<List<String>> groupBy,
-        @JsonProperty("features") final Set<String> features
+        @JsonProperty("features") final Optional<Features> features
     ) {
         this.filter = filter;
         this.range = range;
@@ -68,7 +64,7 @@ public class Query {
         this.source = source;
         this.options = options;
         this.groupBy = groupBy;
-        this.features = Optional.ofNullable(features).orElseGet(ImmutableSet::of);
+        this.features = features.orElseGet(Features::empty);
     }
 
     public Optional<Aggregation> getAggregation() {
@@ -77,15 +73,5 @@ public class Query {
         }
 
         return aggregation;
-    }
-
-    /**
-     * Check if a specific experimental feature is implemented for this query.
-     *
-     * @param feature Feature to check for.
-     * @return {@code true} if the feature is enabled.
-     */
-    public boolean hasFeature(final String feature) {
-        return features.contains(feature);
     }
 }

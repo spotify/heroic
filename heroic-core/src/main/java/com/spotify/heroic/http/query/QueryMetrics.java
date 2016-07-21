@@ -27,18 +27,16 @@ import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.Chain;
+import com.spotify.heroic.common.Features;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.MetricType;
-import jersey.repackaged.com.google.common.collect.ImmutableSet;
 import lombok.Data;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 import static com.spotify.heroic.common.Optionals.firstPresent;
-import static java.util.Optional.ofNullable;
 
 @Data
 public class QueryMetrics {
@@ -53,7 +51,7 @@ public class QueryMetrics {
     private final Optional<String> key;
     private final Optional<Map<String, String>> tags;
     private final Optional<List<String>> groupBy;
-    private final Set<String> features;
+    private final Features features;
 
     public QueryMetrics(
         Optional<String> query, Optional<Aggregation> aggregation, Optional<MetricType> source,
@@ -69,32 +67,34 @@ public class QueryMetrics {
         this.key = Optional.empty();
         this.tags = Optional.empty();
         this.groupBy = Optional.empty();
-        this.features = ImmutableSet.of();
+        this.features = Features.empty();
     }
 
     @JsonCreator
     public QueryMetrics(
-        @JsonProperty("query") String query, @JsonProperty("aggregation") Aggregation aggregation,
-        @JsonProperty("aggregators") List<Aggregation> aggregators,
-        @JsonProperty("source") String source, @JsonProperty("range") QueryDateRange range,
-        @JsonProperty("filter") Filter filter, @JsonProperty("key") String key,
-        @JsonProperty("tags") Map<String, String> tags,
-        @JsonProperty("groupBy") List<String> groupBy,
-        @JsonProperty("options") QueryOptions options,
-        @JsonProperty("features") Set<String> features,
-            /* ignored */ @JsonProperty("noCache") Boolean noCache
+        @JsonProperty("query") Optional<String> query,
+        @JsonProperty("aggregation") Optional<Aggregation> aggregation,
+        @JsonProperty("aggregators") Optional<List<Aggregation>> aggregators,
+        @JsonProperty("source") Optional<String> source,
+        @JsonProperty("range") Optional<QueryDateRange> range,
+        @JsonProperty("filter") Optional<Filter> filter, @JsonProperty("key") Optional<String> key,
+        @JsonProperty("tags") Optional<Map<String, String>> tags,
+        @JsonProperty("groupBy") Optional<List<String>> groupBy,
+        @JsonProperty("options") Optional<QueryOptions> options,
+        @JsonProperty("features") Optional<Features> features,
+        /* ignored */ @JsonProperty("noCache") Boolean noCache
     ) {
-        this.query = ofNullable(query);
-        this.aggregation = firstPresent(ofNullable(aggregation),
-            ofNullable(aggregators).filter(c -> !c.isEmpty()).map(Chain::new));
-        this.source = MetricType.fromIdentifier(source);
-        this.range = ofNullable(range);
-        this.filter = ofNullable(filter);
-        this.options = ofNullable(options);
+        this.query = query;
+        this.aggregation =
+            firstPresent(aggregation, aggregators.filter(c -> !c.isEmpty()).map(Chain::new));
+        this.source = source.flatMap(MetricType::fromIdentifier);
+        this.range = range;
+        this.filter = filter;
+        this.options = options;
 
-        this.key = ofNullable(key);
-        this.tags = ofNullable(tags);
-        this.groupBy = ofNullable(groupBy);
-        this.features = ofNullable(features).orElseGet(ImmutableSet::of);
+        this.key = key;
+        this.tags = tags;
+        this.groupBy = groupBy;
+        this.features = features.orElseGet(Features::empty);
     }
 }

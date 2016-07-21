@@ -26,13 +26,14 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
 import lombok.RequiredArgsConstructor;
 import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.action.ActionResponse;
 import org.elasticsearch.action.ListenableActionFuture;
 
 @RequiredArgsConstructor
 public class AbstractElasticsearchBackend {
     protected final AsyncFramework async;
 
-    protected <T> AsyncFuture<T> bind(
+    protected <T extends ActionResponse> AsyncFuture<T> bind(
         final ListenableActionFuture<T> actionFuture
     ) {
         final ResolvableFuture<T> future = async.future();

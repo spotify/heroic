@@ -24,7 +24,6 @@ package com.spotify.heroic.statistics.semantic;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
 import com.spotify.heroic.statistics.ConsumerReporter;
-import com.spotify.heroic.statistics.ThreadPoolReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 import lombok.RequiredArgsConstructor;
@@ -77,10 +76,5 @@ public class SemanticConsumerReporter implements ConsumerReporter {
     @Override
     public void reportMessageDrift(final long ms) {
         messageDrift.update(ms);
-    }
-
-    @Override
-    public ThreadPoolReporter newThreadPool() {
-        return new SemanticThreadPoolReporter(registry, base);
     }
 }

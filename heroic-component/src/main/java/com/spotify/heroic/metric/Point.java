@@ -21,10 +21,9 @@
 
 package com.spotify.heroic.metric;
 
+import com.google.common.hash.Hasher;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-
-import java.util.Comparator;
 
 @Data
 @EqualsAndHashCode
@@ -33,23 +32,13 @@ public class Point implements Metric {
     private final double value;
 
     @Override
-    public int valueHash() {
-        return Double.hashCode(value);
-    }
-
-    @Override
     public boolean valid() {
         return Double.isFinite(value);
     }
 
-    public static Comparator<Metric> comparator() {
-        return comparator;
+    @Override
+    public void hash(final Hasher hasher) {
+        hasher.putInt(MetricType.POINT.ordinal());
+        hasher.putDouble(value);
     }
-
-    static final Comparator<Metric> comparator = new Comparator<Metric>() {
-        @Override
-        public int compare(Metric a, Metric b) {
-            return Long.compare(a.getTimestamp(), b.getTimestamp());
-        }
-    };
 }

@@ -21,163 +21,105 @@
 
 package com.spotify.heroic.suggest;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.cluster.ClusterNode;
-import com.spotify.heroic.cluster.NodeMetadata;
-import com.spotify.heroic.cluster.NodeRegistryEntry;
-import com.spotify.heroic.metric.NodeError;
+import com.google.common.collect.ImmutableSortedSet;
+import com.spotify.heroic.cluster.ClusterShard;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.OptionalLimit;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.RequestError;
+import com.spotify.heroic.metric.ShardError;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-
-import static com.google.common.base.Preconditions.checkNotNull;
+import java.util.Map;
+import java.util.Optional;
 
 @Data
 public class TagSuggest {
-    public static final List<RequestError> EMPTY_ERRORS = new ArrayList<>();
-    public static final List<Suggestion> EMPTY_SUGGESTIONS = new ArrayList<>();
-
     private final List<RequestError> errors;
     private final List<Suggestion> suggestions;
 
-    @JsonCreator
-    public TagSuggest(
-        @JsonProperty("errors") List<RequestError> errors,
-        @JsonProperty("suggestions") List<Suggestion> suggestions
-    ) {
-        this.errors = checkNotNull(errors, "errors");
-        this.suggestions = checkNotNull(suggestions, "suggestions");
+    public static TagSuggest of() {
+        return new TagSuggest(ImmutableList.of(), ImmutableList.of());
     }
 
-    public TagSuggest(List<Suggestion> suggestions) {
-        this(EMPTY_ERRORS, suggestions);
+    public static TagSuggest of(List<Suggestion> suggestions) {
+        return new TagSuggest(ImmutableList.of(), suggestions);
     }
 
-    public static Collector<TagSuggest, TagSuggest> reduce(final int limit) {
-        return new Collector<TagSuggest, TagSuggest>() {
-            @Override
-            public TagSuggest collect(Collection<TagSuggest> groups) throws Exception {
-                final List<RequestError> errors = new ArrayList<>();
-                final HashMap<Pair<String, String>, Suggestion> suggestions = new HashMap<>();
+    public static Collector<TagSuggest, TagSuggest> reduce(final OptionalLimit limit) {
+        return groups -> {
+            final List<RequestError> errors1 = new ArrayList<>();
+            final Map<Pair<String, String>, Float> suggestions1 = new HashMap<>();
 
-                for (final TagSuggest g : groups) {
-                    errors.addAll(g.errors);
+            for (final TagSuggest g : groups) {
+                errors1.addAll(g.errors);
 
-                    for (final Suggestion s : g.suggestions) {
-                        final Pair<String, String> key = Pair.of(s.key, s.value);
+                for (final Suggestion s : g.suggestions) {
+                    final Pair<String, String> key = Pair.of(s.getKey(), s.getValue());
+                    final Float old = suggestions1.put(key, s.getScore());
 
-                        final Suggestion replaced = suggestions.put(key, s);
-
-                        if (replaced == null) {
-                            continue;
-                        }
-
-                        // prefer higher score if available.
-                        if (s.score < replaced.score) {
-                            suggestions.put(key, replaced);
-                        }
+                    // prefer higher score if available.
+                    if (old != null && s.score < old) {
+                        suggestions1.put(key, old);
                     }
                 }
-
-                final List<Suggestion> results = new ArrayList<>(suggestions.values());
-                Collections.sort(results, Suggestion.COMPARATOR);
-
-                return new TagSuggest(errors, results.subList(0, Math.min(results.size(), limit)));
             }
-        };
-    }
 
-    public static Transform<Throwable, ? extends TagSuggest> nodeError(
-        final NodeRegistryEntry node
-    ) {
-        return new Transform<Throwable, TagSuggest>() {
-            @Override
-            public TagSuggest transform(Throwable e) throws Exception {
-                final NodeMetadata m = node.getMetadata();
-                final ClusterNode c = node.getClusterNode();
-                return new TagSuggest(ImmutableList.<RequestError>of(
-                    NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
-                    EMPTY_SUGGESTIONS);
-            }
+            final List<Suggestion> values = ImmutableList.copyOf(ImmutableSortedSet.copyOf(
+                suggestions1
+                    .entrySet()
+                    .stream()
+                    .map(e -> new Suggestion(e.getValue(), e.getKey().getLeft(),
+                        e.getKey().getRight()))
+                    .iterator()));
+
+            return new TagSuggest(errors1, limit.limitList(values));
         };
     }
 
     @Data
-    @EqualsAndHashCode(of = {"key", "value"})
-    public static final class Suggestion {
+    public static final class Suggestion implements Comparable<Suggestion> {
         private final float score;
         private final String key;
         private final String value;
 
-        @JsonCreator
-        public Suggestion(
-            @JsonProperty("score") Float score, @JsonProperty("key") String key,
-            @JsonProperty("value") String value
-        ) {
-            this.score = checkNotNull(score, "score");
-            this.key = checkNotNull(key, "key");
-            this.value = value;
+        @Override
+        public int compareTo(final Suggestion o) {
+            final int s = -Float.compare(score, o.score);
+
+            if (s != 0) {
+                return s;
+            }
+
+            int k = key.compareTo(o.key);
+
+            if (k != 0) {
+                return k;
+            }
+
+            return value.compareTo(o.value);
         }
-
-        // sort suggestions descending by score.
-        private static final Comparator<Suggestion> COMPARATOR = new Comparator<Suggestion>() {
-            @Override
-            public int compare(Suggestion a, Suggestion b) {
-                final int s = Float.compare(b.score, a.score);
-
-                if (s != 0) {
-                    return s;
-                }
-
-                return compareKey(a, b);
-            }
-
-            private int compareKey(Suggestion a, Suggestion b) {
-                if (a.key == null && b.key == null) {
-                    return 0;
-                }
-
-                if (a.key == null) {
-                    return 1;
-                }
-
-                if (b.key == null) {
-                    return -1;
-                }
-
-                return a.key.compareTo(b.key);
-            }
-        };
     }
 
-    public static Transform<Throwable, ? extends TagSuggest> nodeError(
-        final ClusterNode.Group group
-    ) {
-        return new Transform<Throwable, TagSuggest>() {
-            @Override
-            public TagSuggest transform(Throwable e) throws Exception {
-                final List<RequestError> errors =
-                    ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
-                return new TagSuggest(errors, EMPTY_SUGGESTIONS);
-            }
-        };
+    public static Transform<Throwable, TagSuggest> shardError(final ClusterShard shard) {
+        return e -> new TagSuggest(ImmutableList.of(ShardError.fromThrowable(shard, e)),
+            ImmutableList.of());
     }
 
-    static final TagSuggest empty = new TagSuggest(EMPTY_SUGGESTIONS);
-
-    public static TagSuggest empty() {
-        return empty;
+    @Data
+    public static class Request {
+        private final Filter filter;
+        private final DateRange range;
+        private final OptionalLimit limit;
+        private final MatchOptions options;
+        private final Optional<String> key;
+        private final Optional<String> value;
     }
 }

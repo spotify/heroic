@@ -45,112 +45,131 @@ public class QuoteParser {
             .build();
     // @formatter:on
 
-    public static List<String> parse(String input) throws QuoteParserException {
-        boolean openSingle = false;
-        boolean openDouble = false;
-        boolean escapeNext = false;
-        boolean whitespaceBlock = false;
-        int unicodeChar = 0;
-        final char[] unicode = new char[4];
-
-        StringBuffer buffer = new StringBuffer();
-
-        final List<String> parts = new ArrayList<>();
-
+    public static List<List<String>> parse(String input) throws QuoteParserException {
         int pos = 0;
 
-        input = input.trim();
+        final char[] chars = input.toCharArray();
 
-        for (final char c : input.toCharArray()) {
-            ++pos;
+        final ImmutableList.Builder<List<String>> lines = ImmutableList.builder();
 
-            if (unicodeChar > 0) {
-                unicode[4 - unicodeChar--] = c;
+        while (pos < chars.length) {
+            boolean openSingle = false;
+            boolean openDouble = false;
+            boolean escapeNext = false;
+            boolean whitespaceBlock = false;
+            int unicodeChar = 0;
+            final char[] unicode = new char[4];
 
-                if (unicodeChar == 0) {
-                    buffer.append(parseUnicodeChar(unicode, pos));
+            StringBuffer buffer = new StringBuffer();
+
+            final List<String> parts = new ArrayList<>();
+
+            while (pos < chars.length) {
+                final char c = chars[pos++];
+
+                if (unicodeChar > 0) {
+                    unicode[4 - unicodeChar--] = c;
+
+                    if (unicodeChar == 0) {
+                        buffer.append(parseUnicodeChar(unicode, pos));
+                    }
+
+                    continue;
                 }
 
-                continue;
+                if (escapeNext) {
+                    escapeNext = false;
+
+                    if (c == 'n') {
+                        buffer.append(NL);
+                        continue;
+                    }
+
+                    if (c == 't') {
+                        buffer.append(TAB);
+                        continue;
+                    }
+
+                    if (c == 'u') {
+                        unicodeChar = 4;
+                        continue;
+                    }
+
+                    buffer.append(c);
+                    continue;
+                }
+
+                if (whitespaceBlock && !isWhitespace(c)) {
+                    whitespaceBlock = false;
+
+                    if (buffer.length() > 0) {
+                        parts.add(buffer.toString());
+                        buffer = new StringBuffer();
+                    }
+                }
+
+                if (c == ';') {
+                    break;
+                }
+
+                if (c == '#') {
+                    pos = chars.length;
+                    break;
+                }
+
+                if (c == BACKTICK) {
+                    escapeNext = true;
+                    continue;
+                }
+
+                if (c == SINGLE_QUOTE && !openDouble) {
+                    openSingle = !openSingle;
+                    continue;
+                }
+
+                if (c == DOUBLE_QUOTE && !openSingle) {
+                    openDouble = !openDouble;
+                    continue;
+                }
+
+                if (openSingle || openDouble) {
+                    buffer.append(c);
+                    continue;
+                }
+
+                if (isWhitespace(c)) {
+                    whitespaceBlock = true;
+                    continue;
+                }
+
+                buffer.append(c);
+            }
+
+            if (openSingle) {
+                throw new QuoteParserException(pos + ": input ended with open single quote");
+            }
+
+            if (openDouble) {
+                throw new QuoteParserException(pos + ": input ended with open double quote");
             }
 
             if (escapeNext) {
-                escapeNext = false;
-
-                if (c == 'n') {
-                    buffer.append(NL);
-                    continue;
-                }
-
-                if (c == 't') {
-                    buffer.append(TAB);
-                    continue;
-                }
-
-                if (c == 'u') {
-                    unicodeChar = 4;
-                    continue;
-                }
-
-                buffer.append(c);
-                continue;
+                throw new QuoteParserException(pos + ": input ended with open escape");
             }
 
-            if (whitespaceBlock && !isWhitespace(c)) {
-                whitespaceBlock = false;
+            if (unicodeChar > 0) {
+                throw new QuoteParserException(
+                    pos + ": input ended with open unicode escape sequence");
+            }
+
+            if (buffer.length() > 0) {
                 parts.add(buffer.toString());
-                buffer = new StringBuffer();
             }
 
-            if (c == BACKTICK) {
-                escapeNext = true;
-                continue;
-            }
-
-            if (c == SINGLE_QUOTE && !openDouble) {
-                openSingle = !openSingle;
-                continue;
-            }
-
-            if (c == DOUBLE_QUOTE && !openSingle) {
-                openDouble = !openDouble;
-                continue;
-            }
-
-            if (openSingle || openDouble) {
-                buffer.append(c);
-                continue;
-            }
-
-            if (isWhitespace(c)) {
-                whitespaceBlock = true;
-                continue;
-            }
-
-            buffer.append(c);
+            lines.add(ImmutableList.copyOf(parts));
         }
 
-        if (openSingle) {
-            throw new QuoteParserException(pos + ": input ended with open single quote");
-        }
-
-        if (openDouble) {
-            throw new QuoteParserException(pos + ": input ended with open double quote");
-        }
-
-        if (escapeNext) {
-            throw new QuoteParserException(pos + ": input ended with open escape");
-        }
-
-        if (unicodeChar > 0) {
-            throw new QuoteParserException(pos + ": input ended with open unicode escape sequence");
-        }
-
-        if (buffer.length() > 0) {
-            parts.add(buffer.toString());
-        }
-
-        return ImmutableList.copyOf(parts);
+        return lines.build();
     }
 
     private static char parseUnicodeChar(char[] unicode, int pos) throws QuoteParserException {

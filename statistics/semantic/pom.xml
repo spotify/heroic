@@ -42,10 +42,5 @@
       <artifactId>lombok</artifactId>
       <scope>provided</scope>
     </dependency>
-
-    <dependency>
-      <groupId>org.elasticsearch</groupId>
-      <artifactId>elasticsearch</artifactId>
-    </dependency>
   </dependencies>
 </project>

@@ -95,7 +95,7 @@ public class Statistics implements ShellTask {
 
         io.out().println("Metrics:");
 
-        for (final MetricBackend m : metrics.allMembers()) {
+        for (final MetricBackend m : metrics.groupSet().useAll().getMembers()) {
             io.out().println("  " + m.toString());
 
             for (final Entry<String, Long> e : m.getStatistics().getCounters().entrySet()) {
@@ -105,7 +105,7 @@ public class Statistics implements ShellTask {
 
         io.out().println("Metadata:");
 
-        for (final MetadataBackend m : metadata.allMembers()) {
+        for (final MetadataBackend m : metadata.groupSet().useAll().getMembers()) {
             io.out().println("  " + m.toString());
 
             for (final Entry<String, Long> e : m.getStatistics().getCounters().entrySet()) {
@@ -115,7 +115,7 @@ public class Statistics implements ShellTask {
 
         io.out().println("Suggest:");
 
-        for (final SuggestBackend s : suggest.allMembers()) {
+        for (final SuggestBackend s : suggest.groupSet().useAll().getMembers()) {
             io.out().println("  " + s.toString());
 
             for (final Entry<String, Long> e : s.getStatistics().getCounters().entrySet()) {

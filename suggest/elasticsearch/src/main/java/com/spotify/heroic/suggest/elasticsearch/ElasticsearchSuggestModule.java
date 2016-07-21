@@ -30,10 +30,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.hash.HashCode;
 import com.google.common.util.concurrent.RateLimiter;
 import com.spotify.heroic.ExtraParameters;
+import com.spotify.heroic.common.DynamicModuleId;
 import com.spotify.heroic.common.Groups;
+import com.spotify.heroic.common.ModuleId;
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.elasticsearch.BackendType;
-import com.spotify.heroic.elasticsearch.BackendTypeFactory;
 import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.ConnectionModule;
 import com.spotify.heroic.elasticsearch.DefaultRateLimitedCache;
@@ -58,6 +59,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Optional.empty;
@@ -65,7 +67,8 @@ import static java.util.Optional.of;
 import static java.util.Optional.ofNullable;
 
 @Data
-public final class ElasticsearchSuggestModule implements SuggestModule {
+@ModuleId("elasticsearch")
+public final class ElasticsearchSuggestModule implements SuggestModule, DynamicModuleId {
     public static final String ELASTICSEARCH_CONFIGURE_PARAM = "elasticsearch.configure";
 
     private static final double DEFAULT_WRITES_PER_SECOND = 3000d;
@@ -73,6 +76,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
     public static final String DEFAULT_GROUP = "elasticsearch";
     public static final String DEFAULT_TEMPLATE_NAME = "heroic-suggest";
     public static final String DEFAULT_BACKEND_TYPE = "default";
+    public static final boolean DEFAULT_CONFIGURE = false;
 
     private final Optional<String> id;
     private final Groups groups;
@@ -81,15 +85,14 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
     private final long writeCacheDurationMinutes;
     private final String templateName;
     private final String backendType;
+    private final boolean configure;
 
-    private static BackendTypeFactory<SuggestBackend> defaultSetup = SuggestBackendKV.factory();
+    private static Supplier<BackendType> defaultSetup = SuggestBackendKV.factory();
 
-    private static final Map<String, BackendTypeFactory<SuggestBackend>> backendTypes =
-        new HashMap<>();
+    private static final Map<String, Supplier<BackendType>> backendTypes = new HashMap<>();
 
     static {
         backendTypes.put("kv", defaultSetup);
-        backendTypes.put("v1", SuggestBackendV1.factory());
     }
 
     public static final List<String> types() {
@@ -97,7 +100,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
     }
 
     @JsonIgnore
-    private final BackendTypeFactory<SuggestBackend> backendTypeBuilder;
+    private final Supplier<BackendType> type;
 
     @JsonCreator
     public ElasticsearchSuggestModule(
@@ -106,7 +109,8 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
         @JsonProperty("writesPerSecond") Optional<Double> writesPerSecond,
         @JsonProperty("writeCacheDurationMinutes") Optional<Long> writeCacheDurationMinutes,
         @JsonProperty("templateName") Optional<String> templateName,
-        @JsonProperty("backendType") Optional<String> backendType
+        @JsonProperty("backendType") Optional<String> backendType,
+        @JsonProperty("configure") Optional<Boolean> configure
     ) {
         this.id = id;
         this.groups = groups.orElseGet(Groups::empty).or(DEFAULT_GROUP);
@@ -116,13 +120,14 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
             writeCacheDurationMinutes.orElse(DEFAULT_WRITES_CACHE_DURATION_MINUTES);
         this.templateName = templateName.orElse(DEFAULT_TEMPLATE_NAME);
         this.backendType = backendType.orElse(DEFAULT_BACKEND_TYPE);
-        this.backendTypeBuilder =
+        this.type =
             backendType.flatMap(bt -> ofNullable(backendTypes.get(bt))).orElse(defaultSetup);
+        this.configure = configure.orElse(DEFAULT_CONFIGURE);
     }
 
     @Override
     public Exposed module(PrimaryComponent primary, Depends depends, final String id) {
-        final BackendType<SuggestBackend> backendType = backendTypeBuilder.setup();
+        final BackendType backendType = type.get();
 
         return DaggerElasticsearchSuggestModule_C
             .builder()
@@ -147,7 +152,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
     @RequiredArgsConstructor
     @Module
     class M {
-        private final BackendType<SuggestBackend> backendType;
+        private final BackendType backendType;
 
         @Provides
         @ElasticsearchScope
@@ -158,14 +163,14 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
         @Provides
         @ElasticsearchScope
         public Managed<Connection> connection(ConnectionModule.Provider provider) {
-            return provider.construct(templateName, backendType.mappings(), backendType.settings());
+            return provider.construct(templateName, backendType);
         }
 
         @Provides
         @ElasticsearchScope
         @Named("configure")
         public boolean configure(ExtraParameters params) {
-            return params.contains(ExtraParameters.CONFIGURE) ||
+            return configure || params.contains(ExtraParameters.CONFIGURE) ||
                 params.contains(ELASTICSEARCH_CONFIGURE_PARAM);
         }
 
@@ -188,23 +193,15 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
 
         @Provides
         @ElasticsearchScope
-        public SuggestBackend suggestBackend(Lazy<SuggestBackendV1> v1, Lazy<SuggestBackendKV> kv) {
-            if (backendType.type().equals(SuggestBackendV1.class)) {
-                return v1.get();
-            }
-
+        public SuggestBackend suggestBackend(Lazy<SuggestBackendKV> kv) {
             return kv.get();
         }
 
         @Provides
         @ElasticsearchScope
         public LifeCycle life(
-            LifeCycleManager manager, Lazy<SuggestBackendV1> v1, Lazy<SuggestBackendKV> kv
+            LifeCycleManager manager, Lazy<SuggestBackendKV> kv
         ) {
-            if (backendType.type().equals(SuggestBackendV1.class)) {
-                return manager.build(v1.get());
-            }
-
             return manager.build(kv.get());
         }
     }
@@ -212,11 +209,6 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
     @Override
     public Optional<String> id() {
         return id;
-    }
-
-    @Override
-    public String buildId(int i) {
-        return String.format("elasticsearch-suggest#%d", i);
     }
 
     public static Builder builder() {
@@ -231,6 +223,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
         private Optional<Long> writeCacheDurationMinutes = empty();
         private Optional<String> templateName = empty();
         private Optional<String> backendType = empty();
+        private Optional<Boolean> configure = empty();
 
         public Builder id(final String id) {
             checkNotNull(id, "id");
@@ -274,9 +267,14 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
             return this;
         }
 
+        public Builder configure(final boolean configure) {
+            this.configure = of(configure);
+            return this;
+        }
+
         public ElasticsearchSuggestModule build() {
             return new ElasticsearchSuggestModule(id, groups, connection, writesPerSecond,
-                writeCacheDurationMinutes, templateName, backendType);
+                writeCacheDurationMinutes, templateName, backendType, configure);
         }
     }
 }

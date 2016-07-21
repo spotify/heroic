@@ -1,9 +1,9 @@
 #!/usr/bin/make -f
 
-MAVEN_HOME=debian/maven_home
+MAVEN_HOME=$(CURDIR)/debian/maven_home
 JAVA_HOME=/usr/lib/jvm/default-java
 
-MVN=debian/mvn.sh
+MVN=$(CURDIR)/debian/mvn.sh
 
 BUILD=build
 
@@ -22,10 +22,16 @@ override_dh_auto_clean:
 	rm -rf $(MAVEN_HOME)
 	MAVEN_HOME=$(MAVEN_HOME) $(MVN) clean
 
-override_dh_auto_build:
+override_dh_auto_build: repackaged
 	MAVEN_HOME=$(MAVEN_HOME) $(MVN) -D heroic.version="${DEB_VERSION} (RELEASE)" package
 	mkdir -p $(BUILD)
 	cp heroic-DIST/target/heroic-DIST-0.0.1-SNAPSHOT-shaded.jar $(HEROIC_JAR)
 	cp debian/bin/heroic $(HEROIC)
 	cp debian/bin/heroicsh $(HEROIC_SHELL)
 	cp debian/bin/heroic-status $(HEROIC_STATUS)
+
+.PHONY: repackaged
+
+# properly install repackaged dependencies
+repackaged:
+	env MAVEN_HOME=$(MAVEN_HOME) MVN="$(MVN)" $(CURDIR)/tools/install-repackaged

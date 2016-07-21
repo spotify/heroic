@@ -30,10 +30,10 @@ import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.generator.Generator;
 import com.spotify.heroic.generator.GeneratorManager;
 import com.spotify.heroic.generator.MetadataGenerator;
+import com.spotify.heroic.ingestion.Ingestion;
 import com.spotify.heroic.ingestion.IngestionGroup;
 import com.spotify.heroic.ingestion.IngestionManager;
 import com.spotify.heroic.metric.MetricCollection;
-import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
@@ -51,6 +51,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 @TaskUsage("Load generated metrics into backends")
@@ -92,7 +93,7 @@ public class LoadGenerated implements ShellTask {
                     () -> new IllegalArgumentException("No such generator: " + name))).iterator());
 
         for (final Generator generator : generators) {
-            final IngestionGroup group = ingestion.useGroup(params.group);
+            final IngestionGroup group = ingestion.useOptionalGroup(params.group);
 
             final long now = System.currentTimeMillis();
             final long start = now - params.duration.toMilliseconds();
@@ -102,7 +103,7 @@ public class LoadGenerated implements ShellTask {
             for (final Series s : metadataGenerator.generate(params.seriesCount)) {
                 final MetricCollection c = generator.generate(s, range);
 
-                writes.add(group.write(new WriteMetric(s, c)).directTransform(n -> {
+                writes.add(group.write(new Ingestion.Request(s, c)).directTransform(n -> {
                     synchronized (io) {
                         io.out().println("Wrote: " + s);
                     }
@@ -119,7 +120,7 @@ public class LoadGenerated implements ShellTask {
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")
-        private String group;
+        private Optional<String> group = Optional.empty();
 
         @Option(name = "-c", aliases = {"--count"},
             usage = "The number of series to generate (default: 100)")

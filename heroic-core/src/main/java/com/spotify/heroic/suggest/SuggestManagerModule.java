@@ -21,16 +21,14 @@
 
 package com.spotify.heroic.suggest;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.spotify.heroic.common.BackendGroups;
+import com.spotify.heroic.common.GroupSet;
+import com.spotify.heroic.common.ModuleIdBuilder;
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
-import com.spotify.heroic.statistics.ClusteredMetadataManagerReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
-import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
+import com.spotify.heroic.statistics.SuggestBackendReporter;
 import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
@@ -44,12 +42,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.spotify.heroic.common.Optionals.mergeOptionalList;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
-import static java.util.Optional.ofNullable;
 
 @RequiredArgsConstructor
 public class SuggestManagerModule {
@@ -82,36 +78,28 @@ public class SuggestManagerModule {
 
         @Provides
         @SuggestScope
-        public LocalMetadataManagerReporter localReporter(HeroicReporter reporter) {
-            return reporter.newLocalMetadataBackendManager();
+        public SuggestBackendReporter localReporter(HeroicReporter reporter) {
+            return reporter.newSuggestBackend();
+        }
+
+        @Provides
+        @Named("groupSet")
+        @SuggestScope
+        public GroupSet<SuggestBackend> groupSet(Set<SuggestBackend> configured) {
+            return GroupSet.build(configured, defaultBackends);
         }
 
         @Provides
         @SuggestScope
-        public ClusteredMetadataManagerReporter clusteredReporter(HeroicReporter reporter) {
-            return reporter.newClusteredMetadataBackendManager();
-        }
-
-        @Provides
-        @Named("backends")
-        @SuggestScope
-        public BackendGroups<SuggestBackend> defaultBackends(Set<SuggestBackend> configured) {
-            return BackendGroups.build(configured, defaultBackends);
-        }
-
-        @Provides
-        @SuggestScope
-        public List<SuggestModule.Exposed> components(LocalMetadataManagerReporter reporter) {
+        public List<SuggestModule.Exposed> components(SuggestBackendReporter reporter) {
             final ArrayList<SuggestModule.Exposed> results = new ArrayList<>();
 
-            final AtomicInteger i = new AtomicInteger();
+            final ModuleIdBuilder idBuilder = new ModuleIdBuilder();
 
             for (final SuggestModule m : backends) {
-                final String id = m.id().orElseGet(() -> m.buildId(i.getAndIncrement()));
+                final String id = idBuilder.buildId(m);
 
-                final SuggestModule.Depends depends =
-                    new SuggestModule.Depends(reporter.newMetadataBackend(id));
-
+                final SuggestModule.Depends depends = new SuggestModule.Depends(reporter);
                 results.add(m.module(primary, depends, id));
             }
 
@@ -120,15 +108,21 @@ public class SuggestManagerModule {
 
         @Provides
         @SuggestScope
-        public Set<SuggestBackend> backends(List<SuggestModule.Exposed> components) {
-            return ImmutableSet.copyOf(components.stream().map(c -> c.backend()).iterator());
+        public Set<SuggestBackend> backends(
+            List<SuggestModule.Exposed> components, SuggestBackendReporter reporter
+        ) {
+            return ImmutableSet.copyOf(components
+                .stream()
+                .map(SuggestModule.Exposed::backend)
+                .map(reporter::decorate)
+                .iterator());
         }
 
         @Provides
         @SuggestScope
         @Named("suggest")
         public LifeCycle suggestLife(List<SuggestModule.Exposed> components) {
-            return LifeCycle.combined(components.stream().map(c -> c.life()));
+            return LifeCycle.combined(components.stream().map(SuggestModule.Exposed::life));
         }
     }
 
@@ -137,19 +131,10 @@ public class SuggestManagerModule {
     }
 
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
-    @AllArgsConstructor(access = AccessLevel.PRIVATE)
+    @AllArgsConstructor
     public static class Builder {
         private Optional<List<SuggestModule>> backends = empty();
         private Optional<List<String>> defaultBackends = empty();
-
-        @JsonCreator
-        public Builder(
-            @JsonProperty("backends") List<SuggestModule> backends,
-            @JsonProperty("defaultBackends") List<String> defaultBackends
-        ) {
-            this.backends = ofNullable(backends);
-            this.defaultBackends = ofNullable(defaultBackends);
-        }
 
         public Builder backends(List<SuggestModule> backends) {
             this.backends = of(backends);

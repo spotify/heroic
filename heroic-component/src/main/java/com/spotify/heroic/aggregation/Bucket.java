@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.aggregation;
 
+import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Point;
@@ -29,13 +30,15 @@ import com.spotify.heroic.metric.Spread;
 import java.util.Map;
 
 public interface Bucket {
-    void updatePoint(Map<String, String> tags, Point sample);
+    void updatePoint(Map<String, String> key, Point sample);
 
-    void updateEvent(Map<String, String> tags, Event sample);
+    void updateEvent(Map<String, String> key, Event sample);
 
-    void updateSpread(Map<String, String> tags, Spread sample);
+    void updateSpread(Map<String, String> key, Spread sample);
 
-    void updateGroup(Map<String, String> tags, MetricGroup sample);
+    void updateGroup(Map<String, String> key, MetricGroup sample);
+
+    void updatePayload(Map<String, String> key, Payload sample);
 
     /**
      * Get the timestamp for the bucket.

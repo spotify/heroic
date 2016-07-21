@@ -24,6 +24,7 @@ package com.spotify.heroic.aggregation.simple;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.AggregationContext;
+import com.spotify.heroic.aggregation.SamplingAggregation;
 import com.spotify.heroic.aggregation.SamplingQuery;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.Optionals;
@@ -50,10 +51,5 @@ public class Max extends SamplingAggregation {
     @Override
     public MaxInstance apply(final AggregationContext contex, final long size, final long extent) {
         return new MaxInstance(size, extent);
-    }
-
-    @Override
-    public String toDSL() {
-        return samplingDSL(NAME);
     }
 }

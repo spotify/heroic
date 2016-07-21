@@ -21,16 +21,20 @@
 
 package com.spotify.heroic.filter;
 
-public abstract class NoArgumentFilterBase<T extends Filter.NoArg>
-    implements NoArgumentFilter<T>, FilterJsonSerialization<T> {
+import lombok.RequiredArgsConstructor;
+
+import javax.inject.Provider;
+
+@RequiredArgsConstructor
+public class NoArgumentFilterBase<T extends Filter> implements FilterEncoding<T> {
+    private final Provider<T> provider;
+
     @Override
-    public T deserialize(FilterJsonSerialization.Deserializer deserializer) {
-        return build();
+    public T deserialize(Decoder decoder) {
+        return provider.get();
     }
 
     @Override
-    public void serialize(FilterJsonSerialization.Serializer serializer, T filter) {
+    public void serialize(Encoder encoder, T filter) {
     }
-
-    public abstract T build();
 }

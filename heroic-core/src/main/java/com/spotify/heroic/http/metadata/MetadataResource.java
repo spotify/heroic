@@ -22,13 +22,25 @@
 package com.spotify.heroic.http.metadata;
 
 import com.spotify.heroic.QueryDateRange;
-import com.spotify.heroic.cluster.ClusterManager;
+import com.spotify.heroic.QueryManager;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.JavaxRestFramework;
-import com.spotify.heroic.common.RangeFilter;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.FilterFactory;
+import com.spotify.heroic.filter.TrueFilter;
+import com.spotify.heroic.metadata.CountSeries;
+import com.spotify.heroic.metadata.DeleteSeries;
+import com.spotify.heroic.metadata.FindKeys;
+import com.spotify.heroic.metadata.FindSeries;
+import com.spotify.heroic.metadata.FindTags;
+import com.spotify.heroic.metadata.WriteMetadata;
+import com.spotify.heroic.suggest.KeySuggest;
+import com.spotify.heroic.suggest.TagKeyCount;
+import com.spotify.heroic.suggest.TagSuggest;
+import com.spotify.heroic.suggest.TagValueSuggest;
+import com.spotify.heroic.suggest.TagValuesSuggest;
+import lombok.Data;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
@@ -42,25 +54,23 @@ import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.MediaType;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 @Path("metadata")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class MetadataResource {
-    private final FilterFactory filters;
     private final JavaxRestFramework httpAsync;
-    private final ClusterManager cluster;
+    private final QueryManager query;
     private final MetadataResourceCache cache;
 
     @Inject
     public MetadataResource(
-        FilterFactory filters, JavaxRestFramework httpAsync, ClusterManager cluster,
-        MetadataResourceCache cache
+        JavaxRestFramework httpAsync, QueryManager query, MetadataResourceCache cache
     ) {
-        this.filters = filters;
         this.httpAsync = httpAsync;
-        this.cluster = cluster;
+        this.query = query;
         this.cache = cache;
     }
 
@@ -68,25 +78,30 @@ public class MetadataResource {
     @Path("tags")
     public void tags(@Suspended final AsyncResponse response, final MetadataQueryBody request)
         throws ExecutionException {
-        final RangeFilter filter =
-            toRangeFilter(request::getFilter, request::getRange, request::getLimit);
-        httpAsync.bind(response, cache.findTags(null, filter));
+        final RequestCriteria c = toCriteria(request::getFilter, request::getRange,
+            () -> OptionalLimit.of(request.getLimit()));
+
+        httpAsync.bind(response, cache.findTags(Optional.empty(),
+            new FindTags.Request(c.getFilter(), c.getRange(), c.getLimit())));
     }
 
     @POST
     @Path("keys")
     public void keys(@Suspended final AsyncResponse response, final MetadataQueryBody request)
         throws ExecutionException {
-        final RangeFilter filter =
-            toRangeFilter(request::getFilter, request::getRange, request::getLimit);
-        httpAsync.bind(response, cache.findKeys(null, filter));
+        final RequestCriteria c = toCriteria(request::getFilter, request::getRange,
+            () -> OptionalLimit.of(request.getLimit()));
+
+        httpAsync.bind(response, cache.findKeys(Optional.empty(),
+            new FindKeys.Request(c.getFilter(), c.getRange(), c.getLimit())));
     }
 
     @PUT
     @Path("series")
     public void addSeries(@Suspended final AsyncResponse response, final Series series) {
         final DateRange range = DateRange.now();
-        httpAsync.bind(response, cluster.useDefaultGroup().writeSeries(range, series));
+        httpAsync.bind(response,
+            query.useDefaultGroup().writeSeries(new WriteMetadata.Request(series, range)));
     }
 
     @POST
@@ -94,9 +109,11 @@ public class MetadataResource {
     public void getTimeSeries(
         @Suspended final AsyncResponse response, final MetadataQueryBody request
     ) {
-        final RangeFilter filter =
-            toRangeFilter(request::getFilter, request::getRange, request::getLimit);
-        httpAsync.bind(response, cluster.useDefaultGroup().findSeries(filter));
+        final RequestCriteria c = toCriteria(request::getFilter, request::getRange,
+            () -> OptionalLimit.of(request.getLimit()));
+        httpAsync.bind(response, query
+            .useDefaultGroup()
+            .findSeries(new FindSeries.Request(c.getFilter(), c.getRange(), c.getLimit())));
     }
 
     @DELETE
@@ -104,15 +121,19 @@ public class MetadataResource {
     public void deleteTimeSeries(
         @Suspended final AsyncResponse response, final MetadataQueryBody request
     ) {
-        final RangeFilter filter = toRangeFilter(request::getFilter, request::getRange);
-        httpAsync.bind(response, cluster.useDefaultGroup().deleteSeries(filter));
+        final RequestCriteria c = toCriteria(request::getFilter, request::getRange);
+        httpAsync.bind(response, query
+            .useDefaultGroup()
+            .deleteSeries(new DeleteSeries.Request(c.getFilter(), c.getRange(), c.getLimit())));
     }
 
     @POST
     @Path("series-count")
     public void seriesCount(@Suspended final AsyncResponse response, final MetadataCount request) {
-        final RangeFilter filter = toRangeFilter(request::getFilter, request::getRange);
-        httpAsync.bind(response, cluster.useDefaultGroup().countSeries(filter));
+        final RequestCriteria c = toCriteria(request::getFilter, request::getRange);
+        httpAsync.bind(response, query
+            .useDefaultGroup()
+            .countSeries(new CountSeries.Request(c.getFilter(), c.getRange(), c.getLimit())));
     }
 
     @POST
@@ -120,9 +141,12 @@ public class MetadataResource {
     public void tagkeyCount(
         @Suspended final AsyncResponse response, final MetadataTagKeySuggest request
     ) {
-        final RangeFilter filter =
-            toRangeFilter(request::getFilter, request::getRange, request::getLimit);
-        httpAsync.bind(response, cluster.useDefaultGroup().tagKeyCount(filter));
+        final RequestCriteria c = toCriteria(request::getFilter, request::getRange,
+            () -> OptionalLimit.of(request.getLimit()));
+        httpAsync.bind(response, query
+            .useDefaultGroup()
+            .tagKeyCount(new TagKeyCount.Request(c.getFilter(), c.getRange(), c.getLimit(),
+                OptionalLimit.of(10))));
     }
 
     @POST
@@ -130,10 +154,12 @@ public class MetadataResource {
     public void keySuggest(
         @Suspended final AsyncResponse response, final MetadataKeySuggest request
     ) {
-        final RangeFilter filter =
-            toRangeFilter(request::getFilter, request::getRange, request::getLimit);
-        httpAsync.bind(response,
-            cluster.useDefaultGroup().keySuggest(filter, request.getMatch(), request.getKey()));
+        final RequestCriteria c = toCriteria(request::getFilter, request::getRange,
+            () -> OptionalLimit.of(request.getLimit()));
+        httpAsync.bind(response, query
+            .useDefaultGroup()
+            .keySuggest(new KeySuggest.Request(c.getFilter(), c.getRange(), c.getLimit(),
+                request.getMatch(), request.getKey())));
     }
 
     @POST
@@ -141,11 +167,13 @@ public class MetadataResource {
     public void tagSuggest(
         @Suspended final AsyncResponse response, final MetadataTagSuggest request
     ) {
-        final RangeFilter filter =
-            toRangeFilter(request::getFilter, request::getRange, request::getLimit);
-        httpAsync.bind(response, cluster
+        final RequestCriteria c = toCriteria(request::getFilter, request::getRange,
+            () -> OptionalLimit.of(request.getLimit()));
+
+        httpAsync.bind(response, query
             .useDefaultGroup()
-            .tagSuggest(filter, request.getMatch(), request.getKey(), request.getValue()));
+            .tagSuggest(new TagSuggest.Request(c.getFilter(), c.getRange(), c.getLimit(),
+                request.getMatch(), request.getKey(), request.getValue())));
     }
 
     @POST
@@ -153,10 +181,13 @@ public class MetadataResource {
     public void tagValueSuggest(
         @Suspended final AsyncResponse response, final MetadataTagValueSuggest request
     ) {
-        final RangeFilter filter =
-            toRangeFilter(request::getFilter, request::getRange, request::getLimit);
-        httpAsync.bind(response,
-            cluster.useDefaultGroup().tagValueSuggest(filter, request.getKey()));
+        final RequestCriteria c = toCriteria(request::getFilter, request::getRange,
+            () -> OptionalLimit.of(request.getLimit()));
+
+        httpAsync.bind(response, query
+            .useDefaultGroup()
+            .tagValueSuggest(new TagValueSuggest.Request(c.getFilter(), c.getRange(), c.getLimit(),
+                request.getKey())));
     }
 
     @POST
@@ -164,27 +195,42 @@ public class MetadataResource {
     public void tagValuesSuggest(
         @Suspended final AsyncResponse response, final MetadataTagValuesSuggest request
     ) {
-        final RangeFilter filter =
-            toRangeFilter(request::getFilter, request::getRange, request::getLimit);
-        httpAsync.bind(response, cluster
+        final RequestCriteria c = toCriteria(request::getFilter, request::getRange,
+            () -> OptionalLimit.of(request.getLimit()));
+
+        httpAsync.bind(response, query
             .useDefaultGroup()
-            .tagValuesSuggest(filter, request.getExclude(), request.getGroupLimit()));
+            .tagValuesSuggest(
+                new TagValuesSuggest.Request(c.getFilter(), c.getRange(), c.getLimit(),
+                    OptionalLimit.of(request.getGroupLimit()), request.getExclude())));
     }
 
-    private RangeFilter toRangeFilter(
+    private RequestCriteria toCriteria(
         final Supplier<Optional<Filter>> optionalFilter,
         final Supplier<Optional<QueryDateRange>> optionalRange
     ) {
-        return toRangeFilter(optionalFilter, optionalRange, () -> Integer.MAX_VALUE);
+        return toCriteria(optionalFilter, optionalRange, OptionalLimit::empty);
     }
 
-    private RangeFilter toRangeFilter(
+    private RequestCriteria toCriteria(
         final Supplier<Optional<Filter>> optionalFilter,
-        final Supplier<Optional<QueryDateRange>> optionalRange, final Supplier<Integer> limit
+        final Supplier<Optional<QueryDateRange>> optionalRange, final Supplier<OptionalLimit> limit
     ) {
         final long now = System.currentTimeMillis();
-        final Filter filter = optionalFilter.get().orElseGet(filters::t);
-        final Optional<DateRange> range = optionalRange.get().map(r -> r.buildDateRange(now));
-        return RangeFilter.filterFor(filter, range, now, limit.get());
+        final Filter c = optionalFilter.get().orElseGet(TrueFilter::get);
+        final DateRange range = optionalRange
+            .get()
+            .map(r -> r.buildDateRange(now))
+            .orElseGet(
+                () -> new DateRange(now - TimeUnit.MILLISECONDS.convert(7, TimeUnit.DAYS), now));
+
+        return new RequestCriteria(c, range, limit.get());
+    }
+
+    @Data
+    static class RequestCriteria {
+        private final Filter filter;
+        private final DateRange range;
+        private final OptionalLimit limit;
     }
 }

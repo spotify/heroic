@@ -6,7 +6,6 @@
     <groupId>com.spotify.heroic</groupId>
     <artifactId>heroic-parent</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <relativePath>..</relativePath>
   </parent>
 
   <artifactId>heroic-all</artifactId>
@@ -24,18 +23,16 @@
       <artifactId>heroic-core</artifactId>
     </dependency>
 
+    <!-- redirect java.util.logging to SLF4J -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>jul-to-slf4j</artifactId>
+    </dependency>
+
     <!-- metric backends -->
     <dependency>
       <groupId>com.spotify.heroic.metric</groupId>
-      <artifactId>heroic-metric-astyanax</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.spotify.heroic.metric</groupId>
       <artifactId>heroic-metric-datastax</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.spotify.heroic.metric</groupId>
-      <artifactId>heroic-metric-generated</artifactId>
     </dependency>
     <dependency>
       <groupId>com.spotify.heroic.metric</groupId>
@@ -61,6 +58,10 @@
       <groupId>com.spotify.heroic.suggest</groupId>
       <artifactId>heroic-suggest-elasticsearch</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.spotify.heroic.suggest</groupId>
+      <artifactId>heroic-suggest-memory</artifactId>
+    </dependency>
 
     <!-- discovery implementations -->
     <dependency>
@@ -72,6 +73,10 @@
     <dependency>
       <groupId>com.spotify.heroic.aggregation</groupId>
       <artifactId>heroic-aggregation-simple</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.spotify.heroic.aggregation</groupId>
+      <artifactId>heroic-aggregation-cardinality</artifactId>
     </dependency>
 
     <!-- consumer implementations -->
@@ -89,6 +94,20 @@
     <dependency>
       <groupId>com.spotify.heroic.rpc</groupId>
       <artifactId>heroic-rpc-nativerpc</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.spotify.heroic.rpc</groupId>
+      <artifactId>heroic-rpc-grpc</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.spotify.heroic.rpc</groupId>
+      <artifactId>heroic-rpc-jvm</artifactId>
+    </dependency>
+
+    <!-- statistics -->
+    <dependency>
+      <groupId>com.spotify.heroic.statistics</groupId>
+      <artifactId>heroic-statistics-semantic</artifactId>
     </dependency>
   </dependencies>
 </project>

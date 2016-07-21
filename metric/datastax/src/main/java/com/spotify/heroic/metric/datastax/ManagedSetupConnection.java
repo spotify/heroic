@@ -40,7 +40,6 @@ import lombok.ToString;
 
 import java.net.InetSocketAddress;
 import java.util.Collection;
-import java.util.concurrent.Callable;
 
 @RequiredArgsConstructor
 @ToString(of = {"seeds"})
@@ -56,30 +55,28 @@ public class ManagedSetupConnection implements ManagedSetup<Connection> {
     private final DatastaxAuthentication authentication;
 
     public AsyncFuture<Connection> construct() {
-        AsyncFuture<Session> session = async.call(new Callable<Session>() {
-            public Session call() throws Exception {
-                // @formatter:off
-                final PoolingOptions pooling = new PoolingOptions();
+        AsyncFuture<Session> session = async.call(() -> {
+            // @formatter:off
+            final PoolingOptions pooling = new PoolingOptions();
 
-                final QueryOptions queryOptions = new QueryOptions()
-                    .setFetchSize(fetchSize)
-                    .setConsistencyLevel(consistencyLevel);
+            final QueryOptions queryOptions = new QueryOptions()
+                .setFetchSize(fetchSize)
+                .setConsistencyLevel(consistencyLevel);
 
-                final SocketOptions socketOptions = new SocketOptions()
-                    .setReadTimeoutMillis((int) readTimeout.toMilliseconds());
+            final SocketOptions socketOptions = new SocketOptions()
+                .setReadTimeoutMillis((int) readTimeout.toMilliseconds());
 
-                final Cluster.Builder cluster = Cluster.builder()
-                    .addContactPointsWithPorts(seeds)
-                    .withRetryPolicy(retryPolicy)
-                    .withPoolingOptions(pooling)
-                    .withQueryOptions(queryOptions)
-                    .withSocketOptions(socketOptions)
-                    .withLoadBalancingPolicy(new TokenAwarePolicy(new RoundRobinPolicy()));
-                // @formatter:on
+            final Cluster.Builder cluster = Cluster.builder()
+                .addContactPointsWithPorts(seeds)
+                .withRetryPolicy(retryPolicy)
+                .withPoolingOptions(pooling)
+                .withQueryOptions(queryOptions)
+                .withSocketOptions(socketOptions)
+                .withLoadBalancingPolicy(new TokenAwarePolicy(new RoundRobinPolicy()));
+            // @formatter:on
 
-                authentication.accept(cluster);
-                return cluster.build().connect();
-            }
+            authentication.accept(cluster);
+            return cluster.build().connect();
         });
 
         if (configure) {

@@ -25,10 +25,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
+import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.hash.HashCode;
+import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
+import com.spotify.heroic.grammar.DSL;
 import eu.toolchain.serializer.AutoSerialize;
 import lombok.ToString;
 
@@ -43,6 +46,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 @AutoSerialize
 @ToString(of = {"key", "tags"})
 public class Series implements Comparable<Series> {
+    static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
+
     static final SortedMap<String, String> EMPTY_TAGS = ImmutableSortedMap.<String, String>of();
     static final String EMPTY_STRING = "";
 
@@ -79,7 +84,7 @@ public class Series implements Comparable<Series> {
     }
 
     private HashCode generateHash() {
-        final Hasher hasher = Hashing.murmur3_128().newHasher();
+        final Hasher hasher = HASH_FUNCTION.newHasher();
 
         if (key != null) {
             hasher.putString(key, Charsets.UTF_8);
@@ -221,5 +226,15 @@ public class Series implements Comparable<Series> {
         }
 
         return 0;
+    }
+
+    public static final Joiner TAGS_JOINER = Joiner.on(", ");
+
+    public String toDSL() {
+        final Iterator<String> tags =
+            this.tags.entrySet().stream().map(e -> DSL.dumpString(e.getKey()) + "=" +
+                DSL.dumpString(e.getValue())).iterator();
+
+        return DSL.dumpString(key) + " " + "{" + TAGS_JOINER.join(tags) + "}";
     }
 }

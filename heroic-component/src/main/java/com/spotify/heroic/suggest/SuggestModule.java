@@ -23,16 +23,10 @@ package com.spotify.heroic.suggest;
 
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
-import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
+import com.spotify.heroic.statistics.SuggestBackendReporter;
 import lombok.Data;
 
-import java.util.Optional;
-
 public interface SuggestModule {
-    Optional<String> id();
-
-    String buildId(int i);
-
     Exposed module(PrimaryComponent primary, Depends depends, String id);
 
     /**
@@ -40,7 +34,7 @@ public interface SuggestModule {
      */
     @Data
     class Depends {
-        private final LocalMetadataBackendReporter backendReporter;
+        private final SuggestBackendReporter backendReporter;
     }
 
     /**

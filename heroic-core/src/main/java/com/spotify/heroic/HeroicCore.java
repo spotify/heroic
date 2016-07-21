@@ -49,6 +49,10 @@ import com.spotify.heroic.dagger.PrimaryModule;
 import com.spotify.heroic.dagger.StartupPingerComponent;
 import com.spotify.heroic.dagger.StartupPingerModule;
 import com.spotify.heroic.generator.GeneratorComponent;
+import com.spotify.heroic.http.DaggerHttpServerComponent;
+import com.spotify.heroic.http.HttpServer;
+import com.spotify.heroic.http.HttpServerComponent;
+import com.spotify.heroic.http.HttpServerModule;
 import com.spotify.heroic.ingestion.IngestionComponent;
 import com.spotify.heroic.lifecycle.CoreLifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycle;
@@ -134,7 +138,6 @@ public class HeroicCore implements HeroicConfiguration {
     // @formatter:off
     private static final HeroicModule[] BUILTIN_MODULES = new HeroicModule[] {
         new com.spotify.heroic.aggregation.Module(),
-        new com.spotify.heroic.filter.Module(),
         new com.spotify.heroic.http.Module(),
         new com.spotify.heroic.jetty.Module(),
         new com.spotify.heroic.ws.Module(),
@@ -168,6 +171,10 @@ public class HeroicCore implements HeroicConfiguration {
     private final List<HeroicProfile> profiles;
     private final List<HeroicBootstrap> early;
     private final List<HeroicBootstrap> late;
+
+    private final List<HeroicConfig.Builder> configFragments;
+
+    private final Optional<ExecutorService> executor;
 
     @Override
     public boolean isDisableLocal() {
@@ -257,7 +264,7 @@ public class HeroicCore implements HeroicConfiguration {
         log.info("Building Loading Injector");
 
         final ExecutorService executor =
-            buildCoreExecutor(Runtime.getRuntime().availableProcessors() * 2);
+            setupExecutor(Runtime.getRuntime().availableProcessors() * 2);
 
         return DaggerCoreLoadingComponent
             .builder()
@@ -280,38 +287,46 @@ public class HeroicCore implements HeroicConfiguration {
     /**
      * Setup a fixed thread pool executor that correctly handles unhandled exceptions.
      *
-     * @param nThreads Number of threads to configure.
+     * @param threads Number of threads to configure.
      * @return
      */
-    private ExecutorService buildCoreExecutor(final int nThreads) {
-        return new ThreadPoolExecutor(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS,
-            new LinkedBlockingQueue<Runnable>(), new ThreadFactoryBuilder()
-            .setNameFormat("heroic-core-%d")
-            .setUncaughtExceptionHandler(uncaughtExceptionHandler)
-            .build()) {
-            @Override
-            protected void afterExecute(Runnable r, Throwable t) {
-                super.afterExecute(r, t);
+    private ExecutorService setupExecutor(final int threads) {
+        return executor.orElseGet(
+            () -> new ThreadPoolExecutor(threads, threads, 0L, TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<>(), new ThreadFactoryBuilder()
+                .setNameFormat("heroic-core-%d")
+                .setUncaughtExceptionHandler(uncaughtExceptionHandler)
+                .build()) {
+                @Override
+                protected void afterExecute(Runnable r, Throwable t) {
+                    super.afterExecute(r, t);
 
-                if (t == null && (r instanceof Future<?>)) {
-                    try {
-                        ((Future<?>) r).get();
-                    } catch (CancellationException e) {
-                        t = e;
-                    } catch (ExecutionException e) {
-                        t = e.getCause();
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
+                    if (t == null && (r instanceof Future<?>)) {
+                        try {
+                            ((Future<?>) r).get();
+                        } catch (CancellationException e) {
+                            t = e;
+                        } catch (ExecutionException e) {
+                            t = e.getCause();
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                        }
+                    }
+
+                    if (t != null) {
+                        if (log.isErrorEnabled()) {
+                            log.error("Unhandled exception caught in core executor", t);
+                            log.error("Exiting (code=2)");
+                        } else {
+                            System.err.println("Unhandled exception caught in core executor");
+                            System.err.println("Exiting (code=2)");
+                            t.printStackTrace(System.err);
+                        }
+
+                        System.exit(2);
                     }
                 }
-
-                if (t != null) {
-                    log.error("Unhandled exception caught in core executor", t);
-                    log.error("Exiting (code=2)");
-                    System.exit(2);
-                }
-            }
-        };
+            });
     }
 
     /**
@@ -337,20 +352,31 @@ public class HeroicCore implements HeroicConfiguration {
 
         final HeroicReporter reporter = statistics.reporter();
 
-        final InetSocketAddress bindAddress = setupBindAddress(config);
-
         // Register root components.
         final CorePrimaryComponent primary = DaggerCorePrimaryComponent
             .builder()
             .coreEarlyComponent(early)
-            .primaryModule(new PrimaryModule(instance, bindAddress, config.isEnableCors(),
-                config.getCorsAllowOrigin(), config.getFeatures(), config.getConnectors(),
-                reporter))
+            .primaryModule(new PrimaryModule(instance, config.getFeatures(), reporter))
             .build();
 
+        final Optional<HttpServer> server;
+
         if (setupService) {
+            final InetSocketAddress bindAddress = setupBindAddress(config);
+
+            final HttpServerComponent serverComponent = DaggerHttpServerComponent
+                .builder()
+                .primaryComponent(primary)
+                .httpServerModule(new HttpServerModule(bindAddress, config.isEnableCors(),
+                    config.getCorsAllowOrigin(), config.getConnectors()))
+                .build();
+
             // Trigger life cycle registration
-            life.add(primary.heroicServerLife());
+            life.add(serverComponent.life());
+
+            server = Optional.of(serverComponent.server());
+        } else {
+            server = Optional.empty();
         }
 
         final CacheComponent cache = config.getCache().module(primary);
@@ -387,7 +413,8 @@ public class HeroicCore implements HeroicConfiguration {
                 .builder()
                 .corePrimaryComponent(primary)
                 .clusterComponent(cluster)
-                .startupPingerModule(new StartupPingerModule(startupPing.get(), startupId.get()))
+                .startupPingerModule(
+                    new StartupPingerModule(startupPing.get(), startupId.get(), server))
                 .build();
 
             life.add(pinger.startupPingerLife());
@@ -403,6 +430,7 @@ public class HeroicCore implements HeroicConfiguration {
 
         final QueryComponent query = DaggerCoreQueryComponent
             .builder()
+            .queryModule(new QueryModule(config.getMetric().getGroupLimit()))
             .corePrimaryComponent(primary)
             .clusterComponent(cluster)
             .cacheComponent(cache)
@@ -535,6 +563,10 @@ public class HeroicCore implements HeroicConfiguration {
             builder = builder.merge(profile.build(p));
         }
 
+        for (final HeroicConfig.Builder fragment : configFragments) {
+            builder = builder.merge(fragment);
+        }
+
         final ObjectMapper mapper = loading.configMapper();
 
         if (configPath.isPresent()) {
@@ -604,6 +636,17 @@ public class HeroicCore implements HeroicConfiguration {
         private final ImmutableList.Builder<HeroicBootstrap> early = ImmutableList.builder();
         private final ImmutableList.Builder<HeroicBootstrap> late = ImmutableList.builder();
 
+        /* configuration fragments */
+        private final ImmutableList.Builder<HeroicConfig.Builder> configFragments =
+            ImmutableList.builder();
+
+        private Optional<ExecutorService> executor = empty();
+
+        public Builder executor(final ExecutorService executor) {
+            this.executor = of(executor);
+            return this;
+        }
+
         /**
          * Register a specific ID for this heroic instance.
          *
@@ -660,6 +703,18 @@ public class HeroicCore implements HeroicConfiguration {
             }
 
             this.configPath = of(configPath);
+            return this;
+        }
+
+        /**
+         * Programmatically add a configuration fragment.
+         *
+         * @param config Configuration fragment to add.
+         * @return This builder.
+         */
+        public Builder configFragment(final HeroicConfig.Builder config) {
+            checkNotNull(config, "config");
+            this.configFragments.add(config);
             return this;
         }
 
@@ -774,7 +829,11 @@ public class HeroicCore implements HeroicConfiguration {
                 modules.build(),
                 profiles.build(),
                 early.build(),
-                late.build()
+                late.build(),
+
+                configFragments.build(),
+
+                executor
             );
             // @formatter:on
         }

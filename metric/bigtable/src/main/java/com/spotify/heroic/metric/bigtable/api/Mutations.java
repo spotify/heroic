@@ -21,12 +21,59 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
-import com.google.bigtable.v1.Mutation;
+import com.google.common.collect.ImmutableList;
+import com.google.protobuf.ByteString;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.List;
 
-@Data
+@RequiredArgsConstructor
 public class Mutations {
-    final List<Mutation> mutations;
+    private final List<com.google.bigtable.v1.Mutation> mutations;
+
+    /**
+     * Get the list of mutations.
+     * <p>
+     * Package private since it should only be access in the
+     * {@link com.spotify.heroic.metric.bigtable.api}
+     * package.
+     *
+     * @return The list of mutations.
+     */
+    List<com.google.bigtable.v1.Mutation> getMutations() {
+        return mutations;
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    @Data
+    public static class Builder {
+        final List<com.google.bigtable.v1.Mutation> mutations = new ArrayList<>();
+
+        public Builder setCell(
+            String family, ByteString columnQualifier, ByteString value
+        ) {
+            final com.google.bigtable.v1.Mutation.SetCell.Builder setCell =
+                com.google.bigtable.v1.Mutation.SetCell
+                    .newBuilder()
+                    .setFamilyName(family)
+                    .setColumnQualifier(columnQualifier)
+                    .setValue(value);
+
+            mutations.add(com.google.bigtable.v1.Mutation.newBuilder().setSetCell(setCell).build());
+            return this;
+        }
+
+        public Mutations build() {
+            return new Mutations(ImmutableList.copyOf(mutations));
+        }
+
+        public int size() {
+            return mutations.size();
+        }
+    }
 }

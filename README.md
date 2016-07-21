@@ -1,5 +1,8 @@
-# Heroic
+# [![Heroic](/logo.42.png?raw=true "The Heroic Time Series Database")](/assets/logo_on_light.svg) Heroic
+
 [![Build Status](https://travis-ci.org/spotify/heroic.svg?branch=master)](https://travis-ci.org/spotify/heroic)
+[![Codecov](https://img.shields.io/codecov/c/github/spotify/heroic.svg)](https://codecov.io/gh/spotify/heroic)
+[![License](https://img.shields.io/github/license/spotify/heroic.svg)](LICENSE)
 
 A scalable time series database based on Bigtable, Cassandra, and Elasticsearch.
 Go to https://spotify.github.io/heroic/ for documentation, please join [`#heroic at Freenode`](irc://freenode.net/heroic) if you need help or want to chat.
@@ -14,25 +17,141 @@ Not doing so might result in losing your data to goblins. It is currently not on
 
 ## Building
 
-Heroic requires Java 8, and is built using maven:
+Java 8 is required.
+
+There are some repackaged dependencies that you have to make available, you do
+this by running `tools/install-repackaged`.
 
 ```bash
-$ mvn clean package
+$ tools/install-repackaged
+Installing repackaged/x
+...
+```
+
+After this, the project is built using Maven:
+
+```bash
+$ mvn package
 ```
 
 This will cause the `heroic-dist` module to produce a shaded jar that contains
 all required dependencies.
+
+## Running
+
+After building, the entry point of the service is
+[`com.spotify.heroic.HeroicService`](/heroic-dist/src/main/java/com/spotify/heroic/HeroicService.java).
+The following is en example of how this can be run:
+
+```
+$ java -cp $PWD/heroic-dist/target/heroic-dist-0.0.1-SNAPSHOT-shaded.jar com.spotify.heroic.HeroicService <config>
+```
+
+Heroic has been tested with the following services:
+
+* Cassandra (`2.1.x`, `3.5`) when using [metric/datastax](/metric/datastax).
+* [Cloud Bigtable](https://cloud.google.com/bigtable/docs/) when using
+  [metric/bigtable](/metric/bigtable).
+* Elasticsearch (`1.7.x`) when using
+  [metadata/elasticsearch](/metadata/elasticsearch) or
+  [suggest/elasticsearch](/suggest/elasticsearch).
+    * Support for `2.x` is in progress, but is being delayed by
+      [elastic/elasticsearch#13273](https://github.com/elastic/elasticsearch/issues/13273)
+* Kafka (`0.8.x`) when using [consumer/kafka](/consumer/kafka).
+
+#### Logging
+
+Logging is captured using [SLF4J](http://www.slf4j.org/), and forwarded to
+[Log4j](http://logging.apache.org/log4j/).
+
+To configure logging, define the `-D -Dlog4j.configurationFile==<path>`
+parameter. You can use [docs/log4j2-file.xml](/docs/log4j2-file.xml) as a base.
+
+## Testing
+
+We run unit tests with Maven:
+
+```
+$ mvn test
+```
+
+A more comprehensive test suite is enabled with the `environment=test`
+property.
+
+```
+$ mvn -D environment=test verify
+```
+
+This adds:
+
+* [Checkstyle](http://checkstyle.sourceforge.net/)
+* [FindBugs](http://findbugs.sourceforge.net/)
+* [Integration Tests with Maven Failsafe Plugin](http://maven.apache.org/surefire/maven-failsafe-plugin/)
+* [Coverage Reporting with Jacoco](http://eclemma.org/jacoco/)
+
+It is strongly recommended that you run the full test suite before setting up a
+pull request, otherwise it will be rejected by Travis.
+
+#### Remote Integration Tests
+
+Integration tests are configured to run remotely depending on a set of system
+properties.
+
+| Property                                            | Description                                            |
+|-----------------------------------------------------|--------------------------------------------------------|
+| -D elasticsearch.version=&lt;version&gt;            | Use the given client version when building the project |
+| -D it.elasticsearch.remote=true                     | Run Elasticsearch tests against a remote database      |
+| -D it.elasticsearch.seed=&lt;seed&gt;               | Use the given seed (default: `localhost`)              |
+| -D it.elasticsearch.clusterName=&lt;clusterName&gt; | Use the given cluster name (default: `elasticsearch`)  |
+|-----------------------------------------------------|--------------------------------------------------------|
+| -D datastax.version=&lt;version&gt;                 | Use the given client version when building the project |
+| -D it.datastax.remote=true                          | Run Datastax tests against a remote database           |
+| -D it.datastax.seed=&lt;seed&gt;                    | Use the given seed (default: `localhost`)              |
+|-----------------------------------------------------|--------------------------------------------------------|
+| -D bigtable.version=&lt;version&gt;                 | Use the given client version when building the project |
+| -D it.bigtable.remote=true                          | Run Bigtable tests against a remote database           |
+| -D it.bigtable.project=&lt;project&gt;              | Use the given project                                  |
+| -D it.bigtable.zone=&lt;zone&gt;                    | Use the given zone                                     |
+| -D it.bigtable.cluster=&lt;cluster&gt;              | Use the given cluster                                  |
+| -D it.bigtable.credentials=&lt;credentials&gt;      | Use the given credentials file                         |
+|-----------------------------------------------------|--------------------------------------------------------|
+
+The following is an example Elasticsearch remote integration test:
+
+```
+$> mvn -P integration-tests \
+    -D elasticsearch.version=1.7.5 \
+    -D it.elasticsearch.remote=true \
+    clean verify
+```
+
+#### Full Cluster Tests
+
+Full cluster tests are defined in [heroic-dist/src/test/java](/heroic-dist/src/test/java).
+
+This way, they have access to all the modules and parts of Heroic.
+
+The [JVM RPC](/rpc/jvm) module is specifically designed to allow for rapid
+execution of integration tests. It allows multiple cores to be defined and
+communicate with each other in the same JVM instance.
+
+See [ClusterIT](/heroic-dist/src/test/java/com/spotify/heroic/ClusterIT.java)
+for a basic example of this.
+
+#### Coverage
+
+[![Coverage](https://codecov.io/gh/spotify/heroic/branch/master/graphs/icicle.svg)](https://codecov.io/gh/spotify/heroic/branch/master)
+
+There's an ongoing project to improve test coverage.
+Clicking the above graph will bring you to [codecov.io](https://codecov.io/gh/spotify/heroic/branches/master), where you can find areas to focus on.
 
 #### Speedy Building
 
 For a speedy build without tests and checks, you can run:
 
 ```bash
-$ mvn clean package -D findbugs.skip=true -D checkstyle.skip=true -D maven.test.skip=true
+$ mvn -D maven.test.skip=true package
 ```
-
-It is strongly recommended that you run through findbugs and checkstyle before
-setting up a pull request.
 
 #### Building a Debian Package
 
@@ -165,3 +284,31 @@ $ tools/heroic-shell <heroic-options> -- com.spotify.heroic.shell.task.<task-nam
 
 There are also profiles that can be activated with the `-P <profile>` switch,
 available profiles are listed in `--help`.
+
+## Repackaged Dependencies
+
+* [repackaged/bigtable](/repackaged/bigtable)
+
+These are third-party dependencies that has to be repackaged to avoid binary
+incompatibilities with dependencies.
+
+Every time these are upgraded, they must be inspected for new conflicts.
+The easiest way to do this, is to build the project and look at the warnings
+for the shaded jar.
+
+```
+$> mvn clean package -D maven.test.skip=true
+...
+[WARNING] foo-3.5.jar, foo-4.5.jar define 10 overlapping classes:
+[WARNING]   - com.foo.ConflictingClass
+...
+```
+
+This would indicate that there is a package called foo with overlapping
+classes.
+
+You can find the culprit using the `dependency` plugin.
+
+```
+$> mvn package dependency:tree
+```

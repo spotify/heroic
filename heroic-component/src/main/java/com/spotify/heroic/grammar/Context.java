@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.grammar;
 
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import lombok.Data;
 
 @Data
@@ -38,15 +39,15 @@ public class Context {
         return new ParseException(cause.getMessage(), cause, line, col, lineEnd, colEnd);
     }
 
-    public ParseException castError(final Object from, final Class<?> to) {
-        return new ParseException(String.format("%s cannot be cast to %s", from, name(to)), null,
-            line, col, lineEnd, colEnd);
+    public ParseException castError(final Expression from, final Class<?> to) {
+        return new ParseException(String.format("%s cannot be cast to %s", from.toRepr(), name(to)),
+            null, line, col, lineEnd, colEnd);
     }
 
-    public ParseException castError(final Object from, final Object to) {
+    public ParseException scopeLookupError(final String name) {
         return new ParseException(
-            String.format("%s cannot be cast to a compatible type of %s", from, to), null, line,
-            col, lineEnd, colEnd);
+            String.format("cannot find reference (%s) in the current scope", name), null, line, col,
+            lineEnd, colEnd);
     }
 
     public Context join(final Context o) {
@@ -54,17 +55,30 @@ public class Context {
             Math.max(getLineEnd(), o.getLineEnd()), Math.max(getColEnd(), o.getColEnd()));
     }
 
-    public static Context empty() {
-        return new Context(-1, -1, -1, -1);
-    }
-
     static String name(Class<?> type) {
-        final ValueName name = type.getAnnotation(ValueName.class);
+        final JsonTypeName name = type.getAnnotation(JsonTypeName.class);
 
         if (name != null) {
             return name.value();
         }
 
         return type.getSimpleName();
+    }
+
+    @Override
+    public String toString() {
+        return toStringLine() + ":" + toStringCol();
+    }
+
+    public String toStringLine() {
+        if (line != lineEnd) {
+            return line + "-" + lineEnd;
+        }
+
+        return Integer.toString(line);
+    }
+
+    public String toStringCol() {
+        return col + "-" + colEnd;
     }
 }

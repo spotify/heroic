@@ -24,7 +24,6 @@ package com.spotify.heroic.aggregation;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.DateRange;
 
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -37,7 +36,7 @@ import java.util.Set;
  * @see Aggregation
  */
 public interface AggregationInstance {
-    public static final String SAMPLE_SIZE = "Aggregation.sampleSize";
+    String SAMPLE_SIZE = "Aggregation.sampleSize";
 
     /**
      * Estimate number of points this aggregation will produce.
@@ -59,7 +58,7 @@ public interface AggregationInstance {
     /**
      * Traverse the possible aggregations and build the necessary graph out of them.
      */
-    AggregationTraversal session(List<AggregationState> states, DateRange range);
+    AggregationSession session(DateRange range);
 
     /**
      * Get the distributed aggregation that is relevant for this aggregation.
@@ -78,9 +77,7 @@ public interface AggregationInstance {
      *
      * @return The distributed aggregation for the current aggregation.
      */
-    default AggregationInstance distributed() {
-        return this;
-    }
+    AggregationInstance distributed();
 
     /**
      * Build a reducer for the given aggregation.
@@ -90,18 +87,8 @@ public interface AggregationInstance {
      *
      * @return A reducer for the current aggregation.
      */
-    ReducerSession reducer(final DateRange range);
-
-    /**
-     * Build a combiner for the given aggregation.
-     * <p>
-     * A combiner organizes how distributed sub-aggregations are re-combined. Specific aggregations
-     * have different methods of recombining results that are more or less efficient.
-     *
-     * @return An aggregation combiner.
-     */
-    default AggregationCombiner combiner(final DateRange range) {
-        return AggregationCombiner.DEFAULT;
+    default AggregationInstance reducer() {
+        return this;
     }
 
     /**
@@ -114,5 +101,12 @@ public interface AggregationInstance {
      */
     default Set<String> requiredTags() {
         return ImmutableSet.of();
+    }
+
+    /**
+     * Indicated if any aggregation after this in a chain can be reduced or not.
+     */
+    default boolean distributable() {
+        return true;
     }
 }

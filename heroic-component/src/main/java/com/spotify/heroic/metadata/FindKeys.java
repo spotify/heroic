@@ -21,40 +21,40 @@
 
 package com.spotify.heroic.metadata;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.cluster.ClusterNode;
-import com.spotify.heroic.cluster.NodeMetadata;
-import com.spotify.heroic.cluster.NodeRegistryEntry;
-import com.spotify.heroic.metric.NodeError;
+import com.google.common.collect.ImmutableSet;
+import com.spotify.heroic.cluster.ClusterShard;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.OptionalLimit;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.RequestError;
+import com.spotify.heroic.metric.ShardError;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
 import lombok.Data;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 @Data
 public class FindKeys {
-    public static final List<RequestError> EMPTY_ERRORS = new ArrayList<>();
-    public static final Set<String> EMPTY_KEYS = new HashSet<String>();
-
-    public static final FindKeys EMPTY = new FindKeys(EMPTY_ERRORS, EMPTY_KEYS, 0, 0);
-
     private final List<RequestError> errors;
     private final Set<String> keys;
     private final int size;
     private final int duplicates;
 
-    public static class SelfReducer implements Collector<FindKeys, FindKeys> {
-        @Override
-        public FindKeys collect(Collection<FindKeys> results) throws Exception {
+    public static FindKeys of() {
+        return new FindKeys(ImmutableList.of(), ImmutableSet.of(), 0, 0);
+    }
+
+    public static FindKeys of(final Set<String> keys, int size, int duplicates) {
+        return new FindKeys(ImmutableList.of(), keys, size, duplicates);
+    }
+
+    public static Collector<FindKeys, FindKeys> reduce() {
+        return results -> {
             final List<RequestError> errors = new ArrayList<>();
             final Set<String> keys = new HashSet<>();
             int size = 0;
@@ -74,53 +74,18 @@ public class FindKeys {
             }
 
             return new FindKeys(errors, keys, size, duplicates);
-        }
-    }
-
-    private static final SelfReducer reducer = new SelfReducer();
-
-    public static Collector<FindKeys, FindKeys> reduce() {
-        return reducer;
-    }
-
-    @JsonCreator
-    public FindKeys(
-        @JsonProperty("errors") List<RequestError> errors, @JsonProperty("keys") Set<String> keys,
-        @JsonProperty("size") int size, @JsonProperty("duplicates") int duplicates
-    ) {
-        this.errors = Optional.fromNullable(errors).or(EMPTY_ERRORS);
-        this.keys = keys;
-        this.size = size;
-        this.duplicates = duplicates;
-    }
-
-    public FindKeys(Set<String> keys, int size, int duplicates) {
-        this(EMPTY_ERRORS, keys, size, duplicates);
-    }
-
-    public static Transform<Throwable, ? extends FindKeys> nodeError(final NodeRegistryEntry node) {
-        return new Transform<Throwable, FindKeys>() {
-            @Override
-            public FindKeys transform(Throwable e) throws Exception {
-                final NodeMetadata m = node.getMetadata();
-                final ClusterNode c = node.getClusterNode();
-                return new FindKeys(ImmutableList.<RequestError>of(
-                    NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)), EMPTY_KEYS,
-                    0, 0);
-            }
         };
     }
 
-    public static Transform<Throwable, ? extends FindKeys> nodeError(
-        final ClusterNode.Group group
-    ) {
-        return new Transform<Throwable, FindKeys>() {
-            @Override
-            public FindKeys transform(Throwable e) throws Exception {
-                final List<RequestError> errors =
-                    ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
-                return new FindKeys(errors, EMPTY_KEYS, 0, 0);
-            }
-        };
+    public static Transform<Throwable, FindKeys> shardError(final ClusterShard shard) {
+        return e -> new FindKeys(ImmutableList.of(ShardError.fromThrowable(shard, e)),
+            ImmutableSet.of(), 0, 0);
+    }
+
+    @Data
+    public static final class Request {
+        private final Filter filter;
+        private final DateRange range;
+        private final OptionalLimit limit;
     }
 }

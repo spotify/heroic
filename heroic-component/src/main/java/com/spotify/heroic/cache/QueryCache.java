@@ -21,19 +21,14 @@
 
 package com.spotify.heroic.cache;
 
-import com.spotify.heroic.QueryOptions;
-import com.spotify.heroic.aggregation.AggregationInstance;
-import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.FullQuery;
 import com.spotify.heroic.metric.QueryResult;
 import eu.toolchain.async.AsyncFuture;
 
 import java.util.function.Supplier;
 
 public interface QueryCache {
-    public AsyncFuture<QueryResult> load(
-        MetricType source, Filter filter, DateRange range, AggregationInstance aggregationInstance,
-        QueryOptions options, Supplier<AsyncFuture<QueryResult>> loader
+    AsyncFuture<QueryResult> load(
+        FullQuery.Request request, Supplier<AsyncFuture<QueryResult>> loader
     );
 }

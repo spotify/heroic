@@ -51,12 +51,12 @@ public class StripedMaxBucket extends AbstractBucket implements DoubleBucket {
     }
 
     @Override
-    public void updatePoint(Map<String, String> tags, Point d) {
+    public void updatePoint(Map<String, String> key, Point d) {
         max.accumulate(d.getValue());
     }
 
     @Override
-    public void updateSpread(Map<String, String> tags, Spread d) {
+    public void updateSpread(Map<String, String> key, Spread d) {
         max.accumulate(d.getMax());
     }
 

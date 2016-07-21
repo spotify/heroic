@@ -21,35 +21,59 @@
 
 package com.spotify.heroic;
 
-import com.spotify.heroic.cluster.ClusterNode;
+import com.spotify.heroic.cluster.ClusterShard;
+import com.spotify.heroic.common.UsableGroupManager;
+import com.spotify.heroic.metadata.CountSeries;
+import com.spotify.heroic.metadata.DeleteSeries;
+import com.spotify.heroic.metadata.FindKeys;
+import com.spotify.heroic.metadata.FindSeries;
+import com.spotify.heroic.metadata.FindTags;
+import com.spotify.heroic.metadata.WriteMetadata;
 import com.spotify.heroic.metric.QueryResult;
+import com.spotify.heroic.metric.WriteMetric;
+import com.spotify.heroic.suggest.KeySuggest;
+import com.spotify.heroic.suggest.TagKeyCount;
+import com.spotify.heroic.suggest.TagSuggest;
+import com.spotify.heroic.suggest.TagValueSuggest;
+import com.spotify.heroic.suggest.TagValuesSuggest;
 import eu.toolchain.async.AsyncFuture;
 
-import java.util.Collection;
-import java.util.Optional;
+import java.util.List;
 
-public interface QueryManager {
-    Group useGroup(String group);
-
-    Collection<? extends Group> useGroupPerNode(String group);
-
-    Group useDefaultGroup();
-
-    Collection<? extends Group> useDefaultGroupPerNode();
-
+public interface QueryManager extends UsableGroupManager<QueryManager.Group> {
     QueryBuilder newQuery();
 
     QueryBuilder newQueryFromString(String query);
 
-    String queryToString(final Query query);
-
-    String queryToString(final Query query, Optional<Integer> indent);
-
-    AsyncFuture<Void> initialized();
-
-    public interface Group extends Iterable<ClusterNode.Group> {
+    interface Group {
         AsyncFuture<QueryResult> query(Query query);
 
-        ClusterNode.Group first();
+        AsyncFuture<FindTags> findTags(final FindTags.Request request);
+
+        AsyncFuture<FindKeys> findKeys(final FindKeys.Request request);
+
+        AsyncFuture<FindSeries> findSeries(final FindSeries.Request request);
+
+        AsyncFuture<DeleteSeries> deleteSeries(final DeleteSeries.Request request);
+
+        AsyncFuture<CountSeries> countSeries(final CountSeries.Request request);
+
+        AsyncFuture<TagKeyCount> tagKeyCount(final TagKeyCount.Request request);
+
+        AsyncFuture<TagSuggest> tagSuggest(final TagSuggest.Request request);
+
+        AsyncFuture<KeySuggest> keySuggest(final KeySuggest.Request request);
+
+        AsyncFuture<TagValuesSuggest> tagValuesSuggest(
+            final TagValuesSuggest.Request request
+        );
+
+        AsyncFuture<TagValueSuggest> tagValueSuggest(final TagValueSuggest.Request request);
+
+        AsyncFuture<WriteMetadata> writeSeries(final WriteMetadata.Request request);
+
+        AsyncFuture<WriteMetric> writeMetric(final WriteMetric.Request write);
+
+        List<ClusterShard> shards();
     }
 }

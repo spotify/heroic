@@ -21,60 +21,33 @@
 
 package com.spotify.heroic.metadata;
 
-import com.spotify.heroic.common.BackendGroups;
-import com.spotify.heroic.common.GroupMember;
-import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
+import com.spotify.heroic.common.GroupSet;
 import eu.toolchain.async.AsyncFramework;
 
 import javax.inject.Inject;
 import javax.inject.Named;
-import java.util.List;
-import java.util.Set;
+import java.util.Optional;
 
 @MetadataScope
 public class LocalMetadataManager implements MetadataManager {
     private final AsyncFramework async;
-    private final BackendGroups<MetadataBackend> backends;
-    private final LocalMetadataManagerReporter reporter;
+    private final GroupSet<MetadataBackend> groupSet;
 
     @Inject
     public LocalMetadataManager(
-        final AsyncFramework async,
-        @Named("backends") final BackendGroups<MetadataBackend> backends,
-        final LocalMetadataManagerReporter reporter
+        final AsyncFramework async, @Named("groupSet") final GroupSet<MetadataBackend> groupSet
     ) {
         this.async = async;
-        this.backends = backends;
-        this.reporter = reporter;
+        this.groupSet = groupSet;
     }
 
     @Override
-    public List<MetadataBackend> allMembers() {
-        return backends.allMembers();
+    public MetadataBackend useOptionalGroup(Optional<String> group) {
+        return new MetadataBackendGroup(groupSet.useOptionalGroup(group), async);
     }
 
     @Override
-    public List<MetadataBackend> use(String group) {
-        return backends.use(group).getMembers();
-    }
-
-    @Override
-    public List<GroupMember<MetadataBackend>> getBackends() {
-        return backends.all();
-    }
-
-    @Override
-    public MetadataBackend useDefaultGroup() {
-        return new MetadataBackendGroup(backends.useDefault(), async, reporter);
-    }
-
-    @Override
-    public MetadataBackend useGroup(String group) {
-        return new MetadataBackendGroup(backends.use(group), async, reporter);
-    }
-
-    @Override
-    public MetadataBackend useGroups(Set<String> groups) {
-        return new MetadataBackendGroup(backends.use(groups), async, reporter);
+    public GroupSet<MetadataBackend> groupSet() {
+        return groupSet;
     }
 }

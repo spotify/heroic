@@ -41,6 +41,7 @@ import org.kohsuke.args4j.Option;
 import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @TaskUsage("Configure the given group of metric backends")
 @TaskName("configure")
@@ -77,9 +78,9 @@ public class Configure implements ShellTask {
         futures.add(analytics.configure());
 
         if (!params.noData) {
-            futures.add(metrics.useGroup(params.group).configure());
-            futures.add(metadata.useGroup(params.group).configure());
-            futures.add(suggest.useGroup(params.group).configure());
+            futures.add(metrics.useOptionalGroup(params.group).configure());
+            futures.add(metadata.useOptionalGroup(params.group).configure());
+            futures.add(suggest.useOptionalGroup(params.group).configure());
         }
 
         return async.collectAndDiscard(futures);
@@ -89,7 +90,7 @@ public class Configure implements ShellTask {
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")
-        private String group = null;
+        private Optional<String> group = Optional.empty();
 
         @Option(name = "--no-data", usage = "Do not configure data backends")
         private boolean noData = false;
@@ -100,7 +101,7 @@ public class Configure implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         Configure task();
     }
 }

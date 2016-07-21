@@ -28,6 +28,7 @@ import dagger.Component;
 
 @QueryScope
 @Component(
+    modules = QueryModule.class,
     dependencies = {CorePrimaryComponent.class, ClusterComponent.class, CacheComponent.class})
 public interface CoreQueryComponent extends QueryComponent {
     @Override

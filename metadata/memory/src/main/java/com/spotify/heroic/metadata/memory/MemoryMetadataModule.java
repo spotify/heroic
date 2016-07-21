@@ -23,18 +23,18 @@ package com.spotify.heroic.metadata.memory;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.spotify.heroic.common.DynamicModuleId;
 import com.spotify.heroic.common.Groups;
+import com.spotify.heroic.common.ModuleId;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.PrimaryComponent;
-import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataModule;
 import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
-import eu.toolchain.async.AsyncFramework;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 
+import javax.inject.Named;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Optional;
@@ -46,7 +46,8 @@ import static java.util.Optional.empty;
 import static java.util.Optional.of;
 
 @Data
-public final class MemoryMetadataModule implements MetadataModule {
+@ModuleId("memory")
+public final class MemoryMetadataModule implements MetadataModule, DynamicModuleId {
     public static final String DEFAULT_GROUP = "memory";
 
     private final Optional<String> id;
@@ -64,12 +65,17 @@ public final class MemoryMetadataModule implements MetadataModule {
     }
 
     @Override
+    public Optional<String> id() {
+        return id;
+    }
+
+    @Override
     public Exposed module(PrimaryComponent primary, Depends depends, final String id) {
         return DaggerMemoryMetadataModule_C
             .builder()
             .primaryComponent(primary)
             .depends(depends)
-            .m(new M(synchronizedStorage, groups))
+            .m(new M())
             .build();
     }
 
@@ -77,38 +83,27 @@ public final class MemoryMetadataModule implements MetadataModule {
     @Component(modules = M.class, dependencies = {PrimaryComponent.class, Depends.class})
     interface C extends Exposed {
         @Override
-        MetadataBackend backend();
+        MemoryBackend backend();
     }
 
-    @RequiredArgsConstructor
     @Module
     class M {
-        private final boolean synchronizedStorage;
-        private final Groups groups;
+        @MemoryScope
+        @Provides
+        public Groups groups() {
+            return groups;
+        }
 
         @MemoryScope
         @Provides
-        public MetadataBackend backend(AsyncFramework async) {
-            final Set<Series> storage;
-
+        @Named("storage")
+        public Set<Series> storage() {
             if (synchronizedStorage) {
-                storage = Collections.synchronizedSet(new HashSet<>());
+                return Collections.synchronizedSet(new HashSet<>());
             } else {
-                storage = new ConcurrentSkipListSet<>();
+                return new ConcurrentSkipListSet<>();
             }
-
-            return new MemoryBackend(async, groups, storage);
         }
-    }
-
-    @Override
-    public Optional<String> id() {
-        return id;
-    }
-
-    @Override
-    public String buildId(int i) {
-        return String.format("memory#%d", i);
     }
 
     public static Builder builder() {

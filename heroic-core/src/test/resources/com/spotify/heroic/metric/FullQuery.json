@@ -1,0 +1,13 @@
+{
+  "groups": [],
+  "errors": [],
+  "statistics": {
+    "counters": {}
+  },
+  "trace": {
+    "what": {"name": "test"},
+    "elapsed": 0,
+    "children": []
+  },
+  "limits": []
+}

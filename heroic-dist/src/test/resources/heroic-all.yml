@@ -3,19 +3,16 @@ cluster:
     role: test
   protocols:
     - type: nativerpc
+    - type: grpc
 
 metadata:
   backends:
     - type: memory
     - type: elasticsearch
-      backendType: v1
-    - type: elasticsearch
       backendType: kv
 
 suggest:
   backends:
-    - type: elasticsearch
-      backendType: v1
     - type: elasticsearch
       backendType: kv
 
@@ -25,8 +22,6 @@ metrics:
       project: project
       zone: zone
     - type: datastax
-    - type: astyanax
-    - type: generated
     - type: memory
 
 analytics:

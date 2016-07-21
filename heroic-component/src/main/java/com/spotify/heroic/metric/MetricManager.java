@@ -21,9 +21,12 @@
 
 package com.spotify.heroic.metric;
 
-import com.spotify.heroic.common.GroupManager;
+import com.spotify.heroic.common.GroupSet;
+import com.spotify.heroic.common.UsableGroupManager;
 
-public interface MetricManager extends GroupManager<MetricBackend, MetricBackendGroup> {
+public interface MetricManager extends UsableGroupManager<MetricBackendGroup> {
     String FAILED = "MetricManager.failed";
     String RESOLVED = "MetricManager.resolved";
+
+    GroupSet<MetricBackend> groupSet();
 }

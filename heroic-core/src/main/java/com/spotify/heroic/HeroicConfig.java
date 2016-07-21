@@ -21,22 +21,19 @@
 
 package com.spotify.heroic;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonLocation;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.spotify.heroic.analytics.AnalyticsModule;
 import com.spotify.heroic.analytics.NullAnalyticsModule;
 import com.spotify.heroic.cache.CacheModule;
 import com.spotify.heroic.cache.noop.NoopCacheModule;
 import com.spotify.heroic.cluster.ClusterManagerModule;
 import com.spotify.heroic.common.Duration;
+import com.spotify.heroic.common.Features;
 import com.spotify.heroic.consumer.ConsumerModule;
 import com.spotify.heroic.generator.CoreGeneratorModule;
 import com.spotify.heroic.ingestion.IngestionModule;
@@ -47,7 +44,6 @@ import com.spotify.heroic.shell.ShellServerModule;
 import com.spotify.heroic.statistics.StatisticsModule;
 import com.spotify.heroic.statistics.noop.NoopStatisticsModule;
 import com.spotify.heroic.suggest.SuggestManagerModule;
-import jersey.repackaged.com.google.common.collect.Sets;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -62,7 +58,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static com.spotify.heroic.common.Optionals.mergeOptional;
@@ -105,7 +100,7 @@ public class HeroicConfig {
     private final Optional<Boolean> disableMetrics;
     private final boolean enableCors;
     private final Optional<String> corsAllowOrigin;
-    private final Set<String> features;
+    private final Features features;
     private final ClusterManagerModule cluster;
     private final MetricManagerModule metric;
     private final MetadataManagerModule metadata;
@@ -184,15 +179,15 @@ public class HeroicConfig {
         private Optional<Boolean> disableMetrics = empty();
         private Optional<Boolean> enableCors = empty();
         private Optional<String> corsAllowOrigin = empty();
-        private Set<String> features = ImmutableSet.of();
+        private Optional<Features> features = empty();
         private Optional<ClusterManagerModule.Builder> cluster = empty();
-        private Optional<MetricManagerModule.Builder> metric = empty();
+        private Optional<MetricManagerModule.Builder> metrics = empty();
         private Optional<MetadataManagerModule.Builder> metadata = empty();
         private Optional<SuggestManagerModule.Builder> suggest = empty();
         private Optional<CacheModule.Builder> cache = empty();
         private Optional<IngestionModule.Builder> ingestion = empty();
-        private List<ConsumerModule.Builder> consumers = ImmutableList.of();
-        private Optional<ShellServerModule.Builder> shellServer = empty();
+        private Optional<List<ConsumerModule.Builder>> consumers = empty();
+        private Optional<ShellServerModule> shellServer = empty();
         private Optional<AnalyticsModule.Builder> analytics = empty();
         private Optional<CoreGeneratorModule.Builder> generator = empty();
         private Optional<StatisticsModule> statistics = empty();
@@ -200,55 +195,9 @@ public class HeroicConfig {
         private Optional<String> version = empty();
         private Optional<String> service = empty();
 
-        @JsonCreator
-        public Builder(
-            @JsonProperty("id") Optional<String> id,
-            @JsonProperty("startTimeout") Optional<Duration> startTimeout,
-            @JsonProperty("stopTimeout") Optional<Duration> stopTimeout,
-            @JsonProperty("host") Optional<String> host,
-            @JsonProperty("port") Optional<Integer> port,
-            @JsonProperty("connectors") Optional<List<JettyServerConnector.Builder>> connectors,
-            @JsonProperty("disableMetrics") Optional<Boolean> disableMetrics,
-            @JsonProperty("enableCors") Optional<Boolean> enableCors,
-            @JsonProperty("corsAllowOrigin") Optional<String> corsAllowOrigin,
-            @JsonProperty("features") Optional<Set<String>> features,
-            @JsonProperty("cluster") Optional<ClusterManagerModule.Builder> cluster,
-            @JsonProperty("metrics") Optional<MetricManagerModule.Builder> metrics,
-            @JsonProperty("metadata") Optional<MetadataManagerModule.Builder> metadata,
-            @JsonProperty("suggest") Optional<SuggestManagerModule.Builder> suggest,
-            @JsonProperty("cache") Optional<CacheModule.Builder> cache,
-            @JsonProperty("ingestion") Optional<IngestionModule.Builder> ingestion,
-            @JsonProperty("consumers") Optional<List<ConsumerModule.Builder>> consumers,
-            @JsonProperty("shellServer") Optional<ShellServerModule.Builder> shellServer,
-            @JsonProperty("analytics") Optional<AnalyticsModule.Builder> analytics,
-            @JsonProperty("generator") Optional<CoreGeneratorModule.Builder> generator,
-            @JsonProperty("statistics") Optional<StatisticsModule> statistics,
-            @JsonProperty("version") Optional<String> version,
-            @JsonProperty("service") Optional<String> service
-        ) {
-            this.id = id;
-            this.startTimeout = startTimeout;
-            this.stopTimeout = stopTimeout;
-            this.host = host;
-            this.port = port;
-            this.connectors = connectors;
-            this.disableMetrics = disableMetrics;
-            this.enableCors = enableCors;
-            this.corsAllowOrigin = corsAllowOrigin;
-            this.features = features.orElseGet(ImmutableSet::of);
-            this.cluster = cluster;
-            this.metric = metrics;
-            this.metadata = metadata;
-            this.suggest = suggest;
-            this.cache = cache;
-            this.ingestion = ingestion;
-            this.consumers = consumers.orElseGet(ImmutableList::of);
-            this.shellServer = shellServer;
-            this.analytics = analytics;
-            this.generator = generator;
-            this.statistics = statistics;
-            this.version = version;
-            this.service = service;
+        public Builder enableCors(boolean enableCors) {
+            this.enableCors = of(enableCors);
+            return this;
         }
 
         public Builder startTimeout(Duration startTimeout) {
@@ -276,8 +225,8 @@ public class HeroicConfig {
             return this;
         }
 
-        public Builder features(Set<String> features) {
-            this.features = features;
+        public Builder features(Features features) {
+            this.features = of(features);
             return this;
         }
 
@@ -286,8 +235,8 @@ public class HeroicConfig {
             return this;
         }
 
-        public Builder metric(MetricManagerModule.Builder metric) {
-            this.metric = of(metric);
+        public Builder metrics(MetricManagerModule.Builder metrics) {
+            this.metrics = of(metrics);
             return this;
         }
 
@@ -313,7 +262,7 @@ public class HeroicConfig {
 
         public Builder consumers(List<ConsumerModule.Builder> consumers) {
             requireNonNull(consumers, "consumers");
-            this.consumers = consumers;
+            this.consumers = of(consumers);
             return this;
         }
 
@@ -327,7 +276,7 @@ public class HeroicConfig {
             return this;
         }
 
-        public Builder shellServer(ShellServerModule.Builder shellServer) {
+        public Builder shellServer(ShellServerModule shellServer) {
             this.shellServer = of(shellServer);
             return this;
         }
@@ -344,17 +293,17 @@ public class HeroicConfig {
                 pickOptional(disableMetrics, o.disableMetrics),
                 pickOptional(enableCors, o.enableCors),
                 pickOptional(corsAllowOrigin, o.corsAllowOrigin),
-                ImmutableSet.copyOf(Sets.union(features, o.features)),
-                mergeOptional(cluster, o.cluster, (a, b) -> a.merge(b)),
-                mergeOptional(metric, o.metric, (a, b) -> a.merge(b)),
-                mergeOptional(metadata, o.metadata, (a, b) -> a.merge(b)),
-                mergeOptional(suggest, o.suggest, (a, b) -> a.merge(b)),
+                mergeOptional(features, o.features, Features::combine),
+                mergeOptional(cluster, o.cluster, ClusterManagerModule.Builder::merge),
+                mergeOptional(metrics, o.metrics, MetricManagerModule.Builder::merge),
+                mergeOptional(metadata, o.metadata, MetadataManagerModule.Builder::merge),
+                mergeOptional(suggest, o.suggest, SuggestManagerModule.Builder::merge),
                 pickOptional(cache, o.cache),
-                mergeOptional(ingestion, o.ingestion, (a, b) -> a.merge(b)),
-                ImmutableList.copyOf(Iterables.concat(consumers, o.consumers)),
-                mergeOptional(shellServer, o.shellServer, (a, b) -> a.merge(b)),
+                mergeOptional(ingestion, o.ingestion, IngestionModule.Builder::merge),
+                mergeOptionalList(consumers, o.consumers),
+                pickOptional(shellServer, o.shellServer),
                 pickOptional(analytics, o.analytics),
-                mergeOptional(generator, o.generator, (a, b) -> a.merge(b)),
+                mergeOptional(generator, o.generator, CoreGeneratorModule.Builder::merge),
                 pickOptional(statistics, o.statistics),
                 pickOptional(service, o.service),
                 pickOptional(version, o.version)
@@ -382,15 +331,16 @@ public class HeroicConfig {
                 disableMetrics,
                 enableCors.orElse(DEFAULT_ENABLE_CORS),
                 corsAllowOrigin,
-                features,
+                features.orElseGet(Features::empty),
                 cluster.orElseGet(ClusterManagerModule::builder).build(),
-                metric.orElseGet(MetricManagerModule::builder).build(),
+                metrics.orElseGet(MetricManagerModule::builder).build(),
                 metadata.orElseGet(MetadataManagerModule::builder).build(),
                 suggest.orElseGet(SuggestManagerModule::builder).build(),
                 cache.orElseGet(NoopCacheModule::builder).build(),
                 ingestion.orElseGet(IngestionModule::builder).build(),
-                ImmutableList.copyOf(consumers.stream().map(c -> c.build()).iterator()),
-                shellServer.map(ShellServerModule.Builder::build),
+                consumers.map(c -> c.stream().map(ConsumerModule.Builder::build).iterator()).map
+                    (ImmutableList::copyOf).orElseGet(ImmutableList::of),
+                shellServer,
                 analytics.map(AnalyticsModule.Builder::build).orElseGet(NullAnalyticsModule::new),
                 generator.orElseGet(CoreGeneratorModule::builder).build(),
                 statistics.orElseGet(NoopStatisticsModule::new),

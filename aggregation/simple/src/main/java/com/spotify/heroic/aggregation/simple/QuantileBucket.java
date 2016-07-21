@@ -88,7 +88,7 @@ public class QuantileBucket extends AbstractBucket {
      * @param d data point to add.
      */
     @Override
-    public synchronized void updatePoint(Map<String, String> tags, Point d) {
+    public synchronized void updatePoint(Map<String, String> key, Point d) {
         batch[index] = d.getValue();
         index++;
         count++;

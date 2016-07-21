@@ -68,9 +68,4 @@ public class Collapse implements Aggregation {
 
         return new CollapseInstance(of, instance);
     }
-
-    @Override
-    public String toDSL() {
-        return String.format("%s()", NAME);
-    }
 }

@@ -21,13 +21,13 @@
 
 package com.spotify.heroic.metric.bigtable;
 
-import com.spotify.heroic.metric.bigtable.api.DataClient;
-import com.spotify.heroic.metric.bigtable.api.TableAdminClient;
+import com.spotify.heroic.metric.bigtable.api.BigtableDataClient;
+import com.spotify.heroic.metric.bigtable.api.BigtableTableAdminClient;
 
 public interface BigtableConnection {
-    public TableAdminClient adminClient();
+    BigtableTableAdminClient tableAdminClient();
 
-    public DataClient client();
+    BigtableDataClient dataClient();
 
-    public void close() throws Exception;
+    void close() throws Exception;
 }

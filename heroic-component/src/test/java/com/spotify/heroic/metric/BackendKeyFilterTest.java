@@ -1,5 +1,6 @@
 package com.spotify.heroic.metric;
 
+import com.spotify.heroic.common.OptionalLimit;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -14,7 +15,7 @@ public class BackendKeyFilterTest {
         BackendKeyFilter f = BackendKeyFilter.of();
         assertEquals(Optional.empty(), f.getStart());
         assertEquals(Optional.empty(), f.getEnd());
-        assertEquals(Optional.empty(), f.getLimit());
+        assertEquals(OptionalLimit.empty(), f.getLimit());
     }
 
     @Test
@@ -22,31 +23,31 @@ public class BackendKeyFilterTest {
         final BackendKeyFilter a = BackendKeyFilter.of();
         assertEquals(Optional.empty(), a.getStart());
         assertEquals(Optional.empty(), a.getEnd());
-        assertEquals(Optional.empty(), a.getLimit());
+        assertEquals(OptionalLimit.empty(), a.getLimit());
 
         final BackendKeyFilter.Start start = Mockito.mock(BackendKeyFilter.Start.class);
         final BackendKeyFilter.End end = Mockito.mock(BackendKeyFilter.End.class);
-        final int limit = 10;
+        final OptionalLimit limit = OptionalLimit.of(10L);
 
         final BackendKeyFilter b = a.withStart(start);
 
         assertNotEquals(a, b);
         assertEquals(Optional.of(start), b.getStart());
         assertEquals(Optional.empty(), b.getEnd());
-        assertEquals(Optional.empty(), b.getLimit());
+        assertEquals(OptionalLimit.empty(), b.getLimit());
 
         final BackendKeyFilter c = b.withEnd(end);
 
         assertNotEquals(b, c);
         assertEquals(Optional.of(start), c.getStart());
         assertEquals(Optional.of(end), c.getEnd());
-        assertEquals(Optional.empty(), c.getLimit());
+        assertEquals(OptionalLimit.empty(), c.getLimit());
 
         final BackendKeyFilter d = c.withLimit(limit);
 
         assertNotEquals(c, d);
         assertEquals(Optional.of(start), d.getStart());
         assertEquals(Optional.of(end), d.getEnd());
-        assertEquals(Optional.of(limit), d.getLimit());
+        assertEquals(limit, d.getLimit());
     }
 }
