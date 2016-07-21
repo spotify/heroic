@@ -75,7 +75,8 @@ import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
-import org.elasticsearch.index.query.FilterBuilder;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
@@ -95,13 +96,6 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
-
-import static org.elasticsearch.index.query.FilterBuilders.andFilter;
-import static org.elasticsearch.index.query.FilterBuilders.matchAllFilter;
-import static org.elasticsearch.index.query.FilterBuilders.notFilter;
-import static org.elasticsearch.index.query.FilterBuilders.orFilter;
-import static org.elasticsearch.index.query.FilterBuilders.prefixFilter;
-import static org.elasticsearch.index.query.FilterBuilders.termFilter;
 
 @ElasticsearchScope
 @ToString(of = {"connection"})
@@ -223,7 +217,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                 return async.resolved(CountSeries.of());
             }
 
-            final FilterBuilder f = filter(filter.getFilter());
+            final QueryBuilder f = filter(filter.getFilter());
 
             final CountRequestBuilder builder = c.count(filter.getRange(), TYPE_METADATA);
             limit.asInteger().ifPresent(builder::setTerminateAfter);
@@ -270,7 +264,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     @Override
     public AsyncFuture<DeleteSeries> deleteSeries(final DeleteSeries.Request request) {
         return doto(c -> {
-            final FilterBuilder f = filter(request.getFilter());
+            final QueryBuilder f = filter(request.getFilter());
 
             final DeleteByQueryRequestBuilder builder =
                 c.deleteByQuery(request.getRange(), TYPE_METADATA);
@@ -284,7 +278,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     @Override
     public AsyncFuture<FindKeys> findKeys(final FindKeys.Request request) {
         return doto(c -> {
-            final FilterBuilder f = filter(request.getFilter());
+            final QueryBuilder f = filter(request.getFilter());
 
             final SearchRequestBuilder builder =
                 c.search(request.getRange(), TYPE_METADATA).setSearchType("count");
@@ -306,7 +300,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                 int duplicates = 0;
 
                 for (final Terms.Bucket bucket : terms.getBuckets()) {
-                    if (keys.add(bucket.getKey())) {
+                    if (keys.add(bucket.getKeyAsString())) {
                         duplicates += 1;
                     }
                 }
@@ -335,7 +329,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         final Function<SearchHit, T> converter, final Transform<LimitedSet<T>, O> collector,
         final Consumer<SearchRequestBuilder> modifier
     ) {
-        final FilterBuilder f = filter(filter);
+        final QueryBuilder f = filter(filter);
 
         return doto(c -> {
             final SearchRequestBuilder builder = c
@@ -357,7 +351,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         final Function<SearchHit, T> converter, final Function<Set<T>, O> collector,
         final Consumer<SearchRequestBuilder> modifier
     ) {
-        final FilterBuilder filter = filter(f);
+        final QueryBuilder filter = filter(f);
 
         return observer -> connection.doto(c -> {
             final SearchRequestBuilder builder = c
@@ -442,61 +436,72 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         b.endArray();
     }
 
-    private static final Filter.Visitor<FilterBuilder> FILTER_CONVERTER =
-        new Filter.Visitor<FilterBuilder>() {
+    private static final Filter.Visitor<QueryBuilder> FILTER_CONVERTER =
+        new Filter.Visitor<QueryBuilder>() {
             @Override
-            public FilterBuilder visitTrue(final TrueFilter t) {
-                return matchAllFilter();
+            public QueryBuilder visitTrue(final TrueFilter t) {
+                return QueryBuilders.boolQuery().must(QueryBuilders.matchAllQuery());
             }
 
             @Override
-            public FilterBuilder visitFalse(final FalseFilter f) {
-                return notFilter(matchAllFilter());
+            public QueryBuilder visitFalse(final FalseFilter f) {
+                return QueryBuilders.boolQuery().mustNot(QueryBuilders.matchAllQuery());
             }
 
             @Override
-            public FilterBuilder visitAnd(final AndFilter and) {
-                return andFilter(convertTerms(and.terms()));
+            public QueryBuilder visitAnd(final AndFilter and) {
+                QueryBuilder[] andQueryBuilders = convertTerms(and.terms());
+                BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+                for (QueryBuilder andQueryBuilder : andQueryBuilders) {
+                    boolQueryBuilder.must(andQueryBuilder);
+                }
+                return boolQueryBuilder;
             }
 
             @Override
-            public FilterBuilder visitOr(final OrFilter or) {
-                return orFilter(convertTerms(or.terms()));
+            public QueryBuilder visitOr(final OrFilter or) {
+                QueryBuilder[] orQueryBuilders = convertTerms(or.terms());
+                BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+                for (QueryBuilder andQueryBuilder : orQueryBuilders) {
+                    boolQueryBuilder.should(andQueryBuilder);
+                }
+                return boolQueryBuilder;
             }
 
             @Override
-            public FilterBuilder visitNot(final NotFilter not) {
-                return notFilter(not.getFilter().visit(this));
+            public QueryBuilder visitNot(final NotFilter not) {
+                return QueryBuilders.boolQuery().must(not.getFilter().visit(this));
             }
 
             @Override
-            public FilterBuilder visitMatchTag(final MatchTagFilter matchTag) {
-                return termFilter(TAGS, matchTag.getTag() + TAG_DELIMITER + matchTag.getValue());
+            public QueryBuilder visitMatchTag(final MatchTagFilter matchTag) {
+                return QueryBuilders.boolQuery().must(QueryBuilders.termQuery(
+                        TAGS, matchTag.getTag() + TAG_DELIMITER + matchTag.getValue()));
             }
 
             @Override
-            public FilterBuilder visitStartsWith(final StartsWithFilter startsWith) {
-                return prefixFilter(TAGS,
-                    startsWith.getTag() + TAG_DELIMITER + startsWith.getValue());
+            public QueryBuilder visitStartsWith(final StartsWithFilter startsWith) {
+                return QueryBuilders.boolQuery().must(QueryBuilders.prefixQuery(
+                        TAGS, startsWith.getTag() + TAG_DELIMITER + startsWith.getValue()));
             }
 
             @Override
-            public FilterBuilder visitHasTag(final HasTagFilter hasTag) {
-                return termFilter(TAG_KEYS, hasTag.getTag());
+            public QueryBuilder visitHasTag(final HasTagFilter hasTag) {
+                return QueryBuilders.boolQuery().must(QueryBuilders.termQuery(TAG_KEYS, hasTag.getTag()));
             }
 
             @Override
-            public FilterBuilder visitMatchKey(final MatchKeyFilter matchKey) {
-                return termFilter(KEY, matchKey.getValue());
+            public QueryBuilder visitMatchKey(final MatchKeyFilter matchKey) {
+                return QueryBuilders.boolQuery().must(QueryBuilders.termQuery(KEY, matchKey.getValue()));
             }
 
             @Override
-            public FilterBuilder defaultAction(final Filter filter) {
+            public QueryBuilder defaultAction(final Filter filter) {
                 throw new IllegalArgumentException("Unsupported filter statement: " + filter);
             }
 
-            private FilterBuilder[] convertTerms(final List<Filter> terms) {
-                final FilterBuilder[] filters = new FilterBuilder[terms.size()];
+            private QueryBuilder[] convertTerms(final List<Filter> terms) {
+                final QueryBuilder[] filters = new QueryBuilder[terms.size()];
                 int i = 0;
 
                 for (final Filter stmt : terms) {
@@ -508,7 +513,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         };
 
     @Override
-    protected FilterBuilder filter(final Filter filter) {
+    protected QueryBuilder filter(final Filter filter) {
         return filter.visit(FILTER_CONVERTER);
     }
 

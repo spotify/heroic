@@ -24,8 +24,7 @@ package com.spotify.heroic.elasticsearch;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.common.base.Optional;
-import org.elasticsearch.common.settings.ImmutableSettings;
+import com.google.common.base.Optional;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.node.NodeBuilder;
 
@@ -81,8 +80,7 @@ public class StandaloneClientSetup implements ClientSetup {
 
     @Override
     public Client setup() throws Exception {
-        final Settings settings = ImmutableSettings
-            .builder()
+        final Settings settings = Settings.builder()
             .put("path.logs", root.resolve("logs"))
             .put("path.data", root.resolve("data"))
             .put("node.name", InetAddress.getLocalHost().getHostName())
