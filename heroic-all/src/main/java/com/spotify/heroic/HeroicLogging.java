@@ -46,9 +46,6 @@ public class HeroicLogging {
 
         io.netty.util.internal.logging.InternalLoggerFactory.setDefaultFactory(
             new io.netty.util.internal.logging.Slf4JLoggerFactory());
-
-        org.elasticsearch.common.netty.logging.InternalLoggerFactory.setDefaultFactory(
-            new org.elasticsearch.common.netty.logging.Slf4JLoggerFactory());
     }
 
     /**

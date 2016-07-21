@@ -23,8 +23,7 @@ package com.spotify.heroic.elasticsearch;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.common.base.Optional;
-import org.elasticsearch.common.settings.ImmutableSettings;
+import com.google.common.base.Optional;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeBuilder;
@@ -46,8 +45,7 @@ public class NodeClientSetup implements ClientSetup {
 
     @Override
     public Client setup() throws Exception {
-        final Settings settings = ImmutableSettings
-            .builder()
+        final Settings settings = Settings.builder()
             .put("node.name", InetAddress.getLocalHost().getHostName())
             .put("discovery.zen.ping.multicast.enabled", false)
             .putArray("discovery.zen.ping.unicast.hosts", seeds)

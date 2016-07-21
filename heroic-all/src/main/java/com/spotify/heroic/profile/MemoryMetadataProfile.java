@@ -26,7 +26,7 @@ import com.spotify.heroic.HeroicConfig;
 import com.spotify.heroic.metadata.MetadataManagerModule;
 import com.spotify.heroic.metadata.MetadataModule;
 import com.spotify.heroic.metadata.memory.MemoryMetadataModule;
-import org.elasticsearch.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList;
 
 public class MemoryMetadataProfile extends HeroicProfileBase {
     @Override

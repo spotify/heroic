@@ -28,6 +28,7 @@ import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Duration;
 import lombok.ToString;
 import org.elasticsearch.action.count.CountRequestBuilder;
+import org.elasticsearch.action.deletebyquery.DeleteByQueryAction;
 import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.support.IndicesOptions;
@@ -136,8 +137,8 @@ public class RotatingIndexMapping implements IndexMapping {
     public DeleteByQueryRequestBuilder deleteByQuery(
         final Client client, final DateRange range, final String type
     ) throws NoIndexSelectedException {
-        return client
-            .prepareDeleteByQuery(readIndices(range))
+        return new DeleteByQueryRequestBuilder(client, DeleteByQueryAction.INSTANCE)
+            .setIndices(readIndices(range))
             .setIndicesOptions(options())
             .setTypes(type);
     }
