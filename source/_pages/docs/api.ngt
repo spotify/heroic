@@ -80,7 +80,7 @@
     Query and aggregate metrics.
   </p>
 
-  <api-accept curl-data='{"range": {"type": "relative"}, "filter": ["and", ["key", "foo"], ["=", "foo", "bar"], ["+", "role"]], "groupBy": ["site"], "aggregation": []}'>
+  <api-accept curl-data='{"range": {"type": "relative", "unit": "HOURS", "value": 2}, "filter": ["and", ["key", "foo"], ["=", "foo", "bar"], ["+", "role"]], "groupBy": ["site"]}'>
     <api-type>
       <api-field required="true" name="range" type-href="QueryDateRange">
         The range in time for which to query
@@ -119,10 +119,9 @@
 
     <codeblock language="json">
     {
-      "range": {"type": "relative"},
+      "range": {"type": "relative", "unit": "HOURS", "value": 2},
       "filter": ["and", ["key", "foo"], ["=", "foo", "bar"], ["+", "role"]],
-      "groupBy": ["site"],
-      "aggregators": []
+      "groupBy": ["site"]
     }
     </codeblock>
   </api-accept>
@@ -183,7 +182,10 @@
           "values": [[1300000000000, 42.0]]
         }
       ],
-      "range": {},
+      "range": {
+        "end": 1469816790000,
+        "start": 1469809590000
+      },
       "statistics": {}
     }
     </codeblock>
