@@ -47,19 +47,18 @@
 <h3>Metrics</h3>
 
 <p>
-  Metric storage is handled by Cassandra.
-  The technique used is described in
-  <a href="http://www.datastax.com/dev/blog/advanced-time-series-with-cassandra">Advanced Time Series with Cassandra</a>.
-  It was inspired by how it's implemented in
-  <a href="http://kairosdb.github.io/">KairosDB</a>.
+  Metric storage can be handled by either
+  <a href="https://cloud.google.com/bigtable/">Google Cloud Bigtable</a> or
+  Cassandra.
 </p>
 
 <p>
+  The technique for storing time series data in Cassandra is described in
+  <a href="http://www.datastax.com/dev/blog/advanced-time-series-with-cassandra">Advanced Time Series with Cassandra</a>.
+  It was inspired by how it's implemented in
+  <a href="http://kairosdb.github.io/">KairosDB</a>.
   Using Cassandra, you can store almost an indefinite amount of data as long as
   you are willing to <a href="http://techblog.netflix.com/2011/11/benchmarking-cassandra-scalability-on.html">spend the hardware</a> on it.
-  As an alternative to operating your own Cassandra cluster, we are
-  <a href="https://github.com/spotify/heroic/tree/master/metric/bigtable">experimenting</a> with supporting
-  <a href="https://cloud.google.com/bigtable/">Google Cloud Bigtable</a>.
 </p>
 
 <p>
