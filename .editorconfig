@@ -1,0 +1,8 @@
+# See http://editorconfig.org for more info.
+
+# This is the root-level config file.
+root = true
+
+[*.ngt]
+indent_style = space
+indent_size = 2
