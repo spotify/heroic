@@ -27,7 +27,6 @@ import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.common.DynamicModuleId;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.ModuleId;
-import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
@@ -41,7 +40,6 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
 import eu.toolchain.serializer.Serializer;
-import eu.toolchain.serializer.SerializerFramework;
 import lombok.Data;
 
 import javax.inject.Named;
@@ -154,10 +152,8 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
 
         @Provides
         @BigtableScope
-        public Serializer<RowKey> rowKeySerializer(
-            Serializer<Series> series, @Named("common") SerializerFramework s
-        ) {
-            return new RowKey_Serializer(s);
+        public Serializer<RowKey> rowKeySerializer() {
+           return new MetricsRowKeySerializer();
         }
 
         @Provides

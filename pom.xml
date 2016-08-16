@@ -58,7 +58,7 @@
     <semantic-metrics.version>0.2.3</semantic-metrics.version>
     <netty.version>4.1.0.CR3</netty.version>
     <tiny-async.version>1.8.0</tiny-async.version>
-    <tiny-serializer.version>1.4.4</tiny-serializer.version>
+    <tiny-serializer.version>1.4.5</tiny-serializer.version>
     <antlr.version>4.5</antlr.version>
     <log4j.version>2.2</log4j.version>
     <elasticsearch.version>1.7.5</elasticsearch.version>
