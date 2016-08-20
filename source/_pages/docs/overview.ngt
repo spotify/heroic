@@ -47,9 +47,15 @@
 <h3>Metrics</h3>
 
 <p>
-  Metric storage can be handled by either
-  <a href="https://cloud.google.com/bigtable/">Google Cloud Bigtable</a> or
-  Cassandra.
+  Metric storage can be handled by either Google Cloud Bigtable or Apache Cassandra.
+</p>
+
+<p>
+  <a href="https://cloud.google.com/bigtable/">Google Cloud Bigtable</a> is a
+  fully-managed petabyte-scale NoSQL database. It's the same database that
+  powers many core Google services, including Search, Analytics, Maps, and
+  Gmail. Bigtable has inspired the design of many other NoSQL databases, such as
+  Apache HBase and Apache Cassandra.
 </p>
 
 <p>
