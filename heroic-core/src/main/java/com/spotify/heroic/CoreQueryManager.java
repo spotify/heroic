@@ -188,28 +188,36 @@ public class CoreQueryManager implements QueryManager {
             final QueryOptions options = q.getOptions().orElseGet(QueryOptions::defaults);
             final Aggregation aggregation = q.getAggregation().orElse(Empty.INSTANCE);
             final DateRange rawRange = buildRange(q);
-            final Duration cadence = buildCadence(aggregation, rawRange);
 
             final long now = System.currentTimeMillis();
 
-            final DateRange range = features.withFeature(Feature.SHIFT_RANGE,
-                () -> buildShiftedRange(rawRange, cadence.toMilliseconds(), now), () -> rawRange);
-
             final Filter filter = q.getFilter().orElseGet(TrueFilter::get);
 
-            final AggregationContext context = new DefaultAggregationContext(cadence);
+            final AggregationContext context =
+                new DefaultAggregationContext(cadenceFromRange(rawRange));
             final AggregationInstance root = aggregation.apply(context);
 
             final AggregationInstance aggregationInstance;
-            final AggregationCombiner combiner;
 
             final Features features = CoreQueryManager.this.features.combine(q.getFeatures());
 
-            if (features.hasFeature(Feature.DISTRIBUTED_AGGREGATIONS)) {
+            boolean isDistributed = features.hasFeature(Feature.DISTRIBUTED_AGGREGATIONS);
+
+            if (isDistributed) {
                 aggregationInstance = root.distributed();
-                combiner = new DistributedAggregationCombiner(root.reducer(), range);
             } else {
                 aggregationInstance = root;
+            }
+
+            final DateRange range = features.withFeature(Feature.SHIFT_RANGE,
+                () -> buildShiftedRange(rawRange, aggregationInstance.cadence(), now),
+                () -> rawRange);
+
+            final AggregationCombiner combiner;
+
+            if (isDistributed) {
+                combiner = new DistributedAggregationCombiner(root.reducer(), range);
+            } else {
                 combiner = AggregationCombiner.DEFAULT;
             }
 
@@ -320,13 +328,6 @@ public class CoreQueryManager implements QueryManager {
             }
 
             return async.collect(futures, collector);
-        }
-
-        private Duration buildCadence(final Aggregation aggregation, final DateRange rawRange) {
-            return aggregation
-                .size()
-                .map(Duration::ofMilliseconds)
-                .orElseGet(() -> cadenceFromRange(rawRange));
         }
 
         private DateRange buildRange(Query q) {
