@@ -27,8 +27,6 @@ import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationContext;
 import lombok.Data;
 
-import java.util.Optional;
-
 @Data
 public class TopK implements Aggregation {
     public static final String NAME = "topk";
@@ -38,16 +36,6 @@ public class TopK implements Aggregation {
     @JsonCreator
     public TopK(@JsonProperty("k") long k) {
         this.k = k;
-    }
-
-    @Override
-    public Optional<Long> size() {
-        return Optional.empty();
-    }
-
-    @Override
-    public Optional<Long> extent() {
-        return Optional.empty();
     }
 
     @Override

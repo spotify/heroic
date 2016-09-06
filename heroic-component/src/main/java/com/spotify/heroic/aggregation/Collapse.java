@@ -47,16 +47,6 @@ public class Collapse implements Aggregation {
     }
 
     @Override
-    public Optional<Long> size() {
-        return each.flatMap(Aggregation::size);
-    }
-
-    @Override
-    public Optional<Long> extent() {
-        return each.flatMap(Aggregation::extent);
-    }
-
-    @Override
     public CollapseInstance apply(final AggregationContext context) {
         final AggregationInstance instance = each.orElse(Empty.INSTANCE).apply(context);
 
