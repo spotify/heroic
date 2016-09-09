@@ -19,16 +19,14 @@ public class BigtableBackendIT extends AbstractMetricBackendIT {
             final String table = "heroic_it_" + UUID.randomUUID();
 
             final String project = properties.getRequiredString("project");
-            final String zone = properties.getRequiredString("zone");
-            final String cluster = properties.getRequiredString("cluster");
+            final String instance = properties.getRequiredString("instance");
             final Path credentials = Paths.get(properties.getRequiredString("credentials"));
 
             return BigtableMetricModule
                 .builder()
                 .configure(true)
                 .project(project)
-                .zone(zone)
-                .cluster(cluster)
+                .instance(instance)
                 .table(table)
                 .credentials(JsonCredentialsBuilder.builder().path(credentials).build())
                 .build();

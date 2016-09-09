@@ -61,7 +61,6 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
     public static final int DEFAULT_MAX_PENDING_REPORTS = 1000;
 
     private final String project;
-    private final String zone;
     private final String cluster;
     private final CredentialsBuilder credentials;
     private final int maxPendingReports;
@@ -103,7 +102,7 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
                 @Override
                 public AsyncFuture<BigtableConnection> construct() throws Exception {
                     return async.call(
-                        new BigtableConnectionBuilder(project, zone, cluster, credentials, async,
+                        new BigtableConnectionBuilder(project, cluster, credentials, async,
                             executorService));
                 }
 
@@ -156,22 +155,19 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
     @NoArgsConstructor
     public static class Builder implements AnalyticsModule.Builder {
         private Optional<String> project = Optional.empty();
-        private Optional<String> zone = Optional.empty();
-        private Optional<String> cluster = Optional.empty();
+        private Optional<String> instance = Optional.empty();
         private Optional<CredentialsBuilder> credentials = Optional.empty();
         private Optional<Integer> maxPendingReports = Optional.empty();
 
         @JsonCreator
         public Builder(
             @JsonProperty("project") Optional<String> project,
-            @JsonProperty("zone") Optional<String> zone,
-            @JsonProperty("cluster") Optional<String> cluster,
+            @JsonProperty("instance") Optional<String> instance,
             @JsonProperty("credentials") Optional<CredentialsBuilder> credentials,
             @JsonProperty("maxPendingReports") Optional<Integer> maxPendingReports
         ) {
             this.project = project;
-            this.zone = zone;
-            this.cluster = cluster;
+            this.instance = instance;
             this.credentials = credentials;
             this.maxPendingReports = maxPendingReports;
         }
@@ -181,13 +177,8 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
             return this;
         }
 
-        public Builder zone(String zone) {
-            this.zone = Optional.of(zone);
-            return this;
-        }
-
-        public Builder cluster(String cluster) {
-            this.cluster = Optional.of(cluster);
+        public Builder instance(String instance) {
+            this.instance = Optional.of(instance);
             return this;
         }
 
@@ -205,10 +196,7 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
             final String project = this.project.orElseThrow(
                 () -> new IllegalStateException("'project' configuration is required"));
 
-            final String zone = this.zone.orElseThrow(
-                () -> new IllegalStateException("'zone' configuration is required"));
-
-            return new BigtableAnalyticsModule(project, zone, cluster.orElse(DEFAULT_CLUSTER),
+            return new BigtableAnalyticsModule(project, instance.orElse(DEFAULT_CLUSTER),
                 credentials.orElse(DEFAULT_CREDENTIALS),
                 maxPendingReports.orElse(DEFAULT_MAX_PENDING_REPORTS));
         }
