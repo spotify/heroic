@@ -20,14 +20,12 @@ metrics:
   backends:
     - type: bigtable
       project: project
-      zone: zone
     - type: datastax
     - type: memory
 
 analytics:
   type: bigtable
   project: project
-  zone: zone
 
 generator:
   metadata:
