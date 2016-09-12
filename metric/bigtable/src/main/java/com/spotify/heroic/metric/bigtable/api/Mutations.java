@@ -31,7 +31,7 @@ import java.util.List;
 
 @RequiredArgsConstructor
 public class Mutations {
-    private final List<com.google.bigtable.v1.Mutation> mutations;
+    private final List<com.google.bigtable.v2.Mutation> mutations;
 
     /**
      * Get the list of mutations.
@@ -42,7 +42,7 @@ public class Mutations {
      *
      * @return The list of mutations.
      */
-    List<com.google.bigtable.v1.Mutation> getMutations() {
+    List<com.google.bigtable.v2.Mutation> getMutations() {
         return mutations;
     }
 
@@ -52,19 +52,19 @@ public class Mutations {
 
     @Data
     public static class Builder {
-        final List<com.google.bigtable.v1.Mutation> mutations = new ArrayList<>();
+        final List<com.google.bigtable.v2.Mutation> mutations = new ArrayList<>();
 
         public Builder setCell(
             String family, ByteString columnQualifier, ByteString value
         ) {
-            final com.google.bigtable.v1.Mutation.SetCell.Builder setCell =
-                com.google.bigtable.v1.Mutation.SetCell
+            final com.google.bigtable.v2.Mutation.SetCell.Builder setCell =
+                com.google.bigtable.v2.Mutation.SetCell
                     .newBuilder()
                     .setFamilyName(family)
                     .setColumnQualifier(columnQualifier)
                     .setValue(value);
 
-            mutations.add(com.google.bigtable.v1.Mutation.newBuilder().setSetCell(setCell).build());
+            mutations.add(com.google.bigtable.v2.Mutation.newBuilder().setSetCell(setCell).build());
             return this;
         }
 

@@ -35,14 +35,13 @@ import lombok.ToString;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 
-@ToString(of = {"project", "zone", "cluster", "credentials"})
+@ToString(of = {"project", "instance", "credentials"})
 @RequiredArgsConstructor
 public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
     private static final String USER_AGENT = "heroic";
 
     private final String project;
-    private final String zone;
-    private final String cluster;
+    private final String instance;
 
     private final CredentialsBuilder credentials;
 
@@ -55,8 +54,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
 
         final BigtableOptions options = new BigtableOptions.Builder()
             .setProjectId(project)
-            .setZoneId(zone)
-            .setClusterId(cluster)
+            .setInstanceId(instance)
             .setUserAgent(USER_AGENT)
             .setDataChannelCount(64)
             .setCredentialOptions(credentials)
@@ -66,20 +64,19 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
 
         final BigtableTableAdminClient adminClient =
             new BigtableTableTableAdminClientImpl(async, session.getTableAdminClient(), project,
-                zone, cluster);
+              instance);
 
         final BigtableDataClient client =
-            new BigtableDataClientImpl(async, session.getDataClient(), project, zone, cluster);
+            new BigtableDataClientImpl(async, session.getDataClient(), project, instance);
 
-        return new GrpcBigtableConnection(project, zone, cluster, session, adminClient, client);
+        return new GrpcBigtableConnection(project, instance, session, adminClient, client);
     }
 
     @RequiredArgsConstructor
-    @ToString(of = {"project", "zone", "cluster"})
+    @ToString(of = {"project", "instance"})
     public static class GrpcBigtableConnection implements BigtableConnection {
         private final String project;
-        private final String zone;
-        private final String cluster;
+        private final String instance;
 
         final BigtableSession session;
         final BigtableTableAdminClient tableAdminClient;

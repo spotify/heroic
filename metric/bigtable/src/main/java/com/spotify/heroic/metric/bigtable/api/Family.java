@@ -29,7 +29,7 @@ import java.util.Iterator;
 @Data
 public class Family {
     final String name;
-    final Iterable<com.google.bigtable.v1.Column> columns;
+    final Iterable<com.google.bigtable.v2.Column> columns;
 
     /**
      * Get an iterable of the latest cells in a given column.
@@ -38,7 +38,7 @@ public class Family {
      */
     public Iterable<LatestCellValueColumn> latestCellValue() {
         return () -> {
-            final Iterator<com.google.bigtable.v1.Column> iterator = columns.iterator();
+            final Iterator<com.google.bigtable.v2.Column> iterator = columns.iterator();
 
             return new Iterator<LatestCellValueColumn>() {
                 @Override
@@ -48,7 +48,7 @@ public class Family {
 
                 @Override
                 public LatestCellValueColumn next() {
-                    final com.google.bigtable.v1.Column next = iterator.next();
+                    final com.google.bigtable.v2.Column next = iterator.next();
 
                     if (next.getCellsCount() < 1) {
                         throw new IllegalStateException("empty cell");
