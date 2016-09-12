@@ -135,7 +135,7 @@ The [JVM RPC](/rpc/jvm) module is specifically designed to allow for rapid
 execution of integration tests. It allows multiple cores to be defined and
 communicate with each other in the same JVM instance.
 
-See [ClusterIT](/heroic-dist/src/test/java/com/spotify/heroic/ClusterIT.java)
+See [ClusterQueryIT](/heroic-dist/src/test/java/com/spotify/heroic/ClusterQueryIT.java)
 for a basic example of this.
 
 #### Coverage
