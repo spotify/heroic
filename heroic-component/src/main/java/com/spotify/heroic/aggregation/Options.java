@@ -23,13 +23,10 @@ package com.spotify.heroic.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.common.Duration;
 import lombok.Data;
 
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-
-import static com.spotify.heroic.common.Optionals.firstPresent;
 
 @Data
 public class Options implements Aggregation {
@@ -47,18 +44,6 @@ public class Options implements Aggregation {
     ) {
         this.sampling = sampling;
         this.aggregation = aggregation;
-    }
-
-    @Override
-    public Optional<Long> size() {
-        return firstPresent(aggregation.flatMap(Aggregation::size),
-            sampling.flatMap(SamplingQuery::getSize).map(Duration::toMilliseconds));
-    }
-
-    @Override
-    public Optional<Long> extent() {
-        return firstPresent(aggregation.flatMap(Aggregation::extent),
-            sampling.flatMap(SamplingQuery::getExtent).map(Duration::toMilliseconds));
     }
 
     @Override

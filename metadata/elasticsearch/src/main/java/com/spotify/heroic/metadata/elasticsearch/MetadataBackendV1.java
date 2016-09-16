@@ -535,7 +535,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
 
                     @Override
                     public QueryBuilder visitNot(final NotFilter not) {
-                        return QueryBuilders.boolQuery().must(filter(not.getFilter()));
+                        return QueryBuilders.boolQuery().mustNot(filter(not.getFilter()));
                     }
 
                     @Override
@@ -564,13 +564,15 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
 
                     @Override
                     public QueryBuilder visitHasTag(final HasTagFilter hasTag) {
-                        final TermQueryBuilder nested = QueryBuilders.termQuery(tagsKey, hasTag.getTag());
+                        final TermQueryBuilder nested =
+                            QueryBuilders.termQuery(tagsKey, hasTag.getTag());
                         return QueryBuilders.nestedQuery(tags, nested);
                     }
 
                     @Override
                     public QueryBuilder visitMatchKey(final MatchKeyFilter matchKey) {
-                        return QueryBuilders.boolQuery().must(QueryBuilders.termQuery(seriesKey, matchKey.getValue()));
+                        return QueryBuilders.boolQuery().must(QueryBuilders.termQuery(
+                            seriesKey, matchKey.getValue()));
                     }
 
                     @Override

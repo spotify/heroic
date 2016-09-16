@@ -44,8 +44,7 @@ public class BigtableAnalyticsProfile extends HeroicProfileBase {
         final BigtableAnalyticsModule.Builder module = BigtableAnalyticsModule.builder();
 
         params.get("project").map(module::project);
-        params.get("zone").map(module::zone);
-        params.get("cluster").map(module::cluster);
+        params.get("instance").map(module::instance);
 
         final String credentials = params.get("credential").orElse(DEFAULT_CREDENTIALS);
 
@@ -90,8 +89,7 @@ public class BigtableAnalyticsProfile extends HeroicProfileBase {
             parameter("configure", "If set, will cause the cluster to be " +
                     "automatically configured"),
             parameter("project", "Bigtable project to use", "<project>"),
-            parameter("zone", "Bigtable zone to use", "<zone>"),
-            parameter("cluster", "Bigtable cluster to use", "<cluster>"),
+            parameter("instance", "Bigtable instance to use", "<instance>"),
             parameter("credentials", "Credentials implementation to use, must " +
                     "be one of: compute-engine (default), json, service-account", "<credentials>"),
             parameter("json", "Json file to use when using json credentials",

@@ -112,8 +112,11 @@ public class HeroicShell {
                 System.exit(1);
                 return;
             }
-
-            interactive(params, bridge);
+            try {
+                interactive(params, bridge);
+            } catch (Exception e) {
+                System.exit(1);
+            }
             System.exit(0);
             return;
         }
@@ -175,21 +178,31 @@ public class HeroicShell {
         });
     }
 
-    static void interactive(Parameters params, CoreInterface core) {
+    static void interactive(Parameters params, CoreInterface core) throws Exception {
         log.info("Setting up interactive shell...");
 
+        Exception e = null;
         try {
             runInteractiveShell(core);
-        } catch (Exception e) {
-            log.error("Error when running shell", e);
+        } catch (final Exception inner) {
+            log.error("Error when running shell", inner);
+            e = inner;
         }
 
         log.info("Closing core bridge...");
 
         try {
             core.shutdown();
-        } catch (Exception e) {
-            log.error("Failed to close core bridge", e);
+        } catch (final Exception inner) {
+            log.error("Failed to close core bridge", inner);
+            if (e != null) {
+                inner.addSuppressed(e);
+            }
+            e = inner;
+        }
+
+        if (e != null) {
+            throw e;
         }
     }
 

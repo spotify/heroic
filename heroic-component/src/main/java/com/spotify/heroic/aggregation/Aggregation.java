@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.util.Optional;
 import java.util.function.Function;
 
 /**
@@ -38,21 +37,4 @@ import java.util.function.Function;
  * @see AggregationInstance
  */
 public interface Aggregation extends Function<AggregationContext, AggregationInstance> {
-    /**
-     * Get the size of the aggregation.
-     * <p>
-     * The size is the space of time between subsequent samples.
-     *
-     * @return The size if available, otherwise an empty result.
-     */
-    Optional<Long> size();
-
-    /**
-     * Get the extent of the aggregation.
-     * <p>
-     * The extent is the space of time in milliseconds that an aggregation takes samples.
-     *
-     * @return The extent if available, otherwise an empty result.
-     */
-    Optional<Long> extent();
 }
