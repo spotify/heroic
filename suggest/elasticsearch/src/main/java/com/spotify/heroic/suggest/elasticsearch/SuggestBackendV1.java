@@ -376,7 +376,8 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
 
             // aggregation
             {
-                final MaxBuilder topHit = AggregationBuilders.max("topHit").script(new Script("_score"));
+                final MaxBuilder topHit =
+                    AggregationBuilders.max("topHit").script(new Script("_score"));
                 final TopHitsBuilder hits = AggregationBuilders
                     .topHits("hits")
                     .setSize(1)
@@ -440,7 +441,8 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
 
             // aggregation
             {
-                final MaxBuilder topHit = AggregationBuilders.max("top_hit").script(new Script("_score"));
+                final MaxBuilder topHit =
+                    AggregationBuilders.max("top_hit").script(new Script("_score"));
                 final TopHitsBuilder hits = AggregationBuilders
                     .topHits("hits")
                     .setSize(1)
@@ -465,7 +467,8 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
                 for (final Terms.Bucket bucket : keys.getBuckets()) {
                     final TopHits topHits = bucket.getAggregations().get("hits");
                     final SearchHits hits = topHits.getHits();
-                    suggestions.add(new KeySuggest.Suggestion(hits.getMaxScore(), bucket.getKeyAsString()));
+                    suggestions.add(
+                        new KeySuggest.Suggestion(hits.getMaxScore(), bucket.getKeyAsString()));
                 }
 
                 return KeySuggest.of(ImmutableList.copyOf(suggestions));
@@ -768,7 +771,7 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
 
                     @Override
                     public QueryBuilder visitNot(final NotFilter not) {
-                        return QueryBuilders.boolQuery().must(filter(not.getFilter()));
+                        return QueryBuilders.boolQuery().mustNot(filter(not.getFilter()));
                     }
 
                     @Override
@@ -797,13 +800,15 @@ public class SuggestBackendV1 extends AbstractElasticsearchBackend
 
                     @Override
                     public QueryBuilder visitHasTag(final HasTagFilter hasTag) {
-                        final TermQueryBuilder nested = QueryBuilders.termQuery(tagsKey, hasTag.getTag());
+                        final TermQueryBuilder nested =
+                            QueryBuilders.termQuery(tagsKey, hasTag.getTag());
                         return QueryBuilders.nestedQuery(tags, nested);
                     }
 
                     @Override
                     public QueryBuilder visitMatchKey(final MatchKeyFilter matchKey) {
-                        return QueryBuilders.boolQuery().must(QueryBuilders.termQuery(seriesKey, matchKey.getValue()));
+                        return QueryBuilders.boolQuery()
+                            .must(QueryBuilders.termQuery(seriesKey, matchKey.getValue()));
                     }
 
                     @Override
