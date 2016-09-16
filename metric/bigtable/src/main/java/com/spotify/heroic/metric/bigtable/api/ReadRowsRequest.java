@@ -33,16 +33,22 @@ public class ReadRowsRequest {
     private final Optional<RowFilter> filter;
     private final Optional<ByteString> rowKey;
 
-    public com.google.bigtable.v1.ReadRowsRequest toPb(final String tableUri) {
-        final com.google.bigtable.v1.ReadRowsRequest.Builder builder =
-            com.google.bigtable.v1.ReadRowsRequest.newBuilder();
+    public com.google.bigtable.v2.ReadRowsRequest toPb(final String tableUri) {
+        final com.google.bigtable.v2.RowSet.Builder rowSetBuilder =
+          com.google.bigtable.v2.RowSet.newBuilder();
 
-        builder.setTableName(tableUri);
-        range.map(RowRange::toPb).ifPresent(builder::setRowRange);
-        filter.map(RowFilter::toPb).ifPresent(builder::setFilter);
-        rowKey.ifPresent(builder::setRowKey);
+        range.map(RowRange::toPb).ifPresent(rowSetBuilder::addRowRanges);
+        rowKey.ifPresent(rowSetBuilder::addRowKeys);
 
-        return builder.build();
+        final com.google.bigtable.v2.ReadRowsRequest.Builder requestBuilder =
+            com.google.bigtable.v2.ReadRowsRequest.newBuilder();
+
+        requestBuilder.setTableName(tableUri);
+        requestBuilder.setRows(rowSetBuilder.build());
+
+        filter.map(RowFilter::toPb).ifPresent(requestBuilder::setFilter);
+
+        return requestBuilder.build();
     }
 
     public static Builder builder() {
