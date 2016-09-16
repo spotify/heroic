@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
+import com.google.bigtable.admin.v2.ModifyColumnFamiliesRequest;
+import com.google.cloud.bigtable.grpc.BigtableInstanceName;
 import com.spotify.heroic.bigtable.grpc.Status;
 import com.spotify.heroic.bigtable.grpc.StatusRuntimeException;
 import eu.toolchain.async.AsyncFramework;
@@ -33,28 +35,29 @@ public class BigtableTableTableAdminClientImpl implements BigtableTableAdminClie
     final com.google.cloud.bigtable.grpc.BigtableTableAdminClient client;
 
     private final String project;
-    private final String zone;
-    private final String cluster;
+    private final String instance;
 
     private final String clusterUri;
+
+    private final BigtableInstanceName bigtableInstanceName;
 
     public BigtableTableTableAdminClientImpl(
         final AsyncFramework async,
         final com.google.cloud.bigtable.grpc.BigtableTableAdminClient client, final String project,
-        final String zone, final String cluster
+        final String instance
     ) {
         this.client = client;
         this.project = project;
-        this.zone = zone;
-        this.cluster = cluster;
-        this.clusterUri = String.format("projects/%s/zones/%s/clusters/%s", project, zone, cluster);
+        this.instance = instance;
+        this.clusterUri = String.format("projects/%s/instances/%s", project, instance);
+        this.bigtableInstanceName = new BigtableInstanceName(project, instance);
     }
 
     @Override
     public Optional<Table> getTable(String name) {
         try {
             return Optional.of(Table.fromPb(client.getTable(
-                com.google.bigtable.admin.table.v1.GetTableRequest
+                com.google.bigtable.admin.v2.GetTableRequest
                     .newBuilder()
                     .setName(Table.toURI(clusterUri, name))
                     .build())));
@@ -69,9 +72,9 @@ public class BigtableTableTableAdminClientImpl implements BigtableTableAdminClie
 
     @Override
     public Table createTable(String name) {
-        client.createTable(com.google.bigtable.admin.table.v1.CreateTableRequest
+        client.createTable(com.google.bigtable.admin.v2.CreateTableRequest
             .newBuilder()
-            .setName(clusterUri)
+            .setParent(bigtableInstanceName.toString())
             .setTableId(name)
             .build());
 
@@ -80,15 +83,16 @@ public class BigtableTableTableAdminClientImpl implements BigtableTableAdminClie
 
     @Override
     public ColumnFamily createColumnFamily(Table table, String name) {
-        // name MUST be empty during creation, do not set it.
-        final com.google.bigtable.admin.table.v1.ColumnFamily cf =
-            com.google.bigtable.admin.table.v1.ColumnFamily.newBuilder().build();
-
-        client.createColumnFamily(com.google.bigtable.admin.table.v1.CreateColumnFamilyRequest
+        final ModifyColumnFamiliesRequest.Modification modification =
+          ModifyColumnFamiliesRequest.Modification
             .newBuilder()
-            .setName(table.toURI())
-            .setColumnFamilyId(name)
-            .setColumnFamily(cf)
+            .setCreate(com.google.bigtable.admin.v2.ColumnFamily.newBuilder().build())
+            .setId(name).build();
+
+        client.modifyColumnFamily(com.google.bigtable.admin.v2.ModifyColumnFamiliesRequest
+            .newBuilder()
+            .addModifications(modification)
+            .setName(bigtableInstanceName.toTableNameStr(table.getName()))
             .build());
 
         return new ColumnFamily(clusterUri, table.getName(), name);

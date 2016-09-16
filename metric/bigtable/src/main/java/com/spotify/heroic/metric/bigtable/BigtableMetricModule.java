@@ -27,7 +27,6 @@ import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.common.DynamicModuleId;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.ModuleId;
-import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
@@ -41,7 +40,6 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
 import eu.toolchain.serializer.Serializer;
-import eu.toolchain.serializer.SerializerFramework;
 import lombok.Data;
 
 import javax.inject.Named;
@@ -57,7 +55,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
     public static final String BIGTABLE_CONFIGURE_PARAM = "bigtable.configure";
 
     public static final String DEFAULT_GROUP = "bigtable";
-    public static final String DEFAULT_CLUSTER = "heroic";
+    public static final String DEFAULT_INSTANCE = "heroic";
     public static final String DEFAULT_TABLE = "metrics";
     public static final CredentialsBuilder DEFAULT_CREDENTIALS =
         new ComputeEngineCredentialsBuilder();
@@ -66,8 +64,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
     private final Optional<String> id;
     private final Groups groups;
     private final String project;
-    private final String zone;
-    private final String cluster;
+    private final String instance;
     private final String table;
     private final CredentialsBuilder credentials;
     private final boolean configure;
@@ -76,8 +73,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
     public BigtableMetricModule(
         @JsonProperty("id") Optional<String> id, @JsonProperty("groups") Optional<Groups> groups,
         @JsonProperty("project") Optional<String> project,
-        @JsonProperty("zone") Optional<String> zone,
-        @JsonProperty("cluster") Optional<String> cluster,
+        @JsonProperty("instance") Optional<String> instance,
         @JsonProperty("table") Optional<String> table,
         @JsonProperty("credentials") Optional<CredentialsBuilder> credentials,
         @JsonProperty("configure") Optional<Boolean> configure
@@ -85,8 +81,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         this.id = id;
         this.groups = groups.orElseGet(Groups::empty).or(DEFAULT_GROUP);
         this.project = project.orElseThrow(() -> new NullPointerException("project"));
-        this.zone = zone.orElseThrow(() -> new NullPointerException("zone"));
-        this.cluster = cluster.orElse(DEFAULT_CLUSTER);
+        this.instance = instance.orElse(DEFAULT_INSTANCE);
         this.table = table.orElse(DEFAULT_TABLE);
         this.credentials = credentials.orElse(DEFAULT_CREDENTIALS);
         this.configure = configure.orElse(DEFAULT_CONFIGURE);
@@ -123,7 +118,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
                 @Override
                 public AsyncFuture<BigtableConnection> construct() throws Exception {
                     return async.call(
-                        new BigtableConnectionBuilder(project, zone, cluster, credentials, async,
+                        new BigtableConnectionBuilder(project, instance, credentials, async,
                             executorService));
                 }
 
@@ -154,10 +149,8 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
 
         @Provides
         @BigtableScope
-        public Serializer<RowKey> rowKeySerializer(
-            Serializer<Series> series, @Named("common") SerializerFramework s
-        ) {
-            return new RowKey_Serializer(s);
+        public Serializer<RowKey> rowKeySerializer() {
+           return new MetricsRowKeySerializer();
         }
 
         @Provides
@@ -186,8 +179,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         private Optional<String> id = empty();
         private Optional<Groups> groups = empty();
         private Optional<String> project = empty();
-        private Optional<String> zone = empty();
-        private Optional<String> cluster = empty();
+        private Optional<String> instance = empty();
         private Optional<String> table = empty();
         private Optional<CredentialsBuilder> credentials = empty();
         private Optional<Boolean> configure = empty();
@@ -207,13 +199,8 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
             return this;
         }
 
-        public Builder zone(String zone) {
-            this.zone = of(zone);
-            return this;
-        }
-
-        public Builder cluster(String cluster) {
-            this.cluster = of(cluster);
+        public Builder instance(String instance) {
+            this.instance = of(instance);
             return this;
         }
 
@@ -233,7 +220,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         }
 
         public BigtableMetricModule build() {
-            return new BigtableMetricModule(id, groups, project, zone, cluster, table, credentials,
+            return new BigtableMetricModule(id, groups, project, instance, table, credentials,
                 configure);
         }
     }

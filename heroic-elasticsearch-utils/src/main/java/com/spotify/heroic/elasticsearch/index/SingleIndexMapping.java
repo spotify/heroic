@@ -83,7 +83,9 @@ public class SingleIndexMapping implements IndexMapping {
     public DeleteByQueryRequestBuilder deleteByQuery(
         final Client client, DateRange range, final String type
     ) {
-        return new DeleteByQueryRequestBuilder(client, DeleteByQueryAction.INSTANCE).setIndices(index).setTypes(type);
+        return new DeleteByQueryRequestBuilder(client, DeleteByQueryAction.INSTANCE)
+            .setIndices(index)
+            .setTypes(type);
     }
 
     public static Builder builder() {

@@ -53,19 +53,6 @@ public class Chain implements Aggregation {
     }
 
     @Override
-    public Optional<Long> size() {
-        return chain.get(chain.size() - 1).size();
-    }
-
-    /**
-     * The first aggregation in the chain determines the extent.
-     */
-    @Override
-    public Optional<Long> extent() {
-        return chain.iterator().next().extent();
-    }
-
-    @Override
     public AggregationInstance apply(final AggregationContext context) {
         ListIterator<Aggregation> it = chain.listIterator(chain.size());
 

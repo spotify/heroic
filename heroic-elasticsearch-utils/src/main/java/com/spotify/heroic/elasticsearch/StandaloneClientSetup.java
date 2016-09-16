@@ -34,6 +34,7 @@ import java.net.InetAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.UUID;
 
 public class StandaloneClientSetup implements ClientSetup {
     public static final String DEFAULT_CLUSTER_NAME = "heroic-standalone";
@@ -89,6 +90,8 @@ public class StandaloneClientSetup implements ClientSetup {
             // .put("script.groovy.sandbox.enabled",
             // true)
             .put("discovery.zen.ping.multicast.enabled", false)
+            // Fixing path.home not configured error in unit test
+            .put("path.home", "/tmp/" + UUID.randomUUID())
             .build();
 
         return NodeBuilder

@@ -42,11 +42,11 @@ public class RowRange {
         return new RowRange(start, end);
     }
 
-    public com.google.bigtable.v1.RowRange toPb() {
-        final com.google.bigtable.v1.RowRange.Builder builder =
-            com.google.bigtable.v1.RowRange.newBuilder();
-        start.ifPresent(builder::setStartKey);
-        end.ifPresent(builder::setEndKey);
+    public com.google.bigtable.v2.RowRange toPb() {
+        final com.google.bigtable.v2.RowRange.Builder builder =
+            com.google.bigtable.v2.RowRange.newBuilder();
+        start.ifPresent(builder::setStartKeyClosed);
+        end.ifPresent(builder::setEndKeyOpen);
         return builder.build();
     }
 }

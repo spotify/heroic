@@ -112,7 +112,7 @@ properties.
 | -D it.bigtable.remote=true                          | Run Bigtable tests against a remote database           |
 | -D it.bigtable.project=&lt;project&gt;              | Use the given project                                  |
 | -D it.bigtable.zone=&lt;zone&gt;                    | Use the given zone                                     |
-| -D it.bigtable.cluster=&lt;cluster&gt;              | Use the given cluster                                  |
+| -D it.bigtable.instance=&lt;instance&gt;            | Use the given instance                                  |
 | -D it.bigtable.credentials=&lt;credentials&gt;      | Use the given credentials file                         |
 |-----------------------------------------------------|--------------------------------------------------------|
 
@@ -135,7 +135,7 @@ The [JVM RPC](/rpc/jvm) module is specifically designed to allow for rapid
 execution of integration tests. It allows multiple cores to be defined and
 communicate with each other in the same JVM instance.
 
-See [ClusterIT](/heroic-dist/src/test/java/com/spotify/heroic/ClusterIT.java)
+See [ClusterQueryIT](/heroic-dist/src/test/java/com/spotify/heroic/ClusterQueryIT.java)
 for a basic example of this.
 
 #### Coverage

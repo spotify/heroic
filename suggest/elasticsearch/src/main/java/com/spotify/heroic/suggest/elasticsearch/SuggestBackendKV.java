@@ -514,7 +514,8 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 for (final Terms.Bucket bucket : terms.getBuckets()) {
                     final TopHits topHits = bucket.getAggregations().get("hits");
                     final SearchHits hits = topHits.getHits();
-                    suggestions.add(new KeySuggest.Suggestion(hits.getMaxScore(), bucket.getKeyAsString()));
+                    suggestions.add(
+                        new KeySuggest.Suggestion(hits.getMaxScore(), bucket.getKeyAsString()));
                 }
 
                 return KeySuggest.of(ImmutableList.copyOf(suggestions));
@@ -695,7 +696,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
             @Override
             public QueryBuilder visitNot(final NotFilter not) {
-                return QueryBuilders.boolQuery().must(filter(not.getFilter()));
+                return QueryBuilders.boolQuery().mustNot(filter(not.getFilter()));
             }
 
             @Override
@@ -707,17 +708,20 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
             @Override
             public QueryBuilder visitStartsWith(final StartsWithFilter startsWith) {
                 return QueryBuilders.boolQuery().must(
-                    QueryBuilders.prefixQuery(TAGS, startsWith.getTag() + '\0' + startsWith.getValue()));
+                    QueryBuilders.prefixQuery(
+                        TAGS, startsWith.getTag() + '\0' + startsWith.getValue()));
             }
 
             @Override
             public QueryBuilder visitHasTag(final HasTagFilter hasTag) {
-                return QueryBuilders.boolQuery().must(QueryBuilders.termQuery(TAG_KEYS, hasTag.getTag()));
+                return QueryBuilders.boolQuery()
+                    .must(QueryBuilders.termQuery(TAG_KEYS, hasTag.getTag()));
             }
 
             @Override
             public QueryBuilder visitMatchKey(final MatchKeyFilter matchKey) {
-                return QueryBuilders.boolQuery().must(QueryBuilders.termQuery(KEY, matchKey.getValue()));
+                return QueryBuilders.boolQuery()
+                    .must(QueryBuilders.termQuery(KEY, matchKey.getValue()));
             }
 
             @Override

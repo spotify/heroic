@@ -51,18 +51,18 @@ public interface RowFilter {
         return new Chain(chain);
     }
 
-    com.google.bigtable.v1.RowFilter toPb();
+    com.google.bigtable.v2.RowFilter toPb();
 
     @Data
     static class Chain implements RowFilter {
         private final Iterable<? extends RowFilter> chain;
 
         @Override
-        public com.google.bigtable.v1.RowFilter toPb() {
-            final com.google.bigtable.v1.RowFilter.Chain.Builder chain =
-                com.google.bigtable.v1.RowFilter.Chain.newBuilder();
+        public com.google.bigtable.v2.RowFilter toPb() {
+            final com.google.bigtable.v2.RowFilter.Chain.Builder chain =
+                com.google.bigtable.v2.RowFilter.Chain.newBuilder();
             this.chain.forEach(f -> chain.addFilters(f.toPb()));
-            return com.google.bigtable.v1.RowFilter.newBuilder().setChain(chain.build()).build();
+            return com.google.bigtable.v2.RowFilter.newBuilder().setChain(chain.build()).build();
         }
     }
 
@@ -70,22 +70,22 @@ public interface RowFilter {
     static class ColumnRange implements RowFilter {
         private final String family;
 
-        private final Optional<ByteString> startQualifierInclusive;
-        private final Optional<ByteString> startQualifierExclusive;
-        private final Optional<ByteString> endQualifierInclusive;
-        private final Optional<ByteString> endQualifierExclusive;
+        private final Optional<ByteString> startQualifierClosed;
+        private final Optional<ByteString> startQualifierOpen;
+        private final Optional<ByteString> endQualifierClosed;
+        private final Optional<ByteString> endQualifierOpen;
 
         @Override
-        public com.google.bigtable.v1.RowFilter toPb() {
-            final com.google.bigtable.v1.ColumnRange.Builder builder =
-                com.google.bigtable.v1.ColumnRange.newBuilder().setFamilyName(family);
+        public com.google.bigtable.v2.RowFilter toPb() {
+            final com.google.bigtable.v2.ColumnRange.Builder builder =
+                com.google.bigtable.v2.ColumnRange.newBuilder().setFamilyName(family);
 
-            startQualifierInclusive.ifPresent(builder::setStartQualifierInclusive);
-            startQualifierExclusive.ifPresent(builder::setStartQualifierExclusive);
-            endQualifierInclusive.ifPresent(builder::setEndQualifierInclusive);
-            endQualifierExclusive.ifPresent(builder::setEndQualifierExclusive);
+            startQualifierClosed.ifPresent(builder::setStartQualifierClosed);
+            startQualifierOpen.ifPresent(builder::setStartQualifierOpen);
+            endQualifierClosed.ifPresent(builder::setEndQualifierClosed);
+            endQualifierOpen.ifPresent(builder::setEndQualifierOpen);
 
-            return com.google.bigtable.v1.RowFilter
+            return com.google.bigtable.v2.RowFilter
                 .newBuilder()
                 .setColumnRangeFilter(builder.build())
                 .build();
@@ -95,34 +95,34 @@ public interface RowFilter {
         public static class Builder {
             private final String family;
 
-            private Optional<ByteString> startQualifierInclusive = Optional.empty();
-            private Optional<ByteString> startQualifierExclusive = Optional.empty();
-            private Optional<ByteString> endQualifierInclusive = Optional.empty();
-            private Optional<ByteString> endQualifierExclusive = Optional.empty();
+            private Optional<ByteString> startQualifierClosed = Optional.empty();
+            private Optional<ByteString> startQualifierOpen = Optional.empty();
+            private Optional<ByteString> endQualifierClosed = Optional.empty();
+            private Optional<ByteString> endQualifierOpen = Optional.empty();
 
-            public Builder startQualifierInclusive(final ByteString startQualifierInclusive) {
-                this.startQualifierInclusive = Optional.of(startQualifierInclusive);
+            public Builder startQualifierClosed(final ByteString startQualifierClosed) {
+                this.startQualifierClosed = Optional.of(startQualifierClosed);
                 return this;
             }
 
-            public Builder startQualifierExclusive(final ByteString startQualifierExclusive) {
-                this.startQualifierExclusive = Optional.of(startQualifierExclusive);
+            public Builder startQualifierOpen(final ByteString startQualifierOpen) {
+                this.startQualifierOpen = Optional.of(startQualifierOpen);
                 return this;
             }
 
-            public Builder endQualifierInclusive(final ByteString endQualifierInclusive) {
-                this.endQualifierInclusive = Optional.of(endQualifierInclusive);
+            public Builder endQualifierClosed(final ByteString endQualifierClosed) {
+                this.endQualifierClosed = Optional.of(endQualifierClosed);
                 return this;
             }
 
-            public Builder endQualifierExclusive(final ByteString endQualifierExclusive) {
-                this.endQualifierExclusive = Optional.of(endQualifierExclusive);
+            public Builder endQualifierOpen(final ByteString endQualifierOpen) {
+                this.endQualifierOpen = Optional.of(endQualifierOpen);
                 return this;
             }
 
             public ColumnRange build() {
-                return new ColumnRange(family, startQualifierInclusive, startQualifierExclusive,
-                    endQualifierInclusive, endQualifierExclusive);
+                return new ColumnRange(family, startQualifierClosed, startQualifierOpen,
+                    endQualifierClosed, endQualifierOpen);
             }
         }
     }
@@ -130,8 +130,8 @@ public interface RowFilter {
     @Data
     public class BlockAll implements RowFilter {
         @Override
-        public com.google.bigtable.v1.RowFilter toPb() {
-            return com.google.bigtable.v1.RowFilter.newBuilder().setBlockAllFilter(true).build();
+        public com.google.bigtable.v2.RowFilter toPb() {
+            return com.google.bigtable.v2.RowFilter.newBuilder().setBlockAllFilter(true).build();
         }
     }
 }

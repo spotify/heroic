@@ -54,7 +54,10 @@ public class TransportClientSetup implements ClientSetup {
     public Client setup() throws Exception {
         final Settings settings = Settings.builder().put("cluster.name", clusterName).build();
 
-        final TransportClient client = TransportClient.builder().settings(settings).addPlugin(DeleteByQueryPlugin.class).build();
+        final TransportClient client = TransportClient.builder()
+            .settings(settings)
+            .addPlugin(DeleteByQueryPlugin.class)
+            .build();
 
         for (final InetSocketTransportAddress seed : seeds) {
             client.addTransportAddress(seed);
@@ -73,7 +76,8 @@ public class TransportClientSetup implements ClientSetup {
     private static InetSocketTransportAddress parseInetSocketTransportAddress(final String seed) {
         if (seed.contains(":")) {
             final String[] parts = seed.split(":");
-            return new InetSocketTransportAddress(new InetSocketAddress(parts[0], Integer.parseInt(parts[1])));
+            return new InetSocketTransportAddress(
+                new InetSocketAddress(parts[0], Integer.parseInt(parts[1])));
         }
 
         return new InetSocketTransportAddress(new InetSocketAddress(seed, DEFAULT_PORT));

@@ -21,14 +21,13 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
-import com.google.bigtable.v1.ReadModifyWriteRowRequest;
+import com.google.bigtable.v2.ReadModifyWriteRowRequest;
 import com.google.cloud.bigtable.grpc.scanner.ResultScanner;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.Empty;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.async.AsyncObserver;
 import eu.toolchain.async.AsyncFramework;
@@ -50,18 +49,18 @@ public class BigtableDataClientImpl implements BigtableDataClient {
 
     public BigtableDataClientImpl(
         final AsyncFramework async, final com.google.cloud.bigtable.grpc.BigtableDataClient client,
-        final String project, final String zone, final String cluster
+        final String project, final String cluster
     ) {
         this.async = async;
         this.client = client;
-        this.clusterUri = String.format("projects/%s/zones/%s/clusters/%s", project, zone, cluster);
+        this.clusterUri = String.format("projects/%s/instances/%s", project, cluster);
     }
 
     @Override
     public AsyncFuture<Void> mutateRow(
         String tableName, ByteString rowKey, Mutations mutations
     ) {
-        return convertEmpty(client.mutateRowAsync(com.google.bigtable.v1.MutateRowRequest
+        return convertVoid(client.mutateRowAsync(com.google.bigtable.v2.MutateRowRequest
             .newBuilder()
             .setTableName(Table.toURI(clusterUri, tableName))
             .setRowKey(rowKey)
@@ -85,7 +84,7 @@ public class BigtableDataClientImpl implements BigtableDataClient {
             .setTableName(Table.toURI(clusterUri, tableName))
             .setRowKey(rowKey)
             .addAllRules(rules.getRules())
-            .build())).directTransform(r -> convertRow(r));
+            .build())).directTransform(r -> convertRow(r.getRow()));
     }
 
     @Override
@@ -93,7 +92,7 @@ public class BigtableDataClientImpl implements BigtableDataClient {
         final String tableName, final ReadRowsRequest request
     ) {
         return observer -> {
-            final ResultScanner<com.google.bigtable.v1.Row> s =
+            final ResultScanner<com.google.bigtable.v2.Row> s =
                 client.readRows(request.toPb(Table.toURI(clusterUri, tableName)));
 
             final ResultScanner<Row> scanner = new ResultScanner<Row>() {
@@ -104,7 +103,7 @@ public class BigtableDataClientImpl implements BigtableDataClient {
 
                 @Override
                 public Row next() throws IOException {
-                    final com.google.bigtable.v1.Row n = s.next();
+                    final com.google.bigtable.v2.Row n = s.next();
 
                     if (n == null) {
                         return null;
@@ -115,7 +114,7 @@ public class BigtableDataClientImpl implements BigtableDataClient {
 
                 @Override
                 public Row[] next(int count) throws IOException {
-                    final com.google.bigtable.v1.Row[] rows = s.next(count);
+                    final com.google.bigtable.v2.Row[] rows = s.next(count);
 
                     final Row[] results = new Row[rows.length];
 
@@ -137,12 +136,12 @@ public class BigtableDataClientImpl implements BigtableDataClient {
     }
 
     AsyncFuture<List<Row>> convertRows(
-        final ListenableFuture<List<com.google.bigtable.v1.Row>> readRowsAsync
+        final ListenableFuture<List<com.google.bigtable.v2.Row>> readRowsAsync
     ) {
         return convert(readRowsAsync).directTransform(result -> {
             final List<Row> rows = new ArrayList<>();
 
-            for (final com.google.bigtable.v1.Row row : result) {
+            for (final com.google.bigtable.v2.Row row : result) {
                 rows.add(convertRow(row));
             }
 
@@ -150,10 +149,10 @@ public class BigtableDataClientImpl implements BigtableDataClient {
         });
     }
 
-    Row convertRow(final com.google.bigtable.v1.Row row) {
+    Row convertRow(final com.google.bigtable.v2.Row row) {
         final ImmutableMap.Builder<String, Family> families = ImmutableMap.builder();
 
-        for (final com.google.bigtable.v1.Family family : row.getFamiliesList()) {
+        for (final com.google.bigtable.v2.Family family : row.getFamiliesList()) {
             families.put(family.getName(), new Family(family.getName(), family.getColumnsList()));
         }
 
@@ -219,12 +218,12 @@ public class BigtableDataClientImpl implements BigtableDataClient {
         return future;
     }
 
-    private AsyncFuture<Void> convertEmpty(final ListenableFuture<Empty> request) {
+    private <T> AsyncFuture<Void> convertVoid(final ListenableFuture<T> request) {
         final ResolvableFuture<Void> future = async.future();
 
-        Futures.addCallback(request, new FutureCallback<Empty>() {
+        Futures.addCallback(request, new FutureCallback<T>() {
             @Override
-            public void onSuccess(Empty result) {
+            public void onSuccess(T result) {
                 future.resolve(null);
             }
 

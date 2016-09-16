@@ -55,7 +55,7 @@ public class Table {
         return Optional.ofNullable(columnFamilies.get(name));
     }
 
-    public static Table fromPb(com.google.bigtable.admin.table.v1.Table table) {
+    public static Table fromPb(com.google.bigtable.admin.v2.Table table) {
         final Matcher m = TABLE_NAME_PATTERN.matcher(table.getName());
 
         if (!m.matches()) {
@@ -67,10 +67,10 @@ public class Table {
 
         final ImmutableMap.Builder<String, ColumnFamily> columnFamilies = ImmutableMap.builder();
 
-        for (final Entry<String, com.google.bigtable.admin.table.v1.ColumnFamily> e : table
-            .getColumnFamilies()
+        for (final Entry<String, com.google.bigtable.admin.v2.ColumnFamily> e : table
+            .getColumnFamiliesMap()
             .entrySet()) {
-            final ColumnFamily columnFamily = ColumnFamily.fromPb(e.getValue());
+            final ColumnFamily columnFamily = new ColumnFamily(cluster, tableId, e.getKey());
             columnFamilies.put(columnFamily.getName(), columnFamily);
         }
 

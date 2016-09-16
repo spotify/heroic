@@ -44,16 +44,6 @@ public abstract class SamplingAggregation implements Aggregation {
         return apply(context, s.convert(TimeUnit.MILLISECONDS), e.convert(TimeUnit.MILLISECONDS));
     }
 
-    @Override
-    public Optional<Long> size() {
-        return size.map(Duration::toMilliseconds);
-    }
-
-    @Override
-    public Optional<Long> extent() {
-        return extent.map(Duration::toMilliseconds);
-    }
-
     protected abstract AggregationInstance apply(
         AggregationContext context, long size, long extent
     );
