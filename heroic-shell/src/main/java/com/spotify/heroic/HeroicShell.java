@@ -115,6 +115,7 @@ public class HeroicShell {
             try {
                 interactive(params, bridge);
             } catch (Exception e) {
+                log.error("Error when running shell", e);
                 System.exit(1);
             }
             System.exit(0);
@@ -185,7 +186,6 @@ public class HeroicShell {
         try {
             runInteractiveShell(core);
         } catch (final Exception inner) {
-            log.error("Error when running shell", inner);
             e = inner;
         }
 
@@ -194,13 +194,11 @@ public class HeroicShell {
         try {
             core.shutdown();
         } catch (final Exception inner) {
-            log.error("Failed to close core bridge", inner);
             if (e != null) {
                 inner.addSuppressed(e);
             }
             e = inner;
         }
-
         if (e != null) {
             throw e;
         }
