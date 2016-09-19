@@ -81,6 +81,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 
+@BigtableScope
 @ToString(of = {"connection"})
 @Slf4j
 public class BigtableBackend extends AbstractMetricBackend implements LifeCycles {
