@@ -74,4 +74,8 @@ public class FunctionExpression implements Expression {
     public Optional<Expression> keyword(final String key) {
         return Optional.ofNullable(keywords.get(key));
     }
+
+    public FunctionExpression withKeywords(final Map<String, Expression> keywords) {
+        return new FunctionExpression(context, name, arguments, keywords);
+    }
 }

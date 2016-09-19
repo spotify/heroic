@@ -6,24 +6,11 @@ statements
 
 statement
     : Let expr Eq query #LetStatement
-    | query             #QueryStatemnet
-    ;
-
-expressionOnly
-    : expr EOF
-    ;
-
-filterOnly
-    : filter EOF
+    | query             #QueryStatement
     ;
 
 query
-    : select from? where? with? as?
-    ;
-
-select
-    : Mul  # SelectAll
-    | expr # SelectExpression
+    : select=expr from? where? with? as?
     ;
 
 from
@@ -47,22 +34,22 @@ keyValues
     ;
 
 filter
-    : LParen filter RParen #FilterPrecedence
-    | filter Or filter     #FilterOr
-    | filter And filter    #FilterAnd
-    | expr Eq expr         #FilterEq
-    | expr NotEq expr      #FilterNotEq
-    | SKey Eq expr         #FilterKeyEq
-    | SKey NotEq expr      #FilterKeyNotEq
-    | Plus expr            #FilterHas
-    | expr Prefix expr     #FilterPrefix
-    | expr NotPrefix expr  #FilterNotPrefix
-    | expr Regex expr      #FilterRegex
-    | expr NotRegex expr   #FilterNotRegex
-    | expr In expr         #FilterIn
-    | expr Not In expr     #FilterNotIn
-    | (True | False)       #FilterBoolean
-    | Bang filter          #FilterNot
+    : LParen filter RParen           #FilterPrecedence
+    | left=filter Or right=filter    #FilterOr
+    | left=filter And right=filter   #FilterAnd
+    | key=expr Eq value=expr         #FilterEq
+    | key=expr NotEq value=expr      #FilterNotEq
+    | SKey Eq expr                   #FilterKeyEq
+    | SKey NotEq expr                #FilterKeyNotEq
+    | Plus expr                      #FilterHas
+    | key=expr Prefix value=expr     #FilterPrefix
+    | key=expr NotPrefix value=expr  #FilterNotPrefix
+    | key=expr Regex value=expr      #FilterRegex
+    | key=expr NotRegex value=expr   #FilterNotRegex
+    | key=expr In value=expr         #FilterIn
+    | key=expr Not In value=expr     #FilterNotIn
+    | (True | False)                 #FilterBoolean
+    | Bang filter                    #FilterNot
     ;
 
 string
@@ -76,100 +63,64 @@ keyValue
     ;
 
 expr
-    : LParen expr RParen                            #ExpressionPrecedence
-    | Duration                                      #ExpressionDuration
-    | Integer                                       #ExpressionInteger
-    | Float                                         #ExpressionFloat
-    | string                                        #ExpressionString
-    | Reference                                     #ExpressionReference
-    | LCurly TimeLiteral RCurly                     #ExpressionTime
-    | LCurly DateTimeLiteral RCurly                 #ExpressionDateTime
-    | LBracket (expr (Comma expr)*)? RBracket       #ExpressionList
-    | LCurly (expr (Comma expr)*)? RCurly           #ExpressionList
-    | Minus expr                                    #ExpressionNegate
-    | expr (Div | Mul) expr                         #ExpressionDivMul
-    | expr (Plus | Minus) expr                      #ExpressionPlusMinus
-    | expr By expr                                  #AggregationBy
-    | expr By Mul                                   #AggregationByAll
-    | expr (Pipe expr)+                             #AggregationPipe
-    | Identifier (LParen functionArguments RParen)? #ExpressionFunction
-    ;
-
-functionArguments
-    : expr (Comma expr)* (Comma keyValue)*
-    | keyValue (Comma keyValue)*
+    : LParen expr RParen                                                  #ExpressionPrecedence
+    | Duration                                                            #ExpressionDuration
+    | Integer                                                             #ExpressionInteger
+    | Float                                                               #ExpressionFloat
+    | string                                                              #ExpressionString
+    | Reference                                                           #ExpressionReference
+    | LCurly TimeLiteral RCurly                                           #ExpressionTime
+    | LCurly DateTimeLiteral RCurly                                       #ExpressionDateTime
+    | LBracket (expr (Comma expr)*)? RBracket                             #ExpressionList
+    | LCurly (expr (Comma expr)*)? RCurly                                 #ExpressionList
+    | Minus expr                                                          #ExpressionNegate
+    | left=expr operator=(Div | Mul) right=expr                           #ExpressionDivMul
+    | left=expr operator=(Plus | Minus) right=expr                        #ExpressionPlusMinus
+    | expression=expr By grouping=expr                                    #ExpressionBy
+    | expr (Pipe expr)+                                                   #ExpressionPipe
+    | Identifier (LParen (expr (Comma expr)*)? (Comma keyValue)* RParen)? #ExpressionFunction
+    | Identifier (LParen (keyValue (Comma keyValue)*)? RParen)?           #ExpressionFunction
+    | Mul                                                                 #ExpressionAny
     ;
 
 sourceRange
-    : LParen expr RParen            #SourceRangeRelative
-    | LParen expr Comma expr RParen #SourceRangeAbsolute
+    : LParen distance=expr RParen             #SourceRangeRelative
+    | LParen start=expr Comma end=expr RParen #SourceRangeAbsolute
     ;
 
-// keywords (must come before SimpleString!)
+// keywords (must come before other literals)
 Let : 'let' ;
-
 As : 'as' ;
-
 True : 'true' ;
-
 False : 'false' ;
-
 Where : 'where' ;
-
 With : 'with' ;
-
 From : 'from' ;
-
 Or : 'or' ;
-
 And : 'and' ;
-
 Not : 'not' ;
-
 In : 'in' ;
-
 By : 'by' ;
-
 Plus : '+' ;
-
 Minus : '-' ;
-
 Div : '/' ;
-
 Mul : '*' ;
-
 Eq : '=' ;
-
 Regex : '~' ;
-
 NotRegex : '!~' ;
-
 Prefix : '^' ;
-
 NotPrefix : '!^' ;
-
 Bang : '!' ;
-
 NotEq : '!=' ;
-
 StatementSeparator : ';' ;
-
 Comma : ',' ;
-
 LParen : '(' ;
-
 RParen : ')' ;
-
 LCurly : '{' ;
-
 RCurly : '}' ;
-
 LBracket : '[' ;
-
 RBracket : ']' ;
-
 Pipe : '|' ;
-
 SKey : '$key' ;
 
 // Only HH:MM:ss.SSS

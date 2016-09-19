@@ -23,7 +23,7 @@ package com.spotify.heroic.grammar;
 
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.MetricType;
-import lombok.Data;
+
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.BailErrorStrategy;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -31,12 +31,15 @@ import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
-import org.antlr.v4.runtime.tree.ParseTreeWalker;
+import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 
-import javax.inject.Inject;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+
+import javax.inject.Inject;
+
+import lombok.Data;
 
 public class CoreQueryParser implements QueryParser {
     @Inject
@@ -45,33 +48,32 @@ public class CoreQueryParser implements QueryParser {
 
     @Override
     public List<Expression> parse(String statements) {
-        return parse(HeroicQueryParser::statements, statements)
-            .pop(QueryListener.Statements.class)
-            .getExpressions();
+        return parse(HeroicQueryParser::statements, Visitors.STATEMENTS,
+            statements).getExpressions();
     }
 
     @Override
     public Filter parseFilter(String filter) {
-        return parse(HeroicQueryParser::filterOnly, filter).pop(Filter.class).optimize();
+        return parse(HeroicQueryParser::filter, Visitors.FILTER, filter).optimize();
     }
 
     FromDSL parseFrom(final String input) {
-        final QueryListener listener = parse(HeroicQueryParser::from, input);
-        listener.popMark(QueryListener.QueryMark.FROM);
-        final MetricType source = listener.pop(MetricType.class);
-        final Optional<RangeExpression> range = listener.popOptional(RangeExpression.class);
-        return new FromDSL(source, range);
+        final Visitors.From from = parse(HeroicQueryParser::from, Visitors.FROM, input);
+        return new FromDSL(from.getType(), from.getRange());
     }
 
     QueryExpression parseQuery(final String input) {
-        return parse(HeroicQueryParser::query, input).pop(QueryExpression.class);
+        return parse(HeroicQueryParser::query, Visitors.EXPRESSION, input).cast(
+            QueryExpression.class);
     }
 
     Expression parseExpression(final String input) {
-        return parse(HeroicQueryParser::expressionOnly, input).pop(Expression.class);
+        return parse(HeroicQueryParser::expr, Visitors.EXPRESSION, input);
     }
 
-    private QueryListener parse(Function<HeroicQueryParser, ParserRuleContext> op, String input) {
+    private <T> T parse(
+        Function<HeroicQueryParser, ParserRuleContext> op, ParseTreeVisitor<T> visitor, String input
+    ) {
         final HeroicQueryLexer lexer = new HeroicQueryLexer(new ANTLRInputStream(input));
 
         final CommonTokenStream tokens = new CommonTokenStream(lexer);
@@ -92,19 +94,15 @@ public class CoreQueryParser implements QueryParser {
             throw toParseException((RecognitionException) e.getCause());
         }
 
-        final QueryListener listener = new QueryListener();
-
-        ParseTreeWalker.DEFAULT.walk(listener, context);
-
         final Token last = lexer.getToken();
 
         if (last.getType() != Token.EOF) {
             throw new ParseException(
-                String.format("garbage at end of string: '%s'", last.getText()), null,
+                String.format("Garbage at end of string: '%s'", last.getText()), null,
                 last.getLine(), last.getCharPositionInLine());
         }
 
-        return listener;
+        return context.accept(visitor);
     }
 
     private ParseException toParseException(final RecognitionException e) {
@@ -117,12 +115,6 @@ public class CoreQueryParser implements QueryParser {
 
         return new ParseException("unexpected token: " + token.getText(), null, token.getLine(),
             token.getCharPositionInLine());
-    }
-
-    public interface Operation<T> {
-        ParserRuleContext context(HeroicQueryParser parser);
-
-        T convert(final QueryListener listener);
     }
 
     @Data

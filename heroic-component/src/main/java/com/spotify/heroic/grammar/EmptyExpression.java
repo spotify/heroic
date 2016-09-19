@@ -22,13 +22,19 @@
 package com.spotify.heroic.grammar;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import java.util.Optional;
 import lombok.Data;
 
-import java.util.Optional;
-
+/**
+ * Type that represents the any '*' expression.
+ */
 @Data
 @JsonTypeName("empty")
 public class EmptyExpression implements Expression {
+    public static final String EMPTY = "empty";
+
     private final Context context;
 
     @Override
@@ -42,6 +48,11 @@ public class EmptyExpression implements Expression {
             return (T) this;
         }
 
+        if (to.equals(FunctionExpression.class)) {
+            return (T) new FunctionExpression(context, EMPTY, ImmutableList.of(),
+                ImmutableMap.of());
+        }
+
         throw context.castError(this, to);
     }
 
@@ -52,6 +63,6 @@ public class EmptyExpression implements Expression {
 
     @Override
     public String toRepr() {
-        return "empty";
+        return "*";
     }
 }

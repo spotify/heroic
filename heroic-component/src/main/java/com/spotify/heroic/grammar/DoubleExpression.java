@@ -27,9 +27,7 @@ import lombok.Data;
 import java.util.concurrent.TimeUnit;
 
 /**
- * int's are represented internally as longs.
- *
- * @author udoprog
+ * Floating point number expressions.
  */
 @Data
 @JsonTypeName("double")

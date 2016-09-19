@@ -30,15 +30,14 @@ import com.spotify.heroic.aggregation.SamplingAggregationDSL;
 import com.spotify.heroic.aggregation.SamplingQuery;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.dagger.LoadingComponent;
-import com.spotify.heroic.grammar.DoubleExpression;
 import com.spotify.heroic.grammar.Expression;
+import com.spotify.heroic.grammar.DoubleExpression;
 import com.spotify.heroic.grammar.IntegerExpression;
 import dagger.Component;
 import eu.toolchain.serializer.SerializerFramework;
-
+import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Named;
-import java.util.Optional;
 
 public class Module implements HeroicModule {
     @Override

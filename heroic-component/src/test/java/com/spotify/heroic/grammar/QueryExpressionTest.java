@@ -1,10 +1,13 @@
 package com.spotify.heroic.grammar;
 
 import com.google.common.collect.ImmutableMap;
+
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.MetricType;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import java.util.Map;
@@ -15,7 +18,7 @@ import static org.junit.Assert.assertEquals;
 
 @RunWith(MockitoJUnitRunner.class)
 public class QueryExpressionTest extends AbstractExpressionTest<QueryExpression> {
-    final Optional<Expression> select = Optional.empty();
+    final Expression select = Mockito.mock(Expression.class);
     final Optional<MetricType> source = Optional.empty();
     final Optional<RangeExpression> range = Optional.empty();
     final Optional<Filter> filter = Optional.empty();
