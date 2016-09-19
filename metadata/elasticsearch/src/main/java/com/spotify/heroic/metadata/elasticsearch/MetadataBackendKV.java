@@ -77,7 +77,6 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
@@ -96,6 +95,12 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+
+import static org.elasticsearch.index.query.QueryBuilders.boolQuery;
+import static org.elasticsearch.index.query.QueryBuilders.filteredQuery;
+import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
+import static org.elasticsearch.index.query.QueryBuilders.prefixQuery;
+import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 
 @ElasticsearchScope
 @ToString(of = {"connection"})
@@ -222,7 +227,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
             final CountRequestBuilder builder = c.count(filter.getRange(), TYPE_METADATA);
             limit.asInteger().ifPresent(builder::setTerminateAfter);
 
-            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+            builder.setQuery(filteredQuery(matchAllQuery(), f));
 
             return bind(builder.execute()).directTransform(
                 response -> CountSeries.of(response.getCount(), false));
@@ -269,7 +274,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
             final DeleteByQueryRequestBuilder builder =
                 c.deleteByQuery(request.getRange(), TYPE_METADATA);
 
-            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+            builder.setQuery(filteredQuery(matchAllQuery(), f));
 
             return bind(builder.execute()).directTransform(response -> DeleteSeries.of());
         });
@@ -283,7 +288,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
             final SearchRequestBuilder builder =
                 c.search(request.getRange(), TYPE_METADATA).setSearchType("count");
 
-            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+            builder.setQuery(filteredQuery(matchAllQuery(), f));
 
             {
                 final AggregationBuilder<?> terms =
@@ -338,7 +343,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                 .setSearchType(SearchType.SCAN);
 
             builder.setSize(limit.asMaxInteger(SCROLL_SIZE));
-            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+            builder.setQuery(filteredQuery(matchAllQuery(), f));
 
             modifier.accept(builder);
 
@@ -360,7 +365,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                 .setSearchType(SearchType.SCAN);
 
             builder.setSize(limit.asMaxInteger(SCROLL_SIZE));
-            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), filter));
+            builder.setQuery(filteredQuery(matchAllQuery(), filter));
 
             modifier.accept(builder);
 
@@ -440,18 +445,18 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         new Filter.Visitor<QueryBuilder>() {
             @Override
             public QueryBuilder visitTrue(final TrueFilter t) {
-                return QueryBuilders.boolQuery().must(QueryBuilders.matchAllQuery());
+                return boolQuery().must(matchAllQuery());
             }
 
             @Override
             public QueryBuilder visitFalse(final FalseFilter f) {
-                return QueryBuilders.boolQuery().mustNot(QueryBuilders.matchAllQuery());
+                return boolQuery().mustNot(matchAllQuery());
             }
 
             @Override
             public QueryBuilder visitAnd(final AndFilter and) {
                 QueryBuilder[] andQueryBuilders = convertTerms(and.terms());
-                BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+                BoolQueryBuilder boolQueryBuilder = boolQuery();
                 for (QueryBuilder andQueryBuilder : andQueryBuilders) {
                     boolQueryBuilder.must(andQueryBuilder);
                 }
@@ -461,7 +466,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
             @Override
             public QueryBuilder visitOr(final OrFilter or) {
                 QueryBuilder[] orQueryBuilders = convertTerms(or.terms());
-                BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+                BoolQueryBuilder boolQueryBuilder = boolQuery();
                 for (QueryBuilder andQueryBuilder : orQueryBuilders) {
                     boolQueryBuilder.should(andQueryBuilder);
                 }
@@ -470,31 +475,29 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
             @Override
             public QueryBuilder visitNot(final NotFilter not) {
-                return QueryBuilders.boolQuery().mustNot(not.getFilter().visit(this));
+                return boolQuery().mustNot(not.getFilter().visit(this));
             }
 
             @Override
             public QueryBuilder visitMatchTag(final MatchTagFilter matchTag) {
-                return QueryBuilders.boolQuery().must(QueryBuilders.termQuery(
-                        TAGS, matchTag.getTag() + TAG_DELIMITER + matchTag.getValue()));
+                return boolQuery().must(
+                    termQuery(TAGS, matchTag.getTag() + TAG_DELIMITER + matchTag.getValue()));
             }
 
             @Override
             public QueryBuilder visitStartsWith(final StartsWithFilter startsWith) {
-                return QueryBuilders.boolQuery().must(QueryBuilders.prefixQuery(
-                        TAGS, startsWith.getTag() + TAG_DELIMITER + startsWith.getValue()));
+                return boolQuery().must(
+                    prefixQuery(TAGS, startsWith.getTag() + TAG_DELIMITER + startsWith.getValue()));
             }
 
             @Override
             public QueryBuilder visitHasTag(final HasTagFilter hasTag) {
-                return QueryBuilders.boolQuery()
-                    .must(QueryBuilders.termQuery(TAG_KEYS, hasTag.getTag()));
+                return boolQuery().must(termQuery(TAG_KEYS, hasTag.getTag()));
             }
 
             @Override
             public QueryBuilder visitMatchKey(final MatchKeyFilter matchKey) {
-                return QueryBuilders.boolQuery()
-                    .must(QueryBuilders.termQuery(KEY, matchKey.getValue()));
+                return boolQuery().must(termQuery(KEY, matchKey.getValue()));
             }
 
             @Override

@@ -81,7 +81,8 @@ public class StandaloneClientSetup implements ClientSetup {
 
     @Override
     public Client setup() throws Exception {
-        final Settings settings = Settings.builder()
+        final Settings settings = Settings
+            .builder()
             .put("path.logs", root.resolve("logs"))
             .put("path.data", root.resolve("data"))
             .put("node.name", InetAddress.getLocalHost().getHostName())
@@ -91,7 +92,7 @@ public class StandaloneClientSetup implements ClientSetup {
             // true)
             .put("discovery.zen.ping.multicast.enabled", false)
             // Fixing path.home not configured error in unit test
-            .put("path.home", "/tmp/" + UUID.randomUUID())
+            .put("path.home", Files.createTempDirectory("tmp"))
             .build();
 
         return NodeBuilder
