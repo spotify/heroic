@@ -29,8 +29,8 @@ import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeBuilder;
 
 import java.net.InetAddress;
+import java.nio.file.Files;
 import java.util.List;
-import java.util.UUID;
 
 public class NodeClientSetup implements ClientSetup {
     public static final String DEFAULT_CLUSTER_NAME = "elasticsearch";
@@ -46,12 +46,13 @@ public class NodeClientSetup implements ClientSetup {
 
     @Override
     public Client setup() throws Exception {
-        final Settings settings = Settings.builder()
+        final Settings settings = Settings
+            .builder()
             .put("node.name", InetAddress.getLocalHost().getHostName())
             .put("discovery.zen.ping.multicast.enabled", false)
             .putArray("discovery.zen.ping.unicast.hosts", seeds)
             // Fixing path.home not configured error in unit test
-            .put("path.home", "/tmp/" + UUID.randomUUID())
+            .put("path.home", Files.createTempDirectory("tmp"))
             .build();
 
         final Node node = NodeBuilder

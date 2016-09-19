@@ -108,9 +108,11 @@ import java.util.stream.Collectors;
 
 import static com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestUtils.loadJsonResource;
 import static com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestUtils.variables;
+
 import static org.elasticsearch.index.query.QueryBuilders.boolQuery;
 import static org.elasticsearch.index.query.QueryBuilders.filteredQuery;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
+import static org.elasticsearch.index.query.QueryBuilders.prefixQuery;
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 
 @ElasticsearchScope
@@ -196,14 +198,14 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     @Override
     public AsyncFuture<TagValuesSuggest> tagValuesSuggest(final TagValuesSuggest.Request request) {
         return connection.doto((final Connection c) -> {
-            final BoolQueryBuilder bool = QueryBuilders.boolQuery();
+            final BoolQueryBuilder bool = boolQuery();
 
             if (!(request.getFilter() instanceof TrueFilter)) {
                 bool.must(filter(request.getFilter()));
             }
 
             for (final String e : request.getExclude()) {
-                bool.mustNot(QueryBuilders.termQuery(TAG_SKEY_RAW, e));
+                bool.mustNot(termQuery(TAG_SKEY_RAW, e));
             }
 
             final QueryBuilder query =
@@ -666,17 +668,17 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
         new Filter.Visitor<QueryBuilder>() {
             @Override
             public QueryBuilder visitTrue(final TrueFilter t) {
-                return QueryBuilders.boolQuery().must(QueryBuilders.matchAllQuery());
+                return boolQuery().must(matchAllQuery());
             }
 
             @Override
             public QueryBuilder visitFalse(final FalseFilter f) {
-                return QueryBuilders.boolQuery().mustNot(QueryBuilders.matchAllQuery());
+                return boolQuery().mustNot(matchAllQuery());
             }
 
             @Override
             public QueryBuilder visitAnd(final AndFilter and) {
-                BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+                BoolQueryBuilder boolQueryBuilder = boolQuery();
                 for (final Filter stmt : and.terms()) {
                     boolQueryBuilder.must(filter(stmt));
                 }
@@ -686,7 +688,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
             @Override
             public QueryBuilder visitOr(final OrFilter or) {
-                BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+                BoolQueryBuilder boolQueryBuilder = boolQuery();
                 for (final Filter stmt : or.terms()) {
                     boolQueryBuilder.should(filter(stmt));
                 }
@@ -696,32 +698,29 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
             @Override
             public QueryBuilder visitNot(final NotFilter not) {
-                return QueryBuilders.boolQuery().mustNot(filter(not.getFilter()));
+                return boolQuery().mustNot(filter(not.getFilter()));
             }
 
             @Override
             public QueryBuilder visitMatchTag(final MatchTagFilter matchTag) {
-                return QueryBuilders.boolQuery().must(
-                    QueryBuilders.termQuery(TAGS, matchTag.getTag() + '\0' + matchTag.getValue()));
+                return boolQuery()
+                    .must(termQuery(TAGS, matchTag.getTag() + '\0' + matchTag.getValue()));
             }
 
             @Override
             public QueryBuilder visitStartsWith(final StartsWithFilter startsWith) {
-                return QueryBuilders.boolQuery().must(
-                    QueryBuilders.prefixQuery(
-                        TAGS, startsWith.getTag() + '\0' + startsWith.getValue()));
+                return boolQuery()
+                    .must(prefixQuery(TAGS, startsWith.getTag() + '\0' + startsWith.getValue()));
             }
 
             @Override
             public QueryBuilder visitHasTag(final HasTagFilter hasTag) {
-                return QueryBuilders.boolQuery()
-                    .must(QueryBuilders.termQuery(TAG_KEYS, hasTag.getTag()));
+                return boolQuery().must(termQuery(TAG_KEYS, hasTag.getTag()));
             }
 
             @Override
             public QueryBuilder visitMatchKey(final MatchKeyFilter matchKey) {
-                return QueryBuilders.boolQuery()
-                    .must(QueryBuilders.termQuery(KEY, matchKey.getValue()));
+                return boolQuery().must(termQuery(KEY, matchKey.getValue()));
             }
 
             @Override
