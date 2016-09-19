@@ -31,7 +31,6 @@ import org.elasticsearch.node.NodeBuilder;
 import java.net.InetAddress;
 import java.nio.file.Files;
 import java.util.List;
-import java.util.UUID;
 
 public class NodeClientSetup implements ClientSetup {
     public static final String DEFAULT_CLUSTER_NAME = "elasticsearch";
