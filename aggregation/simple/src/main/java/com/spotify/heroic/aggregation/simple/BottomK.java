@@ -26,15 +26,24 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationContext;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
+
+import java.util.Optional;
+
+import static com.spotify.heroic.aggregation.simple.Aggregations.verifyNoChild;
 
 @Data
+@RequiredArgsConstructor
 public class BottomK implements Aggregation {
     public static final String NAME = "bottomk";
 
     private final long k;
 
     @JsonCreator
-    public BottomK(@JsonProperty("k") long k) {
+    public BottomK(
+        @JsonProperty("k") long k, @JsonProperty("of") Optional<Aggregation> aggregation
+    ) {
+        verifyNoChild("of", aggregation);
         this.k = k;
     }
 
