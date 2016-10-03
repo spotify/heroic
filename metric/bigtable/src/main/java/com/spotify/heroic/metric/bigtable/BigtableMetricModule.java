@@ -60,6 +60,8 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
     public static final CredentialsBuilder DEFAULT_CREDENTIALS =
         new ComputeEngineCredentialsBuilder();
     public static final boolean DEFAULT_CONFIGURE = false;
+    public static final boolean DEFAULT_DISABLE_BULK_MUTATIONS = false;
+    public static final int DEFAULT_FLUSH_INTERVAL_SECONDS = 2;
 
     private final Optional<String> id;
     private final Groups groups;
@@ -68,6 +70,8 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
     private final String table;
     private final CredentialsBuilder credentials;
     private final boolean configure;
+    private final boolean disableBulkMutations;
+    private final int flushIntervalSeconds;
 
     @JsonCreator
     public BigtableMetricModule(
@@ -76,7 +80,9 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         @JsonProperty("instance") Optional<String> instance,
         @JsonProperty("table") Optional<String> table,
         @JsonProperty("credentials") Optional<CredentialsBuilder> credentials,
-        @JsonProperty("configure") Optional<Boolean> configure
+        @JsonProperty("configure") Optional<Boolean> configure,
+        @JsonProperty("disableBulkMutations") Optional<Boolean> disableBulkMutations,
+        @JsonProperty("flushIntervalSeconds") Optional<Integer> flushIntervalSeconds
     ) {
         this.id = id;
         this.groups = groups.orElseGet(Groups::empty).or(DEFAULT_GROUP);
@@ -85,6 +91,8 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         this.table = table.orElse(DEFAULT_TABLE);
         this.credentials = credentials.orElse(DEFAULT_CREDENTIALS);
         this.configure = configure.orElse(DEFAULT_CONFIGURE);
+        this.disableBulkMutations = disableBulkMutations.orElse(DEFAULT_DISABLE_BULK_MUTATIONS);
+        this.flushIntervalSeconds = flushIntervalSeconds.orElse(DEFAULT_FLUSH_INTERVAL_SECONDS);
     }
 
     @Override
@@ -119,7 +127,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
                 public AsyncFuture<BigtableConnection> construct() throws Exception {
                     return async.call(
                         new BigtableConnectionBuilder(project, instance, credentials, async,
-                            executorService));
+                            executorService, disableBulkMutations, flushIntervalSeconds));
                 }
 
                 @Override
@@ -183,6 +191,8 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         private Optional<String> table = empty();
         private Optional<CredentialsBuilder> credentials = empty();
         private Optional<Boolean> configure = empty();
+        private Optional<Boolean> disableBulkMutations = empty();
+        private Optional<Integer> flushIntervalSeconds = empty();
 
         public Builder id(String id) {
             this.id = of(id);
@@ -214,6 +224,17 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
             return this;
         }
 
+        public Builder disableBulkMutations(boolean disableBulkMutations) {
+            this.disableBulkMutations = of(disableBulkMutations);
+            return this;
+        }
+
+
+        public Builder flushIntervalSeconds(int flushIntervalSeconds) {
+            this.flushIntervalSeconds = of(flushIntervalSeconds);
+            return this;
+        }
+
         public Builder table(final String table) {
             this.table = of(table);
             return this;
@@ -221,7 +242,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
 
         public BigtableMetricModule build() {
             return new BigtableMetricModule(id, groups, project, instance, table, credentials,
-                configure);
+                configure, disableBulkMutations, flushIntervalSeconds);
         }
     }
 }

@@ -19,16 +19,13 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric.bigtable;
+package com.spotify.heroic.metric.bigtable.api;
 
-import com.spotify.heroic.metric.bigtable.api.BigtableDataClient;
-import com.spotify.heroic.metric.bigtable.api.BigtableTableAdminClient;
+import com.google.protobuf.ByteString;
 import eu.toolchain.async.AsyncFuture;
 
-public interface BigtableConnection {
-    BigtableTableAdminClient tableAdminClient();
-
-    BigtableDataClient dataClient();
+public interface BigtableMutator {
+    AsyncFuture<Void> mutateRow(String tableName, ByteString rowKey, Mutations mutations);
 
     AsyncFuture<Void> close();
 }

@@ -59,6 +59,8 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
     public static final String HITS_TABLE = "hits";
     public static final String HITS_COLUMN_FAMILY = "hits";
     public static final int DEFAULT_MAX_PENDING_REPORTS = 1000;
+    public static final boolean DEFAULT_DISABLE_BULK_MUTATIONS = false;
+    public static final int DEFAULT_FLUSH_INTERVAL_SECONDS = 2;
 
     private final String project;
     private final String cluster;
@@ -103,7 +105,8 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
                 public AsyncFuture<BigtableConnection> construct() throws Exception {
                     return async.call(
                         new BigtableConnectionBuilder(project, cluster, credentials, async,
-                            executorService));
+                            executorService, DEFAULT_DISABLE_BULK_MUTATIONS,
+                            DEFAULT_FLUSH_INTERVAL_SECONDS));
                 }
 
                 @Override

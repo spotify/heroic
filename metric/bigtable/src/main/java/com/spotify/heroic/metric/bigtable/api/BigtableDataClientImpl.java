@@ -44,15 +44,17 @@ import java.util.List;
 @ToString
 public class BigtableDataClientImpl implements BigtableDataClient {
     private final AsyncFramework async;
-    private final com.google.cloud.bigtable.grpc.BigtableDataClient client;
+    private final com.google.cloud.bigtable.grpc.BigtableSession session;
+    private final BigtableMutator mutator;
     private final String clusterUri;
 
     public BigtableDataClientImpl(
-        final AsyncFramework async, final com.google.cloud.bigtable.grpc.BigtableDataClient client,
-        final String project, final String cluster
+        final AsyncFramework async, final com.google.cloud.bigtable.grpc.BigtableSession session,
+        BigtableMutator mutator, final String project, final String cluster
     ) {
         this.async = async;
-        this.client = client;
+        this.session = session;
+        this.mutator = mutator;
         this.clusterUri = String.format("projects/%s/instances/%s", project, cluster);
     }
 
@@ -60,26 +62,23 @@ public class BigtableDataClientImpl implements BigtableDataClient {
     public AsyncFuture<Void> mutateRow(
         String tableName, ByteString rowKey, Mutations mutations
     ) {
-        return convertVoid(client.mutateRowAsync(com.google.bigtable.v2.MutateRowRequest
-            .newBuilder()
-            .setTableName(Table.toURI(clusterUri, tableName))
-            .setRowKey(rowKey)
-            .addAllMutations(mutations.getMutations())
-            .build()));
+        return mutator.mutateRow(tableName, rowKey, mutations);
     }
 
     @Override
     public AsyncFuture<List<Row>> readRows(
         final String tableName, final ReadRowsRequest request
     ) {
-        return convertRows(client.readRowsAsync(request.toPb(Table.toURI(clusterUri, tableName))));
+        return convertRows(session
+                .getDataClient()
+                .readRowsAsync(request.toPb(Table.toURI(clusterUri, tableName))));
     }
 
     @Override
     public AsyncFuture<Row> readModifyWriteRow(
         String tableName, ByteString rowKey, ReadModifyWriteRules rules
     ) {
-        return convert(client.readModifyWriteRowAsync(ReadModifyWriteRowRequest
+        return convert(session.getDataClient().readModifyWriteRowAsync(ReadModifyWriteRowRequest
             .newBuilder()
             .setTableName(Table.toURI(clusterUri, tableName))
             .setRowKey(rowKey)
@@ -93,7 +92,7 @@ public class BigtableDataClientImpl implements BigtableDataClient {
     ) {
         return observer -> {
             final ResultScanner<com.google.bigtable.v2.Row> s =
-                client.readRows(request.toPb(Table.toURI(clusterUri, tableName)));
+                session.getDataClient().readRows(request.toPb(Table.toURI(clusterUri, tableName)));
 
             final ResultScanner<Row> scanner = new ResultScanner<Row>() {
                 @Override
@@ -218,21 +217,4 @@ public class BigtableDataClientImpl implements BigtableDataClient {
         return future;
     }
 
-    private <T> AsyncFuture<Void> convertVoid(final ListenableFuture<T> request) {
-        final ResolvableFuture<Void> future = async.future();
-
-        Futures.addCallback(request, new FutureCallback<T>() {
-            @Override
-            public void onSuccess(T result) {
-                future.resolve(null);
-            }
-
-            @Override
-            public void onFailure(Throwable t) {
-                future.fail(t);
-            }
-        });
-
-        return future;
-    }
 }
