@@ -87,6 +87,7 @@ import java.util.function.Function;
 /**
  * MetricBackend for Heroic cassandra datastore.
  */
+@DatastaxScope
 @Slf4j
 @ToString(of = {"connection"})
 public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles {

@@ -51,6 +51,7 @@ public class QueryParserTest {
         assertEquals(string(cols(0, 2), "foo"), parseExpression("foo"));
         assertEquals(string(cols(0, 4), "foo"), parseExpression("\"foo\""));
         assertEquals(string(cols(0, 2), "\u4040"), parseExpression("\"\u4040\""));
+        assertEquals(string(cols(0, 1), "1a"), parseExpression("1a"));
 
         // test all possible escape sequences
         assertEquals(string(cols(0, 17), "\b\t\n\f\r\"\'\\"),

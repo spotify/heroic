@@ -188,11 +188,6 @@ QuotedString : '"' StringCharacters? '"' ;
 
 Identifier : [a-zA-Z] [a-zA-Z0-9]* ;
 
-// strings that do not have to be quoted
-SimpleString
-    : [a-zA-Z] [a-zA-Z0-9:/_\-\.]*
-    ;
-
 Duration
     : Minus? Integer Unit
     ;
@@ -204,6 +199,11 @@ Integer
 Float
     : Minus? Digits '.' Digits?
     | Minus? '.' Digits
+    ;
+
+// strings that do not have to be quoted
+SimpleString
+    : [a-zA-Z0-9:/_\-\.]+
     ;
 
 fragment

@@ -3,7 +3,7 @@ package com.spotify.heroic.aggregation.cardinality;
 public class HyperLogLogCardinalityBucketTest extends AbstractCardinalityBucketTest {
     @Override
     protected double allowedError() {
-        return 0.02D;
+        return 0.9D;
     }
 
     @Override

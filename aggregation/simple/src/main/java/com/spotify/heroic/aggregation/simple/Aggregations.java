@@ -21,32 +21,26 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.aggregation.AggregationContext;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
+import com.spotify.heroic.aggregation.Empty;
 
 import java.util.Optional;
 
-import static com.spotify.heroic.aggregation.simple.Aggregations.verifyNoChild;
-
-@Data
-@RequiredArgsConstructor
-public class TopK implements Aggregation {
-    public static final String NAME = "topk";
-
-    private final long k;
-
-    @JsonCreator
-    public TopK(@JsonProperty("k") long k, @JsonProperty("of") Optional<Aggregation> aggregation) {
-        verifyNoChild("of", aggregation);
-        this.k = k;
-    }
-
-    @Override
-    public TopKInstance apply(final AggregationContext context) {
-        return new TopKInstance(k);
+/**
+ * Utility methods for aggregations.
+ */
+public interface Aggregations {
+    /**
+     * Filtering aggregations should no longer permit a child aggregation.
+     *
+     * This is part of a fix for issue #79.
+     */
+    static void verifyNoChild(final String name, final Optional<Aggregation> aggregation) {
+        aggregation.ifPresent(a -> {
+            if (!(a instanceof Empty)) {
+                throw new IllegalArgumentException(name +
+                    ": filtering aggregations should not take a child aggregation any longer");
+            }
+        });
     }
 }
