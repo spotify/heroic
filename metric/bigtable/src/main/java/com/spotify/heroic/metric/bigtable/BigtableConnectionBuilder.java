@@ -24,7 +24,9 @@ package com.spotify.heroic.metric.bigtable;
 import com.google.appengine.repackaged.com.google.common.collect.ImmutableList;
 import com.google.cloud.bigtable.config.BigtableOptions;
 import com.google.cloud.bigtable.config.CredentialOptions;
+import com.google.cloud.bigtable.config.RetryOptions;
 import com.google.cloud.bigtable.grpc.BigtableSession;
+import com.spotify.heroic.bigtable.grpc.Status;
 import com.spotify.heroic.metric.bigtable.api.BigtableDataClient;
 import com.spotify.heroic.metric.bigtable.api.BigtableDataClientImpl;
 import com.spotify.heroic.metric.bigtable.api.BigtableMutator;
@@ -59,12 +61,19 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
     public BigtableConnection call() throws Exception {
         final CredentialOptions credentials = this.credentials.build();
 
+        final RetryOptions retryOptions = new RetryOptions.Builder()
+            .addStatusToRetryOn(Status.Code.UNKNOWN)
+            .setAllowRetriesWithoutTimestamp(true)
+            .build();
+
+
         final BigtableOptions options = new BigtableOptions.Builder()
             .setProjectId(project)
             .setInstanceId(instance)
             .setUserAgent(USER_AGENT)
             .setDataChannelCount(64)
             .setCredentialOptions(credentials)
+            .setRetryOptions(retryOptions)
             .build();
 
         final BigtableSession session = new BigtableSession(options, executorService);
