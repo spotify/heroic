@@ -27,10 +27,11 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
-import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.plugin.deletebyquery.DeleteByQueryPlugin;
 
+import java.net.InetSocketAddress;
 import java.util.List;
 
 public class TransportClientSetup implements ClientSetup {
@@ -51,10 +52,12 @@ public class TransportClientSetup implements ClientSetup {
 
     @Override
     public Client setup() throws Exception {
-        final Settings settings =
-            ImmutableSettings.builder().put("cluster.name", clusterName).build();
+        final Settings settings = Settings.builder().put("cluster.name", clusterName).build();
 
-        final TransportClient client = new TransportClient(settings);
+        final TransportClient client = TransportClient.builder()
+            .settings(settings)
+            .addPlugin(DeleteByQueryPlugin.class)
+            .build();
 
         for (final InetSocketTransportAddress seed : seeds) {
             client.addTransportAddress(seed);
@@ -73,10 +76,11 @@ public class TransportClientSetup implements ClientSetup {
     private static InetSocketTransportAddress parseInetSocketTransportAddress(final String seed) {
         if (seed.contains(":")) {
             final String[] parts = seed.split(":");
-            return new InetSocketTransportAddress(parts[0], Integer.parseInt(parts[1]));
+            return new InetSocketTransportAddress(
+                new InetSocketAddress(parts[0], Integer.parseInt(parts[1])));
         }
 
-        return new InetSocketTransportAddress(seed, DEFAULT_PORT);
+        return new InetSocketTransportAddress(new InetSocketAddress(seed, DEFAULT_PORT));
     }
 
     public static Builder builder() {
