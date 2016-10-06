@@ -3,8 +3,9 @@ package com.spotify.heroic;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+
 import com.spotify.heroic.common.Feature;
-import com.spotify.heroic.common.Features;
+import com.spotify.heroic.common.FeatureSet;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.ingestion.Ingestion;
@@ -14,7 +15,9 @@ import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.ShardedResultGroup;
+
 import eu.toolchain.async.AsyncFuture;
+
 import org.junit.Before;
 import org.junit.Test;
 
@@ -72,7 +75,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     public QueryResult query(final String queryString) throws Exception {
         final Query q = query
             .newQueryFromString(queryString)
-            .features(Features.of(Feature.DISTRIBUTED_AGGREGATIONS))
+            .features(Optional.of(FeatureSet.of(Feature.DISTRIBUTED_AGGREGATIONS)))
             .source(Optional.of(MetricType.POINT))
             .rangeIfAbsent(Optional.of(new QueryDateRange.Absolute(10, 40)))
             .build();

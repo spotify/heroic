@@ -28,7 +28,7 @@ import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.Chain;
-import com.spotify.heroic.common.Features;
+import com.spotify.heroic.common.FeatureSet;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.MetricType;
 import lombok.Data;
@@ -54,7 +54,7 @@ public class QueryMetrics {
     private final Optional<String> key;
     private final Optional<Map<String, String>> tags;
     private final Optional<List<String>> groupBy;
-    private final Features features;
+    private final Optional<FeatureSet> features;
 
     public QueryMetrics(
         Optional<String> query, Optional<Aggregation> aggregation, Optional<MetricType> source,
@@ -70,7 +70,7 @@ public class QueryMetrics {
         this.key = Optional.empty();
         this.tags = Optional.empty();
         this.groupBy = Optional.empty();
-        this.features = Features.empty();
+        this.features = Optional.empty();
     }
 
     @JsonCreator
@@ -84,7 +84,7 @@ public class QueryMetrics {
         @JsonProperty("tags") Optional<Map<String, String>> tags,
         @JsonProperty("groupBy") Optional<List<String>> groupBy,
         @JsonProperty("options") Optional<QueryOptions> options,
-        @JsonProperty("features") Optional<Features> features,
+        @JsonProperty("features") Optional<FeatureSet> features,
         /* ignored */ @JsonProperty("noCache") Boolean noCache
     ) {
         this.query = query;
@@ -98,7 +98,7 @@ public class QueryMetrics {
         this.key = key;
         this.tags = tags;
         this.groupBy = groupBy;
-        this.features = features.orElseGet(Features::empty);
+        this.features = features;
     }
 
     public QueryBuilder toQueryBuilder(final Function<String, QueryBuilder> stringToQuery) {

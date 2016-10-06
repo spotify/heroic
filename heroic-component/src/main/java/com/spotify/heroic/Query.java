@@ -22,7 +22,7 @@
 package com.spotify.heroic;
 
 import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.common.Features;
+import com.spotify.heroic.common.FeatureSet;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.MetricType;
 import lombok.Data;
@@ -37,5 +37,5 @@ public class Query {
     private final Optional<Filter> filter;
     private final Optional<QueryOptions> options;
     /* set of experimental features to enable */
-    private final Optional<Features> features;
+    private final Optional<FeatureSet> features;
 }

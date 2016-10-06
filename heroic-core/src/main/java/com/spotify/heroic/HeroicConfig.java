@@ -33,7 +33,7 @@ import com.spotify.heroic.cache.CacheModule;
 import com.spotify.heroic.cache.noop.NoopCacheModule;
 import com.spotify.heroic.cluster.ClusterManagerModule;
 import com.spotify.heroic.common.Duration;
-import com.spotify.heroic.common.Features;
+import com.spotify.heroic.common.FeatureSet;
 import com.spotify.heroic.consumer.ConsumerModule;
 import com.spotify.heroic.generator.CoreGeneratorModule;
 import com.spotify.heroic.ingestion.IngestionModule;
@@ -100,7 +100,7 @@ public class HeroicConfig {
     private final Optional<Boolean> disableMetrics;
     private final boolean enableCors;
     private final Optional<String> corsAllowOrigin;
-    private final Features features;
+    private final FeatureSet features;
     private final ClusterManagerModule cluster;
     private final MetricManagerModule metric;
     private final MetadataManagerModule metadata;
@@ -179,7 +179,7 @@ public class HeroicConfig {
         private Optional<Boolean> disableMetrics = empty();
         private Optional<Boolean> enableCors = empty();
         private Optional<String> corsAllowOrigin = empty();
-        private Optional<Features> features = empty();
+        private Optional<FeatureSet> features = empty();
         private Optional<ClusterManagerModule.Builder> cluster = empty();
         private Optional<MetricManagerModule.Builder> metrics = empty();
         private Optional<MetadataManagerModule.Builder> metadata = empty();
@@ -225,7 +225,7 @@ public class HeroicConfig {
             return this;
         }
 
-        public Builder features(Features features) {
+        public Builder features(FeatureSet features) {
             this.features = of(features);
             return this;
         }
@@ -293,7 +293,7 @@ public class HeroicConfig {
                 pickOptional(disableMetrics, o.disableMetrics),
                 pickOptional(enableCors, o.enableCors),
                 pickOptional(corsAllowOrigin, o.corsAllowOrigin),
-                mergeOptional(features, o.features, Features::combine),
+                mergeOptional(features, o.features, FeatureSet::combine),
                 mergeOptional(cluster, o.cluster, ClusterManagerModule.Builder::merge),
                 mergeOptional(metrics, o.metrics, MetricManagerModule.Builder::merge),
                 mergeOptional(metadata, o.metadata, MetadataManagerModule.Builder::merge),
@@ -331,7 +331,7 @@ public class HeroicConfig {
                 disableMetrics,
                 enableCors.orElse(DEFAULT_ENABLE_CORS),
                 corsAllowOrigin,
-                features.orElseGet(Features::empty),
+                features.orElseGet(FeatureSet::empty),
                 cluster.orElseGet(ClusterManagerModule::builder).build(),
                 metrics.orElseGet(MetricManagerModule::builder).build(),
                 metadata.orElseGet(MetadataManagerModule::builder).build(),

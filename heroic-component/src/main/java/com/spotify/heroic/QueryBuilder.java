@@ -23,7 +23,7 @@ package com.spotify.heroic;
 
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.Group;
-import com.spotify.heroic.common.Features;
+import com.spotify.heroic.common.FeatureSet;
 import com.spotify.heroic.filter.AndFilter;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.MatchKeyFilter;
@@ -49,7 +49,7 @@ public class QueryBuilder {
     private Optional<QueryDateRange> range = Optional.empty();
     private Optional<Aggregation> aggregation = Optional.empty();
     private Optional<QueryOptions> options = Optional.empty();
-    private Optional<Features> features = Optional.empty();
+    private Optional<FeatureSet> features = Optional.empty();
 
     /**
      * Specify a set of tags that has to match.
@@ -141,9 +141,9 @@ public class QueryBuilder {
         return this;
     }
 
-    public QueryBuilder features(final Features features) {
+    public QueryBuilder features(final Optional<FeatureSet> features) {
         checkNotNull(features, "features");
-        this.features = Optional.of(features);
+        this.features = features;
         return this;
     }
 

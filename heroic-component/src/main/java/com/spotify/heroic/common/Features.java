@@ -26,20 +26,39 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.ImmutableSet;
 import lombok.Data;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Supplier;
 
+/**
+ * A container for a set of features that provides convenience methods for accessing them.
+ */
 @Data
 public class Features {
+    /**
+     * Default set of features.
+     */
+    public static final Features DEFAULT = Features.create(ImmutableSet.<Feature>builder()
+        .add(Feature.SHIFT_RANGE)
+        .build());
+
     private final Set<Feature> features;
 
     public boolean hasFeature(final Feature feature) {
         return features.contains(feature);
     }
 
-    public Features combine(final Features other) {
-        return new Features(
-            ImmutableSet.<Feature>builder().addAll(features).addAll(other.features).build());
+    /**
+     * Apply the given feature set.
+     *
+     * @param featureSet Feature set to apply.
+     * @return A new Feature with the given set applied.
+     */
+    public Features applySet(final FeatureSet featureSet) {
+        final Set<Feature> features = new HashSet<>(this.features);
+        features.addAll(featureSet.getEnabled());
+        features.removeAll(featureSet.getDisabled());
+        return new Features(features);
     }
 
     @JsonCreator
@@ -50,14 +69,6 @@ public class Features {
     @JsonValue
     public Set<Feature> value() {
         return features;
-    }
-
-    public static Features of(final Feature... features) {
-        return new Features(ImmutableSet.copyOf(features));
-    }
-
-    public static Features empty() {
-        return new Features(ImmutableSet.of());
     }
 
     /**
@@ -73,5 +84,18 @@ public class Features {
         final Feature feature, final Supplier<T> isSet, final Supplier<T> isNotSet
     ) {
         return hasFeature(feature) ? isSet.get() : isNotSet.get();
+    }
+
+    /**
+     * Create an empty set of enabled features.
+     *
+     * @return A new feature set.
+     */
+    public static Features empty() {
+        return new Features(ImmutableSet.of());
+    }
+
+    public static Features of(final Feature... features) {
+        return new Features(ImmutableSet.copyOf(features));
     }
 }

@@ -26,6 +26,10 @@ import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
  * Features that can be enabled in configuration, or per-query.
+ *
+ * Features should be formulated so that they are enabled when they are present, not the other way
+ * around which would be something like {@code DISABLE_SHIFT_RANGE}.
+ * Supporting such duality for every feature would cause more code and add to confusion.
  */
 public enum Feature {
     /**
