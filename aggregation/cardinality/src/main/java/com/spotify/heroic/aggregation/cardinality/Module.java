@@ -29,41 +29,16 @@ import com.spotify.heroic.aggregation.SamplingAggregationDSL;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.dagger.LoadingComponent;
 import com.spotify.heroic.grammar.Expression;
-import dagger.Component;
-import eu.toolchain.serializer.SerializerFramework;
 
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.util.Optional;
 
 public class Module implements HeroicModule {
     @Override
-    public Entry setup(LoadingComponent loading) {
-        return DaggerModule_C.builder().loadingComponent(loading).build().entry();
-    }
+    public Runnable setup(LoadingComponent loading) {
+        final AggregationRegistry c = loading.aggregationRegistry();
+        final AggregationFactory factory = loading.aggregationFactory();
 
-    @Component(dependencies = LoadingComponent.class)
-    interface C {
-        E entry();
-    }
-
-    static class E implements Entry {
-        private final AggregationRegistry c;
-        private final SerializerFramework s;
-        private final AggregationFactory factory;
-
-        @Inject
-        public E(
-            AggregationRegistry c, @Named("common") SerializerFramework s,
-            AggregationFactory factory
-        ) {
-            this.c = c;
-            this.s = s;
-            this.factory = factory;
-        }
-
-        @Override
-        public void setup() {
+        return () -> {
             c.register(CardinalityAggregation.NAME, CardinalityAggregation.class,
                 CardinalityInstance.class,
                 new SamplingAggregationDSL<CardinalityAggregation>(factory) {
@@ -79,6 +54,6 @@ public class Module implements HeroicModule {
                         return new CardinalityAggregation(Optional.empty(), size, extent, method);
                     }
                 });
-        }
+        };
     }
 }

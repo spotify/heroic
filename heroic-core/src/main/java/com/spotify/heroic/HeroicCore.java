@@ -636,7 +636,7 @@ public class HeroicCore implements HeroicConfiguration {
 
         for (final HeroicModule module : modules) {
             // inject members of an entry point and run them.
-            module.setup(loading).setup();
+            module.setup(loading).run();
         }
 
         log.info("Loaded {} module(s)", modules.size());

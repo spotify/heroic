@@ -26,13 +26,25 @@ import com.spotify.heroic.dagger.LoadingComponent;
 
 import java.util.List;
 
+/**
+ * The entry point for heroic modules.
+ * <p>
+ * Modules are structurally separated from the core of Heroic to encourage isolation.
+ */
 public interface HeroicModule {
-    Entry setup(LoadingComponent loading);
+    /**
+     * Setup the module.
+     *
+     * @param loading Loading dependencies which are available to modules.
+     * @return a runnable that when run will configure the module.
+     */
+    Runnable setup(LoadingComponent loading);
 
-    interface Entry {
-        public void setup();
-    }
-
+    /**
+     * Get parameters associated with the module.
+     *
+     * @return a list of parameter specifications.
+     */
     default List<ParameterSpecification> parameters() {
         return ImmutableList.of();
     }

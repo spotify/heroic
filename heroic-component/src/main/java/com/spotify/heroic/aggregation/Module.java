@@ -27,43 +27,17 @@ import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.dagger.LoadingComponent;
 import com.spotify.heroic.grammar.DurationExpression;
 import com.spotify.heroic.grammar.FunctionExpression;
-import dagger.Component;
-import eu.toolchain.serializer.SerializerFramework;
 
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.util.List;
 import java.util.Optional;
 
 public class Module implements HeroicModule {
     @Override
-    public Entry setup(LoadingComponent loading) {
-        return DaggerModule_C.builder().loadingComponent(loading).build().entry();
-    }
+    public Runnable setup(final LoadingComponent loading) {
+        final AggregationRegistry c = loading.aggregationRegistry();
+        final AggregationFactory factory = loading.aggregationFactory();
 
-    @Component(dependencies = LoadingComponent.class)
-    interface C {
-        E entry();
-    }
-
-    static class E implements HeroicModule.Entry {
-        private final AggregationRegistry c;
-        private final AggregationFactory factory;
-        private final SerializerFramework s;
-
-        @Inject
-        public E(
-            AggregationRegistry c, AggregationFactory factory,
-            @Named("common") SerializerFramework s
-        ) {
-            super();
-            this.c = c;
-            this.factory = factory;
-            this.s = s;
-        }
-
-        @Override
-        public void setup() {
+        return () -> {
             c.register(Empty.NAME, Empty.class, EmptyInstance.class, args -> Empty.INSTANCE);
 
             c.register(Group.NAME, Group.class, GroupInstance.class,
@@ -126,6 +100,6 @@ public class Module implements HeroicModule {
                         return new Options(sampling, child);
                     }
                 });
-        }
+        };
     }
 }

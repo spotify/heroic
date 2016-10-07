@@ -24,32 +24,14 @@ package com.spotify.heroic.consumer.kafka;
 import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicModule;
 import com.spotify.heroic.dagger.LoadingComponent;
-import dagger.Component;
-
-import javax.inject.Inject;
 
 public class Module implements HeroicModule {
     @Override
-    public Entry setup(LoadingComponent loading) {
-        return DaggerModule_C.builder().loadingComponent(loading).build().entry();
-    }
+    public Runnable setup(final LoadingComponent loading) {
+        final HeroicConfigurationContext config = loading.heroicConfigurationContext();
 
-    @Component(dependencies = LoadingComponent.class)
-    interface C {
-        E entry();
-    }
-
-    static class E implements HeroicModule.Entry {
-        private final HeroicConfigurationContext configurationContext;
-
-        @Inject
-        public E(HeroicConfigurationContext configurationContext) {
-            this.configurationContext = configurationContext;
-        }
-
-        @Override
-        public void setup() {
-            configurationContext.registerType("kafka", KafkaConsumerModule.Builder.class);
-        }
+        return () -> {
+            config.registerType("kafka", KafkaConsumerModule.Builder.class);
+        };
     }
 }

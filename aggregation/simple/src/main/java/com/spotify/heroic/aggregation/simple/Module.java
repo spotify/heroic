@@ -42,7 +42,7 @@ import java.util.Optional;
 
 public class Module implements HeroicModule {
     @Override
-    public Entry setup(LoadingComponent loading) {
+    public Runnable setup(LoadingComponent loading) {
         return DaggerModule_C.builder().loadingComponent(loading).build().entry();
     }
 
@@ -51,7 +51,7 @@ public class Module implements HeroicModule {
         E entry();
     }
 
-    static class E implements HeroicModule.Entry {
+    static class E implements Runnable {
         private final AggregationRegistry c;
         private final SerializerFramework s;
         private final AggregationFactory factory;
@@ -67,7 +67,7 @@ public class Module implements HeroicModule {
         }
 
         @Override
-        public void setup() {
+        public void run() {
             /* example aggregation, if used only returns zeroes. */
             c.register(Template.NAME, Template.class, TemplateInstance.class,
                 samplingBuilder(Template::new));

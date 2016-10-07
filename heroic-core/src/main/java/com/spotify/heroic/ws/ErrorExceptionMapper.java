@@ -19,7 +19,7 @@
  * under the License.
  */
 
-package com.spotify.heroic.http;
+package com.spotify.heroic.ws;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -30,16 +30,15 @@ import javax.ws.rs.ext.Provider;
 
 @Provider
 @Slf4j
-public class ErrorMapper implements ExceptionMapper<Error> {
+public class ErrorExceptionMapper implements ExceptionMapper<Error> {
     @Inject
-    public ErrorMapper() {
+    public ErrorExceptionMapper() {
     }
 
     @Override
     public Response toResponse(Error e) {
         log.error("Fatal exception thrown in handler", e);
         System.exit(1);
-
         return null;
     }
 }
