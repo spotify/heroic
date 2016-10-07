@@ -2,6 +2,7 @@ package com.spotify.heroic.aggregation;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.spotify.heroic.common.Duration;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -9,6 +10,7 @@ import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
@@ -27,13 +29,12 @@ public class AggregationTest {
     @Mock
     private AggregationInstance instance;
 
-    @Mock
     private AggregationContext context;
 
     @Before
     public void setup() {
         doReturn(instance).when(a).apply(any(AggregationContext.class));
-        doReturn(ImmutableSet.of()).when(context).requiredTags();
+        context = AggregationContext.defaultInstance(Duration.of(1, TimeUnit.MINUTES));
     }
 
     @Test

@@ -28,9 +28,9 @@ import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.aggregation.EmptyInstance;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.MetricGroup;
+import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
 
@@ -50,7 +50,7 @@ public class FilterAggregation implements AggregationInstance {
 
     @Override
     public long estimate(DateRange range) {
-        return 0;
+        return -1;
     }
 
     @Override
