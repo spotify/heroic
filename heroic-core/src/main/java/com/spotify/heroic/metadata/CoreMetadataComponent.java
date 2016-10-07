@@ -19,7 +19,7 @@
  * under the License.
  */
 
-package com.spotify.heroic.shell;
+package com.spotify.heroic.metadata;
 
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
@@ -27,9 +27,12 @@ import dagger.Component;
 
 import javax.inject.Named;
 
-@ShellServerScope
-@Component(modules = ShellServerModule.class, dependencies = PrimaryComponent.class)
-public interface ShellServerComponent {
-    @Named("shellServer")
-    LifeCycle shellServerLife();
+@MetadataScope
+@Component(modules = MetadataManagerModule.class, dependencies = PrimaryComponent.class)
+public interface CoreMetadataComponent extends MetadataComponent {
+    LocalMetadataManager metadataManager();
+
+    @Override
+    @Named("metadata")
+    LifeCycle metadataLife();
 }

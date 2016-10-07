@@ -34,7 +34,6 @@ import com.spotify.heroic.metric.bigtable.CredentialsBuilder;
 import com.spotify.heroic.metric.bigtable.credentials.ComputeEngineCredentialsBuilder;
 import com.spotify.heroic.statistics.AnalyticsReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
-import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
 import eu.toolchain.async.AsyncFramework;
@@ -52,6 +51,7 @@ import java.util.concurrent.ExecutorService;
 
 @ToString
 @RequiredArgsConstructor
+@Module
 public class BigtableAnalyticsModule implements AnalyticsModule {
     public static final String DEFAULT_CLUSTER = "heroic";
     public static final CredentialsBuilder DEFAULT_CREDENTIALS =
@@ -68,87 +68,73 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
     private final int maxPendingReports;
 
     @Override
-    public AnalyticsComponent module(PrimaryComponent primary) {
-        return DaggerBigtableAnalyticsModule_C
+    public AnalyticsComponent module(final PrimaryComponent primary) {
+        return DaggerBigtableAnalyticsComponent
             .builder()
             .primaryComponent(primary)
-            .m(new M())
+            .bigtableAnalyticsModule(this)
             .build();
     }
 
+    @Provides
     @BigtableScope
-    @Component(modules = M.class, dependencies = PrimaryComponent.class)
-    interface C extends AnalyticsComponent {
-        @Override
-        BigtableMetricAnalytics metricAnalytics();
-
-        @Override
-        @Named("analytics")
-        LifeCycle analyticsLife();
+    public AnalyticsReporter reporter(final HeroicReporter reporter) {
+        return reporter.newAnalyticsReporter();
     }
 
-    @Module
-    class M {
-        @Provides
-        @BigtableScope
-        public AnalyticsReporter reporter(final HeroicReporter reporter) {
-            return reporter.newAnalyticsReporter();
-        }
+    @Provides
+    @BigtableScope
+    public Managed<BigtableConnection> connection(
+        final AsyncFramework async, final ExecutorService executorService
+    ) {
+        return async.managed(new ManagedSetup<BigtableConnection>() {
+            @Override
+            public AsyncFuture<BigtableConnection> construct() throws Exception {
+                return async.call(
+                    new BigtableConnectionBuilder(project, cluster, credentials, async,
+                        executorService, DEFAULT_DISABLE_BULK_MUTATIONS,
+                        DEFAULT_FLUSH_INTERVAL_SECONDS));
+            }
 
-        @Provides
-        @BigtableScope
-        public Managed<BigtableConnection> connection(
-            final AsyncFramework async, final ExecutorService executorService
-        ) {
-            return async.managed(new ManagedSetup<BigtableConnection>() {
-                @Override
-                public AsyncFuture<BigtableConnection> construct() throws Exception {
-                    return async.call(
-                        new BigtableConnectionBuilder(project, cluster, credentials, async,
-                            executorService, DEFAULT_DISABLE_BULK_MUTATIONS,
-                            DEFAULT_FLUSH_INTERVAL_SECONDS));
-                }
+            @Override
+            public AsyncFuture<Void> destruct(final BigtableConnection value) throws Exception {
+                return async.call(new Callable<Void>() {
+                    @Override
+                    public Void call() throws Exception {
+                        value.close();
+                        return null;
+                    }
+                });
+            }
+        });
+    }
 
-                @Override
-                public AsyncFuture<Void> destruct(final BigtableConnection value) throws Exception {
-                    return async.call(new Callable<Void>() {
-                        @Override
-                        public Void call() throws Exception {
-                            value.close();
-                            return null;
-                        }
-                    });
-                }
-            });
-        }
+    @Provides
+    @BigtableScope
+    @Named("hitsTableName")
+    String hitsTableName() {
+        return HITS_TABLE;
+    }
 
-        @Provides
-        @BigtableScope
-        @Named("hitsTableName")
-        String hitsTableName() {
-            return HITS_TABLE;
-        }
+    @Provides
+    @BigtableScope
+    @Named("hitsColumnFamily")
+    String hitsColumnFamily() {
+        return HITS_COLUMN_FAMILY;
+    }
 
-        @Provides
-        @BigtableScope
-        @Named("hitsColumnFamily")
-        String hitsColumnFamily() {
-            return HITS_COLUMN_FAMILY;
-        }
+    @Provides
+    @BigtableScope
+    @Named("maxPendingReports")
+    int maxPendingReports() {
+        return maxPendingReports;
+    }
 
-        @Provides
-        @BigtableScope
-        @Named("maxPendingReports")
-        int maxPendingReports() {
-            return maxPendingReports;
-        }
-
-        @Provides
-        @BigtableScope
-        @Named("analytics")
-        LifeCycle analyticsLife(LifeCycleManager manager, BigtableMetricAnalytics backend) {
-            return manager.build(backend);
-        }
+    @Provides
+    @BigtableScope
+    @Named("analytics")
+    LifeCycle analyticsLife(LifeCycleManager manager, BigtableMetricAnalytics backend) {
+        return manager.build(backend);
     }
 
     public static Builder builder() {

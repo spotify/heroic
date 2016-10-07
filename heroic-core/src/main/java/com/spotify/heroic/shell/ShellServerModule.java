@@ -23,10 +23,8 @@ package com.spotify.heroic.shell;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
-import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
 import eu.toolchain.async.AsyncFramework;
@@ -50,6 +48,7 @@ import static java.util.Optional.of;
 
 @Slf4j
 @RequiredArgsConstructor
+@Module
 public class ShellServerModule {
     public static final String DEFAULT_HOST = "localhost";
     public static final int DEFAULT_PORT = 9190;
@@ -65,57 +64,42 @@ public class ShellServerModule {
         this.port = port.orElse(DEFAULT_PORT);
     }
 
-    public ShellServerComponent module(PrimaryComponent primary) {
-        return DaggerShellServerModule_C.builder().primaryComponent(primary).m(new M()).build();
+    @Provides
+    @ShellServerScope
+    @Named("shell-protocol")
+    SerializerFramework serializer() {
+        return ShellProtocol.setupSerializer();
     }
 
-    @ShellScope
-    @Component(modules = M.class, dependencies = {PrimaryComponent.class})
-    interface C extends ShellServerComponent {
-        @Override
-        @Named("shellServer")
-        LifeCycle shellServerLife();
+    @Provides
+    @ShellServerScope
+    Managed<ShellServerState> state(final AsyncFramework async) {
+        return async.managed(new ManagedSetup<ShellServerState>() {
+            @Override
+            public AsyncFuture<ShellServerState> construct() throws Exception {
+                return async.call(new Callable<ShellServerState>() {
+                    @Override
+                    public ShellServerState call() throws Exception {
+                        log.info("Binding to {}:{}", host, port);
+                        final ServerSocket serverSocket = new ServerSocket();
+                        serverSocket.bind(new InetSocketAddress(host, port));
+                        return new ShellServerState(serverSocket);
+                    }
+                });
+            }
+
+            @Override
+            public AsyncFuture<Void> destruct(final ShellServerState value) throws Exception {
+                return async.resolved();
+            }
+        });
     }
 
-    @Module
-    class M {
-        @Provides
-        @ShellScope
-        @Named("shell-protocol")
-        SerializerFramework serializer() {
-            return ShellProtocol.setupSerializer();
-        }
-
-        @Provides
-        @ShellScope
-        Managed<ShellServerState> state(final AsyncFramework async) {
-            return async.managed(new ManagedSetup<ShellServerState>() {
-                @Override
-                public AsyncFuture<ShellServerState> construct() throws Exception {
-                    return async.call(new Callable<ShellServerState>() {
-                        @Override
-                        public ShellServerState call() throws Exception {
-                            log.info("Binding to {}:{}", host, port);
-                            final ServerSocket serverSocket = new ServerSocket();
-                            serverSocket.bind(new InetSocketAddress(host, port));
-                            return new ShellServerState(serverSocket);
-                        }
-                    });
-                }
-
-                @Override
-                public AsyncFuture<Void> destruct(final ShellServerState value) throws Exception {
-                    return async.resolved();
-                }
-            });
-        }
-
-        @Provides
-        @ShellScope
-        @Named("shellServer")
-        LifeCycle shellServerLife(LifeCycleManager manager, ShellServer shellServer) {
-            return manager.build(shellServer);
-        }
+    @Provides
+    @ShellServerScope
+    @Named("shellServer")
+    LifeCycle shellServerLife(LifeCycleManager manager, ShellServer shellServer) {
+        return manager.build(shellServer);
     }
 
     public static Builder builder() {

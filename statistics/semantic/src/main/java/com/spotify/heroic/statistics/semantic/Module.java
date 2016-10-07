@@ -49,7 +49,7 @@ public class Module implements HeroicModule {
 
         @Override
         public void setup() {
-            configurationContext.registerType("semantic", SemanticModule.class);
+            configurationContext.registerType("semantic", SemanticStatisticsModule.class);
         }
     }
 }

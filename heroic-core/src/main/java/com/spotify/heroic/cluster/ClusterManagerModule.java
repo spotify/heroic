@@ -33,13 +33,11 @@ import com.spotify.heroic.lifecycle.LifeCycleManager;
 import com.spotify.heroic.metadata.MetadataComponent;
 import com.spotify.heroic.metric.MetricComponent;
 import com.spotify.heroic.suggest.SuggestComponent;
-import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.Pair;
 
 import javax.inject.Named;
@@ -59,6 +57,7 @@ import static java.util.Optional.of;
  * @author udoprog
  */
 @Data
+@Module
 public class ClusterManagerModule {
     public static final boolean DEFAULT_USE_LOCAL = true;
 
@@ -69,135 +68,95 @@ public class ClusterManagerModule {
     private final List<RpcProtocolModule> protocols;
     private final Set<Map<String, String>> topology;
 
-    public ClusterComponent module(
-        PrimaryComponent primary, MetricComponent metric, MetadataComponent metadata,
-        SuggestComponent suggest
+    @Provides
+    @ClusterScope
+    @Named("local")
+    public ClusterNode localClusterNode(LocalClusterNode local) {
+        return local;
+    }
+
+    @Provides
+    @ClusterScope
+    public NodeMetadata localMetadata(final ServiceInfo service) {
+        return new NodeMetadata(0, id, tags, service);
+    }
+
+    @Provides
+    @ClusterScope
+    @Named("useLocal")
+    public Boolean useLocal() {
+        return useLocal;
+    }
+
+    @Provides
+    @ClusterScope
+    @Named("topology")
+    public Set<Map<String, String>> topology() {
+        return topology;
+    }
+
+    @Provides
+    @ClusterScope
+    public List<Pair<String, RpcProtocolComponent>> protocolComponents(
+        final NodeMetadata nodeMetadata, @Named("local") final ClusterNode localClusterNode,
+        final PrimaryComponent primary, final MetricComponent metric,
+        final MetadataComponent metadata, final SuggestComponent suggest
     ) {
-        final ClusterDiscoveryComponent discovery = this.discovery.module(primary);
-        return DaggerClusterManagerModule_C
+        final ImmutableList.Builder<Pair<String, RpcProtocolComponent>> protocolComponents =
+            ImmutableList.builder();
+
+        /* build up a local component which defines all dependencies for a child component */
+        final RpcProtocolModule.Dependencies dependencies = DaggerRpcProtocolModule_Dependencies
             .builder()
             .primaryComponent(primary)
             .metricComponent(metric)
             .metadataComponent(metadata)
             .suggestComponent(suggest)
-            .clusterDiscoveryComponent(discovery)
-            .m(new M(primary, metric, metadata, suggest))
+            .provided(new RpcProtocolModule.Provided() {
+                @Override
+                public NodeMetadata metadata() {
+                    return nodeMetadata;
+                }
+
+                @Override
+                public ClusterNode localClusterNode() {
+                    return localClusterNode;
+                }
+            })
             .build();
+
+        for (final RpcProtocolModule m : protocols) {
+            protocolComponents.add(Pair.of(m.scheme(), m.module(dependencies)));
+        }
+
+        return protocolComponents.build();
     }
 
+    @Provides
     @ClusterScope
-    @Component(modules = M.class, dependencies = {
-        PrimaryComponent.class, ClusterDiscoveryComponent.class, MetricComponent.class,
-        MetadataComponent.class, SuggestComponent.class
-    })
-    interface C extends ClusterComponent {
-        @Override
-        CoreClusterManager clusterManager();
+    public Map<String, RpcProtocol> protocols(
+        List<Pair<String, RpcProtocolComponent>> protocols
+    ) {
+        final Map<String, RpcProtocol> map = new HashMap<>();
 
-        @Override
-        NodeMetadata nodeMetadata();
+        for (final Pair<String, RpcProtocolComponent> m : protocols) {
+            map.put(m.getLeft(), m.getRight().rpcProtocol());
+        }
 
-        @Named("cluster")
-        @Override
-        LifeCycle clusterLife();
+        return map;
     }
 
-    @RequiredArgsConstructor
-    @Module
-    class M {
-        private final PrimaryComponent primary;
-        private final MetricComponent metric;
-        private final MetadataComponent metadata;
-        private final SuggestComponent suggest;
-
-        @Provides
-        @ClusterScope
-        @Named("local")
-        public ClusterNode localClusterNode(LocalClusterNode local) {
-            return local;
-        }
-
-        @Provides
-        @ClusterScope
-        public NodeMetadata localMetadata(final ServiceInfo service) {
-            return new NodeMetadata(0, id, tags, service);
-        }
-
-        @Provides
-        @ClusterScope
-        @Named("useLocal")
-        public Boolean useLocal() {
-            return useLocal;
-        }
-
-        @Provides
-        @ClusterScope
-        @Named("topology")
-        public Set<Map<String, String>> topology() {
-            return topology;
-        }
-
-        @Provides
-        @ClusterScope
-        public List<Pair<String, RpcProtocolComponent>> protocolComponents(
-            final NodeMetadata metadata, @Named("local") final ClusterNode localClusterNode
-        ) {
-            final ImmutableList.Builder<Pair<String, RpcProtocolComponent>> protocolComponents =
-                ImmutableList.builder();
-
-            /* build up a local component which defines all dependencies for a child component */
-            final RpcProtocolModule.Dependencies dependencies = DaggerRpcProtocolModule_Dependencies
-                .builder()
-                .primaryComponent(this.primary)
-                .metricComponent(this.metric)
-                .metadataComponent(this.metadata)
-                .suggestComponent(this.suggest)
-                .provided(new RpcProtocolModule.Provided() {
-                    @Override
-                    public NodeMetadata metadata() {
-                        return metadata;
-                    }
-
-                    @Override
-                    public ClusterNode localClusterNode() {
-                        return localClusterNode;
-                    }
-                })
-                .build();
-
-            for (final RpcProtocolModule m : protocols) {
-                protocolComponents.add(Pair.of(m.scheme(), m.module(dependencies)));
-            }
-
-            return protocolComponents.build();
-        }
-
-        @Provides
-        @ClusterScope
-        public Map<String, RpcProtocol> protocols(
-            List<Pair<String, RpcProtocolComponent>> protocols
-        ) {
-            final Map<String, RpcProtocol> map = new HashMap<>();
-
-            for (final Pair<String, RpcProtocolComponent> m : protocols) {
-                map.put(m.getLeft(), m.getRight().rpcProtocol());
-            }
-
-            return map;
-        }
-
-        @Provides
-        @ClusterScope
-        @Named("cluster")
-        LifeCycle clusterLife(
-            LifeCycleManager manager, CoreClusterManager cluster,
-            List<Pair<String, RpcProtocolComponent>> protocols
-        ) {
-            final List<LifeCycle> life = new ArrayList<>();
-            life.add(manager.build(cluster));
-            protocols.stream().map(p -> p.getRight().life()).forEach(life::add);
-            return LifeCycle.combined(life);
-        }
+    @Provides
+    @ClusterScope
+    @Named("cluster")
+    LifeCycle clusterLife(
+        LifeCycleManager manager, CoreClusterManager cluster,
+        List<Pair<String, RpcProtocolComponent>> protocols
+    ) {
+        final List<LifeCycle> life = new ArrayList<>();
+        life.add(manager.build(cluster));
+        protocols.stream().map(p -> p.getRight().life()).forEach(life::add);
+        return LifeCycle.combined(life);
     }
 
     public static Builder builder() {

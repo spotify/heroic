@@ -19,7 +19,7 @@
  * under the License.
  */
 
-package com.spotify.heroic.shell;
+package com.spotify.heroic.suggest;
 
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
@@ -27,9 +27,13 @@ import dagger.Component;
 
 import javax.inject.Named;
 
-@ShellServerScope
-@Component(modules = ShellServerModule.class, dependencies = PrimaryComponent.class)
-public interface ShellServerComponent {
-    @Named("shellServer")
-    LifeCycle shellServerLife();
+@SuggestScope
+@Component(modules = SuggestManagerModule.class, dependencies = PrimaryComponent.class)
+public interface CoreSuggestComponent extends SuggestComponent {
+    @Override
+    LocalSuggestManager suggestManager();
+
+    @Override
+    @Named("suggest")
+    LifeCycle suggestLife();
 }

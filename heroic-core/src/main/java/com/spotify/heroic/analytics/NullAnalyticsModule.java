@@ -22,28 +22,22 @@
 package com.spotify.heroic.analytics;
 
 import com.spotify.heroic.dagger.PrimaryComponent;
-import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
 
+@Module
 public class NullAnalyticsModule implements AnalyticsModule {
     public AnalyticsComponent module(PrimaryComponent primary) {
-        return DaggerNullAnalyticsModule_C.builder().primaryComponent(primary).build();
+        return DaggerNullAnalyticsComponent
+            .builder()
+            .primaryComponent(primary)
+            .nullAnalyticsModule(this)
+            .build();
     }
 
     @NullScope
-    @Component(modules = M.class, dependencies = PrimaryComponent.class)
-    interface C extends AnalyticsComponent {
-        @Override
-        MetricAnalytics metricAnalytics();
-    }
-
-    @Module
-    public static class M {
-        @NullScope
-        @Provides
-        public MetricAnalytics metricAnalytics(NullMetricAnalytics metricAnalytics) {
-            return metricAnalytics;
-        }
+    @Provides
+    public MetricAnalytics metricAnalytics(NullMetricAnalytics metricAnalytics) {
+        return metricAnalytics;
     }
 }

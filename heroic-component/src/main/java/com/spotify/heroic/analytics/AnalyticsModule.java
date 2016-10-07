@@ -24,7 +24,7 @@ package com.spotify.heroic.analytics;
 import com.spotify.heroic.dagger.PrimaryComponent;
 
 public interface AnalyticsModule {
-    public AnalyticsComponent module(PrimaryComponent primary);
+    AnalyticsComponent module(PrimaryComponent primary);
 
     interface Builder {
         AnalyticsModule build();

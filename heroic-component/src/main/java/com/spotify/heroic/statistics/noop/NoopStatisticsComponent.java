@@ -19,17 +19,16 @@
  * under the License.
  */
 
-package com.spotify.heroic.shell;
+package com.spotify.heroic.statistics.noop;
 
-import com.spotify.heroic.dagger.PrimaryComponent;
-import com.spotify.heroic.lifecycle.LifeCycle;
+import com.spotify.heroic.dagger.EarlyComponent;
+import com.spotify.heroic.statistics.HeroicReporter;
+import com.spotify.heroic.statistics.StatisticsComponent;
 import dagger.Component;
 
-import javax.inject.Named;
-
-@ShellServerScope
-@Component(modules = ShellServerModule.class, dependencies = PrimaryComponent.class)
-public interface ShellServerComponent {
-    @Named("shellServer")
-    LifeCycle shellServerLife();
+@NoopScope
+@Component(modules = NoopStatisticsModule.class, dependencies = EarlyComponent.class)
+public interface NoopStatisticsComponent extends StatisticsComponent {
+    @Override
+    HeroicReporter reporter();
 }

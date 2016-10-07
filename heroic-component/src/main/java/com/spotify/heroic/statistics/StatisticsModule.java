@@ -22,27 +22,7 @@
 package com.spotify.heroic.statistics;
 
 import com.spotify.heroic.dagger.EarlyComponent;
-import com.spotify.heroic.lifecycle.LifeCycle;
-import lombok.Data;
 
 public interface StatisticsModule {
-    Exposed module(EarlyComponent early, Depends depends);
-
-    /**
-     * Dependencies for statistics modules.
-     */
-    @Data
-    class Depends {
-    }
-
-    /**
-     * Exposed for statistics modules.
-     */
-    interface Exposed {
-        HeroicReporter reporter();
-
-        default LifeCycle life() {
-            return LifeCycle.empty();
-        }
-    }
+    StatisticsComponent module(EarlyComponent early);
 }

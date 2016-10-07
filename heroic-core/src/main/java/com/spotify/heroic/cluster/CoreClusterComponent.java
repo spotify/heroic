@@ -19,17 +19,30 @@
  * under the License.
  */
 
-package com.spotify.heroic.shell;
+package com.spotify.heroic.cluster;
 
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
+import com.spotify.heroic.metadata.MetadataComponent;
+import com.spotify.heroic.metric.MetricComponent;
+import com.spotify.heroic.suggest.SuggestComponent;
 import dagger.Component;
 
 import javax.inject.Named;
 
-@ShellServerScope
-@Component(modules = ShellServerModule.class, dependencies = PrimaryComponent.class)
-public interface ShellServerComponent {
-    @Named("shellServer")
-    LifeCycle shellServerLife();
+@ClusterScope
+@Component(modules = ClusterManagerModule.class, dependencies = {
+    PrimaryComponent.class, ClusterDiscoveryComponent.class, MetricComponent.class,
+    MetadataComponent.class, SuggestComponent.class
+})
+public interface CoreClusterComponent extends ClusterComponent {
+    @Override
+    CoreClusterManager clusterManager();
+
+    @Override
+    NodeMetadata nodeMetadata();
+
+    @Named("cluster")
+    @Override
+    LifeCycle clusterLife();
 }

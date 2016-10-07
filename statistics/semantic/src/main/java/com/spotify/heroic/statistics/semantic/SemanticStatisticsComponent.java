@@ -21,12 +21,18 @@
 
 package com.spotify.heroic.statistics.semantic;
 
-import javax.inject.Scope;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
+import com.spotify.heroic.dagger.EarlyComponent;
+import com.spotify.heroic.lifecycle.LifeCycle;
+import com.spotify.heroic.statistics.HeroicReporter;
+import com.spotify.heroic.statistics.StatisticsComponent;
+import dagger.Component;
 
-@Scope
-@Retention(RetentionPolicy.RUNTIME)
-public @interface SemanticScope {
+@SemanticStatisticsScope
+@Component(modules = SemanticStatisticsModule.class, dependencies = EarlyComponent.class)
+public interface SemanticStatisticsComponent extends StatisticsComponent {
+    @Override
+    HeroicReporter reporter();
 
+    @Override
+    LifeCycle life();
 }

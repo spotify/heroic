@@ -19,17 +19,27 @@
  * under the License.
  */
 
-package com.spotify.heroic.shell;
+package com.spotify.heroic.statistics;
 
-import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
-import dagger.Component;
 
-import javax.inject.Named;
+/**
+ * Dependencies provided by statistics components.
+ */
+public interface StatisticsComponent {
+    /**
+     * Reporter provided by the statistics component.
+     *
+     * @return reporter instance
+     */
+    HeroicReporter reporter();
 
-@ShellServerScope
-@Component(modules = ShellServerModule.class, dependencies = PrimaryComponent.class)
-public interface ShellServerComponent {
-    @Named("shellServer")
-    LifeCycle shellServerLife();
+    /**
+     * Life cycle for the statistics component.
+     *
+     * @return life cycle that is empty by default
+     */
+    default LifeCycle life() {
+        return LifeCycle.empty();
+    }
 }

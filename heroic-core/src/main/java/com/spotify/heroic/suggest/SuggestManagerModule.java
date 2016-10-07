@@ -29,7 +29,6 @@ import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.SuggestBackendReporter;
-import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
 import lombok.AccessLevel;
@@ -48,82 +47,60 @@ import static java.util.Optional.empty;
 import static java.util.Optional.of;
 
 @RequiredArgsConstructor
+@Module
 public class SuggestManagerModule {
     private final List<SuggestModule> backends;
     private final Optional<List<String>> defaultBackends;
 
-    public SuggestComponent module(final PrimaryComponent primary) {
-        return DaggerSuggestManagerModule_C
-            .builder()
-            .primaryComponent(primary)
-            .m(new M(primary))
-            .build();
-    }
-
+    @Provides
     @SuggestScope
-    @Component(modules = M.class, dependencies = {PrimaryComponent.class})
-    interface C extends SuggestComponent {
-        @Override
-        LocalSuggestManager suggestManager();
-
-        @Override
-        @Named("suggest")
-        LifeCycle suggestLife();
+    public SuggestBackendReporter localReporter(HeroicReporter reporter) {
+        return reporter.newSuggestBackend();
     }
 
-    @RequiredArgsConstructor
-    @Module
-    class M {
-        private final PrimaryComponent primary;
+    @Provides
+    @Named("groupSet")
+    @SuggestScope
+    public GroupSet<SuggestBackend> groupSet(Set<SuggestBackend> configured) {
+        return GroupSet.build(configured, defaultBackends);
+    }
 
-        @Provides
-        @SuggestScope
-        public SuggestBackendReporter localReporter(HeroicReporter reporter) {
-            return reporter.newSuggestBackend();
+    @Provides
+    @SuggestScope
+    public List<SuggestModule.Exposed> components(
+        SuggestBackendReporter reporter, PrimaryComponent primary
+    ) {
+        final ArrayList<SuggestModule.Exposed> results = new ArrayList<>();
+
+        final ModuleIdBuilder idBuilder = new ModuleIdBuilder();
+
+        for (final SuggestModule m : backends) {
+            final String id = idBuilder.buildId(m);
+
+            final SuggestModule.Depends depends = new SuggestModule.Depends(reporter);
+            results.add(m.module(primary, depends, id));
         }
 
-        @Provides
-        @Named("groupSet")
-        @SuggestScope
-        public GroupSet<SuggestBackend> groupSet(Set<SuggestBackend> configured) {
-            return GroupSet.build(configured, defaultBackends);
-        }
+        return results;
+    }
 
-        @Provides
-        @SuggestScope
-        public List<SuggestModule.Exposed> components(SuggestBackendReporter reporter) {
-            final ArrayList<SuggestModule.Exposed> results = new ArrayList<>();
+    @Provides
+    @SuggestScope
+    public Set<SuggestBackend> backends(
+        List<SuggestModule.Exposed> components, SuggestBackendReporter reporter
+    ) {
+        return ImmutableSet.copyOf(components
+            .stream()
+            .map(SuggestModule.Exposed::backend)
+            .map(reporter::decorate)
+            .iterator());
+    }
 
-            final ModuleIdBuilder idBuilder = new ModuleIdBuilder();
-
-            for (final SuggestModule m : backends) {
-                final String id = idBuilder.buildId(m);
-
-                final SuggestModule.Depends depends = new SuggestModule.Depends(reporter);
-                results.add(m.module(primary, depends, id));
-            }
-
-            return results;
-        }
-
-        @Provides
-        @SuggestScope
-        public Set<SuggestBackend> backends(
-            List<SuggestModule.Exposed> components, SuggestBackendReporter reporter
-        ) {
-            return ImmutableSet.copyOf(components
-                .stream()
-                .map(SuggestModule.Exposed::backend)
-                .map(reporter::decorate)
-                .iterator());
-        }
-
-        @Provides
-        @SuggestScope
-        @Named("suggest")
-        public LifeCycle suggestLife(List<SuggestModule.Exposed> components) {
-            return LifeCycle.combined(components.stream().map(SuggestModule.Exposed::life));
-        }
+    @Provides
+    @SuggestScope
+    @Named("suggest")
+    public LifeCycle suggestLife(List<SuggestModule.Exposed> components) {
+        return LifeCycle.combined(components.stream().map(SuggestModule.Exposed::life));
     }
 
     public static Builder builder() {

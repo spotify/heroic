@@ -23,37 +23,25 @@ package com.spotify.heroic.statistics.noop;
 
 import com.spotify.heroic.dagger.EarlyComponent;
 import com.spotify.heroic.statistics.HeroicReporter;
+import com.spotify.heroic.statistics.StatisticsComponent;
 import com.spotify.heroic.statistics.StatisticsModule;
-import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
 
+@Module
 public class NoopStatisticsModule implements StatisticsModule {
     @Override
-    public Exposed module(
-        final EarlyComponent early, final Depends depends
-    ) {
-        return DaggerNoopStatisticsModule_C
+    public StatisticsComponent module(final EarlyComponent early) {
+        return DaggerNoopStatisticsComponent
             .builder()
             .earlyComponent(early)
-            .depends(depends)
-            .m(new M())
+            .noopStatisticsModule(this)
             .build();
     }
 
+    @Provides
     @NoopScope
-    @Component(modules = M.class, dependencies = {EarlyComponent.class, Depends.class})
-    interface C extends Exposed {
-        @Override
-        HeroicReporter reporter();
-    }
-
-    @Module
-    class M {
-        @Provides
-        @NoopScope
-        public HeroicReporter reporter() {
-            return NoopHeroicReporter.get();
-        }
+    public HeroicReporter reporter() {
+        return NoopHeroicReporter.get();
     }
 }

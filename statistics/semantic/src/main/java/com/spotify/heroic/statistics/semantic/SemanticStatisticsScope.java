@@ -19,17 +19,14 @@
  * under the License.
  */
 
-package com.spotify.heroic.shell;
+package com.spotify.heroic.statistics.semantic;
 
-import com.spotify.heroic.dagger.PrimaryComponent;
-import com.spotify.heroic.lifecycle.LifeCycle;
-import dagger.Component;
+import javax.inject.Scope;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
-import javax.inject.Named;
+@Scope
+@Retention(RetentionPolicy.RUNTIME)
+public @interface SemanticStatisticsScope {
 
-@ShellServerScope
-@Component(modules = ShellServerModule.class, dependencies = PrimaryComponent.class)
-public interface ShellServerComponent {
-    @Named("shellServer")
-    LifeCycle shellServerLife();
 }

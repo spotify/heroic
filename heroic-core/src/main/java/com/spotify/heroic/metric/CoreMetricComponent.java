@@ -19,17 +19,25 @@
  * under the License.
  */
 
-package com.spotify.heroic.shell;
+package com.spotify.heroic.metric;
 
-import com.spotify.heroic.dagger.PrimaryComponent;
+import com.spotify.heroic.analytics.AnalyticsComponent;
+import com.spotify.heroic.dagger.CorePrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
+import com.spotify.heroic.metadata.MetadataComponent;
 import dagger.Component;
 
 import javax.inject.Named;
 
-@ShellServerScope
-@Component(modules = ShellServerModule.class, dependencies = PrimaryComponent.class)
-public interface ShellServerComponent {
-    @Named("shellServer")
-    LifeCycle shellServerLife();
+@MetricScope
+@Component(modules = MetricManagerModule.class, dependencies = {
+    CorePrimaryComponent.class, MetadataComponent.class, AnalyticsComponent.class
+})
+public interface CoreMetricComponent extends MetricComponent {
+    @Override
+    LocalMetricManager metricManager();
+
+    @Override
+    @Named("metric")
+    LifeCycle metricLife();
 }
