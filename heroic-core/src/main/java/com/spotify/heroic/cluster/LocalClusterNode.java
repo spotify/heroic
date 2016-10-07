@@ -48,6 +48,7 @@ import lombok.ToString;
 import javax.inject.Inject;
 import java.util.Optional;
 
+@ClusterScope
 @ToString(exclude = {"async", "metrics", "metadata", "suggest"})
 public class LocalClusterNode implements ClusterNode {
     private final AsyncFramework async;

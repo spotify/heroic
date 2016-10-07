@@ -23,15 +23,10 @@ package com.spotify.heroic.rpc.jvm;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.cluster.NodeMetadata;
 import com.spotify.heroic.cluster.RpcProtocolComponent;
 import com.spotify.heroic.cluster.RpcProtocolModule;
-import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
-import com.spotify.heroic.metadata.MetadataComponent;
-import com.spotify.heroic.metric.MetricComponent;
-import com.spotify.heroic.suggest.SuggestComponent;
 import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
@@ -59,25 +54,16 @@ public class JvmRpcProtocolModule implements RpcProtocolModule {
     }
 
     @Override
-    public RpcProtocolComponent module(
-        PrimaryComponent primary, MetricComponent metric, MetadataComponent metadata,
-        SuggestComponent suggest, NodeMetadata nodeMetadata
-    ) {
+    public RpcProtocolComponent module(final Dependencies dependencies) {
         return DaggerJvmRpcProtocolModule_C
             .builder()
-            .primaryComponent(primary)
-            .metricComponent(metric)
-            .metadataComponent(metadata)
-            .suggestComponent(suggest)
-            .m(new M(nodeMetadata))
+            .dependencies(dependencies)
+            .m(new M())
             .build();
     }
 
     @JvmRpcScope
-    @Component(modules = M.class, dependencies = {
-        PrimaryComponent.class, SuggestComponent.class, MetricComponent.class,
-        MetadataComponent.class
-    })
+    @Component(modules = M.class, dependencies = Dependencies.class)
     interface C extends RpcProtocolComponent {
         @Override
         JvmRpcProtocol rpcProtocol();
@@ -89,14 +75,6 @@ public class JvmRpcProtocolModule implements RpcProtocolModule {
     @RequiredArgsConstructor
     @Module
     class M {
-        private final NodeMetadata nodeMetadata;
-
-        @Provides
-        @JvmRpcScope
-        public NodeMetadata nodeMetadata() {
-            return nodeMetadata;
-        }
-
         @Provides
         @JvmRpcScope
         public JvmRpcContext context() {
@@ -112,9 +90,7 @@ public class JvmRpcProtocolModule implements RpcProtocolModule {
 
         @Provides
         @JvmRpcScope
-        LifeCycle server(
-            LifeCycleManager manager, JvmRpcProtocolServer server
-        ) {
+        LifeCycle server(LifeCycleManager manager, JvmRpcProtocolServer server) {
             final List<LifeCycle> life = new ArrayList<>();
             life.add(manager.build(server));
             return LifeCycle.combined(life);

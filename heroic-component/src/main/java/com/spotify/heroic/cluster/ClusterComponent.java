@@ -30,6 +30,9 @@ public interface ClusterComponent {
 
     NodeMetadata nodeMetadata();
 
+    @Named("local")
+    ClusterNode localClusterNode();
+
     @Named("cluster")
     default LifeCycle clusterLife() {
         return LifeCycle.empty();

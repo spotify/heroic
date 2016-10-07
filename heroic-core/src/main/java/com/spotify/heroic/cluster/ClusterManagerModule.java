@@ -86,11 +86,10 @@ public class ClusterManagerModule {
     }
 
     @ClusterScope
-    @Component(modules = M.class,
-        dependencies = {
-            PrimaryComponent.class, ClusterDiscoveryComponent.class, MetricComponent.class,
-            MetadataComponent.class, SuggestComponent.class
-        })
+    @Component(modules = M.class, dependencies = {
+        PrimaryComponent.class, ClusterDiscoveryComponent.class, MetricComponent.class,
+        MetadataComponent.class, SuggestComponent.class
+    })
     interface C extends ClusterComponent {
         @Override
         CoreClusterManager clusterManager();
@@ -98,8 +97,8 @@ public class ClusterManagerModule {
         @Override
         NodeMetadata nodeMetadata();
 
-        @Override
         @Named("cluster")
+        @Override
         LifeCycle clusterLife();
     }
 
@@ -110,6 +109,13 @@ public class ClusterManagerModule {
         private final MetricComponent metric;
         private final MetadataComponent metadata;
         private final SuggestComponent suggest;
+
+        @Provides
+        @ClusterScope
+        @Named("local")
+        public ClusterNode localClusterNode(LocalClusterNode local) {
+            return local;
+        }
 
         @Provides
         @ClusterScope
@@ -134,14 +140,33 @@ public class ClusterManagerModule {
         @Provides
         @ClusterScope
         public List<Pair<String, RpcProtocolComponent>> protocolComponents(
-            final NodeMetadata nodeMetadata
+            final NodeMetadata metadata, @Named("local") final ClusterNode localClusterNode
         ) {
             final ImmutableList.Builder<Pair<String, RpcProtocolComponent>> protocolComponents =
                 ImmutableList.builder();
 
+            /* build up a local component which defines all dependencies for a child component */
+            final RpcProtocolModule.Dependencies dependencies = DaggerRpcProtocolModule_Dependencies
+                .builder()
+                .primaryComponent(this.primary)
+                .metricComponent(this.metric)
+                .metadataComponent(this.metadata)
+                .suggestComponent(this.suggest)
+                .provided(new RpcProtocolModule.Provided() {
+                    @Override
+                    public NodeMetadata metadata() {
+                        return metadata;
+                    }
+
+                    @Override
+                    public ClusterNode localClusterNode() {
+                        return localClusterNode;
+                    }
+                })
+                .build();
+
             for (final RpcProtocolModule m : protocols) {
-                protocolComponents.add(Pair.of(m.scheme(),
-                    m.module(primary, metric, metadata, suggest, nodeMetadata)));
+                protocolComponents.add(Pair.of(m.scheme(), m.module(dependencies)));
             }
 
             return protocolComponents.build();

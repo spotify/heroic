@@ -70,17 +70,16 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.SortedSet;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import javax.inject.Inject;
+import javax.inject.Named;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class CoreQueryManager implements QueryManager {
@@ -336,7 +335,7 @@ public class CoreQueryManager implements QueryManager {
             return q
                 .getRange()
                 .map(r -> r.buildDateRange(now))
-                .orElseThrow(() -> new QueryStateException("Range must be present"));
+                .orElseThrow(() -> new IllegalArgumentException("Range must be present"));
         }
     }
 
