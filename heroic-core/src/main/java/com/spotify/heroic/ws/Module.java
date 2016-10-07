@@ -50,8 +50,6 @@ public class Module implements HeroicModule {
 
         ParseExceptionMapper parseExceptionMapper();
 
-        QueryStateExceptionMapper queryStateExceptionMapper();
-
         JsonMappingExceptionMapper jsonMappingExceptionMapper();
 
         JsonParseExceptionMapper jsonParseExceptionMapper();
@@ -82,7 +80,6 @@ public class Module implements HeroicModule {
                     w.throwableExceptionMapper(),
                     w.errorMapper(),
                     w.parseExceptionMapper(),
-                    w.queryStateExceptionMapper(),
                     w.jsonMappingExceptionMapper(),
                     w.jsonParseExceptionMapper(),
                     w.webApplicationExceptionMapper(),
