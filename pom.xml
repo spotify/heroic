@@ -132,8 +132,9 @@
             <artifactId>maven-failsafe-plugin</artifactId>
             <version>2.19.1</version>
             <configuration>
-              <parallel>methods</parallel>
-              <threadCount>10</threadCount>
+              <parallel>classesAndMethods</parallel>
+              <threadCount>2</threadCount>
+              <perCoreThreadCount>true</perCoreThreadCount>
             </configuration>
             <executions>
               <execution>
@@ -757,6 +758,9 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.19.1</version>
         <configuration>
+          <parallel>classesAndMethods</parallel>
+          <threadCount>2</threadCount>
+          <perCoreThreadCount>true</perCoreThreadCount>
         </configuration>
       </plugin>
     </plugins>

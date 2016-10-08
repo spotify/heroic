@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.TreeMultimap;
+import lombok.RequiredArgsConstructor;
 import org.mockito.Mockito;
 
 import java.beans.ConstructorProperties;
@@ -45,7 +46,10 @@ import java.util.UUID;
 /**
  * Provides mock values for test classes.
  */
+@RequiredArgsConstructor
 public class FakeValueProvider {
+    private final ValueSuppliers suppliers;
+
     private final Map<Class<?>, Object> primary = new HashMap<>();
     private final Map<Class<?>, Object> secondary = new HashMap<>();
     private final Object lock = new Object();
@@ -60,16 +64,14 @@ public class FakeValueProvider {
         0x01
     });
 
-    /**
-     * Lookup a value for the given type.
-     * <p>
-     * This will only provide primary values.
-     *
-     * @param type Type to provide a value for. secondary value is not equal to a primary value.
-     * @return an object
-     */
-    public Object lookup(final Type type) {
-        return lookup(type, false);
+    public Object lookup(final Type type, final boolean secondary, final String name) {
+        final Optional<Object> supplied = suppliers.lookup(type, secondary, name);
+
+        if (supplied.isPresent()) {
+            return supplied.get();
+        }
+
+        return lookup(type, secondary);
     }
 
     /**
@@ -154,10 +156,20 @@ public class FakeValueProvider {
             .filter(c -> c.isAnnotationPresent(ConstructorProperties.class))
             .findAny()
             .map(c -> {
-                final Object[] arguments = Arrays
-                    .stream(c.getGenericParameterTypes())
-                    .map(t -> lookup(t, secondary))
-                    .toArray(Object[]::new);
+                final String[] names = c.getAnnotation(ConstructorProperties.class).value();
+                final Type[] types = c.getGenericParameterTypes();
+
+                if (names.length != types.length) {
+                    throw new IllegalArgumentException(
+                        "@ConstructorProperties number of arguments do not match number of " +
+                            "parameters: " + c);
+                }
+
+                final Object[] arguments = new Object[types.length];
+
+                for (int i = 0; i < types.length; i++) {
+                    arguments[i] = lookup(types[i], secondary, names[i]);
+                }
 
                 try {
                     return c.newInstance(arguments);

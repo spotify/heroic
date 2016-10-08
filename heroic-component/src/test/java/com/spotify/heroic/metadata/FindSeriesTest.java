@@ -6,6 +6,7 @@ import com.google.common.collect.Sets;
 import com.spotify.heroic.AbstractReducedResultTest;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.test.LombokDataTest;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -28,6 +29,11 @@ public class FindSeriesTest extends AbstractReducedResultTest {
         s1 = new FindSeries(errors, ImmutableSet.of(a), false);
         s2 = new FindSeries(ImmutableList.of(), ImmutableSet.of(a, b), false);
         s3 = new FindSeries(ImmutableList.of(), ImmutableSet.of(c), false);
+    }
+
+    @Test
+    public void lombokDataTest() {
+        LombokDataTest.verifyClass(FindSeries.class);
     }
 
     @Test

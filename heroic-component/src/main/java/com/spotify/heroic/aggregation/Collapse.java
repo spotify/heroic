@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.aggregation;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import lombok.Data;
@@ -36,15 +34,6 @@ public class Collapse implements Aggregation {
 
     private final Optional<List<String>> of;
     private final Optional<Aggregation> each;
-
-    @JsonCreator
-    public Collapse(
-        @JsonProperty("of") Optional<List<String>> of,
-        @JsonProperty("each") Optional<Aggregation> each
-    ) {
-        this.of = of;
-        this.each = each;
-    }
 
     @Override
     public CollapseInstance apply(final AggregationContext context) {

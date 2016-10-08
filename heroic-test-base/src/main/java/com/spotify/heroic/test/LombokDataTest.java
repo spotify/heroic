@@ -43,12 +43,18 @@ import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 
 public class LombokDataTest {
-    private static final FakeValueProvider TYPE_PROVIDERS = new FakeValueProvider();
-
     private static final Converter<String, String> LOWER_TO_UPPER =
         CaseFormat.LOWER_CAMEL.converterTo(CaseFormat.UPPER_CAMEL);
 
     public static void verifyClass(final Class<?> cls) {
+        verifyClass(cls, ValueSuppliers.empty());
+    }
+
+    public static void verifyClass(
+        final Class<?> cls, final ValueSuppliers suppliers
+    ) {
+        final FakeValueProvider valueProvider = new FakeValueProvider(suppliers);
+
         final Constructor<?> constructor = Arrays
             .stream(cls.getConstructors())
             .filter(c -> c.isAnnotationPresent(ConstructorProperties.class))
@@ -56,7 +62,7 @@ public class LombokDataTest {
             .orElseThrow(() -> new IllegalArgumentException(
                 "No constructor annotated with @ConstructorProperties"));
 
-        final List<FieldSpec> specs = buildFieldSpecs(cls, constructor);
+        final List<FieldSpec> specs = buildFieldSpecs(cls, constructor, valueProvider);
 
         verifyGetters(constructor, specs);
         verifyEquals(constructor, specs);
@@ -156,7 +162,7 @@ public class LombokDataTest {
     }
 
     private static List<FieldSpec> buildFieldSpecs(
-        final Class<?> cls, final Constructor<?> constructor
+        final Class<?> cls, final Constructor<?> constructor, final FakeValueProvider valueProvider
     ) {
         final Parameter[] parameters = constructor.getParameters();
 
@@ -173,20 +179,22 @@ public class LombokDataTest {
         final List<FieldSpec> specs = new ArrayList<>();
 
         for (int i = 0; i < types.length; i++) {
-            final Class<?> type = toRawType(types[i]);
+            final Type type = types[i];
+            final Class<?> rawType = toRawType(type);
             final String name = names[i];
 
             final Method getter;
 
-            if (type.equals(boolean.class)) {
+            if (rawType.equals(boolean.class)) {
                 getter = getGetterMethod(cls, "is" + LOWER_TO_UPPER.convert(name));
             } else {
                 getter = getGetterMethod(cls, "get" + LOWER_TO_UPPER.convert(name));
             }
 
-            final Object primary = TYPE_PROVIDERS.lookup(types[i]);
-            final Object secondary = TYPE_PROVIDERS.lookup(types[i], true);
-            specs.add(new FieldSpec(type, primary, secondary, name, getter));
+            final Object primary = valueProvider.lookup(type, false, name);
+            final Object secondary = valueProvider.lookup(type, true, name);
+
+            specs.add(new FieldSpec(rawType, primary, secondary, name, getter));
         }
 
         return specs;

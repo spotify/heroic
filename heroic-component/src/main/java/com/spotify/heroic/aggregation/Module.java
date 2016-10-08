@@ -46,7 +46,7 @@ public class Module implements HeroicModule {
                     protected Aggregation build(
                         Optional<List<String>> over, Optional<Aggregation> each
                     ) {
-                        return new Group(over, each);
+                        return new Group(over, each.map(AggregationOrList::fromAggregation));
                     }
                 });
 

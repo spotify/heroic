@@ -158,7 +158,7 @@ public class QueryBuilder {
      */
     Optional<Aggregation> legacyAggregation() {
         if (groupBy.isPresent()) {
-            return aggregation.map(a -> new Group(groupBy, Optional.of(a)));
+            return Optional.of(Group.of(groupBy, aggregation));
         }
 
         return aggregation;

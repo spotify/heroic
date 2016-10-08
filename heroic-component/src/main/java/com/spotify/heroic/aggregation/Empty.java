@@ -35,7 +35,7 @@ public class Empty implements Aggregation {
     }
 
     @Override
-    public EmptyInstance apply(AggregationContext context) {
+    public EmptyInstance apply(final AggregationContext context) {
         return EmptyInstance.INSTANCE;
     }
 }

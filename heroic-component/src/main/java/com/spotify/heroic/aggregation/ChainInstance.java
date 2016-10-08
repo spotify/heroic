@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.aggregation;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
@@ -33,7 +31,6 @@ import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
-import lombok.AccessLevel;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
@@ -41,7 +38,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -50,17 +46,8 @@ import java.util.Set;
  * @author udoprog
  */
 @Data
-@RequiredArgsConstructor(access = AccessLevel.MODULE)
 public class ChainInstance implements AggregationInstance {
     private final List<AggregationInstance> chain;
-
-    @JsonCreator
-    public ChainInstance(@JsonProperty("chain") Optional<List<AggregationInstance>> chain) {
-        this.chain = chain
-            .filter(c -> !c.isEmpty())
-            .orElseThrow(
-                () -> new IllegalArgumentException("chain must be specified and non-empty"));
-    }
 
     /**
      * The last aggregation in the chain determines the estimated number of samples.
@@ -177,8 +164,8 @@ public class ChainInstance implements AggregationInstance {
         return "[" + CHAIN_JOINER.join(chain.stream().map(Object::toString).iterator()) + "]";
     }
 
-    public static AggregationInstance of(final AggregationInstance... aggregations) {
-        return fromList(ImmutableList.copyOf(aggregations));
+    public static AggregationInstance of(final AggregationInstance... chain) {
+        return fromList(ImmutableList.copyOf(chain));
     }
 
     public static AggregationInstance fromList(final List<AggregationInstance> chain) {

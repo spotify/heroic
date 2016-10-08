@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.aggregation;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.util.Optional;
@@ -36,15 +34,6 @@ public class Options implements Aggregation {
 
     private final Optional<SamplingQuery> sampling;
     private final Optional<Aggregation> aggregation;
-
-    @JsonCreator
-    public Options(
-        @JsonProperty("sampling") Optional<SamplingQuery> sampling,
-        @JsonProperty("aggregation") Optional<Aggregation> aggregation
-    ) {
-        this.sampling = sampling;
-        this.aggregation = aggregation;
-    }
 
     @Override
     public AggregationInstance apply(final AggregationContext context) {
