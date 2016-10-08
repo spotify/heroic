@@ -23,61 +23,64 @@ package com.spotify.heroic.aggregation;
 
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.Duration;
+import lombok.RequiredArgsConstructor;
 
 import java.util.Optional;
 import java.util.Set;
 
-public interface AggregationContext {
+import static com.spotify.heroic.common.Optionals.firstPresent;
+
+@RequiredArgsConstructor
+public class AggregationContext {
+    private final Optional<Duration> size;
+    private final Optional<Duration> extent;
+    private final Duration defaultSize;
+    private final Duration defaultExtent;
+    private final Set<String> requiredTags;
+
     /**
      * Get the size that is currently configured in the context.
      *
      * @return The currently configured size.
      */
-    Optional<Duration> size();
+    public Optional<Duration> size() {
+        return size;
+    }
 
     /**
      * Get extent that is currently configured in the context.
      *
      * @return The currently configured extent.
      */
-    Optional<Duration> extent();
-
-    Duration defaultSize();
-
-    Duration defaultExtent();
-
-    default Set<String> requiredTags() {
-        return ImmutableSet.of();
+    public Optional<Duration> extent() {
+        return extent;
     }
 
-    static AggregationContext withRequiredTags(
-        final AggregationContext context, final Set<String> tags
+    public Duration defaultSize() {
+        return defaultSize;
+    }
+
+    public Duration defaultExtent() {
+        return defaultExtent;
+    }
+
+    public Set<String> requiredTags() {
+        return requiredTags;
+    }
+
+    public AggregationContext withRequiredTags(final Set<String> requiredTags) {
+        return new AggregationContext(size, extent, defaultSize, defaultExtent, requiredTags);
+    }
+
+    public AggregationContext withOptions(
+        final Optional<Duration> size, final Optional<Duration> extent
     ) {
-        return new AggregationContext() {
-            @Override
-            public Optional<Duration> size() {
-                return context.size();
-            }
+        return new AggregationContext(firstPresent(size, this.size),
+            firstPresent(extent, this.extent), defaultSize, defaultExtent, requiredTags);
+    }
 
-            @Override
-            public Optional<Duration> extent() {
-                return context.extent();
-            }
-
-            @Override
-            public Duration defaultSize() {
-                return context.defaultSize();
-            }
-
-            @Override
-            public Duration defaultExtent() {
-                return context.defaultExtent();
-            }
-
-            @Override
-            public Set<String> requiredTags() {
-                return tags;
-            }
-        };
+    public static AggregationContext defaultInstance(final Duration duration) {
+        return new AggregationContext(Optional.empty(), Optional.empty(), duration, duration,
+            ImmutableSet.of());
     }
 }

@@ -27,7 +27,6 @@ import com.spotify.heroic.aggregation.AggregationCombiner;
 import com.spotify.heroic.aggregation.AggregationContext;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.aggregation.AggregationInstance;
-import com.spotify.heroic.aggregation.DefaultAggregationContext;
 import com.spotify.heroic.aggregation.DistributedAggregationCombiner;
 import com.spotify.heroic.aggregation.Empty;
 import com.spotify.heroic.cache.QueryCache;
@@ -193,7 +192,7 @@ public class CoreQueryManager implements QueryManager {
             final Filter filter = q.getFilter().orElseGet(TrueFilter::get);
 
             final AggregationContext context =
-                new DefaultAggregationContext(cadenceFromRange(rawRange));
+                AggregationContext.defaultInstance(cadenceFromRange(rawRange));
             final AggregationInstance root = aggregation.apply(context);
 
             final AggregationInstance aggregationInstance;

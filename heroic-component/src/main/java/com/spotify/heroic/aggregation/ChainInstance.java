@@ -28,9 +28,9 @@ import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
-import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.MetricGroup;
+import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
 import lombok.AccessLevel;
@@ -75,7 +75,12 @@ public class ChainInstance implements AggregationInstance {
      */
     @Override
     public long cadence() {
-        return chain.get(chain.size() - 1).cadence();
+        return chain
+            .stream()
+            .map(AggregationInstance::cadence)
+            .filter(c -> c >= 0)
+            .reduce((a, b) -> b)
+            .orElse(-1L);
     }
 
     @Override

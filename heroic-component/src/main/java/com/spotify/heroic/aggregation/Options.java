@@ -50,7 +50,7 @@ public class Options implements Aggregation {
     public AggregationInstance apply(final AggregationContext context) {
         return aggregation
             .orElse(Empty.INSTANCE)
-            .apply(new OptionsContext(context, sampling.flatMap(SamplingQuery::getSize),
+            .apply(context.withOptions(sampling.flatMap(SamplingQuery::getSize),
                 sampling.flatMap(SamplingQuery::getExtent)));
     }
 }
