@@ -25,11 +25,6 @@
       <scope>provided</scope>
     </dependency>
 
-    <dependency>
-      <groupId>com.spotify.heroic</groupId>
-      <artifactId>heroic-component</artifactId>
-    </dependency>
-
     <!-- testing -->
     <dependency>
       <groupId>junit</groupId>
