@@ -100,10 +100,10 @@ public class Module implements HeroicModule {
                         final Optional<Duration> extent
                     ) {
                         final Optional<Double> q = args
-                            .getNext("q", DoubleExpression.class)
+                            .positionalOrKeyword("q", DoubleExpression.class)
                             .map(DoubleExpression::getValue);
                         final Optional<Double> error = args
-                            .getNext("error", DoubleExpression.class)
+                            .positionalOrKeyword("error", DoubleExpression.class)
                             .map(DoubleExpression::getValue);
                         return new Quantile(Optional.empty(), size, extent, q, error);
                     }
