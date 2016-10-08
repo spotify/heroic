@@ -25,7 +25,6 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.MetricCollection;
@@ -33,10 +32,9 @@ import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.metric.ResultLimits;
 import com.spotify.heroic.metric.SeriesValues;
-import com.spotify.heroic.metric.ShardLatency;
 import com.spotify.heroic.metric.ShardedResultGroup;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.Data;
+import lombok.NonNull;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -46,33 +44,25 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 
-@RequiredArgsConstructor
+@Data
 @JsonSerialize(using = QueryMetricsResponse.Serializer.class)
 public class QueryMetricsResponse {
-    @Getter
+    @NonNull
     private final DateRange range;
 
-    @Getter
+    @NonNull
     private final List<ShardedResultGroup> result;
 
-    @Getter
+    @NonNull
     private final Statistics statistics = Statistics.empty();
 
-    @Getter
+    @NonNull
     private final List<RequestError> errors;
 
-    /**
-     * Shard latencies associated with the query.
-     *
-     * @deprecated Use {@link #trace} instead.
-     */
-    @Getter
-    private final List<ShardLatency> latencies = ImmutableList.of();
-
-    @Getter
+    @NonNull
     private final QueryTrace trace;
 
-    @Getter
+    @NonNull
     private final ResultLimits limits;
 
     public static class Serializer extends JsonSerializer<QueryMetricsResponse> {

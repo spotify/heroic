@@ -21,20 +21,12 @@
 
 package com.spotify.heroic.http.metadata;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.QueryDateRange;
-import com.spotify.heroic.filter.AndFilter;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.HasTagFilter;
-import com.spotify.heroic.filter.MatchKeyFilter;
-import com.spotify.heroic.filter.MatchTagFilter;
-import com.spotify.heroic.filter.TrueFilter;
 import lombok.Data;
+import lombok.NonNull;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -42,83 +34,39 @@ import java.util.Set;
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MetadataQueryBody {
-    private static final int DEFAULT_LIMIT = 50;
+    public static final int DEFAULT_LIMIT = 50;
 
     /**
      * Only include time series which match the exact key.
      */
+    @NonNull
     private final Optional<String> matchKey;
 
     /**
      * Only include time series which matches the exact key/value combination.
      */
+    @NonNull
     private final Optional<Map<String, String>> matchTags;
 
     /**
      * Only include time series which has the following tags.
      */
+    @NonNull
     private final Optional<Set<String>> hasTags;
 
     /**
      * A general set of filters. If this is combined with the other mechanisms, all the filters will
      * be AND:ed together.
      */
+    @NonNull
     private final Optional<Filter> filter;
 
     /**
      * The date range to query for.
      */
+    @NonNull
     private final Optional<QueryDateRange> range;
 
-    private final int limit;
-
-    public Filter makeFilter() {
-        final List<Filter> statements = new ArrayList<>();
-
-        if (filter.isPresent()) {
-            statements.add(filter.get());
-        }
-
-        if (matchTags.isPresent()) {
-            matchTags
-                .get()
-                .entrySet()
-                .forEach(e -> statements.add(new MatchTagFilter(e.getKey(), e.getValue())));
-        }
-
-        if (hasTags.isPresent()) {
-            hasTags.get().forEach(t -> statements.add(new HasTagFilter(t)));
-        }
-
-        if (matchKey.isPresent()) {
-            statements.add(new MatchKeyFilter(matchKey.get()));
-        }
-
-        if (statements.size() == 0) {
-            return TrueFilter.get();
-        }
-
-        if (statements.size() == 1) {
-            return statements.get(0).optimize();
-        }
-
-        return new AndFilter(statements).optimize();
-    }
-
-    @JsonCreator
-    public MetadataQueryBody(
-        @JsonProperty("matchKey") Optional<String> matchKey,
-        @JsonProperty("matchTags") Optional<Map<String, String>> matchTags,
-        @JsonProperty("hasTags") Optional<Set<String>> hasTags,
-        @JsonProperty("filter") Optional<Filter> filter,
-        @JsonProperty("range") Optional<QueryDateRange> range,
-        @JsonProperty("limit") Optional<Integer> limit
-    ) {
-        this.matchKey = matchKey;
-        this.matchTags = matchTags;
-        this.hasTags = hasTags;
-        this.filter = filter;
-        this.range = range;
-        this.limit = limit.orElse(DEFAULT_LIMIT);
-    }
+    @NonNull
+    private final Optional<Integer> limit;
 }

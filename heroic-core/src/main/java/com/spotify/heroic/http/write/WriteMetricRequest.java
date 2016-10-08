@@ -21,38 +21,30 @@
 
 package com.spotify.heroic.http.write;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.ingestion.Ingestion;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
 import lombok.Data;
 
-import static java.util.Optional.ofNullable;
+import java.util.Optional;
 
 @Data
 public class WriteMetricRequest {
-    final Series series;
-    final MetricCollection data;
-
-    @JsonCreator
-    public WriteMetricRequest(
-        @JsonProperty("series") Series series, @JsonProperty("data") MetricCollection data
-    ) {
-        this.series = ofNullable(series).orElseGet(Series::empty);
-        this.data = ofNullable(data).orElseGet(MetricCollection::empty);
-    }
+    final Optional<Series> series;
+    final Optional<MetricCollection> data;
 
     public boolean isEmpty() {
-        return data.isEmpty();
+        return data.map(MetricCollection::isEmpty).orElse(true);
     }
 
     public Iterable<Metric> all() {
-        return data.getDataAs(Metric.class);
+        return data.map(d -> d.getDataAs(Metric.class)).orElseGet(ImmutableList::of);
     }
 
     public Ingestion.Request toIngestionRequest() {
-        return new Ingestion.Request(series, data);
+        return new Ingestion.Request(series.orElseGet(Series::empty),
+            data.orElseGet(MetricCollection::empty));
     }
 }

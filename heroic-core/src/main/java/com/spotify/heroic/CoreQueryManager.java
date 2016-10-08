@@ -69,16 +69,17 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Inject;
+import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.SortedSet;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-import javax.inject.Inject;
-import javax.inject.Named;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class CoreQueryManager implements QueryManager {
@@ -114,11 +115,6 @@ public class CoreQueryManager implements QueryManager {
     @Override
     public QueryManager.Group useOptionalGroup(final Optional<String> group) {
         return new Group(cluster.useOptionalGroup(group));
-    }
-
-    @Override
-    public QueryBuilder newQuery() {
-        return new QueryBuilder();
     }
 
     @Override
@@ -164,7 +160,7 @@ public class CoreQueryManager implements QueryManager {
 
                 final Optional<Filter> filter = e.getFilter();
 
-                return newQuery()
+                return new QueryBuilder()
                     .source(source)
                     .range(range)
                     .aggregation(aggregation)
@@ -197,7 +193,10 @@ public class CoreQueryManager implements QueryManager {
 
             final AggregationInstance aggregationInstance;
 
-            final Features features = CoreQueryManager.this.features.combine(q.getFeatures());
+            final Features features = q
+                .getFeatures()
+                .map(CoreQueryManager.this.features::combine)
+                .orElse(CoreQueryManager.this.features);
 
             boolean isDistributed = features.hasFeature(Feature.DISTRIBUTED_AGGREGATIONS);
 

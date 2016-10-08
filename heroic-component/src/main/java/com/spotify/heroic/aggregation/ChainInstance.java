@@ -182,11 +182,13 @@ public class ChainInstance implements AggregationInstance {
     }
 
     public static AggregationInstance fromList(final List<AggregationInstance> chain) {
-        if (chain.size() == 1) {
-            return chain.iterator().next();
+        final List<AggregationInstance> c = flattenChain(chain);
+
+        if (c.size() == 1) {
+            return c.iterator().next();
         }
 
-        return new ChainInstance(flattenChain(chain));
+        return new ChainInstance(c);
     }
 
     private static List<AggregationInstance> flattenChain(

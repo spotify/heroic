@@ -21,37 +21,27 @@
 
 package com.spotify.heroic.http.metadata;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.suggest.MatchOptions;
 import lombok.Data;
+import lombok.NonNull;
 
 import java.util.Optional;
 
 @Data
 public class MetadataKeySuggest {
-    private static final int DEFAULT_LIMIT = 10;
-    private static final MatchOptions DEFAULT_MATCH = MatchOptions.builder().fuzzy(false).build();
+    public static final int DEFAULT_LIMIT = 10;
+    public static final MatchOptions DEFAULT_MATCH = MatchOptions.builder().fuzzy(false).build();
 
+    @NonNull
     private final Optional<Filter> filter;
+    @NonNull
     private final Optional<QueryDateRange> range;
-    private final int limit;
-    private final MatchOptions match;
+    @NonNull
+    private final Optional<Integer> limit;
+    @NonNull
+    private final Optional<MatchOptions.Builder> match;
+    @NonNull
     private final Optional<String> key;
-
-    @JsonCreator
-    public MetadataKeySuggest(
-        @JsonProperty("filter") Optional<Filter> filter, @JsonProperty("key") Optional<String> key,
-        @JsonProperty("limit") Optional<Integer> limit,
-        @JsonProperty("range") Optional<QueryDateRange> range,
-        @JsonProperty("match") Optional<MatchOptions> match
-    ) {
-        this.filter = filter;
-        this.range = range;
-        this.limit = limit.orElse(DEFAULT_LIMIT);
-        this.match = match.orElse(DEFAULT_MATCH);
-        this.key = key;
-    }
 }

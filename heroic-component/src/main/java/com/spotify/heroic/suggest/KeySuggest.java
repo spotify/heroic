@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.suggest;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.cluster.ClusterShard;
 import com.spotify.heroic.common.DateRange;
@@ -33,6 +31,7 @@ import com.spotify.heroic.metric.ShardError;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
 import lombok.Data;
+import lombok.NonNull;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -41,8 +40,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 @Data
 public class KeySuggest {
@@ -89,14 +86,10 @@ public class KeySuggest {
 
     @Data
     public static final class Suggestion {
+        @NonNull
         private final float score;
+        @NonNull
         private final String key;
-
-        @JsonCreator
-        public Suggestion(@JsonProperty("score") Float score, @JsonProperty("key") String key) {
-            this.score = checkNotNull(score, "score must not be null");
-            this.key = checkNotNull(key, "value must not be null");
-        }
 
         private static final Comparator<Suggestion> COMPARATOR = new Comparator<Suggestion>() {
             @Override

@@ -22,10 +22,12 @@
 package com.spotify.heroic.http.metadata;
 
 import lombok.Data;
+import lombok.NonNull;
 
 import java.util.List;
 
 @Data
 public class MetadataAddSeriesResponse {
+    @NonNull
     private final List<Long> times;
 }

@@ -21,39 +21,31 @@
 
 package com.spotify.heroic.suggest;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import java.beans.ConstructorProperties;
 import java.util.Optional;
 
 @Data
 public class MatchOptions {
-    public static final boolean DEFAULT_FUZZY = false;
-    public static final int DEFAULT_FUZZY_PREFIX_LENGTH = 2;
-    public static final int DEFAULT_FUZZY_MAX_EXPANSIONS = 20;
-    public static final boolean DEFAULT_TOKENIZE = false;
-
     private final boolean fuzzy;
     private final int fuzzyPrefixLength;
     private final int fuzzyMaxExpansions;
     private final boolean tokenize;
 
-    @ConstructorProperties({"fuzzy", "fuzzyPrefixLength", "fuzzyMaxExpansions", "tokenize"})
-    public MatchOptions(
-        final Optional<Boolean> fuzzy, final Optional<Integer> fuzzyPrefixLength,
-        final Optional<Integer> fuzzyMaxExpansions, final Optional<Boolean> tokenize
-    ) {
-        this.fuzzy = fuzzy.orElse(DEFAULT_FUZZY);
-        this.fuzzyPrefixLength = fuzzyPrefixLength.orElse(DEFAULT_FUZZY_PREFIX_LENGTH);
-        this.fuzzyMaxExpansions = fuzzyMaxExpansions.orElse(DEFAULT_FUZZY_MAX_EXPANSIONS);
-        this.tokenize = tokenize.orElse(DEFAULT_TOKENIZE);
-    }
-
     public static Builder builder() {
         return new Builder();
     }
 
+    @AllArgsConstructor
+    @NoArgsConstructor
     public static class Builder {
+        public static final boolean DEFAULT_FUZZY = false;
+        public static final int DEFAULT_FUZZY_PREFIX_LENGTH = 2;
+        public static final int DEFAULT_FUZZY_MAX_EXPANSIONS = 20;
+        public static final boolean DEFAULT_TOKENIZE = false;
+
         private Optional<Boolean> fuzzy = Optional.empty();
         private Optional<Integer> fuzzyPrefixLength = Optional.empty();
         private Optional<Integer> fuzzyMaxExpansions = Optional.empty();
@@ -80,7 +72,10 @@ public class MatchOptions {
         }
 
         public MatchOptions build() {
-            return new MatchOptions(fuzzy, fuzzyPrefixLength, fuzzyMaxExpansions, tokenize);
+            return new MatchOptions(fuzzy.orElse(DEFAULT_FUZZY),
+                fuzzyPrefixLength.orElse(DEFAULT_FUZZY_PREFIX_LENGTH),
+                fuzzyMaxExpansions.orElse(DEFAULT_FUZZY_MAX_EXPANSIONS),
+                tokenize.orElse(DEFAULT_TOKENIZE));
         }
     }
 }

@@ -22,6 +22,7 @@
 package com.spotify.heroic;
 
 import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.Group;
 import com.spotify.heroic.common.Features;
 import com.spotify.heroic.filter.AndFilter;
 import com.spotify.heroic.filter.Filter;
@@ -53,8 +54,8 @@ public class QueryBuilder {
     /**
      * Specify a set of tags that has to match.
      *
-     * @deprecated Use {@link #filter(Filter)} with the appropriate filter instead. These can be
-     * built using {@link com.spotify.heroic.filter.MatchKeyFilter(String)}.
+     * @deprecated Use {@link #filter(java.util.Optional)}} with the appropriate filter instead.
+     * These can be built using {@link com.spotify.heroic.filter.MatchKeyFilter(String)}.
      */
     public QueryBuilder key(Optional<String> key) {
         this.key = key;
@@ -64,8 +65,8 @@ public class QueryBuilder {
     /**
      * Specify a set of tags that has to match.
      *
-     * @deprecated Use {@link #filter(Filter)} with the appropriate filter instead. These can be
-     * built using {@link com.spotify.heroic.filter.MatchTagFilter(String, String)}.
+     * @deprecated Use {@link #filter(java.util.Optional)} with the appropriate filter instead.
+     * These can be built using {@link com.spotify.heroic.filter.MatchTagFilter(String, String)}.
      */
     public QueryBuilder tags(Optional<Map<String, String>> tags) {
         checkNotNull(tags, "tags must not be null");
@@ -147,8 +148,20 @@ public class QueryBuilder {
     }
 
     public Query build() {
-        return new Query(Optional.empty(), aggregation, source, range, legacyFilter(), options,
-            groupBy, features);
+        return new Query(legacyAggregation(), source, range, legacyFilter(), options, features);
+    }
+
+    /**
+     * Support a legacy kind of aggregation where groupBy is specified independently.
+     *
+     * @return an optional aggregation
+     */
+    Optional<Aggregation> legacyAggregation() {
+        if (groupBy.isPresent()) {
+            return aggregation.map(a -> new Group(groupBy, Optional.of(a)));
+        }
+
+        return aggregation;
     }
 
     /**

@@ -70,4 +70,30 @@ public class Chain implements Aggregation {
 
         return ChainInstance.fromList(Lists.reverse(chain.build()));
     }
+
+    public static Aggregation fromList(final List<Aggregation> chain) {
+        final List<Aggregation> c = flattenChain(chain);
+
+        if (c.size() == 1) {
+            return c.iterator().next();
+        }
+
+        return new Chain(c);
+    }
+
+    private static List<Aggregation> flattenChain(
+        final List<Aggregation> chain
+    ) {
+        final ImmutableList.Builder<Aggregation> child = ImmutableList.builder();
+
+        for (final Aggregation a : chain) {
+            if (a instanceof Chain) {
+                child.addAll(flattenChain(Chain.class.cast(a).getChain()));
+            } else {
+                child.add(a);
+            }
+        }
+
+        return child.build();
+    }
 }
