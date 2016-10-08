@@ -19,19 +19,30 @@
  * under the License.
  */
 
-package com.spotify.heroic.metadata.memory;
+package com.spotify.heroic.cluster;
 
-import com.spotify.heroic.HeroicConfigurationContext;
-import com.spotify.heroic.HeroicModule;
-import com.spotify.heroic.dagger.LoadingComponent;
+import com.spotify.heroic.dagger.PrimaryComponent;
+import com.spotify.heroic.lifecycle.LifeCycle;
+import com.spotify.heroic.metadata.MetadataComponent;
+import com.spotify.heroic.metric.MetricComponent;
+import com.spotify.heroic.suggest.SuggestComponent;
+import dagger.Component;
 
-public class Module implements HeroicModule {
+import javax.inject.Named;
+
+@ClusterScope
+@Component(modules = ClusterManagerModule.class, dependencies = {
+    PrimaryComponent.class, ClusterDiscoveryComponent.class, MetricComponent.class,
+    MetadataComponent.class, SuggestComponent.class
+})
+public interface CoreClusterComponent extends ClusterComponent {
     @Override
-    public Runnable setup(final LoadingComponent loading) {
-        final HeroicConfigurationContext config = loading.heroicConfigurationContext();
+    CoreClusterManager clusterManager();
 
-        return () -> {
-            config.registerType("memory", MemoryMetadataModule.class);
-        };
-    }
+    @Override
+    NodeMetadata nodeMetadata();
+
+    @Named("cluster")
+    @Override
+    LifeCycle clusterLife();
 }

@@ -19,19 +19,26 @@
  * under the License.
  */
 
-package com.spotify.heroic.metadata.memory;
+package com.spotify.heroic.ws;
 
-import com.spotify.heroic.HeroicConfigurationContext;
-import com.spotify.heroic.HeroicModule;
-import com.spotify.heroic.dagger.LoadingComponent;
+import lombok.extern.slf4j.Slf4j;
 
-public class Module implements HeroicModule {
+import javax.inject.Inject;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.ext.ExceptionMapper;
+import javax.ws.rs.ext.Provider;
+
+@Provider
+@Slf4j
+public class ErrorExceptionMapper implements ExceptionMapper<Error> {
+    @Inject
+    public ErrorExceptionMapper() {
+    }
+
     @Override
-    public Runnable setup(final LoadingComponent loading) {
-        final HeroicConfigurationContext config = loading.heroicConfigurationContext();
-
-        return () -> {
-            config.registerType("memory", MemoryMetadataModule.class);
-        };
+    public Response toResponse(Error e) {
+        log.error("Fatal exception thrown in handler", e);
+        System.exit(1);
+        return null;
     }
 }

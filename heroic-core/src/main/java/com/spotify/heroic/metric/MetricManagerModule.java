@@ -23,24 +23,20 @@ package com.spotify.heroic.metric;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.spotify.heroic.analytics.AnalyticsComponent;
 import com.spotify.heroic.analytics.MetricAnalytics;
 import com.spotify.heroic.common.GroupSet;
 import com.spotify.heroic.common.ModuleIdBuilder;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.dagger.CorePrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
-import com.spotify.heroic.metadata.MetadataComponent;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
-import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 
 import javax.inject.Named;
 import java.util.ArrayList;
@@ -54,6 +50,7 @@ import static java.util.Optional.empty;
 import static java.util.Optional.of;
 
 @Data
+@Module
 public class MetricManagerModule {
     public static final int DEFAULT_FETCH_PARALLELISM = 100;
 
@@ -85,124 +82,93 @@ public class MetricManagerModule {
      */
     private final int fetchParallelism;
 
-    public MetricComponent module(
-        final CorePrimaryComponent primary, final MetadataComponent metadata,
-        final AnalyticsComponent analytics
-    ) {
-        return DaggerMetricManagerModule_C
-            .builder()
-            .corePrimaryComponent(primary)
-            .m(new M(primary))
-            .metadataComponent(metadata)
-            .analyticsComponent(analytics)
-            .build();
-    }
-
+    @Provides
     @MetricScope
-    @Component(modules = M.class,
-        dependencies = {
-            CorePrimaryComponent.class, MetadataComponent.class, AnalyticsComponent.class
-        })
-    interface C extends MetricComponent {
-        @Override
-        LocalMetricManager metricManager();
-
-        @Override
-        @Named("metric")
-        LifeCycle metricLife();
+    public MetricBackendReporter reporter(HeroicReporter reporter) {
+        return reporter.newMetricBackend();
     }
 
-    @RequiredArgsConstructor
-    @Module
-    public class M {
-        private final CorePrimaryComponent primary;
+    @Provides
+    @MetricScope
+    public GroupSet<MetricBackend> defaultBackends(
+        Set<MetricBackend> configured, MetricAnalytics analytics
+    ) {
+        return GroupSet.build(
+            ImmutableSet.copyOf(configured.stream().map(analytics::wrap).iterator()),
+            defaultBackends);
+    }
 
-        @Provides
-        @MetricScope
-        public MetricBackendReporter reporter(HeroicReporter reporter) {
-            return reporter.newMetricBackend();
+    @Provides
+    @MetricScope
+    public List<MetricModule.Exposed> components(
+        final CorePrimaryComponent primary, final MetricBackendReporter reporter
+    ) {
+        final List<MetricModule.Exposed> exposed = new ArrayList<>();
+
+        final ModuleIdBuilder idBuilder = new ModuleIdBuilder();
+
+        for (final MetricModule m : backends) {
+            final String id = idBuilder.buildId(m);
+
+            final MetricModule.Depends depends = new MetricModule.Depends(reporter);
+            exposed.add(m.module(primary, depends, id));
         }
 
-        @Provides
-        @MetricScope
-        public GroupSet<MetricBackend> defaultBackends(
-            Set<MetricBackend> configured, MetricAnalytics analytics
-        ) {
-            return GroupSet.build(
-                ImmutableSet.copyOf(configured.stream().map(analytics::wrap).iterator()),
-                defaultBackends);
-        }
+        return exposed;
+    }
 
-        @Provides
-        @MetricScope
-        public List<MetricModule.Exposed> components(final MetricBackendReporter reporter) {
-            final List<MetricModule.Exposed> exposed = new ArrayList<>();
+    @Provides
+    @MetricScope
+    public Set<MetricBackend> backends(
+        List<MetricModule.Exposed> components, MetricBackendReporter reporter
+    ) {
+        return ImmutableSet.copyOf(components
+            .stream()
+            .map(MetricModule.Exposed::backend)
+            .map(reporter::decorate)
+            .iterator());
+    }
 
-            final ModuleIdBuilder idBuilder = new ModuleIdBuilder();
+    @Provides
+    @MetricScope
+    @Named("metric")
+    public LifeCycle metricLife(List<MetricModule.Exposed> components) {
+        return LifeCycle.combined(components.stream().map(MetricModule.Exposed::life));
+    }
 
-            for (final MetricModule m : backends) {
-                final String id = idBuilder.buildId(m);
+    @Provides
+    @MetricScope
+    @Named("groupLimit")
+    public OptionalLimit groupLimit() {
+        return groupLimit;
+    }
 
-                final MetricModule.Depends depends = new MetricModule.Depends(reporter);
-                exposed.add(m.module(primary, depends, id));
-            }
+    @Provides
+    @MetricScope
+    @Named("seriesLimit")
+    public OptionalLimit seriesLimit() {
+        return seriesLimit;
+    }
 
-            return exposed;
-        }
+    @Provides
+    @MetricScope
+    @Named("aggregationLimit")
+    public OptionalLimit aggregationLimit() {
+        return aggregationLimit;
+    }
 
-        @Provides
-        @MetricScope
-        public Set<MetricBackend> backends(
-            List<MetricModule.Exposed> components, MetricBackendReporter reporter
-        ) {
-            return ImmutableSet.copyOf(components
-                .stream()
-                .map(MetricModule.Exposed::backend)
-                .map(reporter::decorate)
-                .iterator());
-        }
+    @Provides
+    @MetricScope
+    @Named("dataLimit")
+    public OptionalLimit dataLimit() {
+        return dataLimit;
+    }
 
-        @Provides
-        @MetricScope
-        @Named("metric")
-        public LifeCycle metricLife(List<MetricModule.Exposed> components) {
-            return LifeCycle.combined(components.stream().map(MetricModule.Exposed::life));
-        }
-
-        @Provides
-        @MetricScope
-        @Named("groupLimit")
-        public OptionalLimit groupLimit() {
-            return groupLimit;
-        }
-
-        @Provides
-        @MetricScope
-        @Named("seriesLimit")
-        public OptionalLimit seriesLimit() {
-            return seriesLimit;
-        }
-
-        @Provides
-        @MetricScope
-        @Named("aggregationLimit")
-        public OptionalLimit aggregationLimit() {
-            return aggregationLimit;
-        }
-
-        @Provides
-        @MetricScope
-        @Named("dataLimit")
-        public OptionalLimit dataLimit() {
-            return dataLimit;
-        }
-
-        @Provides
-        @MetricScope
-        @Named("fetchParallelism")
-        public int fetchParallelism() {
-            return fetchParallelism;
-        }
+    @Provides
+    @MetricScope
+    @Named("fetchParallelism")
+    public int fetchParallelism() {
+        return fetchParallelism;
     }
 
     public static Builder builder() {

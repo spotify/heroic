@@ -19,7 +19,7 @@
  * under the License.
  */
 
-package com.spotify.heroic.statistics.semantic;
+package com.spotify.heroic.shell;
 
 import javax.inject.Scope;
 import java.lang.annotation.Retention;
@@ -27,6 +27,6 @@ import java.lang.annotation.RetentionPolicy;
 
 @Scope
 @Retention(RetentionPolicy.RUNTIME)
-public @interface SemanticScope {
+public @interface ShellServerScope {
 
 }

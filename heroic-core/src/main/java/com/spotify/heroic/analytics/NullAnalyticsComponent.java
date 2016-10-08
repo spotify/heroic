@@ -19,14 +19,14 @@
  * under the License.
  */
 
-package com.spotify.heroic.shell;
+package com.spotify.heroic.analytics;
 
-import javax.inject.Scope;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
+import com.spotify.heroic.dagger.PrimaryComponent;
+import dagger.Component;
 
-@Scope
-@Retention(RetentionPolicy.RUNTIME)
-public @interface ShellScope {
-
+@NullScope
+@Component(modules = NullAnalyticsModule.class, dependencies = PrimaryComponent.class)
+interface NullAnalyticsComponent extends AnalyticsComponent {
+    @Override
+    MetricAnalytics metricAnalytics();
 }

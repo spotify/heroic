@@ -19,26 +19,16 @@
  * under the License.
  */
 
-package com.spotify.heroic.ws;
+package com.spotify.heroic.statistics.noop;
 
-import com.spotify.heroic.QueryStateException;
+import com.spotify.heroic.dagger.EarlyComponent;
+import com.spotify.heroic.statistics.HeroicReporter;
+import com.spotify.heroic.statistics.StatisticsComponent;
+import dagger.Component;
 
-import javax.inject.Inject;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.ext.ExceptionMapper;
-
-public class QueryStateExceptionMapper implements ExceptionMapper<QueryStateException> {
-    @Inject
-    public QueryStateExceptionMapper() {
-    }
-
+@NoopScope
+@Component(modules = NoopStatisticsModule.class, dependencies = EarlyComponent.class)
+public interface NoopStatisticsComponent extends StatisticsComponent {
     @Override
-    public Response toResponse(final QueryStateException e) {
-        return Response
-            .status(Response.Status.BAD_REQUEST)
-            .entity(new ErrorMessage(e.getMessage(), Response.Status.BAD_REQUEST))
-            .type(MediaType.APPLICATION_JSON)
-            .build();
-    }
+    HeroicReporter reporter();
 }

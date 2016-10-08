@@ -19,19 +19,20 @@
  * under the License.
  */
 
-package com.spotify.heroic.metadata.memory;
+package com.spotify.heroic.metadata;
 
-import com.spotify.heroic.HeroicConfigurationContext;
-import com.spotify.heroic.HeroicModule;
-import com.spotify.heroic.dagger.LoadingComponent;
+import com.spotify.heroic.dagger.PrimaryComponent;
+import com.spotify.heroic.lifecycle.LifeCycle;
+import dagger.Component;
 
-public class Module implements HeroicModule {
+import javax.inject.Named;
+
+@MetadataScope
+@Component(modules = MetadataManagerModule.class, dependencies = PrimaryComponent.class)
+public interface CoreMetadataComponent extends MetadataComponent {
+    LocalMetadataManager metadataManager();
+
     @Override
-    public Runnable setup(final LoadingComponent loading) {
-        final HeroicConfigurationContext config = loading.heroicConfigurationContext();
-
-        return () -> {
-            config.registerType("memory", MemoryMetadataModule.class);
-        };
-    }
+    @Named("metadata")
+    LifeCycle metadataLife();
 }

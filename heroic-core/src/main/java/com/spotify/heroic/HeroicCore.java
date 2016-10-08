@@ -27,7 +27,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.spotify.heroic.analytics.AnalyticsComponent;
 import com.spotify.heroic.cache.CacheComponent;
-import com.spotify.heroic.cluster.ClusterComponent;
+import com.spotify.heroic.cluster.CoreClusterComponent;
+import com.spotify.heroic.cluster.DaggerCoreClusterComponent;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.Optionals;
 import com.spotify.heroic.consumer.ConsumersComponent;
@@ -58,12 +59,17 @@ import com.spotify.heroic.lifecycle.CoreLifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleHook;
 import com.spotify.heroic.lifecycle.LifeCycleNamedHook;
-import com.spotify.heroic.metadata.MetadataComponent;
-import com.spotify.heroic.metric.MetricComponent;
+import com.spotify.heroic.metadata.CoreMetadataComponent;
+import com.spotify.heroic.metadata.DaggerCoreMetadataComponent;
+import com.spotify.heroic.metric.CoreMetricComponent;
+import com.spotify.heroic.metric.DaggerCoreMetricComponent;
+import com.spotify.heroic.shell.DaggerShellServerComponent;
+import com.spotify.heroic.shell.ShellServerComponent;
 import com.spotify.heroic.shell.ShellServerModule;
 import com.spotify.heroic.statistics.HeroicReporter;
-import com.spotify.heroic.statistics.StatisticsModule;
-import com.spotify.heroic.suggest.SuggestComponent;
+import com.spotify.heroic.statistics.StatisticsComponent;
+import com.spotify.heroic.suggest.CoreSuggestComponent;
+import com.spotify.heroic.suggest.DaggerCoreSuggestComponent;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
@@ -344,9 +350,7 @@ public class HeroicCore implements HeroicConfiguration {
 
         final List<LifeCycle> life = new ArrayList<>();
 
-        final StatisticsModule.Exposed statistics =
-            config.getStatistics().module(early, new StatisticsModule.Depends() {
-            });
+        final StatisticsComponent statistics = config.getStatistics().module(early);
 
         life.add(statistics.life());
 
@@ -385,27 +389,56 @@ public class HeroicCore implements HeroicConfiguration {
         final AnalyticsComponent analytics = config.getAnalytics().module(primary);
         life.add(analytics.analyticsLife());
 
-        final MetadataComponent metadata = config.getMetadata().module(primary);
+        final CoreMetadataComponent metadata = DaggerCoreMetadataComponent
+            .builder()
+            .primaryComponent(primary)
+            .metadataManagerModule(config.getMetadata())
+            .build();
+
         life.add(metadata.metadataLife());
 
-        final SuggestComponent suggest = config.getSuggest().module(primary);
+        final CoreSuggestComponent suggest = DaggerCoreSuggestComponent
+            .builder()
+            .primaryComponent(primary)
+            .suggestManagerModule(config.getSuggest())
+            .build();
+
         life.add(suggest.suggestLife());
 
-        final MetricComponent metric = config.getMetric().module(primary, metadata, analytics);
+        final CoreMetricComponent metric = DaggerCoreMetricComponent
+            .builder()
+            .corePrimaryComponent(primary)
+            .metadataComponent(metadata)
+            .analyticsComponent(analytics)
+            .metricManagerModule(config.getMetric())
+            .build();
+
         life.add(metric.metricLife());
 
         final IngestionComponent ingestion =
             config.getIngestion().module(primary, suggest, metadata, metric);
         life.add(ingestion.ingestionLife());
 
-        Optional<ShellServerModule> shellServer = buildShellServer(config);
+        buildShellServer(config).ifPresent(shellServerModule -> {
+            final ShellServerComponent shellServer = DaggerShellServerComponent
+                .builder()
+                .primaryComponent(primary)
+                .shellServerModule(shellServerModule)
+                .build();
 
-        shellServer.ifPresent(s -> {
-            life.add(s.module(primary).shellServerLife());
+            life.add(shellServer.shellServerLife());
         });
 
-        final ClusterComponent cluster =
-            config.getCluster().module(primary, metric, metadata, suggest);
+        final CoreClusterComponent cluster = DaggerCoreClusterComponent
+            .builder()
+            .primaryComponent(primary)
+            .metricComponent(metric)
+            .metadataComponent(metadata)
+            .suggestComponent(suggest)
+            .clusterManagerModule(config.getCluster())
+            .clusterDiscoveryComponent(config.getCluster().getDiscovery().module(primary))
+            .build();
+
         life.add(cluster.clusterLife());
 
         if (startupPing.isPresent() && startupId.isPresent()) {
@@ -603,7 +636,7 @@ public class HeroicCore implements HeroicConfiguration {
 
         for (final HeroicModule module : modules) {
             // inject members of an entry point and run them.
-            module.setup(loading).setup();
+            module.setup(loading).run();
         }
 
         log.info("Loaded {} module(s)", modules.size());

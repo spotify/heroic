@@ -26,17 +26,19 @@ import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicModule;
 import com.spotify.heroic.ParameterSpecification;
 import com.spotify.heroic.dagger.LoadingComponent;
-import dagger.Component;
 
-import javax.inject.Inject;
 import java.util.List;
 
 import static com.spotify.heroic.ParameterSpecification.parameter;
 
 public class Module implements HeroicModule {
     @Override
-    public Entry setup(LoadingComponent loading) {
-        return DaggerModule_C.builder().loadingComponent(loading).build().entry();
+    public Runnable setup(final LoadingComponent loading) {
+        final HeroicConfigurationContext config = loading.heroicConfigurationContext();
+
+        return () -> {
+            config.registerType("memory", MemorySuggestModule.class);
+        };
     }
 
     @Override
@@ -47,24 +49,5 @@ public class Module implements HeroicModule {
                     "backend")
         );
         // @formatter:on
-    }
-
-    @Component(dependencies = LoadingComponent.class)
-    interface C {
-        E entry();
-    }
-
-    static class E implements HeroicModule.Entry {
-        private final HeroicConfigurationContext config;
-
-        @Inject
-        public E(HeroicConfigurationContext config) {
-            this.config = config;
-        }
-
-        @Override
-        public void setup() {
-            config.registerType("memory", MemorySuggestModule.class);
-        }
     }
 }

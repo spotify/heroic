@@ -22,7 +22,6 @@
 package com.spotify.heroic.rpc.jvm;
 
 import com.spotify.heroic.cluster.ClusterNode;
-import com.spotify.heroic.cluster.LocalClusterNode;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
 import eu.toolchain.async.AsyncFramework;
@@ -41,8 +40,8 @@ public class JvmRpcProtocolServer implements LifeCycles {
 
     @Inject
     public JvmRpcProtocolServer(
-        AsyncFramework async, LocalClusterNode localNode, @Named("bindName") String bindName,
-        JvmRpcContext context
+        AsyncFramework async, @Named("local") ClusterNode localNode,
+        @Named("bindName") String bindName, JvmRpcContext context
     ) {
         this.async = async;
         this.localNode = localNode;

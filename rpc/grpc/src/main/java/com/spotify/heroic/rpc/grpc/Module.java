@@ -21,12 +21,17 @@
 
 package com.spotify.heroic.rpc.grpc;
 
+import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicModule;
 import com.spotify.heroic.dagger.LoadingComponent;
 
 public class Module implements HeroicModule {
     @Override
-    public Entry setup(LoadingComponent loading) {
-        return DaggerGrpcModuleComponent.builder().loadingComponent(loading).build().entry();
+    public Runnable setup(final LoadingComponent loading) {
+        final HeroicConfigurationContext config = loading.heroicConfigurationContext();
+
+        return () -> {
+            config.registerType("grpc", GrpcRpcProtocolModule.class);
+        };
     }
 }

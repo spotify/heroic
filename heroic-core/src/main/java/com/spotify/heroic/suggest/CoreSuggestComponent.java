@@ -19,12 +19,21 @@
  * under the License.
  */
 
-package com.spotify.heroic;
+package com.spotify.heroic.suggest;
 
-public class QueryStateException extends RuntimeException {
-    private static final long serialVersionUID = -8774428990940670028L;
+import com.spotify.heroic.dagger.PrimaryComponent;
+import com.spotify.heroic.lifecycle.LifeCycle;
+import dagger.Component;
 
-    public QueryStateException(String message) {
-        super(message);
-    }
+import javax.inject.Named;
+
+@SuggestScope
+@Component(modules = SuggestManagerModule.class, dependencies = PrimaryComponent.class)
+public interface CoreSuggestComponent extends SuggestComponent {
+    @Override
+    LocalSuggestManager suggestManager();
+
+    @Override
+    @Named("suggest")
+    LifeCycle suggestLife();
 }

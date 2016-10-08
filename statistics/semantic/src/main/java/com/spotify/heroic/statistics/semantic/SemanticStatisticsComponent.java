@@ -19,12 +19,20 @@
  * under the License.
  */
 
-package com.spotify.heroic.rpc.jvm;
+package com.spotify.heroic.statistics.semantic;
 
-import com.spotify.heroic.dagger.LoadingComponent;
+import com.spotify.heroic.dagger.EarlyComponent;
+import com.spotify.heroic.lifecycle.LifeCycle;
+import com.spotify.heroic.statistics.HeroicReporter;
+import com.spotify.heroic.statistics.StatisticsComponent;
 import dagger.Component;
 
-@Component(dependencies = LoadingComponent.class)
-public interface JvmModuleComponent {
-    JvmModuleEntry entry();
+@SemanticStatisticsScope
+@Component(modules = SemanticStatisticsModule.class, dependencies = EarlyComponent.class)
+public interface SemanticStatisticsComponent extends StatisticsComponent {
+    @Override
+    HeroicReporter reporter();
+
+    @Override
+    LifeCycle life();
 }

@@ -25,12 +25,27 @@ import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.metadata.MetadataComponent;
 import com.spotify.heroic.metric.MetricComponent;
 import com.spotify.heroic.suggest.SuggestComponent;
+import dagger.Component;
+
+import javax.inject.Named;
 
 public interface RpcProtocolModule {
-    RpcProtocolComponent module(
-        PrimaryComponent primary, MetricComponent metric, MetadataComponent metadata,
-        SuggestComponent suggest, NodeMetadata nodeMetadata
-    );
+    RpcProtocolComponent module(Dependencies dependencies);
 
     String scheme();
+
+    interface Provided {
+        NodeMetadata metadata();
+
+        @Named("local")
+        ClusterNode localClusterNode();
+    }
+
+    @Component(dependencies = {
+        Provided.class, PrimaryComponent.class, MetricComponent.class, MetadataComponent.class,
+        SuggestComponent.class
+    })
+    interface Dependencies
+        extends Provided, PrimaryComponent, MetricComponent, MetadataComponent, SuggestComponent {
+    }
 }

@@ -25,13 +25,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.GroupSet;
 import com.spotify.heroic.common.ModuleIdBuilder;
-import com.spotify.heroic.dagger.CorePrimaryComponent;
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.metadata.MetadataModule.Exposed;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
-import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
 import lombok.AccessLevel;
@@ -50,78 +48,56 @@ import static java.util.Optional.empty;
 import static java.util.Optional.of;
 
 @RequiredArgsConstructor
+@Module
 public class MetadataManagerModule {
     private final List<MetadataModule> backends;
     private final Optional<List<String>> defaultBackends;
 
-    public MetadataComponent module(final CorePrimaryComponent primary) {
-        return DaggerMetadataManagerModule_C
-            .builder()
-            .corePrimaryComponent(primary)
-            .m(new M(primary))
-            .build();
-    }
-
+    @Provides
     @MetadataScope
-    @Component(modules = M.class, dependencies = CorePrimaryComponent.class)
-    public interface C extends MetadataComponent {
-        LocalMetadataManager metadataManager();
-
-        @Override
-        @Named("metadata")
-        LifeCycle metadataLife();
+    public MetadataBackendReporter localReporter(HeroicReporter reporter) {
+        return reporter.newMetadataBackend();
     }
 
-    @RequiredArgsConstructor
-    @Module
-    class M {
-        private final PrimaryComponent primary;
+    @Provides
+    @MetadataScope
+    public List<Exposed> components(
+        final PrimaryComponent primary, final MetadataBackendReporter reporter
+    ) {
+        final List<Exposed> results = new ArrayList<>();
 
-        @Provides
-        @MetadataScope
-        public MetadataBackendReporter localReporter(HeroicReporter reporter) {
-            return reporter.newMetadataBackend();
+        final ModuleIdBuilder idBuilder = new ModuleIdBuilder();
+
+        for (final MetadataModule m : backends) {
+            final String id = idBuilder.buildId(m);
+            final MetadataModule.Depends depends = new MetadataModule.Depends(reporter);
+            results.add(m.module(primary, depends, id));
         }
 
-        @Provides
-        @MetadataScope
-        public List<Exposed> components(final MetadataBackendReporter reporter) {
-            final List<Exposed> results = new ArrayList<>();
+        return results;
+    }
 
-            final ModuleIdBuilder idBuilder = new ModuleIdBuilder();
+    @Provides
+    @MetadataScope
+    public Set<MetadataBackend> backends(
+        List<Exposed> components, MetadataBackendReporter reporter
+    ) {
+        return ImmutableSet.copyOf(
+            components.stream().map(Exposed::backend).map(reporter::decorate).iterator());
+    }
 
-            for (final MetadataModule m : backends) {
-                final String id = idBuilder.buildId(m);
+    @Provides
+    @Named("groupSet")
+    @MetadataScope
+    public GroupSet<MetadataBackend> groupSet(Set<MetadataBackend> configured) {
+        return GroupSet.build(configured, defaultBackends);
+    }
 
-                final MetadataModule.Depends depends = new MetadataModule.Depends(reporter);
-                results.add(m.module(primary, depends, id));
-            }
-
-            return results;
-        }
-
-        @Provides
-        @MetadataScope
-        public Set<MetadataBackend> backends(
-            List<Exposed> components, MetadataBackendReporter reporter
-        ) {
-            return ImmutableSet.copyOf(
-                components.stream().map(Exposed::backend).map(reporter::decorate).iterator());
-        }
-
-        @Provides
-        @Named("groupSet")
-        @MetadataScope
-        public GroupSet<MetadataBackend> groupSet(Set<MetadataBackend> configured) {
-            return GroupSet.build(configured, defaultBackends);
-        }
-
-        @Provides
-        @Named("metadata")
-        @MetadataScope
-        LifeCycle metadataLife(List<Exposed> components) {
-            return LifeCycle.combined(components.stream().map(c -> c.life()));
-        }
+    @Provides
+    @Named("metadata")
+    @MetadataScope
+    LifeCycle metadataLife(List<Exposed> components) {
+        return LifeCycle.combined(components.stream().map(c -> c.life()));
     }
 
     public static Builder builder() {

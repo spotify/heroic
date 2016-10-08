@@ -24,74 +24,32 @@ package com.spotify.heroic.ws;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicModule;
-import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.dagger.LoadingComponent;
-import com.spotify.heroic.http.ErrorMapper;
-import dagger.Component;
-
-import javax.inject.Inject;
 
 public class Module implements HeroicModule {
     @Override
-    public Entry setup(LoadingComponent loading) {
-        return DaggerModule_C.builder().loadingComponent(loading).build().entry();
-    }
+    public Runnable setup(LoadingComponent loading) {
+        final HeroicConfigurationContext config = loading.heroicConfigurationContext();
 
-    @Component(dependencies = LoadingComponent.class)
-    interface C {
-        E entry();
-    }
-
-    @Component(dependencies = CoreComponent.class)
-    public static interface W {
-        ThrowableExceptionMapper throwableExceptionMapper();
-
-        ErrorMapper errorMapper();
-
-        ParseExceptionMapper parseExceptionMapper();
-
-        QueryStateExceptionMapper queryStateExceptionMapper();
-
-        JsonMappingExceptionMapper jsonMappingExceptionMapper();
-
-        JsonParseExceptionMapper jsonParseExceptionMapper();
-
-        WebApplicationExceptionMapper webApplicationExceptionMapper();
-
-        ValidationBodyErrorMapper validationBodyErrorMapper();
-
-        JacksonMessageBodyReader jacksonMessageBodyReader();
-
-        JacksonMessageBodyWriter jacksonMessageBodyWriter();
-    }
-
-    static class E implements HeroicModule.Entry {
-        private final HeroicConfigurationContext config;
-
-        @Inject
-        public E(HeroicConfigurationContext config) {
-            this.config = config;
-        }
-
-        @Override
-        public void setup() {
+        return () -> {
             config.resources(core -> {
-                final W w = DaggerModule_W.builder().coreComponent(core).build();
+                final RestfulComponent errorMapper =
+                    DaggerRestfulComponent.builder().coreComponent(core).build();
+
                 // @formatter:off
                 return ImmutableList.of(
-                    w.throwableExceptionMapper(),
-                    w.errorMapper(),
-                    w.parseExceptionMapper(),
-                    w.queryStateExceptionMapper(),
-                    w.jsonMappingExceptionMapper(),
-                    w.jsonParseExceptionMapper(),
-                    w.webApplicationExceptionMapper(),
-                    w.validationBodyErrorMapper(),
-                    w.jacksonMessageBodyReader(),
-                    w.jacksonMessageBodyWriter()
+                    errorMapper.throwableExceptionMapper(),
+                    errorMapper.errorMapper(),
+                    errorMapper.parseExceptionMapper(),
+                    errorMapper.jsonMappingExceptionMapper(),
+                    errorMapper.jsonParseExceptionMapper(),
+                    errorMapper.webApplicationExceptionMapper(),
+                    errorMapper.validationBodyErrorMapper(),
+                    errorMapper.jacksonMessageBodyReader(),
+                    errorMapper.jacksonMessageBodyWriter()
                 );
                 // @formatter:on
             });
-        }
+        };
     }
 }

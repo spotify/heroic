@@ -19,12 +19,31 @@
  * under the License.
  */
 
-package com.spotify.heroic.rpc.grpc;
+package com.spotify.heroic.ws;
 
-import com.spotify.heroic.dagger.LoadingComponent;
+import com.spotify.heroic.dagger.CoreComponent;
 import dagger.Component;
 
-@Component(dependencies = LoadingComponent.class)
-public interface GrpcModuleComponent {
-    GrpcModuleEntry entry();
+/**
+ * A resource that defines all exception mappers.
+ */
+@Component(dependencies = CoreComponent.class)
+public interface RestfulComponent {
+    ThrowableExceptionMapper throwableExceptionMapper();
+
+    ErrorExceptionMapper errorMapper();
+
+    ParseExceptionMapper parseExceptionMapper();
+
+    JsonMappingExceptionMapper jsonMappingExceptionMapper();
+
+    JsonParseExceptionMapper jsonParseExceptionMapper();
+
+    WebApplicationExceptionMapper webApplicationExceptionMapper();
+
+    ValidationBodyErrorMapper validationBodyErrorMapper();
+
+    JacksonMessageBodyReader jacksonMessageBodyReader();
+
+    JacksonMessageBodyWriter jacksonMessageBodyWriter();
 }

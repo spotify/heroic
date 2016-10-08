@@ -19,23 +19,22 @@
  * under the License.
  */
 
-package com.spotify.heroic.rpc.jvm;
+package com.spotify.heroic.analytics.bigtable;
 
-import com.spotify.heroic.HeroicConfigurationContext;
-import com.spotify.heroic.HeroicModule;
+import com.spotify.heroic.analytics.AnalyticsComponent;
+import com.spotify.heroic.dagger.PrimaryComponent;
+import com.spotify.heroic.lifecycle.LifeCycle;
+import dagger.Component;
 
-import javax.inject.Inject;
+import javax.inject.Named;
 
-class JvmModuleEntry implements HeroicModule.Entry {
-    private final HeroicConfigurationContext config;
-
-    @Inject
-    public JvmModuleEntry(HeroicConfigurationContext config) {
-        this.config = config;
-    }
+@BigtableScope
+@Component(modules = BigtableAnalyticsModule.class, dependencies = PrimaryComponent.class)
+interface BigtableAnalyticsComponent extends AnalyticsComponent {
+    @Override
+    BigtableMetricAnalytics metricAnalytics();
 
     @Override
-    public void setup() {
-        config.registerType("jvm", JvmRpcProtocolModule.class);
-    }
+    @Named("analytics")
+    LifeCycle analyticsLife();
 }

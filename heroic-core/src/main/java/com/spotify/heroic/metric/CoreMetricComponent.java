@@ -19,23 +19,25 @@
  * under the License.
  */
 
-package com.spotify.heroic.rpc.grpc;
+package com.spotify.heroic.metric;
 
-import com.spotify.heroic.HeroicConfigurationContext;
-import com.spotify.heroic.HeroicModule;
+import com.spotify.heroic.analytics.AnalyticsComponent;
+import com.spotify.heroic.dagger.CorePrimaryComponent;
+import com.spotify.heroic.lifecycle.LifeCycle;
+import com.spotify.heroic.metadata.MetadataComponent;
+import dagger.Component;
 
-import javax.inject.Inject;
+import javax.inject.Named;
 
-class GrpcModuleEntry implements HeroicModule.Entry {
-    private final HeroicConfigurationContext config;
-
-    @Inject
-    public GrpcModuleEntry(HeroicConfigurationContext config) {
-        this.config = config;
-    }
+@MetricScope
+@Component(modules = MetricManagerModule.class, dependencies = {
+    CorePrimaryComponent.class, MetadataComponent.class, AnalyticsComponent.class
+})
+public interface CoreMetricComponent extends MetricComponent {
+    @Override
+    LocalMetricManager metricManager();
 
     @Override
-    public void setup() {
-        config.registerType("grpc", GrpcRpcProtocolModule.class);
-    }
+    @Named("metric")
+    LifeCycle metricLife();
 }

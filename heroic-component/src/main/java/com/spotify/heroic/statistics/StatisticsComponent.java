@@ -19,19 +19,27 @@
  * under the License.
  */
 
-package com.spotify.heroic.metadata.memory;
+package com.spotify.heroic.statistics;
 
-import com.spotify.heroic.HeroicConfigurationContext;
-import com.spotify.heroic.HeroicModule;
-import com.spotify.heroic.dagger.LoadingComponent;
+import com.spotify.heroic.lifecycle.LifeCycle;
 
-public class Module implements HeroicModule {
-    @Override
-    public Runnable setup(final LoadingComponent loading) {
-        final HeroicConfigurationContext config = loading.heroicConfigurationContext();
+/**
+ * Dependencies provided by statistics components.
+ */
+public interface StatisticsComponent {
+    /**
+     * Reporter provided by the statistics component.
+     *
+     * @return reporter instance
+     */
+    HeroicReporter reporter();
 
-        return () -> {
-            config.registerType("memory", MemoryMetadataModule.class);
-        };
+    /**
+     * Life cycle for the statistics component.
+     *
+     * @return life cycle that is empty by default
+     */
+    default LifeCycle life() {
+        return LifeCycle.empty();
     }
 }
