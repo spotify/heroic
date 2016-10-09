@@ -28,5 +28,7 @@ public interface LifeCycleRegistry {
 
     void stop(LifeCycleHook<AsyncFuture<Void>> stopper);
 
+    void watch(LifeCycleHook<Boolean> watch);
+
     LifeCycleRegistry scoped(final String id);
 }
