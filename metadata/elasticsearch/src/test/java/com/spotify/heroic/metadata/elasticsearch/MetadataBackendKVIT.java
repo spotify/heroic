@@ -30,4 +30,12 @@ public class MetadataBackendKVIT extends AbstractElasticsearchMetadataBackendIT 
     protected String backendType() {
         return "kv";
     }
+
+    @Override
+    protected void setupConditions() {
+        super.setupConditions();
+
+        // TODO: support findTags?
+        findTagsSupport = false;
+    }
 }

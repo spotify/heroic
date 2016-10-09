@@ -32,11 +32,16 @@ import com.spotify.heroic.common.GroupMember;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.LoadingComponent;
+import com.spotify.heroic.filter.FalseFilter;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.MatchKeyFilter;
 import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.metadata.CountSeries;
+import com.spotify.heroic.metadata.DeleteSeries;
+import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.FindSeriesIds;
+import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManagerModule;
 import com.spotify.heroic.metadata.MetadataModule;
@@ -52,12 +57,17 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import static com.spotify.heroic.filter.Filter.and;
+import static com.spotify.heroic.filter.Filter.hasTag;
 import static com.spotify.heroic.filter.Filter.matchKey;
+import static com.spotify.heroic.filter.Filter.matchTag;
 import static com.spotify.heroic.filter.Filter.not;
+import static com.spotify.heroic.filter.Filter.or;
 import static com.spotify.heroic.filter.Filter.startsWith;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeTrue;
 
 @RunWith(MockitoJUnitRunner.class)
 public abstract class AbstractMetadataBackendIT {
@@ -72,7 +82,13 @@ public abstract class AbstractMetadataBackendIT {
     private HeroicCoreInstance core;
     private MetadataBackend backend;
 
+    protected boolean findTagsSupport = true;
+    protected boolean orFilterSupport = true;
+
     protected abstract MetadataModule setupModule() throws Exception;
+
+    protected void setupConditions() {
+    }
 
     @Before
     public final void abstractSetup() throws Exception {
@@ -107,6 +123,8 @@ public abstract class AbstractMetadataBackendIT {
         writes.add(writeSeries(backend, s2, range));
         writes.add(writeSeries(backend, s3, range));
         async.collectAndDiscard(writes).get();
+
+        setupConditions();
     }
 
     @After
@@ -134,6 +152,29 @@ public abstract class AbstractMetadataBackendIT {
     }
 
     @Test
+    public void findTags() throws Exception {
+        assumeTrue(findTagsSupport);
+
+        final FindTags.Request request =
+            new FindTags.Request(TrueFilter.get(), range, OptionalLimit.empty());
+
+        final FindTags result = backend.findTags(request).get();
+
+        assertEquals(ImmutableMap.of("role", ImmutableSet.of("bar", "foo", "baz")),
+            result.getTags());
+    }
+
+    @Test
+    public void findKeys() throws Exception {
+        final FindKeys.Request request =
+            new FindKeys.Request(TrueFilter.get(), range, OptionalLimit.empty());
+
+        final FindKeys result = backend.findKeys(request).get();
+
+        assertEquals(ImmutableSet.of(s1.getKey(), s2.getKey(), s3.getKey()), result.getKeys());
+    }
+
+    @Test
     public void countSeriesTest() throws Exception {
         final CountSeries.Request f =
             new CountSeries.Request(not(matchKey(s2.getKey())), range, OptionalLimit.empty());
@@ -149,6 +190,54 @@ public abstract class AbstractMetadataBackendIT {
 
         final FindSeriesIds result = backend.findSeriesIds(f).get();
         assertEquals(ImmutableSet.of(s1.hash(), s3.hash()), result.getIds());
+    }
+
+    @Test
+    public void deleteSeriesTest() throws Exception {
+        {
+            final DeleteSeries.Request request =
+                new DeleteSeries.Request(not(matchKey(s2.getKey())), range, OptionalLimit.empty());
+
+            backend.deleteSeries(request).get();
+        }
+
+        {
+            final FindSeries.Request f =
+                new FindSeries.Request(TrueFilter.get(), range, OptionalLimit.empty());
+
+            final FindSeries result = backend.findSeries(f).get();
+
+            assertEquals(ImmutableSet.of(s2), result.getSeries());
+        }
+    }
+
+    @Test
+    public void filterTest() throws Exception {
+        assertEquals(ImmutableSet.of(s1.hash(), s2.hash(), s3.hash()), findIds(TrueFilter.get()));
+        assertEquals(ImmutableSet.of(), findIds(FalseFilter.get()));
+
+        assertEquals(ImmutableSet.of(s2.hash()), findIds(matchKey(s2.getKey())));
+
+        assertEquals(ImmutableSet.of(s1.hash(), s3.hash()), findIds(not(matchKey(s2.getKey()))));
+
+        assertEquals(ImmutableSet.of(s1.hash()), findIds(matchTag("role", "foo")));
+
+        if (orFilterSupport) {
+            assertEquals(ImmutableSet.of(s1.hash(), s2.hash()),
+                findIds(or(matchKey(s1.getKey()), matchKey(s2.getKey()))));
+        }
+
+        assertEquals(ImmutableSet.of(s1.hash()),
+            findIds(and(matchKey(s1.getKey()), matchTag("role", "foo"))));
+
+        assertEquals(ImmutableSet.of(s1.hash(), s2.hash(), s3.hash()), findIds(hasTag("role")));
+    }
+
+    private Set<String> findIds(final Filter filter) throws Exception {
+        return backend
+            .findSeriesIds(new FindSeriesIds.Request(filter, range, OptionalLimit.empty()))
+            .get()
+            .getIds();
     }
 
     private AsyncFuture<Void> writeSeries(
