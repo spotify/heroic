@@ -70,14 +70,29 @@
     </dependency>
   </dependencies>
 
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-      </plugin>
-    </plugins>
+  <profiles>
+    <profile>
+      <id>shade</id>
 
+      <activation>
+        <property>
+          <name>environment</name>
+          <value>!test</value>
+        </property>
+      </activation>
+
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+  <build>
     <resources>
       <resource>
         <directory>src/main/resources</directory>
