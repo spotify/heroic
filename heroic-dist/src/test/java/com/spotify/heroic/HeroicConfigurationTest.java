@@ -23,7 +23,6 @@ public class HeroicConfigurationTest {
             "com.spotify.heroic.metric.bigtable.BigtableBackend",
             "com.spotify.heroic.metric.datastax.DatastaxBackend",
             "com.spotify.heroic.rpc.grpc.GrpcRpcProtocolServer",
-            "com.spotify.heroic.rpc.nativerpc.NativeRpcProtocolServer",
             "com.spotify.heroic.shell.ShellServer",
             "com.spotify.heroic.suggest.elasticsearch.SuggestBackendKV"
         );
@@ -38,7 +37,6 @@ public class HeroicConfigurationTest {
             "com.spotify.heroic.metric.bigtable.BigtableBackend",
             "com.spotify.heroic.metric.datastax.DatastaxBackend",
             "com.spotify.heroic.rpc.grpc.GrpcRpcProtocolServer",
-            "com.spotify.heroic.rpc.nativerpc.NativeRpcProtocolServer",
             "com.spotify.heroic.shell.ShellServer",
             "com.spotify.heroic.suggest.elasticsearch.SuggestBackendKV"
         );

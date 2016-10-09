@@ -32,7 +32,6 @@
     <module>aggregation/cardinality</module>
     <module>consumer/kafka</module>
     <module>consumer/collectd</module>
-    <module>rpc/nativerpc</module>
     <module>rpc/grpc</module>
     <module>rpc/jvm</module>
     <module>heroic-dist</module>
@@ -379,11 +378,6 @@
       <dependency>
         <groupId>com.spotify.heroic.statistics</groupId>
         <artifactId>heroic-statistics-semantic</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.spotify.heroic.rpc</groupId>
-        <artifactId>heroic-rpc-nativerpc</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
