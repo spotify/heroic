@@ -23,12 +23,12 @@ package com.spotify.heroic.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import lombok.Data;
 
 import java.io.IOException;
 import java.util.List;
@@ -41,17 +41,18 @@ import java.util.Optional;
  *
  * @author udoprog
  */
+@Data
 @JsonDeserialize(using = AggregationOrList.Deserializer.class)
 public class AggregationOrList {
     private final Optional<Aggregation> aggregation;
 
-    public AggregationOrList(final Optional<Aggregation> aggregation) {
-        this.aggregation = aggregation;
-    }
-
     @JsonValue
     public Optional<Aggregation> toAggregation() {
         return aggregation;
+    }
+
+    public static AggregationOrList fromAggregation(final Aggregation aggregation) {
+        return new AggregationOrList(Optional.of(aggregation));
     }
 
     public static final class Deserializer extends JsonDeserializer<AggregationOrList> {
@@ -61,7 +62,7 @@ public class AggregationOrList {
 
         @Override
         public AggregationOrList deserialize(final JsonParser p, final DeserializationContext c)
-            throws IOException, JsonProcessingException {
+            throws IOException {
             switch (p.getCurrentToken()) {
                 case START_ARRAY:
                     final List<Aggregation> chain = p.readValueAs(LIST_OF_AGGREGATIONS);

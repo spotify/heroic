@@ -7,6 +7,7 @@ import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.Empty;
 import com.spotify.heroic.aggregation.Group;
 import com.spotify.heroic.common.TypeNameMixin;
+import com.spotify.heroic.http.query.QueryMetrics;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -34,7 +35,10 @@ public class QueryTest {
 
     private Query parse(final String name) throws Exception {
         try (final InputStream in = resource(name)) {
-            return mapper.readValue(in, Query.class);
+            return mapper
+                .readValue(in, QueryMetrics.class)
+                .toQueryBuilder(string -> new QueryBuilder())
+                .build();
         }
     }
 

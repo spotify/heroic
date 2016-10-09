@@ -21,50 +21,38 @@
 
 package com.spotify.heroic.http.metadata;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.filter.Filter;
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
+import lombok.NonNull;
 
 import java.util.Optional;
 
 @Data
-@RequiredArgsConstructor(access = AccessLevel.NONE)
 public class MetadataTagValueSuggest {
-    private static final int DEFAULT_LIMIT = 10;
+    public static final int DEFAULT_LIMIT = 10;
 
     /**
      * Filter the suggestions being returned.
      */
+    @NonNull
     private final Optional<Filter> filter;
 
     /**
      * Limit the number of suggestions being returned.
      */
-    private final int limit;
+    @NonNull
+    private final Optional<Integer> limit;
 
     /**
      * Query for tags within the given range.
      */
+    @NonNull
     private final Optional<QueryDateRange> range;
 
     /**
      * Exclude the given tags from the result.
      */
+    @NonNull
     private final Optional<String> key;
-
-    @JsonCreator
-    public MetadataTagValueSuggest(
-        @JsonProperty("filter") Optional<Filter> filter,
-        @JsonProperty("range") Optional<QueryDateRange> range,
-        @JsonProperty("limit") Optional<Integer> limit, @JsonProperty("key") Optional<String> key
-    ) {
-        this.filter = filter;
-        this.range = range;
-        this.limit = limit.orElse(DEFAULT_LIMIT);
-        this.key = key;
-    }
 }

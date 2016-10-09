@@ -23,6 +23,7 @@ package com.spotify.heroic.http.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.spotify.heroic.QueryBuilder;
 import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.Aggregation;
@@ -35,6 +36,8 @@ import lombok.Data;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static com.spotify.heroic.common.Optionals.firstPresent;
 
@@ -86,7 +89,7 @@ public class QueryMetrics {
     ) {
         this.query = query;
         this.aggregation =
-            firstPresent(aggregation, aggregators.filter(c -> !c.isEmpty()).map(Chain::new));
+            firstPresent(aggregation, aggregators.filter(c -> !c.isEmpty()).map(Chain::fromList));
         this.source = source.flatMap(MetricType::fromIdentifier);
         this.range = range;
         this.filter = filter;
@@ -96,5 +99,26 @@ public class QueryMetrics {
         this.tags = tags;
         this.groupBy = groupBy;
         this.features = features.orElseGet(Features::empty);
+    }
+
+    public QueryBuilder toQueryBuilder(final Function<String, QueryBuilder> stringToQuery) {
+        final Supplier<? extends QueryBuilder> supplier = () -> {
+            return new QueryBuilder()
+                .key(key)
+                .tags(tags)
+                .groupBy(groupBy)
+                .filter(filter)
+                .range(range)
+                .aggregation(aggregation)
+                .source(source)
+                .options(options);
+        };
+
+        return query
+            .map(stringToQuery)
+            .orElseGet(supplier)
+            .rangeIfAbsent(range)
+            .optionsIfAbsent(options)
+            .features(features);
     }
 }

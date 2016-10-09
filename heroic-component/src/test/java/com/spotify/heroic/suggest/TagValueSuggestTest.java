@@ -3,6 +3,7 @@ package com.spotify.heroic.suggest;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.AbstractReducedResultTest;
 import com.spotify.heroic.common.OptionalLimit;
+import com.spotify.heroic.test.LombokDataTest;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -21,6 +22,11 @@ public class TagValueSuggestTest extends AbstractReducedResultTest {
         s1 = new TagValueSuggest(ImmutableList.of(e1), ImmutableList.of("foo", "bar"), false);
         s2 = new TagValueSuggest(ImmutableList.of(e2), ImmutableList.of("foo"), false);
         s3 = new TagValueSuggest(ImmutableList.of(), ImmutableList.of("foo", "baz"), false);
+    }
+
+    @Test
+    public void lombokDataTest() {
+        LombokDataTest.verifyClass(TagValueSuggest.class);
     }
 
     @Test

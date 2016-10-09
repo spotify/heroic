@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.aggregation;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -31,7 +29,6 @@ import lombok.Data;
 
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Optional;
 
 @Data
 public class Chain implements Aggregation {
@@ -39,18 +36,6 @@ public class Chain implements Aggregation {
     public static final Joiner PIPE = Joiner.on(" | ");
 
     private final List<Aggregation> chain;
-
-    public Chain(List<Aggregation> chain) {
-        this(Optional.ofNullable(chain));
-    }
-
-    @JsonCreator
-    public Chain(@JsonProperty("chain") Optional<List<Aggregation>> chain) {
-        this.chain = chain
-            .filter(c -> !c.isEmpty())
-            .orElseThrow(
-                () -> new IllegalArgumentException("chain must be specified and non-empty"));
-    }
 
     @Override
     public AggregationInstance apply(final AggregationContext context) {
@@ -69,5 +54,31 @@ public class Chain implements Aggregation {
         }
 
         return ChainInstance.fromList(Lists.reverse(chain.build()));
+    }
+
+    public static Aggregation fromList(final List<Aggregation> chain) {
+        final List<Aggregation> c = flattenChain(chain);
+
+        if (c.size() == 1) {
+            return c.iterator().next();
+        }
+
+        return new Chain(c);
+    }
+
+    private static List<Aggregation> flattenChain(
+        final List<Aggregation> chain
+    ) {
+        final ImmutableList.Builder<Aggregation> child = ImmutableList.builder();
+
+        for (final Aggregation a : chain) {
+            if (a instanceof Chain) {
+                child.addAll(flattenChain(Chain.class.cast(a).getChain()));
+            } else {
+                child.add(a);
+            }
+        }
+
+        return child.build();
     }
 }

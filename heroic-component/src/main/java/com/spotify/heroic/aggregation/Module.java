@@ -46,7 +46,7 @@ public class Module implements HeroicModule {
                     protected Aggregation build(
                         Optional<List<String>> over, Optional<Aggregation> each
                     ) {
-                        return new Group(over, each);
+                        return new Group(over, each.map(AggregationOrList::fromAggregation));
                     }
                 });
 
@@ -65,7 +65,7 @@ public class Module implements HeroicModule {
                     @Override
                     public Aggregation build(final AggregationArguments args) {
                         final List<Aggregation> chain = ImmutableList.copyOf(args
-                            .takeArguments(FunctionExpression.class)
+                            .all(FunctionExpression.class)
                             .stream()
                             .map(this::asAggregation)
                             .iterator());
@@ -79,7 +79,7 @@ public class Module implements HeroicModule {
                     @Override
                     public Aggregation build(final AggregationArguments args) {
                         final Optional<Aggregation> child = args
-                            .getNext("aggregation", FunctionExpression.class)
+                            .positionalOrKeyword("aggregation", FunctionExpression.class)
                             .map(this::asAggregation);
 
                         final Optional<Duration> size = args

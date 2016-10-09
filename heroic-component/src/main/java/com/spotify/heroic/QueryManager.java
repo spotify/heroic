@@ -41,8 +41,6 @@ import eu.toolchain.async.AsyncFuture;
 import java.util.List;
 
 public interface QueryManager extends UsableGroupManager<QueryManager.Group> {
-    QueryBuilder newQuery();
-
     QueryBuilder newQueryFromString(String query);
 
     interface Group {

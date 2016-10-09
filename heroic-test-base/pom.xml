@@ -26,8 +26,8 @@
     </dependency>
 
     <dependency>
-      <groupId>com.spotify.heroic</groupId>
-      <artifactId>heroic-component</artifactId>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-annotations</artifactId>
     </dependency>
 
     <!-- testing -->

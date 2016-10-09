@@ -23,7 +23,6 @@ package com.spotify.heroic.http.query;
 
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.Query;
-import com.spotify.heroic.QueryBuilder;
 import com.spotify.heroic.QueryManager;
 import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.metric.QueryResult;
@@ -47,7 +46,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 @Path("query")
 @Produces(MediaType.APPLICATION_JSON)
@@ -85,7 +83,7 @@ public class QueryResource {
         @Suspended final AsyncResponse response, @QueryParam("group") String group,
         QueryMetrics query
     ) {
-        final Query q = setupQuery(query).build();
+        final Query q = query.toQueryBuilder(this.query::newQueryFromString).build();
 
         final QueryManager.Group g = this.query.useOptionalGroup(Optional.ofNullable(group));
         final AsyncFuture<QueryResult> callback = g.query(q);
@@ -103,10 +101,17 @@ public class QueryResource {
 
         final List<AsyncFuture<Pair<String, QueryResult>>> futures = new ArrayList<>();
 
-        for (final Map.Entry<String, QueryMetrics> e : query.getQueries().entrySet()) {
-            final Query q = setupQuery(e.getValue()).rangeIfAbsent(query.getRange()).build();
-            futures.add(g.query(q).directTransform(r -> Pair.of(e.getKey(), r)));
-        }
+        query.getQueries().ifPresent(queries -> {
+            for (final Map.Entry<String, QueryMetrics> e : queries.entrySet()) {
+                final Query q = e
+                    .getValue()
+                    .toQueryBuilder(this.query::newQueryFromString)
+                    .rangeIfAbsent(query.getRange())
+                    .build();
+
+                futures.add(g.query(q).directTransform(r -> Pair.of(e.getKey(), r)));
+            }
+        });
 
         final AsyncFuture<QueryBatchResponse> future =
             async.collect(futures).directTransform(entries -> {
@@ -136,30 +141,6 @@ public class QueryResource {
         httpAsync.bind(response, callback,
             r -> new QueryMetricsResponse(r.getRange(), r.getGroups(), r.getErrors(), r.getTrace(),
                 r.getLimits()));
-    }
-
-    @SuppressWarnings("deprecation")
-    private QueryBuilder setupQuery(final QueryMetrics q) {
-        Supplier<? extends QueryBuilder> supplier = () -> {
-            return query
-                .newQuery()
-                .key(q.getKey())
-                .tags(q.getTags())
-                .groupBy(q.getGroupBy())
-                .filter(q.getFilter())
-                .range(q.getRange())
-                .aggregation(q.getAggregation())
-                .source(q.getSource())
-                .options(q.getOptions());
-        };
-
-        return q
-            .getQuery()
-            .map(query::newQueryFromString)
-            .orElseGet(supplier)
-            .rangeIfAbsent(q.getRange())
-            .optionsIfAbsent(q.getOptions())
-            .features(q.getFeatures());
     }
 
     @Data

@@ -50,22 +50,24 @@ public class AggregationArguments {
     /**
      * Take all arguments as a list with the given type.
      */
-    public <T extends Expression> List<T> takeArguments(final Class<T> expected) {
+    public <T extends Expression> List<T> all(final Class<T> expected) {
         final List<T> result =
             ImmutableList.copyOf(args.stream().map(v -> v.cast(expected)).iterator());
         args.clear();
         return result;
     }
 
-    public Optional<Expression> getNext() {
-        if (!args.isEmpty()) {
-            return Optional.of(args.removeFirst());
-        }
-
-        return Optional.empty();
-    }
-
-    public <T extends Expression> Optional<T> getNext(final String key, Class<T> expected) {
+    /**
+     * Take the next argument from the list of available arguments or fallback to a keyword if no
+     * arguments are present.
+     *
+     * @param key keyword to take if argument is missing
+     * @param expected expected type to take
+     * @return optionally the next argument or keyword
+     */
+    public <T extends Expression> Optional<T> positionalOrKeyword(
+        final String key, Class<T> expected
+    ) {
         if (!args.isEmpty()) {
             return Optional.of(args.removeFirst().cast(expected));
         }
@@ -73,6 +75,11 @@ public class AggregationArguments {
         return Optional.ofNullable(kw.remove(key)).map(v -> v.cast(expected));
     }
 
+    /**
+     * Take the next positional argument from the list of available arguments.
+     *
+     * @return optionally the next argument
+     */
     public <T extends Expression> Optional<T> positional(Class<T> expected) {
         if (args.isEmpty()) {
             return Optional.empty();
@@ -81,25 +88,42 @@ public class AggregationArguments {
         return Optional.of(args.removeFirst().cast(expected));
     }
 
+    /**
+     * Take a single keyword of an expected type.
+     *
+     * @param key keyword to take
+     * @param expected type to expect
+     * @param <T> type to expect
+     * @return optionally the value of the keyword
+     */
     public <T extends Expression> Optional<T> keyword(final String key, Class<T> expected) {
         return Optional.ofNullable(kw.remove(key)).map(v -> v.cast(expected));
     }
 
+    /**
+     * Throw an exception unless there are no more arguments and keywords available.
+     *
+     * @param name name of the context throwing the exception, will be used as a prefix in the
+     * message
+     */
     public void throwUnlessEmpty(final String name) {
-        if (!args.isEmpty() || !kw.isEmpty()) {
-            final List<String> parts = new ArrayList<>();
-            final Joiner on = Joiner.on(" and ");
-
-            if (!args.isEmpty()) {
-                parts.add(
-                    args.size() == 1 ? "argument " + args.iterator().next() : "arguments " + args);
-            }
-
-            if (!kw.isEmpty()) {
-                parts.add((kw.size() == 1 ? "keyword " : "keywords ") + kw);
-            }
-
-            throw new IllegalStateException(name + ": has trailing " + on.join(parts));
+        if (args.isEmpty() && kw.isEmpty()) {
+            return;
         }
+
+        final List<String> parts = new ArrayList<>();
+        final Joiner on = Joiner.on(" and ");
+
+        if (!args.isEmpty()) {
+            parts.add(
+                args.size() == 1 ? "argument " + args.iterator().next() : "arguments " + args);
+        }
+
+        if (!kw.isEmpty()) {
+            parts.add((kw.size() == 1 ? "keyword " + kw.keySet().iterator().next()
+                : "keywords " + kw.keySet()));
+        }
+
+        throw new IllegalStateException(name + ": has trailing " + on.join(parts));
     }
 }

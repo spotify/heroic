@@ -21,18 +21,12 @@
 
 package com.spotify.heroic;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.aggregation.Aggregations;
-import com.spotify.heroic.aggregation.Group;
 import com.spotify.heroic.common.Features;
-import com.spotify.heroic.common.Optionals;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.MetricType;
 import lombok.Data;
 
-import java.util.List;
 import java.util.Optional;
 
 @Data
@@ -42,36 +36,6 @@ public class Query {
     private final Optional<QueryDateRange> range;
     private final Optional<Filter> filter;
     private final Optional<QueryOptions> options;
-    private final Optional<List<String>> groupBy;
     /* set of experimental features to enable */
-    private final Features features;
-
-    @JsonCreator
-    public Query(
-        @JsonProperty("aggregators") final Optional<List<Aggregation>> aggregators,
-        @JsonProperty("aggregation") final Optional<Aggregation> aggregation,
-        @JsonProperty("source") final Optional<MetricType> source,
-        @JsonProperty("range") final Optional<QueryDateRange> range,
-        @JsonProperty("filter") final Optional<Filter> filter,
-        @JsonProperty("options") final Optional<QueryOptions> options,
-        @JsonProperty("groupBy") final Optional<List<String>> groupBy,
-        @JsonProperty("features") final Optional<Features> features
-    ) {
-        this.filter = filter;
-        this.range = range;
-        this.aggregation =
-            Optionals.pickOptional(aggregation, aggregators.flatMap(Aggregations::chain));
-        this.source = source;
-        this.options = options;
-        this.groupBy = groupBy;
-        this.features = features.orElseGet(Features::empty);
-    }
-
-    public Optional<Aggregation> getAggregation() {
-        if (groupBy.isPresent()) {
-            return aggregation.<Aggregation>map(a -> new Group(groupBy, Optional.of(a)));
-        }
-
-        return aggregation;
-    }
+    private final Optional<Features> features;
 }

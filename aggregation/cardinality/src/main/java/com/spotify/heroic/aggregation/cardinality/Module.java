@@ -48,7 +48,7 @@ public class Module implements HeroicModule {
                         final Optional<Duration> extent
                     ) {
                         final Optional<CardinalityMethod> method = args
-                            .getNext("method", Expression.class)
+                            .positionalOrKeyword("method", Expression.class)
                             .map(CardinalityMethod::fromExpression);
 
                         return new CardinalityAggregation(Optional.empty(), size, extent, method);

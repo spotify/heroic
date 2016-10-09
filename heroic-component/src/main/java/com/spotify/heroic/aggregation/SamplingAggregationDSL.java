@@ -33,10 +33,12 @@ public abstract class SamplingAggregationDSL<T> extends AbstractAggregationDSL {
 
     @Override
     public Aggregation build(final AggregationArguments args) {
-        final Optional<Duration> size =
-            args.getNext("size", DurationExpression.class).map(DurationExpression::toDuration);
-        final Optional<Duration> extent =
-            args.getNext("extent", DurationExpression.class).map(DurationExpression::toDuration);
+        final Optional<Duration> size = args
+            .positionalOrKeyword("size", DurationExpression.class)
+            .map(DurationExpression::toDuration);
+        final Optional<Duration> extent = args
+            .positionalOrKeyword("extent", DurationExpression.class)
+            .map(DurationExpression::toDuration);
 
         return buildWith(args, size, extent);
     }

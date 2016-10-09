@@ -21,41 +21,34 @@
 
 package com.spotify.heroic.aggregation;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import lombok.Data;
+import lombok.NonNull;
 
 import java.util.List;
 import java.util.Optional;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 @Data
 public class Group implements Aggregation {
     public static final String NAME = "group";
     public static final String ALL = "*";
 
+    @NonNull
     private final Optional<List<String>> of;
-    private final Optional<Aggregation> each;
+    @NonNull
+    private final Optional<AggregationOrList> each;
 
-    public Group(Optional<List<String>> of, Optional<Aggregation> each) {
-        this.of = checkNotNull(of, "of");
-        this.each = checkNotNull(each, "each");
-    }
-
-    @JsonCreator
-    public static Group create(
-        @JsonProperty("of") Optional<List<String>> of,
-        @JsonProperty("each") Optional<AggregationOrList> each
+    public static Aggregation of(
+        final Optional<List<String>> of, final Optional<Aggregation> aggregation
     ) {
-        return new Group(of, each.flatMap(AggregationOrList::toAggregation));
+        return new Group(of, aggregation.map(AggregationOrList::fromAggregation));
     }
 
     @Override
     public GroupInstance apply(final AggregationContext context) {
-        final AggregationInstance instance = each.orElse(Empty.INSTANCE).apply(context);
+        final AggregationInstance instance =
+            each.flatMap(AggregationOrList::toAggregation).orElse(Empty.INSTANCE).apply(context);
 
         final Optional<List<String>> of = this.of.map(o -> {
             final ImmutableSet.Builder<String> b = ImmutableSet.builder();

@@ -21,27 +21,24 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationContext;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 
+import java.beans.ConstructorProperties;
 import java.util.Optional;
 
 import static com.spotify.heroic.aggregation.simple.Aggregations.verifyNoChild;
 
 @Data
-@RequiredArgsConstructor
 public class TopK implements Aggregation {
     public static final String NAME = "topk";
 
     private final long k;
 
-    @JsonCreator
-    public TopK(@JsonProperty("k") long k, @JsonProperty("of") Optional<Aggregation> aggregation) {
-        verifyNoChild("of", aggregation);
+    @ConstructorProperties({"k", "of"})
+    public TopK(final long k, final Optional<Aggregation> of) {
+        verifyNoChild("of", of);
         this.k = k;
     }
 

@@ -100,26 +100,30 @@ public class Module implements HeroicModule {
                         final Optional<Duration> extent
                     ) {
                         final Optional<Double> q = args
-                            .getNext("q", DoubleExpression.class)
+                            .positionalOrKeyword("q", DoubleExpression.class)
                             .map(DoubleExpression::getValue);
                         final Optional<Double> error = args
-                            .getNext("error", DoubleExpression.class)
+                            .positionalOrKeyword("error", DoubleExpression.class)
                             .map(DoubleExpression::getValue);
                         return new Quantile(Optional.empty(), size, extent, q, error);
                     }
                 });
 
             c.register(TopK.NAME, TopK.class, TopKInstance.class,
-                args -> new TopK(fetchK(args, IntegerExpression.class).getValue()));
+                args -> new TopK(fetchK(args, IntegerExpression.class).getValue(),
+                    Optional.empty()));
 
             c.register(BottomK.NAME, BottomK.class, BottomKInstance.class,
-                args -> new BottomK(fetchK(args, IntegerExpression.class).getValue()));
+                args -> new BottomK(fetchK(args, IntegerExpression.class).getValue(),
+                    Optional.empty()));
 
             c.register(AboveK.NAME, AboveK.class, AboveKInstance.class,
-                args -> new AboveK(fetchK(args, DoubleExpression.class).getValue()));
+                args -> new AboveK(fetchK(args, DoubleExpression.class).getValue(),
+                    Optional.empty()));
 
             c.register(BelowK.NAME, BelowK.class, BelowKInstance.class,
-                args -> new BelowK(fetchK(args, DoubleExpression.class).getValue()));
+                args -> new BelowK(fetchK(args, DoubleExpression.class).getValue(),
+                    Optional.empty()));
         }
 
         private <T extends Expression> T fetchK(AggregationArguments args, Class<T> doubleClass) {

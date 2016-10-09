@@ -40,11 +40,11 @@ public abstract class GroupingAggregationBuilder extends AbstractAggregationDSL 
     @Override
     public Aggregation build(final AggregationArguments args) {
         final Optional<List<String>> of = args
-            .getNext("of", Expression.class)
+            .positionalOrKeyword("of", Expression.class)
             .flatMap(Expression::toOptional)
             .map(this::convertOf);
         final Optional<Aggregation> each =
-            args.getNext("each", FunctionExpression.class).map(this::asAggregation);
+            args.positionalOrKeyword("each", FunctionExpression.class).map(this::asAggregation);
         return build(of, each);
     }
 
