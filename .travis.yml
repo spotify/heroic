@@ -4,8 +4,8 @@ jdk:
   - oraclejdk8
 
 branches:
-  except:
-    - site
+  only:
+    - master
 
 cache:
   directories:
@@ -17,7 +17,7 @@ install:
   - tools/install-repackaged
 
 script:
-  - mvn -D environment=test verify
+  - mvn -D environment=test -P '!findbugs' verify
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
