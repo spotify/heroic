@@ -81,12 +81,16 @@
         </property>
       </activation>
 
+      <modules>
+        <module>reporting</module>
+      </modules>
+
       <build>
         <plugins>
           <plugin>
             <groupId>org.jacoco</groupId>
             <artifactId>jacoco-maven-plugin</artifactId>
-            <version>0.7.6.201602180812</version>
+            <version>0.7.7.201606060606</version>
             <configuration>
               <excludes>
                 <exclude>**/Dagger*.class</exclude>
@@ -96,18 +100,23 @@
             </configuration>
             <executions>
               <execution>
+                <id>codecov-test</id>
                 <goals>
                   <goal>prepare-agent</goal>
                 </goals>
+                <configuration>
+                  <propertyName>surefireArgLine</propertyName>
+                </configuration>
               </execution>
+
               <execution>
-                <id>report-coverage</id>
-
-                <phase>verify</phase>
-
+                <id>codecov-integration-test</id>
                 <goals>
-                  <goal>report</goal>
+                  <goal>prepare-agent-integration</goal>
                 </goals>
+                <configuration>
+                  <propertyName>failsafeArgLine</propertyName>
+                </configuration>
               </execution>
             </executions>
           </plugin>
@@ -132,6 +141,7 @@
             <artifactId>maven-failsafe-plugin</artifactId>
             <version>2.19.1</version>
             <configuration>
+              <argLine>${failsafeArgLine}</argLine>
               <parallel>classesAndMethods</parallel>
               <threadCount>2</threadCount>
               <perCoreThreadCount>true</perCoreThreadCount>
@@ -758,6 +768,7 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.19.1</version>
         <configuration>
+          <argLine>${surefireArgLine}</argLine>
           <parallel>classesAndMethods</parallel>
           <threadCount>2</threadCount>
           <perCoreThreadCount>true</perCoreThreadCount>
@@ -767,6 +778,11 @@
 
     <pluginManagement>
       <plugins>
+        <plugin>
+          <groupId>org.jacoco</groupId>
+          <artifactId>jacoco-maven-plugin</artifactId>
+          <version>0.7.7.201606060606</version>
+        </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
