@@ -33,8 +33,6 @@ import com.spotify.heroic.shell.TaskUsage;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.Getter;
-import lombok.ToString;
 import org.kohsuke.args4j.Option;
 
 import javax.inject.Inject;
@@ -74,10 +72,8 @@ public class Pause implements ShellTask {
         return async.collectAndDiscard(futures.build());
     }
 
-    @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "--skip-consumers", usage = "Do not pause consumers")
-        @Getter
         private boolean skipConsumers = false;
     }
 
@@ -86,7 +82,7 @@ public class Pause implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         Pause task();
     }
 }
