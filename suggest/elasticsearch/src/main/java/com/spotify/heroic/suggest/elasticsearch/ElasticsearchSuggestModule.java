@@ -64,7 +64,6 @@ import java.util.function.Supplier;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
-import static java.util.Optional.ofNullable;
 
 @Data
 @ModuleId("elasticsearch")
@@ -120,9 +119,19 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
             writeCacheDurationMinutes.orElse(DEFAULT_WRITES_CACHE_DURATION_MINUTES);
         this.templateName = templateName.orElse(DEFAULT_TEMPLATE_NAME);
         this.backendType = backendType.orElse(DEFAULT_BACKEND_TYPE);
-        this.type =
-            backendType.flatMap(bt -> ofNullable(backendTypes.get(bt))).orElse(defaultSetup);
+        this.type = backendType.map(this::lookupBackendType).orElse(defaultSetup);
         this.configure = configure.orElse(DEFAULT_CONFIGURE);
+    }
+
+    private Supplier<BackendType> lookupBackendType(final String bt) {
+        final Supplier<BackendType> type = backendTypes.get(bt);
+
+        if (type == null) {
+            throw new IllegalArgumentException(
+                "Invalid backend type (" + bt + "), must be one of " + backendTypes.keySet());
+        }
+
+        return type;
     }
 
     @Override
