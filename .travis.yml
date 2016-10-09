@@ -17,7 +17,7 @@ install:
   - tools/install-repackaged
 
 script:
-  - mvn -D environment=test -P '!findbugs' verify
+  - mvn -T 1.5C -D environment=test -P '!findbugs' verify
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
