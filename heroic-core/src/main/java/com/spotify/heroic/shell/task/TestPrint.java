@@ -31,8 +31,6 @@ import com.spotify.heroic.shell.TaskUsage;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.Getter;
-import lombok.ToString;
 import org.kohsuke.args4j.Option;
 
 import javax.inject.Inject;
@@ -63,10 +61,8 @@ public class TestPrint implements ShellTask {
         return async.resolved();
     }
 
-    @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "--count", usage = "Number of lines to print")
-        @Getter
         private long count = 10000;
     }
 

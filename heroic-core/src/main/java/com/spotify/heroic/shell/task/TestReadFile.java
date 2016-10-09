@@ -32,8 +32,6 @@ import com.spotify.heroic.shell.TaskUsage;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.Getter;
-import lombok.ToString;
 import org.kohsuke.args4j.Option;
 
 import javax.inject.Inject;
@@ -82,10 +80,8 @@ public class TestReadFile implements ShellTask {
         return async.resolved();
     }
 
-    @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-i", usage = "File to read from")
-        @Getter
         private Path in = Paths.get("in.txt");
     }
 

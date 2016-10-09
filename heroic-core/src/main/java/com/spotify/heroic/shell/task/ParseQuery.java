@@ -37,7 +37,6 @@ import com.spotify.heroic.shell.TaskUsage;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.ToString;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 
@@ -88,12 +87,11 @@ public class ParseQuery implements ShellTask {
         return async.resolved();
     }
 
-    @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "--no-indent", usage = "Do not indent output")
         private boolean noIndent = false;
 
-        @Option(name = "-e", aliases = {"--eval"}, usage = "Evaluate output")
+        @Option(name = "-e", aliases = "--eval", usage = "Evaluate output")
         private boolean eval = false;
 
         @Argument(usage = "Query to parse")
@@ -105,7 +103,7 @@ public class ParseQuery implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         ParseQuery task();
     }
 }
