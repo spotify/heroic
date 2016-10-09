@@ -24,6 +24,7 @@ package com.spotify.heroic.test;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedSet;
 import com.spotify.heroic.HeroicConfig;
 import com.spotify.heroic.HeroicCore;
 import com.spotify.heroic.HeroicCoreInstance;
@@ -38,7 +39,10 @@ import com.spotify.heroic.suggest.MatchOptions;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestManagerModule;
 import com.spotify.heroic.suggest.SuggestModule;
+import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
+import com.spotify.heroic.suggest.TagValueSuggest;
+import com.spotify.heroic.suggest.TagValuesSuggest;
 import com.spotify.heroic.suggest.WriteSuggest;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -112,6 +116,46 @@ public abstract class AbstractSuggestBackendIT {
     @After
     public final void abstractTeardown() throws Exception {
         core.shutdown().get();
+    }
+
+    @Test
+    public void tagValuesSuggest() throws Exception {
+        final TagValuesSuggest.Request request =
+            new TagValuesSuggest.Request(TrueFilter.get(), range, OptionalLimit.empty(),
+                OptionalLimit.empty(), ImmutableList.of());
+
+        final TagValuesSuggest result = backend.tagValuesSuggest(request).get();
+
+        final TagValuesSuggest.Suggestion s = result.getSuggestions().get(0);
+
+        assertEquals(
+            new TagValuesSuggest.Suggestion("role", ImmutableSortedSet.of("bar", "baz", "foo"),
+                false), s);
+    }
+
+    @Test
+    public void tagValueSuggest() throws Exception {
+        final TagValueSuggest.Request request =
+            new TagValueSuggest.Request(TrueFilter.get(), range, OptionalLimit.empty(),
+                Optional.of("role"));
+
+        final TagValueSuggest result = backend.tagValueSuggest(request).get();
+
+        assertEquals(ImmutableSet.of("bar", "baz", "foo"), ImmutableSet.copyOf(result.getValues()));
+    }
+
+    @Test
+    public void tagKeyCount() throws Exception {
+        final TagKeyCount.Request request =
+            new TagKeyCount.Request(TrueFilter.get(), range, OptionalLimit.empty(),
+                OptionalLimit.empty());
+
+        final TagKeyCount result = backend.tagKeyCount(request).get();
+
+        final TagKeyCount.Suggestion s = result.getSuggestions().get(0);
+
+        assertEquals("role", s.getKey());
+        assertEquals(3, s.getCount());
     }
 
     @Test
