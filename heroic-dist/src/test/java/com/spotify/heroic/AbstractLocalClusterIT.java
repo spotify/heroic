@@ -4,8 +4,11 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.cluster.ClusterManagerModule;
+import com.spotify.heroic.cluster.RpcProtocolModule;
 import com.spotify.heroic.cluster.discovery.simple.StaticListDiscoveryModule;
+import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.profile.MemoryProfile;
+import com.spotify.heroic.rpc.grpc.GrpcRpcProtocolModule;
 import com.spotify.heroic.rpc.jvm.JvmRpcContext;
 import com.spotify.heroic.rpc.jvm.JvmRpcProtocolModule;
 import eu.toolchain.async.AsyncFuture;
@@ -14,6 +17,7 @@ import org.junit.After;
 import org.junit.Before;
 
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -28,6 +32,10 @@ public abstract class AbstractLocalClusterIT {
 
     protected List<HeroicCoreInstance> instances;
 
+    protected String protocol() {
+        return "jvm";
+    }
+
     /**
      * Override to configure more than one instance.
      * <p>
@@ -36,7 +44,7 @@ public abstract class AbstractLocalClusterIT {
      * @return a list of URIs.
      */
     protected List<URI> instanceUris() {
-        return ImmutableList.of(URI.create("jvm://a"), URI.create("jvm://b"));
+        return ImmutableList.of(URI.create(protocol() + "://a"), URI.create(protocol() + "://b"));
     }
 
     /**
@@ -65,11 +73,12 @@ public abstract class AbstractLocalClusterIT {
             instances.stream().map(HeroicCoreInstance::start).collect(Collectors.toList()));
 
         // Refresh all cores, allowing them to discover each other.
-        final AsyncFuture<Void> refresh = startup.lazyTransform(v -> async.collectAndDiscard(
-            instances
+        final AsyncFuture<Void> refresh = startup.lazyTransform(v -> {
+            return setupStaticNodes().lazyTransform(ignore -> async.collectAndDiscard(instances
                 .stream()
                 .map(c -> c.inject(inj -> inj.clusterManager().refresh()))
                 .collect(Collectors.toList())));
+        });
 
         refresh.lazyTransform(v -> {
             // verify that the correct number of nodes are visible from all instances.
@@ -81,6 +90,36 @@ public abstract class AbstractLocalClusterIT {
             assertEquals(expectedNumberOfNodes, actualNumberOfNodes);
             return prepareEnvironment();
         }).get(10, TimeUnit.SECONDS);
+    }
+
+    private AsyncFuture<Void> setupStaticNodes() {
+        // JVM protocol does not require static nodes since addresses are known beforehand.
+        if ("jvm".equals(protocol())) {
+            return async.resolved(null);
+        }
+
+        // Collect remote URIs from instances to get ahold of generated port.
+        final List<AsyncFuture<String>> remotes = instances
+            .stream()
+            .map(c -> c.inject(CoreComponent::clusterManager))
+            .map(c -> c.protocols().iterator().next().getListenURI())
+            .collect(Collectors.toList());
+
+        return async.collect(remotes).lazyTransform(uris -> {
+            final List<AsyncFuture<Void>> addNodes = new ArrayList<>();
+
+            for (final String stringUri : uris) {
+                final URI remoteUri = URI.create(stringUri);
+
+                instances.forEach(instance -> {
+                    final URI uri =
+                        URI.create(remoteUri.getScheme() + "://127.0.0.1:" + remoteUri.getPort());
+                    addNodes.add(instance.inject(CoreComponent::clusterManager).addStaticNode(uri));
+                });
+            }
+
+            return async.collectAndDiscard(addNodes);
+        });
     }
 
     @After
@@ -104,8 +143,22 @@ public abstract class AbstractLocalClusterIT {
     private HeroicCoreInstance setupCoreThrowing(
         final URI uri, final List<URI> uris, final JvmRpcContext context
     ) throws Exception {
-        final JvmRpcProtocolModule protocol =
-            JvmRpcProtocolModule.builder().context(context).bindName(uri.getHost()).build();
+        final RpcProtocolModule protocol;
+        final StaticListDiscoveryModule discovery;
+
+        switch (uri.getScheme()) {
+            case "jvm":
+                protocol =
+                    JvmRpcProtocolModule.builder().context(context).bindName(uri.getHost()).build();
+                discovery = new StaticListDiscoveryModule(uris);
+                break;
+            case "grpc":
+                protocol = GrpcRpcProtocolModule.builder().build();
+                discovery = new StaticListDiscoveryModule(ImmutableList.of());
+                break;
+            default:
+                throw new IllegalArgumentException("Unsupported URI: " + uri);
+        }
 
         return HeroicCore
             .builder()
@@ -119,7 +172,7 @@ public abstract class AbstractLocalClusterIT {
                     .builder()
                     .tags(ImmutableMap.of("shard", uri.getHost()))
                     .protocols(ImmutableList.of(protocol))
-                    .discovery(new StaticListDiscoveryModule(uris))))
+                    .discovery(discovery)))
             .profile(new MemoryProfile())
             .modules(HeroicModules.ALL_MODULES)
             .build()

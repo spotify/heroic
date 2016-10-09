@@ -27,15 +27,23 @@ import java.util.stream.Collectors;
 
 import static com.spotify.heroic.test.Data.points;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeTrue;
 
-public class ClusterQueryIT extends AbstractLocalClusterIT {
+public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     private final Series s1 = Series.of("key1", ImmutableMap.of("shared", "a", "diff", "a"));
     private final Series s2 = Series.of("key1", ImmutableMap.of("shared", "a", "diff", "b"));
 
     private QueryManager query;
 
+    protected boolean cardinalitySupport = true;
+
+    protected void setupSupport() {
+    }
+
     @Before
-    public void setup() {
+    public final void setupAbstract() {
+        setupSupport();
+
         query = instances.get(0).inject(CoreComponent::queryManager);
     }
 
@@ -130,6 +138,8 @@ public class ClusterQueryIT extends AbstractLocalClusterIT {
 
     @Test
     public void cardinalityTest() throws Exception {
+        assumeTrue(cardinalitySupport);
+
         final QueryResult result = query("cardinality(10ms)");
 
         final Set<MetricCollection> m = getResults(result);
@@ -141,6 +151,8 @@ public class ClusterQueryIT extends AbstractLocalClusterIT {
 
     @Test
     public void cardinalityWithKeyTest() throws Exception {
+        assumeTrue(cardinalitySupport);
+
         // TODO: support native booleans in expressions
         final QueryResult result = query("cardinality(10ms, method=hllp(includeKey=\"true\"))");
 
