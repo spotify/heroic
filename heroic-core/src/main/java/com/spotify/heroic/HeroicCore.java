@@ -516,18 +516,18 @@ public class HeroicCore implements HeroicConfiguration {
         return new InetSocketAddress(host, port);
     }
 
-    static void startLifeCycles(CoreComponent primary, HeroicConfig config) throws Exception {
-        final CoreLifeCycleRegistry r = (CoreLifeCycleRegistry) primary.lifeCycleRegistry();
-
-        if (!awaitLifeCycles("start", primary, config.getStartTimeout(), r.starters())) {
+    static void startLifeCycles(
+        CoreLifeCycleRegistry registry, CoreComponent primary, HeroicConfig config
+    ) throws Exception {
+        if (!awaitLifeCycles("start", primary, config.getStartTimeout(), registry.starters())) {
             throw new Exception("Failed to start all life cycles");
         }
     }
 
-    static void stopLifeCycles(CoreComponent primary, HeroicConfig config) throws Exception {
-        final CoreLifeCycleRegistry r = (CoreLifeCycleRegistry) primary.lifeCycleRegistry();
-
-        if (!awaitLifeCycles("stop", primary, config.getStopTimeout(), r.stoppers())) {
+    static void stopLifeCycles(
+        CoreLifeCycleRegistry registry, CoreComponent primary, HeroicConfig config
+    ) throws Exception {
+        if (!awaitLifeCycles("stop", primary, config.getStopTimeout(), registry.stoppers())) {
             log.warn("Failed to stop all life cycles");
         }
     }
@@ -571,7 +571,7 @@ public class HeroicCore implements HeroicConfiguration {
 
         try {
             async.collect(futures).get(await.getDuration(), await.getUnit());
-        } catch (TimeoutException e) {
+        } catch (final TimeoutException e) {
             log.error("Operation timed out");
 
             for (final Pair<AsyncFuture<Void>, LifeCycleHook<AsyncFuture<Void>>> pair : pairs) {
@@ -905,9 +905,18 @@ public class HeroicCore implements HeroicConfiguration {
                 final CoreComponent core = coreInjector.get();
                 assert core != null;
 
+                final CoreLifeCycleRegistry coreRegistry =
+                    (CoreLifeCycleRegistry) core.lifeCycleRegistry();
+
                 runBootstrappers(early, late);
-                startLifeCycles(core, config);
-                startInternalLifecycles(core);
+                startLifeCycles(coreRegistry, core, config);
+
+                core.loadingLifeCycle().install();
+
+                core.internalLifeCycleRegistry().start(() -> {
+                    ((CoreHeroicContext) core.context()).resolveCoreFuture();
+                    return core.async().resolved(null);
+                });
 
                 log.info("Startup finished, hello!");
                 return null;
@@ -917,18 +926,29 @@ public class HeroicCore implements HeroicConfiguration {
                 final CoreComponent core = coreInjector.get();
                 assert core != null;
 
+                final CoreLifeCycleRegistry coreRegistry =
+                    (CoreLifeCycleRegistry) core.lifeCycleRegistry();
+
                 core.stopSignal().run();
 
                 log.info("Shutting down Heroic");
 
                 try {
-                    stopLifeCycles(core, config);
+                    stopLifeCycles(coreRegistry, core, config);
                 } catch (Exception e) {
                     log.error("Failed to stop all lifecycles, continuing anyway...", e);
                 }
 
                 log.info("Stopping internal life cycle");
-                ((CoreHeroicLifeCycle) core.lifeCycle()).stop();
+
+                final CoreLifeCycleRegistry internalRegistry =
+                    (CoreLifeCycleRegistry) core.internalLifeCycleRegistry();
+
+                try {
+                    stopLifeCycles(internalRegistry, core, config);
+                } catch (Exception e) {
+                    log.error("Failed to stop all internal lifecycles, continuing anyway...", e);
+                }
 
                 log.info("Done shutting down, bye bye!");
                 return null;
@@ -968,29 +988,6 @@ public class HeroicCore implements HeroicConfiguration {
         @Override
         public AsyncFuture<Void> join() {
             return this.stopped;
-        }
-
-        /**
-         * Start the internal lifecycles
-         * <p>
-         * First step is to register event hooks that makes sure that the lifecycle components gets
-         * started and shutdown correctly. After this the registered internal lifecycles are
-         * started.
-         *
-         * @param primary
-         */
-        private void startInternalLifecycles(final CoreComponent primary) {
-            final CoreHeroicLifeCycle lifecycle = (CoreHeroicLifeCycle) primary.lifeCycle();
-
-            lifecycle.registerShutdown("Core Scheduler", () -> primary.scheduler().stop());
-
-            lifecycle.registerShutdown("Core Executor Service",
-                () -> primary.executorService().shutdown());
-
-            lifecycle.register("Core Future Resolver",
-                c -> ((CoreHeroicContext) primary.context()).resolveCoreFuture());
-
-            lifecycle.start();
         }
     }
 }

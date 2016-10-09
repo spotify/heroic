@@ -70,26 +70,12 @@ public class DefaultScheduler implements Scheduler {
 
     @Override
     public void schedule(final String name, long value, TimeUnit unit, final Task task) {
-        scheduler.schedule(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    task.run();
-                } catch (final Exception e) {
-                    log.error("{} task failed", name, e);
-                }
+        scheduler.schedule(() -> {
+            try {
+                task.run();
+            } catch (final Exception e) {
+                log.error("{} task failed", name, e);
             }
         }, value, unit);
-    }
-
-    @Override
-    public void stop() {
-        scheduler.shutdownNow();
-
-        try {
-            scheduler.awaitTermination(30, TimeUnit.SECONDS);
-        } catch (final InterruptedException e) {
-            log.error("Failed to shut down scheduled executor service in a timely manner");
-        }
     }
 }

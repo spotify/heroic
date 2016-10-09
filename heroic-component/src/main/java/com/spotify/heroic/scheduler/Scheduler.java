@@ -56,9 +56,4 @@ public interface Scheduler {
      * @param task Task to execute.
      */
     void schedule(String name, long value, TimeUnit unit, Task task);
-
-    /**
-     * Stop the scheduler.
-     */
-    void stop();
 }

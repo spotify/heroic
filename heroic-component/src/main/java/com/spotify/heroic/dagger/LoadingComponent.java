@@ -25,12 +25,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.HeroicConfiguration;
 import com.spotify.heroic.HeroicConfigurationContext;
-import com.spotify.heroic.HeroicLifeCycle;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.aggregation.AggregationRegistry;
 import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.FilterModifier;
+import com.spotify.heroic.lifecycle.LifeCycle;
+import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.scheduler.Scheduler;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.serializer.Serializer;
@@ -66,8 +67,6 @@ public interface LoadingComponent {
 
     Scheduler scheduler();
 
-    HeroicLifeCycle lifeCycle();
-
     FilterModifier filterModifier();
 
     ExecutorService executorService();
@@ -75,4 +74,10 @@ public interface LoadingComponent {
     JavaxRestFramework javaxRestFramework();
 
     HeroicConfigurationContext heroicConfigurationContext();
+
+    @Named("internal")
+    LifeCycleRegistry internalLifeCycleRegistry();
+
+    @Named("loading")
+    LifeCycle loadingLifeCycle();
 }
