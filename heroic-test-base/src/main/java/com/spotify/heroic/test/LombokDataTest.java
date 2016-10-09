@@ -21,20 +21,27 @@
 
 package com.spotify.heroic.test;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Converter;
 import com.google.common.base.Throwables;
+import lombok.RequiredArgsConstructor;
 
 import java.beans.ConstructorProperties;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -47,26 +54,7 @@ public class LombokDataTest {
         CaseFormat.LOWER_CAMEL.converterTo(CaseFormat.UPPER_CAMEL);
 
     public static void verifyClass(final Class<?> cls) {
-        verifyClass(cls, ValueSuppliers.empty());
-    }
-
-    public static void verifyClass(
-        final Class<?> cls, final ValueSuppliers suppliers
-    ) {
-        final FakeValueProvider valueProvider = new FakeValueProvider(suppliers);
-
-        final Constructor<?> constructor = Arrays
-            .stream(cls.getConstructors())
-            .filter(c -> c.isAnnotationPresent(ConstructorProperties.class))
-            .findAny()
-            .orElseThrow(() -> new IllegalArgumentException(
-                "No constructor annotated with @ConstructorProperties"));
-
-        final List<FieldSpec> specs = buildFieldSpecs(cls, constructor, valueProvider);
-
-        verifyGetters(constructor, specs);
-        verifyEquals(constructor, specs);
-        verifyToString(constructor, specs);
+        verifyClassBuilder(cls).verify();
     }
 
     private static void verifyGetters(
@@ -76,16 +64,18 @@ public class LombokDataTest {
 
         /* test getters */
         for (final FieldSpec f : specs) {
-            final Object value;
+            f.getGetter().ifPresent(getter -> {
+                final Object value;
 
-            try {
-                value = f.getGetter().invoke(instance);
-            } catch (final ReflectiveOperationException e) {
-                throw Throwables.propagate(e);
-            }
+                try {
+                    value = getter.invoke(instance);
+                } catch (final ReflectiveOperationException e) {
+                    throw Throwables.propagate(e);
+                }
 
-            assertEquals("Expected value from getter (" + f.getName() + ") is same", f.getPrimary(),
-                value);
+                assertEquals("Expected value from getter (" + f.getName() + ") is same",
+                    f.getPrimary(), value);
+            });
         }
     }
 
@@ -162,7 +152,8 @@ public class LombokDataTest {
     }
 
     private static List<FieldSpec> buildFieldSpecs(
-        final Class<?> cls, final Constructor<?> constructor, final FakeValueProvider valueProvider
+        final Class<?> cls, final Constructor<?> constructor, final FakeValueProvider ignoreGetters,
+        final Set<String> ignore
     ) {
         final Parameter[] parameters = constructor.getParameters();
 
@@ -183,16 +174,21 @@ public class LombokDataTest {
             final Class<?> rawType = toRawType(type);
             final String name = names[i];
 
-            final Method getter;
+            final Optional<Method> getter;
 
-            if (rawType.equals(boolean.class)) {
-                getter = getGetterMethod(cls, "is" + LOWER_TO_UPPER.convert(name));
+            if (ignore.contains(name)) {
+                getter = Optional.empty();
             } else {
-                getter = getGetterMethod(cls, "get" + LOWER_TO_UPPER.convert(name));
+                if (rawType.equals(boolean.class)) {
+                    getter = Optional.of(getGetterMethod(cls, "is" + LOWER_TO_UPPER.convert(name)));
+                } else {
+                    getter =
+                        Optional.of(getGetterMethod(cls, "get" + LOWER_TO_UPPER.convert(name)));
+                }
             }
 
-            final Object primary = valueProvider.lookup(type, false, name);
-            final Object secondary = valueProvider.lookup(type, true, name);
+            final Object primary = ignoreGetters.lookup(type, false, name);
+            final Object secondary = ignoreGetters.lookup(type, true, name);
 
             specs.add(new FieldSpec(rawType, primary, secondary, name, getter));
         }
@@ -226,6 +222,89 @@ public class LombokDataTest {
         private final Object primary;
         private final Object secondary;
         private final String name;
-        private final Method getter;
+        private final Optional<Method> getter;
+    }
+
+    public static Builder verifyClassBuilder(final Class<?> cls) {
+        return new Builder(cls);
+    }
+
+    @RequiredArgsConstructor
+    public static class Builder {
+        private final Class<?> cls;
+
+        /**
+         * Check that there are no conflicting value builders.
+         */
+        private boolean checkJson = true;
+
+        /**
+         * Custom value suppliers.
+         */
+        private final List<ValueSuppliers.ValueSupplier> valueSuppliers = new ArrayList<>();
+
+        /**
+         * Getters to ignore.
+         */
+        private final Set<String> ignoreGetters = new HashSet<>();
+
+        public Builder checkJson(final boolean checkJson) {
+            this.checkJson = checkJson;
+            return this;
+        }
+
+        public Builder valueSupplier(ValueSuppliers.ValueSupplier valueSupplier) {
+            this.valueSuppliers.add(valueSupplier);
+            return this;
+        }
+
+        public Builder ignoreGetter(final String name) {
+            this.ignoreGetters.add(name);
+            return this;
+        }
+
+        public void verify() {
+            final ValueSuppliers suppliers = new ValueSuppliers(valueSuppliers);
+
+            final FakeValueProvider valueProvider = new FakeValueProvider(suppliers);
+
+            final Constructor<?> constructor = Arrays
+                .stream(cls.getConstructors())
+                .filter(c -> c.isAnnotationPresent(ConstructorProperties.class))
+                .findAny()
+                .orElseThrow(() -> new IllegalArgumentException(
+                    "No constructor annotated with @ConstructorProperties"));
+
+            final List<FieldSpec> specs =
+                buildFieldSpecs(cls, constructor, valueProvider, ignoreGetters);
+
+            verifyGetters(constructor, specs);
+            verifyEquals(constructor, specs);
+            verifyToString(constructor, specs);
+
+            if (checkJson) {
+                verifyJson(cls);
+            }
+        }
+
+        private void verifyJson(final Class<?> cls) {
+            final List<Constructor<?>> constructors = Arrays
+                .stream(cls.getConstructors())
+                .filter(c -> c.isAnnotationPresent(ConstructorProperties.class) ||
+                    c.isAnnotationPresent(JsonCreator.class))
+                .collect(Collectors.toList());
+
+            final List<Method> jsonCreators = Arrays
+                .stream(cls.getMethods())
+                .filter(m -> ((m.getModifiers() & Modifier.STATIC) != 0) &&
+                    m.isAnnotationPresent(JsonCreator.class))
+                .collect(Collectors.toList());
+
+            if (constructors.size() + jsonCreators.size() != 1) {
+                throw new AssertionError(
+                    "Constructors (" + constructors + ") and @JsonCreator methods (" +
+                        jsonCreators + ") conflicting for JSON de-serialization");
+            }
+        }
     }
 }
