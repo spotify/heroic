@@ -31,11 +31,8 @@ import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.scheduler.Scheduler;
-import com.spotify.heroic.scheduler.Task;
-import com.spotify.heroic.statistics.HeroicReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.ResolvableFuture;
 import eu.toolchain.async.Transform;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -76,13 +73,9 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
     private final Map<String, RpcProtocol> protocols;
     private final Scheduler scheduler;
     private final Boolean useLocal;
-    private final Set<Map<String, String>> topology;
-    private final HeroicReporter reporter;
     private final HeroicConfiguration options;
     private final LocalClusterNode local;
     private final HeroicContext context;
-
-    private final ResolvableFuture<Void> initialized;
 
     private final AtomicReference<Set<URI>> staticNodes = new AtomicReference<>(new HashSet<>());
 
@@ -95,8 +88,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
     public CoreClusterManager(
         AsyncFramework async, ClusterDiscovery discovery, NodeMetadata localMetadata,
         Map<String, RpcProtocol> protocols, Scheduler scheduler,
-        @Named("useLocal") Boolean useLocal, @Named("topology") Set<Map<String, String>> topology,
-        HeroicReporter reporter, HeroicConfiguration options, LocalClusterNode local,
+        @Named("useLocal") Boolean useLocal, HeroicConfiguration options, LocalClusterNode local,
         HeroicContext context
     ) {
         this.async = async;
@@ -105,13 +97,9 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
         this.protocols = protocols;
         this.scheduler = scheduler;
         this.useLocal = useLocal;
-        this.topology = topology;
-        this.reporter = reporter;
         this.options = options;
         this.local = local;
         this.context = context;
-
-        this.initialized = async.future();
     }
 
     @Override
@@ -288,22 +276,6 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
     }
 
     @Override
-    public boolean isReady() {
-        final NodeRegistry registry = this.registry.get();
-
-        if (registry == null) {
-            return false;
-        }
-
-        return registry.getOnlineNodes() > 0;
-    }
-
-    @Override
-    public AsyncFuture<Void> initialized() {
-        return initialized;
-    }
-
-    @Override
     public List<ClusterShard> useOptionalGroup(final Optional<String> group) {
         final ImmutableList.Builder<ClusterShard> shards = ImmutableList.builder();
 
@@ -325,12 +297,8 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
 
         if (!options.isOneshot()) {
             startup = context.startedFuture().directTransform(result -> {
-                scheduler.periodically("cluster-refresh", 1, TimeUnit.MINUTES, new Task() {
-                    @Override
-                    public void run() throws Exception {
-                        refresh().get();
-                    }
-                });
+                scheduler.periodically("cluster-refresh", 1, TimeUnit.MINUTES,
+                    () -> refresh().get());
 
                 return null;
             });
@@ -341,7 +309,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
         startup.lazyTransform(result -> refresh().catchFailed((Throwable e) -> {
             log.error("initial metadata refresh failed", e);
             return null;
-        })).onFinished(() -> initialized.resolve(null));
+        }));
 
         return async.resolved();
     }

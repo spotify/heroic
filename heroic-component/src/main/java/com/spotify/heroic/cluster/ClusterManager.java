@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.cluster;
 
-import com.spotify.heroic.common.Initializing;
 import com.spotify.heroic.common.UsableGroupManager;
 import eu.toolchain.async.AsyncFuture;
 import lombok.Data;
@@ -42,7 +41,7 @@ import java.util.Set;
  *
  * @author udoprog
  */
-public interface ClusterManager extends UsableGroupManager<List<ClusterShard>>, Initializing {
+public interface ClusterManager extends UsableGroupManager<List<ClusterShard>> {
     @Data
     class Statistics {
         private final int onlineNodes;
@@ -69,11 +68,6 @@ public interface ClusterManager extends UsableGroupManager<List<ClusterShard>>, 
     AsyncFuture<Void> refresh();
 
     Statistics getStatistics();
-
-    /**
-     * Future that will be resolved, after the cluster manager has been fully initialized.
-     */
-    AsyncFuture<Void> initialized();
 
     Set<RpcProtocol> protocols();
 }
