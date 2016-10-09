@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.AggregationContext;
 import com.spotify.heroic.aggregation.SamplingAggregation;
 import com.spotify.heroic.aggregation.SamplingQuery;
@@ -31,6 +29,7 @@ import com.spotify.heroic.common.Optionals;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.beans.ConstructorProperties;
 import java.util.Optional;
 
 @Data
@@ -38,11 +37,9 @@ import java.util.Optional;
 public class Average extends SamplingAggregation {
     public static final String NAME = "average";
 
-    @JsonCreator
+    @ConstructorProperties({"sampling", "size", "extent"})
     public Average(
-        @JsonProperty("sampling") Optional<SamplingQuery> sampling,
-        @JsonProperty("size") Optional<Duration> size,
-        @JsonProperty("extent") Optional<Duration> extent
+        Optional<SamplingQuery> sampling, Optional<Duration> size, Optional<Duration> extent
     ) {
         super(Optionals.firstPresent(size, sampling.flatMap(SamplingQuery::getSize)),
             Optionals.firstPresent(extent, sampling.flatMap(SamplingQuery::getExtent)));
