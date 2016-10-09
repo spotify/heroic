@@ -33,20 +33,18 @@ import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
+import lombok.Data;
+import lombok.NonNull;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
-public class FilterAggregation implements AggregationInstance {
+@Data
+public abstract class FilterAggregation implements AggregationInstance {
+    @NonNull
     private final FilterStrategy filterStrategy;
-
-    public FilterAggregation(final FilterStrategy filterStrategy) {
-        this.filterStrategy = checkNotNull(filterStrategy, "filterStrategy");
-    }
 
     @Override
     public long estimate(DateRange range) {

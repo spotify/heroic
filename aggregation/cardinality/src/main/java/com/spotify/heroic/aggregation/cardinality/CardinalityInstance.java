@@ -21,21 +21,22 @@
 
 package com.spotify.heroic.aggregation.cardinality;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.BucketAggregationInstance;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
+import java.beans.ConstructorProperties;
+
+@Data
+@EqualsAndHashCode(callSuper = true)
 public class CardinalityInstance extends BucketAggregationInstance<CardinalityBucket> {
     private final CardinalityMethod method;
 
-    @JsonCreator
-    public CardinalityInstance(
-        @JsonProperty("size") final long size, @JsonProperty("extent") final long extent,
-        @JsonProperty("method") CardinalityMethod method
-    ) {
+    @ConstructorProperties({"size", "extent", "method"})
+    public CardinalityInstance(final long size, final long extent, CardinalityMethod method) {
         super(size, extent, ALL_TYPES, MetricType.POINT);
         this.method = method;
     }

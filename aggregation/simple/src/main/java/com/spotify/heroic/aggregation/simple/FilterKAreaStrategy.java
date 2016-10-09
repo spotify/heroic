@@ -28,15 +28,10 @@ import lombok.Data;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Data
 public class FilterKAreaStrategy implements FilterStrategy {
-
     private final FilterKAreaType filterType;
     private final long k;
-
-    public FilterKAreaStrategy(FilterKAreaType filterType, long k) {
-        this.filterType = filterType;
-        this.k = k;
-    }
 
     @Override
     public <T> List<T> filter(List<FilterableMetrics<T>> metrics) {
@@ -48,10 +43,6 @@ public class FilterKAreaStrategy implements FilterStrategy {
             .map(Area::getFilterableMetrics)
             .map(FilterableMetrics::getData)
             .collect(Collectors.toList());
-    }
-
-    public Long getK() {
-        return k;
     }
 
     @Data

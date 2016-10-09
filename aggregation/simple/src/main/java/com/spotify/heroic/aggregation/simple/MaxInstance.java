@@ -21,18 +21,16 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 
+import java.beans.ConstructorProperties;
+
 public class MaxInstance extends DistributedBucketInstance<StripedMaxBucket> {
-    @JsonCreator
-    public MaxInstance(
-        @JsonProperty("size") final long size, @JsonProperty("extent") final long extent
-    ) {
+    @ConstructorProperties({"size", "extent"})
+    public MaxInstance(final long size, final long extent) {
         super(size, extent, ImmutableSet.of(MetricType.POINT, MetricType.SPREAD), MetricType.POINT);
     }
 

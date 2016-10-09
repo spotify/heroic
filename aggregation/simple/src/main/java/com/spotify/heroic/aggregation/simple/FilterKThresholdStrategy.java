@@ -30,14 +30,10 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@Data
 public class FilterKThresholdStrategy implements FilterStrategy {
     private final FilterKThresholdType filterType;
     private final double k;
-
-    public FilterKThresholdStrategy(FilterKThresholdType filterType, double k) {
-        this.filterType = filterType;
-        this.k = k;
-    }
 
     @Override
     public <T> List<T> filter(List<FilterableMetrics<T>> metrics) {
@@ -48,10 +44,6 @@ public class FilterKThresholdStrategy implements FilterStrategy {
             .map(Extreme::getFilterableMetrics)
             .map(FilterableMetrics::getData)
             .collect(Collectors.toList());
-    }
-
-    public double getK() {
-        return k;
     }
 
     @Data

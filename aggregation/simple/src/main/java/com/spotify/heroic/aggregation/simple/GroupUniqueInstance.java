@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.BucketAggregationInstance;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
@@ -30,14 +28,13 @@ import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.MetricType;
 import lombok.ToString;
 
+import java.beans.ConstructorProperties;
 import java.util.List;
 
 @ToString(callSuper = true)
 public class GroupUniqueInstance extends BucketAggregationInstance<GroupUniqueBucket> {
-    @JsonCreator
-    public GroupUniqueInstance(
-        @JsonProperty("size") final long size, @JsonProperty("extent") final long extent
-    ) {
+    @ConstructorProperties({"size", "extent"})
+    public GroupUniqueInstance(final long size, final long extent) {
         super(size, extent, BucketAggregationInstance.ALL_TYPES, MetricType.GROUP);
     }
 

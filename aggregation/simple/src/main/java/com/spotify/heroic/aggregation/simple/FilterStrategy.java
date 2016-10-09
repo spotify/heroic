@@ -23,6 +23,7 @@ package com.spotify.heroic.aggregation.simple;
 
 import java.util.List;
 
+@FunctionalInterface
 public interface FilterStrategy {
     <T> List<T> filter(List<FilterableMetrics<T>> metrics);
 }
