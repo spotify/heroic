@@ -12,9 +12,7 @@ import com.spotify.heroic.ingestion.IngestionManager;
 import com.spotify.heroic.shell.ShellIO;
 import eu.toolchain.async.AsyncFuture;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.Timeout;
 import org.mockito.InOrder;
 
 import java.io.ByteArrayInputStream;
@@ -43,9 +41,6 @@ public class TaskIT extends AbstractLocalClusterIT {
 
     private PrintWriter out;
     private ShellIO io;
-
-    @Rule
-    public Timeout timeout = Timeout.millis(10000);
 
     @Override
     protected List<URI> instanceUris() {
