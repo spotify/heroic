@@ -21,6 +21,10 @@
 
 package com.spotify.heroic;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
@@ -73,11 +77,6 @@ import com.spotify.heroic.suggest.DaggerCoreSuggestComponent;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
-import lombok.AccessLevel;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.tuple.Pair;
-
 import java.io.InputStream;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.InetSocketAddress;
@@ -99,10 +98,10 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Supplier;
-
-import static com.google.common.base.Preconditions.checkNotNull;
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.Pair;
 
 /**
  * Configure and bootstrap a Heroic application.
@@ -233,6 +232,13 @@ public class HeroicCore implements HeroicConfiguration {
             new Instance(loading.async(), injector, early, config, this.late);
 
         final CoreComponent primary = primaryInjector(early, config, instance);
+
+        primary.loadingLifeCycle().install();
+
+        primary.internalLifeCycleRegistry().scoped("startup future").start(() -> {
+            ((CoreHeroicContext) primary.context()).resolveCoreFuture();
+            return primary.async().resolved(null);
+        });
 
         // Update the instance injector, giving dynamic components initialized after this point
         // access to the primary
@@ -911,12 +917,10 @@ public class HeroicCore implements HeroicConfiguration {
                 runBootstrappers(early, late);
                 startLifeCycles(coreRegistry, core, config);
 
-                core.loadingLifeCycle().install();
+                final CoreLifeCycleRegistry internalRegistry =
+                    (CoreLifeCycleRegistry) core.internalLifeCycleRegistry();
 
-                core.internalLifeCycleRegistry().start(() -> {
-                    ((CoreHeroicContext) core.context()).resolveCoreFuture();
-                    return core.async().resolved(null);
-                });
+                startLifeCycles(internalRegistry, core, config);
 
                 log.info("Startup finished, hello!");
                 return null;

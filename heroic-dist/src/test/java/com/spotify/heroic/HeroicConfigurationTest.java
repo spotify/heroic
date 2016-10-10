@@ -2,6 +2,7 @@ package com.spotify.heroic;
 
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.lifecycle.CoreLifeCycleRegistry;
+import com.spotify.heroic.lifecycle.LifeCycleNamedHook;
 import org.junit.Test;
 
 import java.io.InputStream;
@@ -42,20 +43,46 @@ public class HeroicConfigurationTest {
         );
         // @formatter:on
 
+        // @formatter:off
+        final List<String> referenceInternalStarters = ImmutableList.of(
+            "startup future"
+        );
+        // @formatter:on
+
+        // @formatter:off
+        final List<String> referenceInternalStoppers = ImmutableList.of(
+            "loading executor",
+            "loading scheduler"
+        );
+        // @formatter:on
+
         final HeroicCoreInstance instance = testConfiguration("heroic-all.yml");
 
         final List<String> starters = instance.inject(c -> {
             final CoreLifeCycleRegistry reg = (CoreLifeCycleRegistry) c.lifeCycleRegistry();
-            return reg.starters().stream().map(h -> h.id()).sorted().collect(Collectors.toList());
+            return reg.starters().stream().map(LifeCycleNamedHook::id).sorted().collect(Collectors.toList());
         });
 
         final List<String> stoppers = instance.inject(c -> {
             final CoreLifeCycleRegistry reg = (CoreLifeCycleRegistry) c.lifeCycleRegistry();
-            return reg.stoppers().stream().map(h -> h.id()).sorted().collect(Collectors.toList());
+            return reg.stoppers().stream().map(LifeCycleNamedHook::id).sorted().collect(Collectors.toList());
         });
 
         assertEquals(referenceStarters, starters);
         assertEquals(referenceStoppers, stoppers);
+
+        final List<String> internalStarters = instance.inject(c -> {
+            final CoreLifeCycleRegistry reg = (CoreLifeCycleRegistry) c.internalLifeCycleRegistry();
+            return reg.starters().stream().map(LifeCycleNamedHook::id).sorted().collect(Collectors.toList());
+        });
+
+        final List<String> internalStoppers = instance.inject(c -> {
+            final CoreLifeCycleRegistry reg = (CoreLifeCycleRegistry) c.internalLifeCycleRegistry();
+            return reg.stoppers().stream().map(LifeCycleNamedHook::id).sorted().collect(Collectors.toList());
+        });
+
+        assertEquals(internalStarters, referenceInternalStarters);
+        assertEquals(internalStoppers, referenceInternalStoppers);
     }
 
     private HeroicCoreInstance testConfiguration(final String name) throws Exception {

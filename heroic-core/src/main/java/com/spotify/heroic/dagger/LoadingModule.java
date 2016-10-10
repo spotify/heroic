@@ -50,14 +50,13 @@ import eu.toolchain.async.TinyAsync;
 import eu.toolchain.serializer.Serializer;
 import eu.toolchain.serializer.SerializerFramework;
 import eu.toolchain.serializer.TinySerializer;
-import lombok.RequiredArgsConstructor;
-
-import javax.inject.Named;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import javax.inject.Named;
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 @Module
@@ -170,12 +169,12 @@ public class LoadingModule {
         final ScheduledExecutorService scheduler, final ExecutorService executor
     ) {
         return () -> {
-            registry.start(() -> async.call(() -> {
+            registry.scoped("loading scheduler").stop(() -> async.call(() -> {
                 shutdown(scheduler);
                 return null;
             }, ForkJoinPool.commonPool()));
 
-            registry.start(() -> async.call(() -> {
+            registry.scoped("loading executor").stop(() -> async.call(() -> {
                 shutdown(executor);
                 return null;
             }, ForkJoinPool.commonPool()));
