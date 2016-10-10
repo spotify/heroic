@@ -73,13 +73,6 @@
     <profile>
       <id>codecov</id>
 
-      <activation>
-        <property>
-          <name>environment</name>
-          <value>test</value>
-        </property>
-      </activation>
-
       <modules>
         <module>reporting</module>
       </modules>
