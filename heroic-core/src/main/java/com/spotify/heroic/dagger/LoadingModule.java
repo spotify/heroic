@@ -62,6 +62,8 @@ import lombok.RequiredArgsConstructor;
 @Module
 public class LoadingModule {
     private final ExecutorService executor;
+    /* {@code true} if this instance manages its own executor and is responsible for stopping it */
+    private final boolean managedExecutor;
     private final HeroicConfiguration options;
     private final ExtraParameters parameters;
 
@@ -174,10 +176,12 @@ public class LoadingModule {
                 return null;
             }, ForkJoinPool.commonPool()));
 
-            registry.scoped("loading executor").stop(() -> async.call(() -> {
-                shutdown(executor);
-                return null;
-            }, ForkJoinPool.commonPool()));
+            if (managedExecutor) {
+                registry.scoped("loading executor").stop(() -> async.call(() -> {
+                    shutdown(executor);
+                    return null;
+                }, ForkJoinPool.commonPool()));
+            }
         };
     }
 

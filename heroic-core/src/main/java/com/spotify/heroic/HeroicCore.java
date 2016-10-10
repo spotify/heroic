@@ -275,12 +275,20 @@ public class HeroicCore implements HeroicConfiguration {
     private CoreLoadingComponent loadingInjector() {
         log.info("Building Loading Injector");
 
-        final ExecutorService executor =
-            setupExecutor(Runtime.getRuntime().availableProcessors() * 2);
+        final ExecutorService executor;
+        final boolean managedExecutor;
+
+        if (this.executor.isPresent()) {
+            executor = this.executor.get();
+            managedExecutor = false;
+        } else {
+            executor = setupExecutor(Runtime.getRuntime().availableProcessors() * 2);
+            managedExecutor = true;
+        }
 
         return DaggerCoreLoadingComponent
             .builder()
-            .loadingModule(new LoadingModule(executor, this, params))
+            .loadingModule(new LoadingModule(executor, managedExecutor, this, params))
             .build();
     }
 
@@ -303,42 +311,41 @@ public class HeroicCore implements HeroicConfiguration {
      * @return
      */
     private ExecutorService setupExecutor(final int threads) {
-        return executor.orElseGet(
-            () -> new ThreadPoolExecutor(threads, threads, 0L, TimeUnit.MILLISECONDS,
-                new LinkedBlockingQueue<>(), new ThreadFactoryBuilder()
-                .setNameFormat("heroic-core-%d")
-                .setUncaughtExceptionHandler(uncaughtExceptionHandler)
-                .build()) {
-                @Override
-                protected void afterExecute(Runnable r, Throwable t) {
-                    super.afterExecute(r, t);
+        return new ThreadPoolExecutor(threads, threads, 0L, TimeUnit.MILLISECONDS,
+            new LinkedBlockingQueue<>(), new ThreadFactoryBuilder()
+            .setNameFormat("heroic-core-%d")
+            .setUncaughtExceptionHandler(uncaughtExceptionHandler)
+            .build()) {
+            @Override
+            protected void afterExecute(Runnable r, Throwable t) {
+                super.afterExecute(r, t);
 
-                    if (t == null && (r instanceof Future<?>)) {
-                        try {
-                            ((Future<?>) r).get();
-                        } catch (CancellationException e) {
-                            t = e;
-                        } catch (ExecutionException e) {
-                            t = e.getCause();
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                        }
-                    }
-
-                    if (t != null) {
-                        if (log.isErrorEnabled()) {
-                            log.error("Unhandled exception caught in core executor", t);
-                            log.error("Exiting (code=2)");
-                        } else {
-                            System.err.println("Unhandled exception caught in core executor");
-                            System.err.println("Exiting (code=2)");
-                            t.printStackTrace(System.err);
-                        }
-
-                        System.exit(2);
+                if (t == null && (r instanceof Future<?>)) {
+                    try {
+                        ((Future<?>) r).get();
+                    } catch (CancellationException e) {
+                        t = e;
+                    } catch (ExecutionException e) {
+                        t = e.getCause();
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
                     }
                 }
-            });
+
+                if (t != null) {
+                    if (log.isErrorEnabled()) {
+                        log.error("Unhandled exception caught in core executor", t);
+                        log.error("Exiting (code=2)");
+                    } else {
+                        System.err.println("Unhandled exception caught in core executor");
+                        System.err.println("Exiting (code=2)");
+                        t.printStackTrace(System.err);
+                    }
+
+                    System.exit(2);
+                }
+            }
+        };
     }
 
     /**
