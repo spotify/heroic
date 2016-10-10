@@ -2,7 +2,6 @@ cluster:
   tags:
     role: test
   protocols:
-    - type: nativerpc
     - type: grpc
 
 metadata:

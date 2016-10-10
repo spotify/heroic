@@ -21,29 +21,12 @@
 
 package com.spotify.heroic.http.utils;
 
-import com.spotify.heroic.HeroicLifeCycle;
-
 import javax.inject.Inject;
-import javax.ws.rs.GET;
 import javax.ws.rs.Path;
-import javax.ws.rs.container.AsyncResponse;
-import javax.ws.rs.container.Suspended;
-import javax.ws.rs.core.Response;
 
 @Path("utils")
 public class UtilsResource {
-    private final HeroicLifeCycle lifecycle;
-
     @Inject
-    public UtilsResource(final HeroicLifeCycle lifecycle) {
-        this.lifecycle = lifecycle;
-    }
-
-    @GET
-    @Path("wait")
-    public void wait(@Suspended final AsyncResponse response) {
-        lifecycle.register("client wait", (HeroicLifeCycle.Context context) -> {
-            response.resume(Response.status(Response.Status.OK).entity("started").build());
-        });
+    public UtilsResource() {
     }
 }

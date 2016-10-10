@@ -69,7 +69,7 @@ public class EarlyModule {
 
     @Provides
     @EarlyScope
-    LifeCycleRegistry lifeCycleRegistry(CoreLifeCycleRegistry registry) {
-        return registry;
+    LifeCycleRegistry lifeCycleRegistry() {
+        return new CoreLifeCycleRegistry();
     }
 }

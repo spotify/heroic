@@ -29,7 +29,6 @@ import com.spotify.heroic.cluster.ClusterManagerModule;
 import com.spotify.heroic.cluster.discovery.simple.SrvRecordDiscoveryModule;
 import com.spotify.heroic.cluster.discovery.simple.StaticListDiscoveryModule;
 import com.spotify.heroic.rpc.grpc.GrpcRpcProtocolModule;
-import com.spotify.heroic.rpc.nativerpc.NativeRpcProtocolModule;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -50,9 +49,6 @@ public class ClusterProfile extends HeroicProfileBase {
         switch (protocol) {
             case "grpc":
                 module.protocols(ImmutableList.of(GrpcRpcProtocolModule.builder().build()));
-                break;
-            case "nativerpc":
-                module.protocols(ImmutableList.of(NativeRpcProtocolModule.builder().build()));
                 break;
             default:
                 throw new IllegalArgumentException("illegal value for protocol (" + protocol + ")");

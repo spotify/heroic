@@ -36,6 +36,8 @@ public interface AggregationRegistry {
         String id, Class<A> type, Class<I> instanceType, AggregationDSL dsl
     );
 
+    <I extends AggregationInstance> void registerInstance(String id, Class<I> instanceType);
+
     Module module();
 
     AggregationFactory newAggregationFactory();

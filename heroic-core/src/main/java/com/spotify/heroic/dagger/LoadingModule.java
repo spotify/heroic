@@ -24,12 +24,10 @@ package com.spotify.heroic.dagger;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.spotify.heroic.CoreHeroicConfigurationContext;
-import com.spotify.heroic.CoreHeroicLifeCycle;
 import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.HeroicConfiguration;
 import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicCore;
-import com.spotify.heroic.HeroicLifeCycle;
 import com.spotify.heroic.HeroicMappers;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.aggregation.AggregationRegistry;
@@ -40,6 +38,9 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Series_Serializer;
 import com.spotify.heroic.filter.CoreFilterModifier;
 import com.spotify.heroic.filter.FilterModifier;
+import com.spotify.heroic.lifecycle.CoreLifeCycleRegistry;
+import com.spotify.heroic.lifecycle.LifeCycle;
+import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.scheduler.DefaultScheduler;
 import com.spotify.heroic.scheduler.Scheduler;
 import dagger.Module;
@@ -53,8 +54,10 @@ import lombok.RequiredArgsConstructor;
 
 import javax.inject.Named;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 @RequiredArgsConstructor
 @Module
@@ -128,12 +131,6 @@ public class LoadingModule {
 
     @Provides
     @LoadingScope
-    HeroicLifeCycle heroicLifeCycle(CoreHeroicLifeCycle heroicLifeCycle) {
-        return heroicLifeCycle;
-    }
-
-    @Provides
-    @LoadingScope
     FilterModifier coreFilterModifier() {
         return new CoreFilterModifier();
     }
@@ -156,5 +153,48 @@ public class LoadingModule {
         @Named("application/heroic-config") final ObjectMapper mapper
     ) {
         return new CoreHeroicConfigurationContext(mapper);
+    }
+
+    @Provides
+    @LoadingScope
+    @Named("internal")
+    LifeCycleRegistry internalLifeCycleRegistry() {
+        return new CoreLifeCycleRegistry();
+    }
+
+    @Provides
+    @LoadingScope
+    @Named("loading")
+    LifeCycle loadingLifeCycles(
+        @Named("internal") LifeCycleRegistry registry, final AsyncFramework async,
+        final ScheduledExecutorService scheduler, final ExecutorService executor
+    ) {
+        return () -> {
+            registry.start(() -> async.call(() -> {
+                shutdown(scheduler);
+                return null;
+            }, ForkJoinPool.commonPool()));
+
+            registry.start(() -> async.call(() -> {
+                shutdown(executor);
+                return null;
+            }, ForkJoinPool.commonPool()));
+        };
+    }
+
+    private void shutdown(final ExecutorService executor) {
+        executor.shutdown();
+
+        final boolean terminated;
+
+        try {
+            terminated = executor.awaitTermination(10L, TimeUnit.SECONDS);
+        } catch (final InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        if (!terminated) {
+            throw new RuntimeException("executor did not shut down in time");
+        }
     }
 }

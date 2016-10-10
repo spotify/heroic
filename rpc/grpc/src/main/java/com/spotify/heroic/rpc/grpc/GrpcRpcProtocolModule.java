@@ -44,6 +44,8 @@ import java.util.Optional;
 
 @Data
 public class GrpcRpcProtocolModule implements RpcProtocolModule {
+    private static final Object PARENT = new Object();
+
     private static final String DEFAULT_HOST = "0.0.0.0";
     private static final int DEFAULT_PORT = 0;
     private static final int DEFAULT_PARENT_THREADS = 2;
@@ -137,7 +139,7 @@ public class GrpcRpcProtocolModule implements RpcProtocolModule {
         @Provides
         @GrpcRpcScope
         LifeCycle server(
-            LifeCycleManager manager, GrpcRpcProtocolServer server, GrpcRpcProtocol protocol
+            LifeCycleManager manager, GrpcRpcProtocolServer server
         ) {
             final List<LifeCycle> life = new ArrayList<>();
             life.add(manager.build(server));

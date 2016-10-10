@@ -105,11 +105,6 @@
     <!-- rpc implementations -->
     <dependency>
       <groupId>com.spotify.heroic.rpc</groupId>
-      <artifactId>heroic-rpc-nativerpc</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>com.spotify.heroic.rpc</groupId>
       <artifactId>heroic-rpc-grpc</artifactId>
     </dependency>
 

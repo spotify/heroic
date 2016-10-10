@@ -66,7 +66,6 @@ public class HeroicModules {
 
         new com.spotify.heroic.consumer.collectd.Module(),
 
-        new com.spotify.heroic.rpc.nativerpc.Module(),
         new com.spotify.heroic.rpc.grpc.Module(),
         new com.spotify.heroic.rpc.jvm.Module(),
 

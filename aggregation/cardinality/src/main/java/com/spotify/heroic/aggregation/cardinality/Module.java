@@ -54,6 +54,9 @@ public class Module implements HeroicModule {
                         return new CardinalityAggregation(Optional.empty(), size, extent, method);
                     }
                 });
+
+            c.registerInstance(DistributedCardinalityInstance.NAME,
+                DistributedCardinalityInstance.class);
         };
     }
 }
