@@ -36,6 +36,7 @@ import com.spotify.heroic.cluster.ClusterShard;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.Feature;
+import com.spotify.heroic.common.FeatureSet;
 import com.spotify.heroic.common.Features;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.filter.Filter;
@@ -193,10 +194,8 @@ public class CoreQueryManager implements QueryManager {
 
             final AggregationInstance aggregationInstance;
 
-            final Features features = q
-                .getFeatures()
-                .map(CoreQueryManager.this.features::combine)
-                .orElse(CoreQueryManager.this.features);
+            final Features features = CoreQueryManager.this.features
+                .applySet(q.getFeatures().orElseGet(FeatureSet::empty));
 
             boolean isDistributed = features.hasFeature(Feature.DISTRIBUTED_AGGREGATIONS);
 

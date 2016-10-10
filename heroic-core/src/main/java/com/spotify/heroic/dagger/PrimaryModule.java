@@ -32,6 +32,7 @@ import com.spotify.heroic.HeroicMappers;
 import com.spotify.heroic.QueryManager;
 import com.spotify.heroic.ShellTasks;
 import com.spotify.heroic.aggregation.AggregationRegistry;
+import com.spotify.heroic.common.FeatureSet;
 import com.spotify.heroic.common.Features;
 import com.spotify.heroic.grammar.CoreQueryParser;
 import com.spotify.heroic.grammar.QueryParser;
@@ -55,7 +56,7 @@ import java.util.TreeMap;
 @Module
 public class PrimaryModule {
     private final HeroicCoreInstance instance;
-    private final Features features;
+    private final FeatureSet features;
     private final HeroicReporter reporter;
 
     @Provides
@@ -92,7 +93,7 @@ public class PrimaryModule {
     @Named("features")
     @PrimaryScope
     Features features() {
-        return features;
+        return Features.DEFAULT.applySet(features);
     }
 
     @Provides
