@@ -3,7 +3,6 @@ package com.spotify.heroic;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-
 import com.spotify.heroic.common.Feature;
 import com.spotify.heroic.common.FeatureSet;
 import com.spotify.heroic.common.Series;
@@ -15,9 +14,7 @@ import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.ShardedResultGroup;
-
 import eu.toolchain.async.AsyncFuture;
-
 import org.junit.Before;
 import org.junit.Test;
 
@@ -73,14 +70,22 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     }
 
     public QueryResult query(final String queryString) throws Exception {
+        return query(queryString, true);
+    }
+
+    public QueryResult query(final String queryString, final boolean distributed) throws Exception {
         final Query q = query
             .newQueryFromString(queryString)
-            .features(Optional.of(FeatureSet.of(Feature.DISTRIBUTED_AGGREGATIONS)))
+            .features(distributed ? Optional.of(FeatureSet.of(Feature.DISTRIBUTED_AGGREGATIONS))
+                : Optional.empty())
             .source(Optional.of(MetricType.POINT))
             .rangeIfAbsent(Optional.of(new QueryDateRange.Absolute(10, 40)))
             .build();
 
-        return query.useDefaultGroup().query(q).get();
+        final QueryResult result = query.useDefaultGroup().query(q).get();
+
+        assertEquals("There are no errors", ImmutableList.of(), result.getErrors());
+        return result;
     }
 
     @Test
@@ -118,7 +123,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     }
 
     @Test
-    public void filterQueryTest() throws Exception {
+    public void distributedFilterQueryTest() throws Exception {
         final QueryResult result = query("average(10ms) by * | topk(2) | bottomk(1) | sum(10ms)");
 
         final Set<MetricCollection> m = getResults(result);
@@ -126,6 +131,20 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
 
         assertEquals(ImmutableList.of(10L), cadences);
         assertEquals(ImmutableSet.of(points().p(10, 1D).p(20, 4D).build()), m);
+    }
+
+    @Test
+    public void filterQueryTest() throws Exception {
+        final QueryResult result =
+            query("average(10ms) by * | topk(2) | bottomk(1) | sum(10ms)", false);
+
+        final Set<MetricCollection> m = getResults(result);
+        final List<Long> cadences = getCadences(result);
+
+        // why not two responses?
+        assertEquals(ImmutableList.of(10L, 10L), cadences);
+        assertEquals(ImmutableSet.of(points().p(10, 1D).p(20, 4D).build(),
+            points().p(10, 1D).p(30, 2D).build()), m);
     }
 
     @Test

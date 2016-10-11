@@ -21,16 +21,19 @@
 
 package com.spotify.heroic.aggregation.simple;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-
-import java.beans.ConstructorProperties;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class BottomKInstance extends FilterAggregation {
-    @ConstructorProperties({"k"})
-    public BottomKInstance(final long k) {
+    private final long k;
+
+    @JsonCreator
+    public BottomKInstance(@JsonProperty("k") final long k) {
         super(new FilterKAreaStrategy(FilterKAreaType.BOTTOM, k));
+        this.k = k;
     }
 }
