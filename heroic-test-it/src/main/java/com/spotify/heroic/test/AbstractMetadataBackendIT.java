@@ -67,6 +67,8 @@ import static com.spotify.heroic.filter.Filter.not;
 import static com.spotify.heroic.filter.Filter.or;
 import static com.spotify.heroic.filter.Filter.startsWith;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -149,6 +151,23 @@ public abstract class AbstractMetadataBackendIT {
         final FindSeries result = backend.findSeries(f).get();
 
         assertEquals(ImmutableSet.of(s1, s2, s3), result.getSeries());
+    }
+
+    @Test
+    public void findSeriesLimitedTest() throws Exception {
+        final FindSeries r1 = backend
+            .findSeries(new FindSeries.Request(TrueFilter.get(), range, OptionalLimit.of(1L)))
+            .get();
+
+        assertTrue("Result should be limited", r1.isLimited());
+        assertEquals("Result size should be same as limit", 1, r1.getSeries().size());
+
+        final FindSeries r2 = backend
+            .findSeries(new FindSeries.Request(TrueFilter.get(), range, OptionalLimit.of(3L)))
+            .get();
+
+        assertFalse("Result should not be limited", r2.isLimited());
+        assertEquals("Result size should be all entries", 3, r2.getSeries().size());
     }
 
     @Test

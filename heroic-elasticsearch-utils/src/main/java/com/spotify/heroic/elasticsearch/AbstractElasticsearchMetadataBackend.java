@@ -106,8 +106,8 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
             final SearchHit[] hits = response.getHits().getHits();
 
             for (final SearchHit hit : hits) {
-                if (limit.isGreaterOrEqual(size)) {
-                    break;
+                if (limit.isGreater(size)) {
+                    return async.resolved(new LimitedSet<>(limit.limitSet(results), true));
                 }
 
                 if (!results.add(converter.apply(hit))) {
@@ -117,9 +117,8 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
                 size += 1;
             }
 
-            if (hits.length == 0 || limit.isGreaterOrEqual(size)) {
-                return async.resolved(
-                    new LimitedSet<>(limit.limitSet(results), limit.isGreater(size)));
+            if (hits.length == 0) {
+                return async.resolved(new LimitedSet<>(results, false));
             }
 
             return scroller.get().lazyTransform(this);
