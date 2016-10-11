@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static com.spotify.heroic.test.Data.points;
@@ -32,6 +33,7 @@ import static org.junit.Assume.assumeTrue;
 public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     private final Series s1 = Series.of("key1", ImmutableMap.of("shared", "a", "diff", "a"));
     private final Series s2 = Series.of("key1", ImmutableMap.of("shared", "a", "diff", "b"));
+    private final Series s3 = Series.of("key1", ImmutableMap.of("shared", "a", "diff", "c"));
 
     private QueryManager query;
 
@@ -70,22 +72,24 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     }
 
     public QueryResult query(final String queryString) throws Exception {
-        return query(queryString, true);
+        return query(query.newQueryFromString(queryString), builder -> {
+        });
     }
 
-    public QueryResult query(final String queryString, final boolean distributed) throws Exception {
-        final Query q = query
-            .newQueryFromString(queryString)
-            .features(distributed ? Optional.of(FeatureSet.of(Feature.DISTRIBUTED_AGGREGATIONS))
-                : Optional.empty())
+    public QueryResult query(final String queryString, final Consumer<QueryBuilder> modifier)
+        throws Exception {
+        return query(query.newQueryFromString(queryString), modifier);
+    }
+
+    public QueryResult query(final QueryBuilder builder, final Consumer<QueryBuilder> modifier)
+        throws Exception {
+        builder
+            .features(Optional.of(FeatureSet.of(Feature.DISTRIBUTED_AGGREGATIONS)))
             .source(Optional.of(MetricType.POINT))
-            .rangeIfAbsent(Optional.of(new QueryDateRange.Absolute(10, 40)))
-            .build();
+            .rangeIfAbsent(Optional.of(new QueryDateRange.Absolute(10, 40)));
 
-        final QueryResult result = query.useDefaultGroup().query(q).get();
-
-        assertEquals("There are no errors", ImmutableList.of(), result.getErrors());
-        return result;
+        modifier.accept(builder);
+        return query.useDefaultGroup().query(builder.build()).get();
     }
 
     @Test
@@ -136,7 +140,9 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     @Test
     public void filterQueryTest() throws Exception {
         final QueryResult result =
-            query("average(10ms) by * | topk(2) | bottomk(1) | sum(10ms)", false);
+            query("average(10ms) by * | topk(2) | bottomk(1) | sum(10ms)", builder -> {
+                builder.features(Optional.empty());
+            });
 
         final Set<MetricCollection> m = getResults(result);
         final List<Long> cadences = getCadences(result);
