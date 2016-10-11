@@ -32,6 +32,8 @@ import com.spotify.heroic.metadata.Entries;
 import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.FindSeriesIds;
+import com.spotify.heroic.metadata.FindSeriesIdsStream;
+import com.spotify.heroic.metadata.FindSeriesStream;
 import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.WriteMetadata;
@@ -149,10 +151,24 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
         }
 
         @Override
+        public AsyncObservable<FindSeriesStream> findSeriesStream(
+            final FindSeries.Request request
+        ) {
+            return delegate.findSeriesStream(request);
+        }
+
+        @Override
         public AsyncFuture<FindSeriesIds> findSeriesIds(
             final FindSeriesIds.Request request
         ) {
             return delegate.findSeriesIds(request).onDone(findSeriesIds.setup());
+        }
+
+        @Override
+        public AsyncObservable<FindSeriesIdsStream> findSeriesIdsStream(
+            final FindSeriesIds.Request request
+        ) {
+            return delegate.findSeriesIdsStream(request);
         }
 
         @Override
