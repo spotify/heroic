@@ -14,6 +14,11 @@ import static org.junit.Assert.assertEquals;
 
 public class HeroicConfigurationTest {
     @Test
+    public void testMetricsLimits() throws Exception {
+        testConfiguration("heroic-metrics-limits.yml");
+    }
+
+    @Test
     public void testAll() throws Exception {
         // @formatter:off
         final List<String> referenceStarters = ImmutableList.of(

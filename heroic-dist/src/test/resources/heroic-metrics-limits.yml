@@ -1,0 +1,5 @@
+metrics:
+  failOnLimits: true
+  dataLimit: 10000
+  seriesLimit: 10000
+  groupLimit: 10000
