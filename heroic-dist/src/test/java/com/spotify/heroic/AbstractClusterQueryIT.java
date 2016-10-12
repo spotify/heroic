@@ -203,6 +203,17 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         assertEquals(ResultLimits.of(ResultLimit.QUOTA), result.getLimits());
     }
 
+    @Test
+    public void groupLimit() throws Exception {
+        final QueryResult result = query("*", builder -> {
+            builder.options(Optional.of(QueryOptions.builder().groupLimit(1L).build()));
+        });
+
+        assertEquals(0, result.getErrors().size());
+        assertEquals(ResultLimits.of(ResultLimit.GROUP), result.getLimits());
+        assertEquals(1, result.getGroups().size());
+    }
+
     private Set<MetricCollection> getResults(final QueryResult result) {
         return result
             .getGroups()
