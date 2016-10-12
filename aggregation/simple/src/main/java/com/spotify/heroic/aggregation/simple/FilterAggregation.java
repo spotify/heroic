@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.aggregation.simple;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.AggregationOutput;
 import com.spotify.heroic.aggregation.AggregationResult;
@@ -44,6 +45,7 @@ import java.util.stream.Collectors;
 @Data
 public abstract class FilterAggregation implements AggregationInstance {
     @NonNull
+    @JsonIgnore
     private final FilterStrategy filterStrategy;
 
     @Override

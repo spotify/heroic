@@ -1,27 +1,66 @@
 package com.spotify.heroic.aggregation.simple;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.spotify.heroic.aggregation.AggregationInstance;
+import org.junit.Before;
 import org.junit.Test;
 
-import static com.spotify.heroic.test.LombokDataTest.verifyClassBuilder;
+import static org.junit.Assert.assertEquals;
 
 public class FilterAggregationTest {
-    @Test
-    public void testAboveKInstance() {
-        verifyClassBuilder(AboveKInstance.class).checkGetters(false).verify();
+    private ObjectMapper mapper;
+
+    @Before
+    public void setup() {
+        mapper = new ObjectMapper();
+        mapper.addMixIn(AggregationInstance.class, TypeNameMixin.class);
+        mapper.registerSubtypes(new NamedType(AboveKInstance.class, AboveK.NAME));
+        mapper.registerSubtypes(new NamedType(BelowKInstance.class, BelowK.NAME));
+        mapper.registerSubtypes(new NamedType(BottomKInstance.class, BottomK.NAME));
+        mapper.registerSubtypes(new NamedType(TopKInstance.class, TopK.NAME));
     }
 
     @Test
-    public void testBelowKInstance() {
-        verifyClassBuilder(BelowKInstance.class).checkGetters(false).verify();
+    public void testAboveKInstance() throws Exception {
+        // TODO: support @JsonCreator
+        // verifyClassBuilder(AboveKInstance.class).checkGetters(false).verify();
+        verifyRoundtrip("{\"type\":\"abovek\",\"k\":0.0}", new AboveKInstance(0),
+            AboveKInstance.class);
     }
 
     @Test
-    public void testBottomKInstance() {
-        verifyClassBuilder(BottomKInstance.class).checkGetters(false).verify();
+    public void testBelowKInstance() throws Exception {
+        // TODO: support @JsonCreator
+        // verifyClassBuilder(BelowKInstance.class).checkGetters(false).verify();
+        verifyRoundtrip("{\"type\":\"belowk\",\"k\":0.0}", new BelowKInstance(0),
+            BelowKInstance.class);
     }
 
     @Test
-    public void testTopKInstance() {
-        verifyClassBuilder(TopKInstance.class).checkGetters(false).verify();
+    public void testBottomKInstance() throws Exception {
+        // TODO: support @JsonCreator
+        // verifyClassBuilder(BottomKInstance.class).checkGetters(false).verify();
+        verifyRoundtrip("{\"type\":\"bottomk\",\"k\":0}", new BottomKInstance(0),
+            BottomKInstance.class);
+    }
+
+    @Test
+    public void testTopKInstance() throws Exception {
+        // TODO: support @JsonCreator
+        // verifyClassBuilder(TopKInstance.class).checkGetters(false).verify();
+        verifyRoundtrip("{\"type\":\"topk\",\"k\":0}", new TopKInstance(0), TopKInstance.class);
+    }
+
+    private <T> void verifyRoundtrip(
+        final String json, final T reference, final Class<T> cls
+    ) throws Exception {
+        assertEquals(reference, mapper.readValue(json, cls));
+        assertEquals(json, mapper.writeValueAsString(reference));
+    }
+
+    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+    public interface TypeNameMixin {
     }
 }
