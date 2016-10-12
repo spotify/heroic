@@ -85,6 +85,13 @@ public class HeroicConfigurationTest {
         assertEquals(internalStoppers, referenceInternalStoppers);
     }
 
+    @Test
+    public void testNullShellHost() throws Exception {
+        // TODO: get this into the shell server module
+        final HeroicCoreInstance instance = testConfiguration("heroic-null-shell-host.yml");
+        instance.start().get();
+    }
+
     private HeroicCoreInstance testConfiguration(final String name) throws Exception {
         final HeroicCore.Builder builder = HeroicCore.builder();
         builder.modules(HeroicModules.ALL_MODULES);

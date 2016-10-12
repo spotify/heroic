@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.shell;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
 import dagger.Module;
@@ -37,11 +35,11 @@ import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import javax.inject.Named;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.util.Optional;
 import java.util.concurrent.Callable;
+import javax.inject.Named;
 
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
@@ -53,16 +51,8 @@ public class ShellServerModule {
     public static final String DEFAULT_HOST = "localhost";
     public static final int DEFAULT_PORT = 9190;
 
-    final String host;
-    final int port;
-
-    @JsonCreator
-    public ShellServerModule(
-        @JsonProperty("host") Optional<String> host, @JsonProperty("port") Optional<Integer> port
-    ) {
-        this.host = host.orElse(DEFAULT_HOST);
-        this.port = port.orElse(DEFAULT_PORT);
-    }
+    final Optional<String> host;
+    final Optional<Integer> port;
 
     @Provides
     @ShellServerScope
@@ -74,6 +64,9 @@ public class ShellServerModule {
     @Provides
     @ShellServerScope
     Managed<ShellServerState> state(final AsyncFramework async) {
+        final String host = this.host.orElse(DEFAULT_HOST);
+        final int port = this.port.orElse(DEFAULT_PORT);
+
         return async.managed(new ManagedSetup<ShellServerState>() {
             @Override
             public AsyncFuture<ShellServerState> construct() throws Exception {
@@ -122,7 +115,7 @@ public class ShellServerModule {
         }
 
         public ShellServerModule build() {
-            return new ShellServerModule(host.orElse(DEFAULT_HOST), port.orElse(DEFAULT_PORT));
+            return new ShellServerModule(host, port);
         }
     }
 }
