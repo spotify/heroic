@@ -76,6 +76,7 @@ public class LocalMetricManager implements MetricManager {
     private final OptionalLimit aggregationLimit;
     private final OptionalLimit dataLimit;
     private final int fetchParallelism;
+    private final boolean failOnLimits;
 
     private final AsyncFramework async;
     private final GroupSet<MetricBackend> groupSet;
@@ -96,7 +97,8 @@ public class LocalMetricManager implements MetricManager {
         @Named("seriesLimit") final OptionalLimit seriesLimit,
         @Named("aggregationLimit") final OptionalLimit aggregationLimit,
         @Named("dataLimit") final OptionalLimit dataLimit,
-        @Named("fetchParallelism") final int fetchParallelism, final AsyncFramework async,
+        @Named("fetchParallelism") final int fetchParallelism,
+        @Named("failOnLimits") final boolean failOnLimits, final AsyncFramework async,
         final GroupSet<MetricBackend> groupSet, final MetadataManager metadata,
         final MetricBackendReporter reporter
     ) {
@@ -105,6 +107,7 @@ public class LocalMetricManager implements MetricManager {
         this.aggregationLimit = aggregationLimit;
         this.dataLimit = dataLimit;
         this.fetchParallelism = fetchParallelism;
+        this.failOnLimits = failOnLimits;
         this.async = async;
         this.groupSet = groupSet;
         this.metadata = metadata;
@@ -156,10 +159,26 @@ public class LocalMetricManager implements MetricManager {
                 options.getDataLimit().orElse(dataLimit).asLong().<FetchQuotaWatcher>map(
                     LimitedFetchQuotaWatcher::new).orElse(FetchQuotaWatcher.NO_QUOTA);
 
+            final OptionalLimit seriesLimit =
+                options.getSeriesLimit().orElse(LocalMetricManager.this.seriesLimit);
+
+            final boolean failOnLimits =
+                options.getFailOnLimits().orElse(LocalMetricManager.this.failOnLimits);
+
             final LazyTransform<FindSeries, FullQuery> transform = (final FindSeries result) -> {
                 final ResultLimits limits;
 
                 if (result.isLimited()) {
+                    if (failOnLimits) {
+                        final List<RequestError> errors = ImmutableList.of(QueryError.fromMessage(
+                            "The number of series requested is more than the allowed limit of " +
+                                seriesLimit));
+
+                        return async.resolved(
+                            new FullQuery(w.end(), errors, ImmutableList.of(), Statistics.empty(),
+                                ResultLimits.of(ResultLimit.SERIES)));
+                    }
+
                     limits = ResultLimits.of(ResultLimit.SERIES);
                 } else {
                     limits = ResultLimits.of();
@@ -200,7 +219,7 @@ public class LocalMetricManager implements MetricManager {
                 if (options.isTracing()) {
                     // tracing enabled, keeps track of each individual FetchData trace.
                     collector = new ResultCollector(watcher, aggregation, session, limits,
-                        options.getGroupLimit().orElse(groupLimit)) {
+                        options.getGroupLimit().orElse(groupLimit), failOnLimits) {
                         final ConcurrentLinkedQueue<QueryTrace> traces =
                             new ConcurrentLinkedQueue<>();
 
@@ -218,7 +237,7 @@ public class LocalMetricManager implements MetricManager {
                 } else {
                     // very limited tracing, does not collected each individual FetchData trace.
                     collector = new ResultCollector(watcher, aggregation, session, limits,
-                        options.getGroupLimit().orElse(groupLimit)) {
+                        options.getGroupLimit().orElse(groupLimit), failOnLimits) {
                         @Override
                         public QueryTrace buildTrace() {
                             return w.end();
@@ -229,10 +248,8 @@ public class LocalMetricManager implements MetricManager {
                 return async.eventuallyCollect(fetches, collector, fetchParallelism);
             };
 
-            final OptionalLimit limit = options.getSeriesLimit().orElse(seriesLimit);
-
             return metadata
-                .findSeries(new FindSeries.Request(filter, range, limit))
+                .findSeries(new FindSeries.Request(filter, range, seriesLimit))
                 .onDone(reporter.reportFindSeries())
                 .lazyTransform(transform)
                 .onDone(reporter.reportQueryMetrics());
@@ -366,6 +383,7 @@ public class LocalMetricManager implements MetricManager {
         final AggregationSession session;
         final ResultLimits limits;
         final OptionalLimit groupLimit;
+        final boolean failOnLimits;
 
         @Override
         public void resolved(final Pair<Series, FetchData> result) throws Exception {
@@ -419,6 +437,15 @@ public class LocalMetricManager implements MetricManager {
 
             for (final AggregationOutput group : result.getResult()) {
                 if (groupLimit.isGreaterOrEqual(groups.size())) {
+                    if (failOnLimits) {
+                        final List<RequestError> errors = ImmutableList.of(QueryError.fromMessage(
+                            "The number of result groups is more than the allowed limit of " +
+                                groupLimit));
+
+                        return new FullQuery(trace, errors, ImmutableList.of(), Statistics.empty(),
+                            new ResultLimits(limits.add(ResultLimit.GROUP).build()));
+                    }
+
                     limits.add(ResultLimit.GROUP);
                     break;
                 }
@@ -434,8 +461,7 @@ public class LocalMetricManager implements MetricManager {
         private Optional<String> checkIssues(final int failed, final int cancelled) {
             if (failed > 0 || cancelled > 0) {
                 return Optional.of(
-                    "Some fetches failed (" + failed + ") or were cancelled (" + cancelled +
-                        ")");
+                    "Some fetches failed (" + failed + ") or were cancelled (" + cancelled + ")");
             }
 
             return Optional.empty();

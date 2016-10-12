@@ -67,6 +67,7 @@
     <dagger.version>2.7</dagger.version>
     <slf4j.version>1.7.21</slf4j.version>
     <junit.version>4.12</junit.version>
+    <hamcrest.version>2.0.0.0</hamcrest.version>
   </properties>
 
   <profiles>
@@ -727,6 +728,12 @@
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>
         <version>${junit.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.hamcrest</groupId>
+        <artifactId>java-hamcrest</artifactId>
+        <version>${hamcrest.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
