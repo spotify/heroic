@@ -12,7 +12,11 @@ import com.spotify.heroic.ingestion.IngestionComponent;
 import com.spotify.heroic.ingestion.IngestionManager;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.QueryError;
 import com.spotify.heroic.metric.QueryResult;
+import com.spotify.heroic.metric.RequestError;
+import com.spotify.heroic.metric.ResultLimit;
+import com.spotify.heroic.metric.ResultLimits;
 import com.spotify.heroic.metric.ShardedResultGroup;
 import eu.toolchain.async.AsyncFuture;
 import org.junit.Before;
@@ -23,15 +27,20 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static com.spotify.heroic.test.Data.points;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     private final Series s1 = Series.of("key1", ImmutableMap.of("shared", "a", "diff", "a"));
     private final Series s2 = Series.of("key1", ImmutableMap.of("shared", "a", "diff", "b"));
+    private final Series s3 = Series.of("key1", ImmutableMap.of("shared", "a", "diff", "c"));
 
     private QueryManager query;
 
@@ -70,22 +79,24 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     }
 
     public QueryResult query(final String queryString) throws Exception {
-        return query(queryString, true);
+        return query(query.newQueryFromString(queryString), builder -> {
+        });
     }
 
-    public QueryResult query(final String queryString, final boolean distributed) throws Exception {
-        final Query q = query
-            .newQueryFromString(queryString)
-            .features(distributed ? Optional.of(FeatureSet.of(Feature.DISTRIBUTED_AGGREGATIONS))
-                : Optional.empty())
+    public QueryResult query(final String queryString, final Consumer<QueryBuilder> modifier)
+        throws Exception {
+        return query(query.newQueryFromString(queryString), modifier);
+    }
+
+    public QueryResult query(final QueryBuilder builder, final Consumer<QueryBuilder> modifier)
+        throws Exception {
+        builder
+            .features(Optional.of(FeatureSet.of(Feature.DISTRIBUTED_AGGREGATIONS)))
             .source(Optional.of(MetricType.POINT))
-            .rangeIfAbsent(Optional.of(new QueryDateRange.Absolute(10, 40)))
-            .build();
+            .rangeIfAbsent(Optional.of(new QueryDateRange.Absolute(10, 40)));
 
-        final QueryResult result = query.useDefaultGroup().query(q).get();
-
-        assertEquals("There are no errors", ImmutableList.of(), result.getErrors());
-        return result;
+        modifier.accept(builder);
+        return query.useDefaultGroup().query(builder.build()).get();
     }
 
     @Test
@@ -136,7 +147,9 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     @Test
     public void filterQueryTest() throws Exception {
         final QueryResult result =
-            query("average(10ms) by * | topk(2) | bottomk(1) | sum(10ms)", false);
+            query("average(10ms) by * | topk(2) | bottomk(1) | sum(10ms)", builder -> {
+                builder.features(Optional.empty());
+            });
 
         final Set<MetricCollection> m = getResults(result);
         final List<Long> cadences = getCadences(result);
@@ -183,6 +196,75 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
 
         assertEquals(ImmutableList.of(10L), cadences);
         assertEquals(ImmutableSet.of(points().p(10, 2D).p(20, 1D).p(30, 1D).p(40, 0D).build()), m);
+    }
+
+    @Test
+    public void dataLimit() throws Exception {
+        final QueryResult result = query("*", builder -> {
+            builder.options(Optional.of(QueryOptions.builder().dataLimit(1L).build()));
+        });
+
+        // quota limits are always errors
+        assertEquals(2, result.getErrors().size());
+
+        for (final RequestError e : result.getErrors()) {
+            assertTrue((e instanceof QueryError));
+            final QueryError q = (QueryError) e;
+            assertThat(q.getError(), containsString(
+                "Some fetches failed (1) or were cancelled (0)"));
+        }
+
+        assertEquals(ResultLimits.of(ResultLimit.QUOTA), result.getLimits());
+    }
+
+    @Test
+    public void groupLimit() throws Exception {
+        final QueryResult result = query("*", builder -> {
+            builder.options(Optional.of(QueryOptions.builder().groupLimit(1L).build()));
+        });
+
+        assertEquals(0, result.getErrors().size());
+        assertEquals(ResultLimits.of(ResultLimit.GROUP), result.getLimits());
+        assertEquals(1, result.getGroups().size());
+    }
+
+    @Test
+    public void seriesLimitFailure() throws Exception {
+        final QueryResult result = query("*", builder -> {
+            builder.options(
+                Optional.of(QueryOptions.builder().seriesLimit(0L).failOnLimits(true).build()));
+        });
+
+        assertEquals(2, result.getErrors().size());
+
+        for (final RequestError e : result.getErrors()) {
+            assertTrue((e instanceof QueryError));
+            final QueryError q = (QueryError) e;
+            assertThat(q.getError(), containsString(
+                "The number of series requested is more than the allowed limit of [0]"));
+        }
+
+        assertEquals(ResultLimits.of(ResultLimit.SERIES), result.getLimits());
+    }
+
+    @Test
+    public void groupLimitFailure() throws Exception {
+        final QueryResult result = query("*", builder -> {
+            builder.options(
+                Optional.of(QueryOptions.builder().groupLimit(0L).failOnLimits(true).build()));
+        });
+
+        assertEquals(2, result.getErrors().size());
+
+        for (final RequestError e : result.getErrors()) {
+            assertTrue((e instanceof QueryError));
+            final QueryError q = (QueryError) e;
+            assertThat(q.getError(), containsString(
+                "The number of result groups is more than the allowed limit of [0]"));
+        }
+
+        assertEquals(ResultLimits.of(ResultLimit.GROUP), result.getLimits());
+        assertEquals(0, result.getGroups().size());
     }
 
     private Set<MetricCollection> getResults(final QueryResult result) {

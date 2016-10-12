@@ -50,9 +50,9 @@ public final class FullQuery {
             ResultLimits.of());
     }
 
-    public static FullQuery empty(final QueryTrace trace) {
+    public static FullQuery empty(final QueryTrace trace, final ResultLimits limits) {
         return new FullQuery(trace, ImmutableList.of(), ImmutableList.of(), Statistics.empty(),
-            ResultLimits.of());
+            limits);
     }
 
     public static Collector<FullQuery, FullQuery> collect(final QueryTrace.Identifier what) {

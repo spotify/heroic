@@ -53,6 +53,7 @@ import static java.util.Optional.of;
 @Module
 public class MetricManagerModule {
     public static final int DEFAULT_FETCH_PARALLELISM = 100;
+    public static final boolean DEFAULT_FAIL_ON_LIMITS = false;
 
     private final List<MetricModule> backends;
     private final Optional<List<String>> defaultBackends;
@@ -81,6 +82,11 @@ public class MetricManagerModule {
      * How many data fetches are performed in parallel.
      */
     private final int fetchParallelism;
+
+    /**
+     * If {@code true}, will cause any limits applied to be reported as a failure.
+     */
+    private final boolean failOnLimits;
 
     @Provides
     @MetricScope
@@ -171,6 +177,13 @@ public class MetricManagerModule {
         return fetchParallelism;
     }
 
+    @Provides
+    @MetricScope
+    @Named("failOnLimits")
+    public boolean failOnLimits() {
+        return failOnLimits;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -185,6 +198,7 @@ public class MetricManagerModule {
         private OptionalLimit aggregationLimit = OptionalLimit.empty();
         private OptionalLimit dataLimit = OptionalLimit.empty();
         private Optional<Integer> fetchParallelism = empty();
+        private Optional<Boolean> failOnLimits = empty();
 
         public Builder backends(List<MetricModule> backends) {
             this.backends = of(backends);
@@ -221,6 +235,11 @@ public class MetricManagerModule {
             return this;
         }
 
+        public Builder failOnLimits(boolean failOnLimits) {
+            this.failOnLimits = of(failOnLimits);
+            return this;
+        }
+
         public Builder merge(final Builder o) {
             // @formatter:off
             return new Builder(
@@ -230,7 +249,8 @@ public class MetricManagerModule {
                 seriesLimit.orElse(o.seriesLimit),
                 aggregationLimit.orElse(o.aggregationLimit),
                 dataLimit.orElse(o.dataLimit),
-                pickOptional(fetchParallelism, o.fetchParallelism)
+                pickOptional(fetchParallelism, o.fetchParallelism),
+                pickOptional(failOnLimits, o.failOnLimits)
             );
             // @formatter:on
         }
@@ -244,7 +264,8 @@ public class MetricManagerModule {
                 seriesLimit,
                 aggregationLimit,
                 dataLimit,
-                fetchParallelism.orElse(DEFAULT_FETCH_PARALLELISM)
+                fetchParallelism.orElse(DEFAULT_FETCH_PARALLELISM),
+                failOnLimits.orElse(DEFAULT_FAIL_ON_LIMITS)
             );
             // @formatter:on
         }

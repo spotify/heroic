@@ -61,6 +61,11 @@ public class QueryOptions {
      */
     private final OptionalLimit seriesLimit;
 
+    /**
+     * Report limiting as a failure.
+     */
+    private final Optional<Boolean> failOnLimits;
+
     public boolean isTracing() {
         return tracing.orElse(DEFAULT_TRACING);
     }
@@ -71,7 +76,7 @@ public class QueryOptions {
 
     public static QueryOptions defaults() {
         return new QueryOptions(Optional.empty(), Optional.empty(), OptionalLimit.empty(),
-            OptionalLimit.empty(), OptionalLimit.empty());
+            OptionalLimit.empty(), OptionalLimit.empty(), Optional.empty());
     }
 
     public static Builder builder() {
@@ -84,6 +89,7 @@ public class QueryOptions {
         private OptionalLimit dataLimit = OptionalLimit.empty();
         private OptionalLimit groupLimit = OptionalLimit.empty();
         private OptionalLimit seriesLimit = OptionalLimit.empty();
+        private Optional<Boolean> failOnLimits = Optional.empty();
 
         public Builder tracing(boolean tracing) {
             this.tracing = Optional.of(tracing);
@@ -110,8 +116,14 @@ public class QueryOptions {
             return this;
         }
 
+        public Builder failOnLimits(boolean failOnLimits) {
+            this.failOnLimits = Optional.of(failOnLimits);
+            return this;
+        }
+
         public QueryOptions build() {
-            return new QueryOptions(tracing, fetchSize, dataLimit, groupLimit, seriesLimit);
+            return new QueryOptions(tracing, fetchSize, dataLimit, groupLimit, seriesLimit,
+                failOnLimits);
         }
     }
 }
