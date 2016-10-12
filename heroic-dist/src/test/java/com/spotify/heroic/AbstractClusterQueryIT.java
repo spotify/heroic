@@ -13,6 +13,8 @@ import com.spotify.heroic.ingestion.IngestionManager;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.QueryResult;
+import com.spotify.heroic.metric.ResultLimit;
+import com.spotify.heroic.metric.ResultLimits;
 import com.spotify.heroic.metric.ShardedResultGroup;
 import eu.toolchain.async.AsyncFuture;
 import org.junit.Before;
@@ -189,6 +191,16 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
 
         assertEquals(ImmutableList.of(10L), cadences);
         assertEquals(ImmutableSet.of(points().p(10, 2D).p(20, 1D).p(30, 1D).p(40, 0D).build()), m);
+    }
+
+    @Test
+    public void dataLimit() throws Exception {
+        final QueryResult result = query("*", builder -> {
+            builder.options(Optional.of(QueryOptions.builder().dataLimit(1L).build()));
+        });
+
+        assertEquals(2, result.getErrors().size());
+        assertEquals(ResultLimits.of(ResultLimit.QUOTA), result.getLimits());
     }
 
     private Set<MetricCollection> getResults(final QueryResult result) {
