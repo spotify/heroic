@@ -97,24 +97,33 @@ pull request, otherwise it will be rejected by Travis.
 Integration tests are configured to run remotely depending on a set of system
 properties.
 
-| Property                                            | Description                                            |
-|-----------------------------------------------------|--------------------------------------------------------|
-| -D elasticsearch.version=&lt;version&gt;            | Use the given client version when building the project |
-| -D it.elasticsearch.remote=true                     | Run Elasticsearch tests against a remote database      |
-| -D it.elasticsearch.seed=&lt;seed&gt;               | Use the given seed (default: `localhost`)              |
-| -D it.elasticsearch.clusterName=&lt;clusterName&gt; | Use the given cluster name (default: `elasticsearch`)  |
-|-----------------------------------------------------|--------------------------------------------------------|
-| -D datastax.version=&lt;version&gt;                 | Use the given client version when building the project |
-| -D it.datastax.remote=true                          | Run Datastax tests against a remote database           |
-| -D it.datastax.seed=&lt;seed&gt;                    | Use the given seed (default: `localhost`)              |
-|-----------------------------------------------------|--------------------------------------------------------|
-| -D bigtable.version=&lt;version&gt;                 | Use the given client version when building the project |
-| -D it.bigtable.remote=true                          | Run Bigtable tests against a remote database           |
-| -D it.bigtable.project=&lt;project&gt;              | Use the given project                                  |
-| -D it.bigtable.zone=&lt;zone&gt;                    | Use the given zone                                     |
-| -D it.bigtable.instance=&lt;instance&gt;            | Use the given instance                                  |
-| -D it.bigtable.credentials=&lt;credentials&gt;      | Use the given credentials file                         |
-|-----------------------------------------------------|--------------------------------------------------------|
+##### Elasticsearch
+
+| Property | Description |
+|----------|-------------|
+| `-D elasticsearch.version=<version>` | Use the given client version when building the project |
+| `-D it.elasticsearch.remote=true` | Run Elasticsearch tests against a remote database |
+| `-D it.elasticsearch.seed=<seed>` | Use the given seed (default: `localhost`) |
+| `-D it.elasticsearch.clusterName=<clusterName>` | Use the given cluster name (default: `elasticsearch`) |
+
+##### Datastax
+
+| Property | Description |
+|----------|-------------|
+| `-D datastax.version=<version>` | Use the given client version when building the project |
+| `-D it.datastax.remote=true` | Run Datastax tests against a remote database |
+| `-D it.datastax.seed=<seed>` | Use the given seed (default: `localhost`) |
+
+##### Bigtable
+
+| Property | Description |
+|----------|-------------|
+| `-D bigtable.version=<version>` | Use the given client version when building the project |
+| `-D it.bigtable.remote=true` | Run Bigtable tests against a remote database  |
+| `-D it.bigtable.project=<project>` | Use the given project |
+| `-D it.bigtable.zone=<zone>` | Use the given zone |
+| `-D it.bigtable.instance=<instance>` | Use the given instance |
+| `-D it.bigtable.credentials=<credentials>` | Use the given credentials file |
 
 The following is an example Elasticsearch remote integration test:
 
@@ -135,8 +144,9 @@ The [JVM RPC](/rpc/jvm) module is specifically designed to allow for rapid
 execution of integration tests. It allows multiple cores to be defined and
 communicate with each other in the same JVM instance.
 
-See [ClusterQueryIT](/heroic-dist/src/test/java/com/spotify/heroic/ClusterQueryIT.java)
-for a basic example of this.
+* See [AbstractClusterQueryIT](/heroic-dist/src/test/java/com/spotify/heroic/AbstractClusterQueryIT.java)
+* JVM-based [JvmClusterQueryIT](/heroic-dist/src/test/java/com/spotify/heroic/JvmClusterQueryIT.java)
+* gRPC-based [GrpcClusterQueryIT](/heroic-dist/src/test/java/com/spotify/heroic/GrpcClusterQueryIT.java)
 
 #### Coverage
 
