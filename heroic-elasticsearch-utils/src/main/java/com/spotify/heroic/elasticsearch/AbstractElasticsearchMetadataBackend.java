@@ -109,15 +109,18 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
             final SearchHit[] hits = response.getHits().getHits();
 
             for (final SearchHit hit : hits) {
+                final T convertedHit = converter.apply(hit);
+
+                if (!results.add(convertedHit)) {
+                    duplicates += 1;
+                } else {
+                    size += 1;
+                }
+
                 if (limit.isGreater(size)) {
+                    results.remove(convertedHit);
                     return async.resolved(new LimitedSet<>(limit.limitSet(results), true));
                 }
-
-                if (!results.add(converter.apply(hit))) {
-                    duplicates += 1;
-                }
-
-                size += 1;
             }
 
             if (hits.length == 0) {
