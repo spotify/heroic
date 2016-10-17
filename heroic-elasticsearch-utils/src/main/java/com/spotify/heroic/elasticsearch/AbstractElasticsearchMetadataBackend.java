@@ -86,12 +86,15 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
             final Supplier<AsyncFuture<SearchResponse>> scroller =
                 () -> bind(c.prepareSearchScroll(scrollId).setScroll(SCROLL_TIME).execute());
 
-            return scroller.get().lazyTransform(new ScrollTransform<>(limit, scroller, converter));
+            return scroller.get().lazyTransform(
+                new ScrollTransform<>(async, limit, scroller, converter)
+            );
         });
     }
 
     @RequiredArgsConstructor
-    class ScrollTransform<T> implements LazyTransform<SearchResponse, LimitedSet<T>> {
+    public static class ScrollTransform<T> implements LazyTransform<SearchResponse, LimitedSet<T>> {
+        private final AsyncFramework async;
         private final OptionalLimit limit;
         private final Supplier<AsyncFuture<SearchResponse>> scroller;
 
