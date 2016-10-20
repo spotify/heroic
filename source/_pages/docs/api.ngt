@@ -81,7 +81,7 @@
   </p>
 
   <api-accept curl-data='{"range": {"type": "relative", "unit": "HOURS", "value": 2}, "filter": ["and", ["key", "foo"], ["=", "foo", "bar"], ["+", "role"]], "groupBy": ["site"]}'>
-    <api-type>
+    <api-type name="Query">
       <api-field required="true" name="range" type-href="QueryDateRange">
         The range in time for which to query
       </api-field>
@@ -127,7 +127,7 @@
   </api-accept>
 
   <api-response>
-    <api-type>
+    <api-type name="QueryResponse">
       <api-field name="range" type-json="{start: <number>, end: <number>}">
         The range in time for which to query
       </api-field>
@@ -187,6 +187,109 @@
         "start": 1469809590000
       },
       "statistics": {}
+    }
+    </codeblock>
+  </api-response>
+</api-endpoint>
+
+<api-endpoint path="/query/batch" method="POST">
+  <p>
+    Run multiple metrics query in a batch.
+  </p>
+
+  <p>
+    This accepts a JSON document where all keys are expected to map up to a
+    Query.
+  </p>
+
+  <api-accept curl-data='{"a": <query>, "b": <query>}'>
+    <api-type>
+      <api-field required="true" name="*" type-href="Query">
+        Queries to run.
+      </api-field>
+    </api-type>
+
+    <h4>Example Request</h4>
+
+    <codeblock language="json">
+    {
+      "a": {
+        "range": {"type": "relative", "unit": "HOURS", "value": 2},
+        "filter": ["and", ["key", "foo"], ["=", "foo", "bar"], ["+", "role"]],
+        "aggregation": {
+          "type": "group",
+          "of": ["site"],
+          "each": {
+            "type": "sum"
+          }
+        }
+      },
+      "b": {
+        "range": {"type": "relative", "unit": "HOURS", "value": 2},
+        "filter": ["and", ["key", "baz"], ["=", "foo", "bar"], ["+", "role"]],
+        "aggregation": {
+          "type": "group",
+          "of": ["site"],
+          "each": {
+            "type": "sum"
+          }
+        }
+      }
+    }
+    </codeblock>
+  </api-accept>
+
+  <api-response>
+    <api-type>
+      <api-field name="*" type-href="QueryResponse">
+        Responses to each query run.
+      </api-field>
+    </api-type>
+
+    <h4>Example Response</h4>
+
+    <codeblock language="json">
+    {
+      "a": {
+        "errors": [],
+        "result": [
+          {
+            "hash": "deadbeef",
+            "tags": {"foo": "bar"},
+            "values": [[1300000000000, 42.0]]
+          },
+          {
+            "hash": "beefdead",
+            "tags": {"foo": "baz"},
+            "values": [[1300000000000, 42.0]]
+          }
+        ],
+        "range": {
+          "end": 1469816790000,
+          "start": 1469809590000
+        },
+        "statistics": {}
+      },
+      "b": {
+        "errors": [],
+        "result": [
+          {
+            "hash": "deadbeef",
+            "tags": {"foo": "bar"},
+            "values": [[1300000000000, 42.0]]
+          },
+          {
+            "hash": "beefdead",
+            "tags": {"foo": "baz"},
+            "values": [[1300000000000, 42.0]]
+          }
+        ],
+        "range": {
+          "end": 1469816790000,
+          "start": 1469809590000
+        },
+        "statistics": {}
+      }
     }
     </codeblock>
   </api-response>
