@@ -3,11 +3,5 @@
   <span class="status">Status: {{status}},</span>
   <span class="content-type">Content-Type: {{contentType}}</span>
 
-  <a class="btn btn-doc btn-default btn-xs pull-right" href ng-click="showDoc = !showDoc" title="show/hide documentation">
-    <span>Response Doc</span>
-    <span ng-hide="showDoc" class="glyphicon glyphicon-menu-down"></span>
-    <span ng-show="showDoc" class="glyphicon glyphicon-menu-up"></span>
-  </a>
-
-  <div class="response-doc" ng-show="showDoc"><ng-transclude /></div>
+  <div class="response-doc"><ng-transclude /></div>
 </div>

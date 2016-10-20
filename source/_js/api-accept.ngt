@@ -11,22 +11,10 @@
 
   <span ng-if="!isEmpty" class="content-type">{{contentType}}</span>
 
-  <a ng-show="!isEmpty" class="btn btn-doc btn-default btn-xs pull-right" href ng-click="showDoc = !showDoc" title="show/hide documentation">
-    <span>Request Doc</span>
-    <span ng-hide="showDoc" class="glyphicon glyphicon-menu-down"></span>
-    <span ng-show="showDoc" class="glyphicon glyphicon-menu-up"></span>
-  </a>
+  <div ng-if="!isEmpty" class="accept-doc"><ng-transclude /></div>
 
-  <a ng-show="curl !== null" class="btn btn-curl btn-default btn-xs pull-right" href ng-click="showCurl = !showCurl" title="show/hide example curl">
-    <span>Curl</span>
-    <span ng-hide="showCurl" class="glyphicon glyphicon-menu-down"></span>
-    <span ng-show="showCurl" class="glyphicon glyphicon-menu-up"></span>
-  </a>
-
-  <div ng-if="curl !== null" ng-show="showCurl">
+  <div ng-if="curl !== null">
     <h4>Example Curl</h4>
     <codeblock language="bash" content="curl"></codeblock>
   </div>
-
-  <div ng-if="!isEmpty" class="accept-doc" ng-show="showDoc"><ng-transclude /></div>
 </div>

@@ -1,5 +1,6 @@
 (function() {
   var m = angular.module('hdoc.docs', [
+    'hdoc.docs.api',
     '_pages/docs.ngt',
     '_pages/docs/getting_started.ngt',
     '_pages/docs/getting_started/installation.ngt',
@@ -8,9 +9,6 @@
     '_pages/docs/data_model.ngt',
     '_pages/docs/query_language.ngt',
     '_pages/docs/overview.ngt',
-    '_pages/docs/api.ngt',
-    '_pages/docs/api/accept-metadata-query-body.ngt',
-    '_pages/docs/api/accept-series.ngt',
     '_pages/docs/aggregations.ngt',
     '_pages/docs/shell.ngt',
     '_pages/docs/profiles.ngt',
@@ -26,7 +24,8 @@
     '_pages/docs/config/consumer.ngt'
   ]);
 
-  function DocumentationCtrl() {
+  function DocumentationCtrl($scope) {
+    $scope.endpoints = endpoints;
   }
 
   m.controller('DocumentationCtrl', DocumentationCtrl);
@@ -36,7 +35,8 @@
       .state('docs', {
         abstract: true,
         url: "/docs",
-        templateUrl: "_pages/docs.ngt"
+        templateUrl: "_pages/docs.ngt",
+        controller: DocumentationCtrl
       })
       .state('docs.getting_started', {
         abstract: true,
@@ -70,10 +70,6 @@
       .state('docs.data_model', {
         url: '/data_model',
         templateUrl: '_pages/docs/data_model.ngt'
-      })
-      .state('docs.api', {
-        url: '/api',
-        templateUrl: '_pages/docs/api.ngt'
       })
       .state('docs.aggregations', {
         url: '/aggregations',

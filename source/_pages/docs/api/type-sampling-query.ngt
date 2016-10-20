@@ -1,0 +1,17 @@
+<api-type name="SamplingQuery">
+  <p>
+    Java Class: <a git-href-java="heroic-component">com.spotify.heroic.aggregation.SamplingQuery</a>
+  </p>
+
+  <api-field required="false" name="unit" type-json='<string>'>
+    The default unit to use in size and extent (unless specified).
+  </api-field>
+
+  <api-field required="true" name="size" type-json='<number> | {"unit": <string>, "value": <number>}'>
+    The size to use in a given aggregation.
+  </api-field>
+
+  <api-field required="true" name="extent" type-json='<number> | {"unit": <string>, "value": <number>}'>
+    The extent to use in a given aggregation.
+  </api-field>
+</api-type>

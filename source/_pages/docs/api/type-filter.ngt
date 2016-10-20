@@ -1,0 +1,23 @@
+<api-type kind="structural" name="Filter">
+  <p>
+    Java Class: <a git-href-java="heroic-component">com.spotify.heroic.filter.Filter</a>
+  </p>
+
+  <p>
+    The structure of a filter is explained in detail in
+    the <a ui-sref="docs.query_language">Query Language</a> documentation.
+    This will only be a brief, syntactical overview.
+  </p>
+
+  <api-field name="and" type-json='["and", <filter>, ...]'>
+    A boolean 'and' operation, evaluates to <code language="json">true</code> if <em>all</em> of the nested <code language="json">&lt;filter&gt;</code>'s are <code language="json">true</code>, otherwise <code language="json">true</code>.
+  </api-field>
+
+  <api-field name="or" type-json='["or", <filter>, ...]'>
+    A boolean 'or' operation, evaluates to <code language="json">true</code> if <em>any</em> of the nested <code language="json">&lt;filter&gt;</code>'s are <code language="json">true</code>, otherwise <code language="json">false</code>.
+  </api-field>
+
+  <api-field name="not" type-json='["not", <filter>]'>
+    A boolean 'not' operation, evaluates to <code language="json">true</code> if the nested <code language="json">&lt;filter&gt;</code> is <code language="json">false</code>.
+  </api-field>
+</api-type>

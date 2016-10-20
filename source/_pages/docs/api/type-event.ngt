@@ -1,0 +1,24 @@
+<api-type name="Event" kind="structural">
+  <p>
+    Java Class: <a git-href-java="heroic-component">com.spotify.heroic.metric.Event</a>
+  </p>
+
+  <p>
+    See the <a ui-sref="^.data_model({'#': 'events'})">Events section in Data Model</a>
+    for more details about <em>what</em> an event is.
+  </p>
+
+  <api-field required="true" name="datapoint" type-json='[<timestamp>, {<payload>}]'>
+    <p>
+      A single event.
+    </p>
+
+    <p>
+      The <code language="json">&lt;timestamp&gt;</code> is the number of milliseconds since unix epoch.
+    </p>
+
+    <p>
+      The <code language="json">&lt;payload&gt;</code> is the sample payload.
+    </p>
+  </api-field>
+</api-type>

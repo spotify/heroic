@@ -66,7 +66,13 @@
       </li>
 
       <li ui-sref-active="active">
-        <a ui-sref="docs.api">API</a>
+        <a ui-sref="docs.api.index">API</a>
+
+        <ul class="nav endpoints">
+          <li ui-sref-active="active" ng-repeat="e in endpoints" class="endpoint-{{e.method | lowercase}}">
+            <a ui-sref="docs.api.{{e.sref}}">{{e.method}}: {{e.url}}</a>
+          </li>
+        </ul>
       </li>
 
       <li ui-sref-active="active">

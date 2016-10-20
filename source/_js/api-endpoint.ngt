@@ -1,5 +1,5 @@
 <div class="api-endpoint">
-  <h3 id="{{id}}" class="heading" ng-class="{'post': method === 'POST', 'get': method === 'GET', 'put': method === 'PUT', 'delete': method === 'DELETE'}">
+  <h3 class="heading" ng-class="{'post': method === 'POST', 'get': method === 'GET', 'put': method === 'PUT', 'delete': method === 'DELETE'}">
     <span class="method">{{method}}</span>: <span class="path">{{path}}</span>
   </h3>
 

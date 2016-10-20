@@ -6,6 +6,15 @@
     '_js/api-type.ngt'
   ]);
 
+  function nameToType(name) {
+    if (!name)
+      throw new Error('name must be defined');
+
+    name = name.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+    name = name.replace(/[\._]/g, '-');
+    return 'type-' + name;
+  }
+
   function pathToId(method, path) {
     var parts = path.split('/');
 
@@ -49,24 +58,14 @@
       link: function($scope, $element, $attr, endpoint) {
         $scope.status = $scope.status || '200';
         $scope.contentType = $scope.contentType || 'application/json';
-        $scope.showDoc = false;
       }
     };
   });
 
-  function nameToAnchor(name) {
-    if (!name)
-      throw new Error('name must be defined');
-
-    name = name.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-    name = name.replace(/[\._]/g, '-');
-    return 'api-types-' + name;
-  }
-
   m.directive('apiTypeId', function() {
     return {
       link: function($scope, $element, $attr) {
-        $element.attr('id', nameToAnchor($attr.apiTypeId));
+        $element.attr('id', nameToType($attr.apiTypeId));
       }
     };
   });
@@ -82,8 +81,7 @@
         return function($scope, $element, $attr) {
           $scope.structural = $attr.kind === 'structural';
           $scope.name = $attr.name || null;
-          $scope.id = $scope.name !== null ? nameToAnchor($scope.name) : null;
-          $scope.showStructureDoc = true;
+          $scope.id = $scope.name !== null ? nameToType($scope.name) : null;
         };
       },
       controller: function ApiTypeCtrl($scope) {
@@ -119,7 +117,7 @@
       var smallGlyph = angular.element('<small>');
       smallGlyph.append(glyph);
 
-      var href = $state.href('.', {'#': nameToAnchor(typeHref)});
+      var href = $state.href('^.' + nameToType(typeHref));
 
       a.attr('href', href);
       code.text(typeHref);
@@ -137,7 +135,7 @@
       var smallGlyph = angular.element('<small>');
       smallGlyph.append(glyph);
 
-      var href = $state.href('.', {'#': nameToAnchor(typeArrayHref)});
+      var href = $state.href('^.' + nameToType(typeArrayHref));
 
       a.attr('href', href);
       code.text("[" + typeArrayHref + ", ...]");
@@ -201,8 +199,6 @@
       link: function($scope, $element, $attr, endpoint) {
         $scope.contentType = $attr.contentType || 'application/json';
         $scope.curl = null;
-        $scope.showDoc = false;
-        $scope.showCurl = false;
         $scope.isEmpty = true;
         $scope.curlData = $attr.curlData || '{}';
 

@@ -4,9 +4,12 @@
 
 //= include 'templates.js'
 
+//= include 'data.js'
+
 //= include '_js/prism.js'
 //= include '_js/api.js'
 //= include '_pages/*.js'
+//= include '_pages/docs/*.js'
 
 (function() {
   var m = angular.module('hdoc', [

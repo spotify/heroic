@@ -1,0 +1,51 @@
+<api-type name="RequestError">
+  <p>
+    Java Class: <a git-href-java="heroic-component">com.spotify.heroic.metric.RequestError</a>
+  </p>
+
+  <api-field required="true" name="type" type-json='"node"|"series"'>
+    Type of the error.
+
+    The different error types have different sets of information associated with them.
+  </api-field>
+</api-type>
+
+<api-type name="SeriesError">
+  <p>
+    Java Class: <a git-href-java="heroic-component">com.spotify.heroic.metric.SeriesError</a>
+  </p>
+
+  <api-field required="true" name="type" type-json='"series"'></api-field>
+
+  <api-field required="true" name="error" type-json='<string>'>
+    An error message.
+  </api-field>
+
+  <api-field required="true" name="tags" type-json='[{"key": <string>, "values": [<string>, ..]}, ..]'>
+    Tags associated with the failing time series.
+  </api-field>
+</api-type>
+
+<api-type name="NodeError">
+  <p>
+    Java Class: <a git-href-java="heroic-component">com.spotify.heroic.metric.NodeError</a>
+  </p>
+
+  <api-field required="true" name="type" type-json='"node"'></api-field>
+
+  <api-field required="true" name="error" type-json='<string>'>
+    An error message.
+  </api-field>
+
+  <api-field required="true" name="nodeId" type-json='<string>'>
+    UUID of the failing node.
+  </api-field>
+
+  <api-field required="true" name="node" type-json='<string>'>
+    String-representation of the failing node.
+  </api-field>
+
+  <api-field required="true" name="tags" type-json='{<string>: <string>, ..}'>
+    <a ui-sref="^.config.cluster({'#': 'tags'})">Cluster tags</a> of the failing node.
+  </api-field>
+</api-type>

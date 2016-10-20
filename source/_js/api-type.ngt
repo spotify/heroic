@@ -1,19 +1,11 @@
 <div class="api-type">
-  <h3 ng-show="!!name" ng-attr-id="{{id}}">
-    <span ng-if="!!name">{{name}}</span>
-
-    <a ng-hide="fields.length === 0" class="btn btn-structure-doc btn-default btn-xs pull-right" href ng-click="showStructureDoc = !showStructureDoc" title="show/hide documentation">
-      <span>Structure</span>
-      <span ng-hide="showStructureDoc" class="glyphicon glyphicon-menu-down"></span>
-      <span ng-show="showStructureDoc" class="glyphicon glyphicon-menu-up"></span>
-    </a>
-  </h3>
+  <h3 ng-if="!!name">{{name}}</h3>
 
   <div class="doc">
     <ng-transclude></ng-transclude>
   </div>
 
-  <div class="structure-doc" ng-show="!!showStructureDoc">
+  <div class="structure-doc">
     <h4 ng-if="!structural">Structure</h4>
 
     <div class="table-responsive">

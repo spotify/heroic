@@ -1,0 +1,67 @@
+<!-- anchor to use when linking to QueryDateRange -->
+<span api-type-id="QueryDateRange"></span>
+
+<api-type name="QueryDateRange.Absolute">
+  <p>
+    Java Class: <a git-href-java="heroic-component">com.spotify.heroic.QueryDateRange</a>
+  </p>
+
+  <p>
+    An absolute time span.
+  </p>
+
+  <api-field required="true" name="type" type-json='"absolute"'>
+    Type of the absolute date range.
+  </api-field>
+
+  <api-field required="true" name="start" type-json='<number>'>
+    Starting timestamp in milliseconds from the unix epoch.
+  </api-field>
+
+  <api-field required="true" name="end" type-json='<number>'>
+    Ending timestamp in milliseconds from the unix epoch.
+  </api-field>
+</api-type>
+
+<api-type name="QueryDateRange.Relative">
+  <p>
+    Java Class: <a git-href-java="heroic-component">com.spotify.heroic.QueryDateRange</a>
+  </p>
+
+  <p>
+    Relative date ranges range from <em>the current</em> time, to a specific
+    point in the past.
+  </p>
+
+  <p>
+    This object tells the distance to the point in the past.
+  </p>
+
+  <api-field required="true" name="type" type-json='"relative"'>
+    Type of the relative date range.
+  </api-field>
+
+  <api-field name="unit" type-json='<string>'>
+    <p>
+      Unit to use for <code>value</code>
+    </p>
+
+    <p>
+      <code>unit</code> must be one of.
+    </p>
+
+    <ul class="list-inline">
+      <li><code language="json">"MILLISECONDS"</code></li>
+      <li><code language="json">"SECONDS"</code></li>
+      <li><code language="json">"MINUTES"</code></li>
+      <li><code language="json">"HOURS"</code></li>
+      <li><code language="json">"DAYS"</code></li>
+      <li><code language="json">"WEEKS"</code></li>
+      <li><code language="json">"MONTHS"</code></li>
+    </ul>
+  </api-field>
+
+  <api-field name="value" type-json='<number>'>
+    How many <code>unit</code> timespans back in time this date starts.
+  </api-field>
+</api-type>
