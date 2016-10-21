@@ -1,0 +1,65 @@
+<api-endpoint path="/metadata/key-suggest" method="POST">
+  <p>
+    Search for key suggestions.
+    This endpoint is intended for use with auto-completion.
+  </p>
+
+  <api-accept>
+    <api-type>
+      <api-field name="key" type-json="<string>">
+        Key to help limit down suggestions, this is a free text value that is
+        analyzed by the search engine.
+      </api-field>
+
+      <api-field name="filter" type-href="Filter">
+        Filter to apply
+      </api-field>
+
+      <api-field name="range" type-href="QueryDateRange">
+        The time range for which to get suggestions.
+      </api-field>
+
+      <api-field name="limit" type-json="<number>">
+        The time range for which to get suggestions.
+      </api-field>
+
+      <api-field name="match" type-href="MatchOptions">
+        Temporary match options to apply, only used for experiments.
+      </api-field>
+    </api-type>
+
+    <h4>Example Request</h4>
+
+    <codeblock language="json">
+    {
+      "key": "foo",
+      "filter": ["=", "role", "heroic"],
+      "limit": 10
+    }
+    </codeblock>
+  </api-accept>
+
+  <api-response status="200">
+    <api-type>
+      <api-field name="errors" type-array-href="RequestError">
+        Errors that occured during the request.
+      </api-field>
+
+      <api-field name="suggestions" required="true" type-json="[{score: <number>, key: <string>}, ...]">
+        Suggest key values with scores.
+      </api-field>
+    </api-type>
+
+    <h4>Example <span class="status">200</span> Response</h4>
+
+    <codeblock language="json">
+    {
+      "errors": [],
+      "suggestions": [
+        {"score": 1.5, "key": "foobar"},
+        {"score": 0.9, "key": "folly"}
+      ]
+    }
+    </codeblock>
+  </api-response>
+</api-endpoint>

@@ -16,6 +16,11 @@
     <codeblock language="json">
     {
       "ok": true,
+      "service": {
+        "name": "The Heroic Time Series Database",
+        "version": "master (git: aaccddee)",
+        "id": "api"
+      },
       "consumers": {
         "ok": true,
         "available": 0,

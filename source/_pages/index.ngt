@@ -1,7 +1,7 @@
 <div class="jumbotron">
   <div class="container">
-    <h1>Heroic</h1>
-    <p>The Heroic Time Series Database</p>
+    <center><img src="/images/logo_on_light.256.png" /></center>
+    <p class="lead">The Heroic Time Series Database</p>
   </div>
 </div>
 
