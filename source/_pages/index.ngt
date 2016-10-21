@@ -1,6 +1,6 @@
 <div class="jumbotron">
   <div class="container">
-    <center><img src="/images/logo_on_light.256.png" /></center>
+    <center><img src="images/logo_on_light.256.png" /></center>
     <p class="lead">The Heroic Time Series Database</p>
   </div>
 </div>
