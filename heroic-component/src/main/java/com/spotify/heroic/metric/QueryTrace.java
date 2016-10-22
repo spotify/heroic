@@ -22,7 +22,6 @@
 package com.spotify.heroic.metric;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -147,24 +146,6 @@ public interface QueryTrace {
     void formatTrace(PrintWriter out, String prefix);
 
     /**
-     * @deprecated use {@link #elapsed()}
-     */
-    @Deprecated
-    long getElapsed();
-
-    /**
-     * @deprecated use {@link #what()}
-     */
-    @Deprecated
-    Identifier getWhat();
-
-    /**
-     * @deprecated use {@link #children()}
-     */
-    @Deprecated
-    List<QueryTrace> getChildren();
-
-    /**
      * How long the trace elapsed for.
      *
      * @return microseconds
@@ -204,24 +185,6 @@ public interface QueryTrace {
         @Override
         public void formatTrace(final PrintWriter out, final String prefix) {
             out.println(prefix + "NO TRACE");
-        }
-
-        @JsonIgnore
-        @Override
-        public long getElapsed() {
-            return elapsed();
-        }
-
-        @JsonIgnore
-        @Override
-        public Identifier getWhat() {
-            return what();
-        }
-
-        @JsonIgnore
-        @Override
-        public List<QueryTrace> getChildren() {
-            return children();
         }
 
         @Override
