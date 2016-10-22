@@ -83,16 +83,6 @@ public interface QueryTrace {
     }
 
     /**
-     * Create a new watch.
-     *
-     * @return a {@link com.spotify.heroic.metric.QueryTrace.NamedWatch}
-     * @deprecated use {@link Tracing#watch(Identifier)}
-     */
-    static NamedWatch watch(final Identifier what) {
-        return new ActiveNamedWatch(what, Stopwatch.createStarted());
-    }
-
-    /**
      * Format the current trace onto the given PrintWriter.
      *
      * @param out {@link java.io.PrintWriter} to format to
