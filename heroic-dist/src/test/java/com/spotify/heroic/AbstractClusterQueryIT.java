@@ -161,6 +161,31 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     }
 
     @Test
+    public void deltaQueryTest() throws Exception {
+        final QueryResult result =
+            query("delta", builder -> {
+                builder.features(Optional.empty());
+            });
+
+        final Set<MetricCollection> m = getResults(result);
+        final List<Long> cadences = getCadences(result);
+
+        assertEquals(ImmutableList.of(-1L, -1L), cadences);
+        assertEquals(ImmutableSet.of(points().p(30, 1D).build(), points().p(20, 3D).build()), m);
+    }
+
+    @Test
+    public void distributedDeltaQueryTest() throws Exception {
+        final QueryResult result = query("max | delta");
+
+        final Set<MetricCollection> m = getResults(result);
+        final List<Long> cadences = getCadences(result);
+
+        assertEquals(ImmutableList.of(1L), cadences);
+        assertEquals(ImmutableSet.of(points().p(20, 3D).p(30, -2D).build()), m);
+    }
+
+    @Test
     public void filterLastQueryTest() throws Exception {
         final QueryResult result = query("average(10ms) by * | topk(2) | bottomk(1)");
 
