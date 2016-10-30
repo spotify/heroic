@@ -238,8 +238,8 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         return doto(c -> {
             final OptionalLimit limit = filter.getLimit();
             final QueryBuilder f = filter(filter.getFilter());
-                    return entries(filter.getFilter(), filter.getLimit(), filter.getRange(), this::toSeries,
-            l -> FindSeries.of(l.getSet(), l.isLimited()), builder -> {
+            return entries(filter.getFilter(), filter.getLimit(), filter.getRange(), this::toSeries,
+                l -> FindSeries.of(l.getSet(), l.isLimited()), builder -> {
                 });
         });
     }
