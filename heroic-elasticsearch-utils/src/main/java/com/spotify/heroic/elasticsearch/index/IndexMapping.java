@@ -23,9 +23,13 @@ package com.spotify.heroic.elasticsearch.index;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.spotify.heroic.common.DateRange;
 import org.elasticsearch.action.count.CountRequestBuilder;
+import org.elasticsearch.action.delete.DeleteRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.client.Client;
+
+import java.util.List;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 @JsonSubTypes({
@@ -43,5 +47,16 @@ public interface IndexMapping {
         throws NoIndexSelectedException;
 
     CountRequestBuilder count(Client client, String type)
+        throws NoIndexSelectedException;
+
+    /**
+     * Create a delete request using the given client.
+     *
+     * @param client Client to create request with
+     * @param type Type of document to delete
+     * @param id Id of document to delete
+     * @return a new delete request
+     */
+    List<DeleteRequestBuilder> delete(Client client, String type, String id)
         throws NoIndexSelectedException;
 }

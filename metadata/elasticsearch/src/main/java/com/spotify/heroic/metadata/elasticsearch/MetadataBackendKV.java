@@ -57,15 +57,20 @@ import com.spotify.heroic.metadata.FindSeriesStream;
 import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.WriteMetadata;
+import com.spotify.heroic.metric.QueryError;
+import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
+import eu.toolchain.async.StreamCollector;
 import eu.toolchain.async.Transform;
 import lombok.ToString;
 import org.apache.commons.lang3.tuple.Pair;
+import org.elasticsearch.action.ActionRequestBuilder;
 import org.elasticsearch.action.count.CountRequestBuilder;
+import org.elasticsearch.action.delete.DeleteRequestBuilder;
 import org.elasticsearch.action.index.IndexRequest.OpType;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
@@ -91,9 +96,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import static org.elasticsearch.index.query.QueryBuilders.andQuery;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
@@ -124,12 +132,13 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     private final Managed<Connection> connection;
     private final RateLimitedCache<Pair<String, HashCode>> writeCache;
     private final boolean configure;
+    private final int deleteParallelism;
 
     @Inject
     public MetadataBackendKV(
         Groups groups, MetadataBackendReporter reporter, AsyncFramework async,
         Managed<Connection> connection, RateLimitedCache<Pair<String, HashCode>> writeCache,
-        @Named("configure") boolean configure
+        @Named("configure") boolean configure, @Named("deleteParallelism") int deleteParallelism
     ) {
         super(async, TYPE_METADATA);
         this.groups = groups;
@@ -138,6 +147,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         this.connection = connection;
         this.writeCache = writeCache;
         this.configure = configure;
+        this.deleteParallelism = deleteParallelism;
     }
 
     @Override
@@ -271,7 +281,29 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
     @Override
     public AsyncFuture<DeleteSeries> deleteSeries(final DeleteSeries.Request request) {
-        return async.failed(new RuntimeException("Not implemented"));
+        final DateRange range = request.getRange();
+
+        final FindSeriesIds.Request findIds =
+            new FindSeriesIds.Request(request.getFilter(), range, request.getLimit());
+
+        return doto(c -> findSeriesIds(findIds).lazyTransform(ids -> {
+            final List<Callable<AsyncFuture<Void>>> deletes = new ArrayList<>();
+
+            for (final String id : ids.getIds()) {
+                deletes.add(() -> {
+                    final List<DeleteRequestBuilder> requests =
+                        c.delete(TYPE_METADATA, id);
+
+                    return async.collectAndDiscard(requests
+                        .stream()
+                        .map(ActionRequestBuilder::execute)
+                        .map(this::bind)
+                        .collect(Collectors.toList()));
+                });
+            }
+
+            return async.eventuallyCollect(deletes, newDeleteCollector(), deleteParallelism);
+        }));
     }
 
     @Override
@@ -343,6 +375,43 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
             return scrollEntries(c, builder, limit, converter).directTransform(collector);
         });
+    }
+
+    /**
+     * Collect the result of a list of operations and convert into a
+     * {@link com.spotify.heroic.metadata.DeleteSeries}.
+     *
+     * @return a {@link eu.toolchain.async.StreamCollector}
+     */
+    private StreamCollector<Void, DeleteSeries> newDeleteCollector() {
+        return new StreamCollector<Void, DeleteSeries>() {
+            final ConcurrentLinkedQueue<Throwable> errors = new ConcurrentLinkedQueue<>();
+
+            @Override
+            public void resolved(final Void result) throws Exception {
+            }
+
+            @Override
+            public void failed(final Throwable cause) throws Exception {
+                errors.add(cause);
+            }
+
+            @Override
+            public void cancelled() throws Exception {
+            }
+
+            @Override
+            public DeleteSeries end(
+                final int resolved, final int failed, final int cancelled
+            ) throws Exception {
+                final List<RequestError> errors = this.errors
+                    .stream()
+                    .map(QueryError::fromThrowable)
+                    .collect(Collectors.toList());
+
+                return new DeleteSeries(errors, resolved, failed + cancelled);
+            }
+        };
     }
 
     private <T, O> AsyncObservable<O> entriesStream(
