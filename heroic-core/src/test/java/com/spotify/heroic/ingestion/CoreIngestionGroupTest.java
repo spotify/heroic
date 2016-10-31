@@ -135,6 +135,7 @@ public class CoreIngestionGroupTest {
         verify(writePermits).release();
         verify(reporter).incrementConcurrentWrites();
         verify(reporter).decrementConcurrentWrites();
+        verify(reporter, never()).reportDroppedByFilter();
         verify(group).doWrite(request);
         verify(expected).onFinished(any(FutureFinished.class));
     }
@@ -161,6 +162,7 @@ public class CoreIngestionGroupTest {
         verify(writePermits, never()).release();
         verify(reporter, never()).incrementConcurrentWrites();
         verify(reporter, never()).decrementConcurrentWrites();
+        verify(reporter).reportDroppedByFilter();
         verify(group, never()).doWrite(request);
         verify(other, never()).onFinished(any(FutureFinished.class));
     }

@@ -34,6 +34,10 @@ public class NoopIngestionManagerReporter implements IngestionManagerReporter {
     }
 
     @Override
+    public void reportDroppedByFilter() {
+    }
+
+    @Override
     public void incrementConcurrentWrites() {
 
     }
