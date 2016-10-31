@@ -161,6 +161,7 @@ public class CoreIngestionGroupTest {
         verify(writePermits, never()).release();
         verify(reporter, never()).incrementConcurrentWrites();
         verify(reporter, never()).decrementConcurrentWrites();
+        verify(reporter).reportDroppedByFilter();
         verify(group, never()).doWrite(request);
         verify(other, never()).onFinished(any(FutureFinished.class));
     }

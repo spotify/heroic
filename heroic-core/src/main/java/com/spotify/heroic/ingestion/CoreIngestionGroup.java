@@ -81,7 +81,7 @@ public class CoreIngestionGroup implements IngestionGroup {
 
     protected AsyncFuture<Ingestion> syncWrite(final Ingestion.Request request) {
         if (!filter.get().apply(request.getSeries())) {
-            // XXX: report dropped-by-filter
+            reporter.reportDroppedByFilter();
             return async.resolved(Ingestion.of(ImmutableList.of()));
         }
 

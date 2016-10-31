@@ -22,6 +22,7 @@
 package com.spotify.heroic.statistics.semantic;
 
 import com.codahale.metrics.Counter;
+import com.codahale.metrics.Meter;
 import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.FutureReporter.Context;
 import com.spotify.heroic.statistics.IngestionManagerReporter;
@@ -36,6 +37,7 @@ public class SemanticIngestionManagerReporter implements IngestionManagerReporte
     private final FutureReporter metadataWrite;
 
     private final Counter concurrentWritesCounter;
+    private final Meter droppedByFilter;
 
     public SemanticIngestionManagerReporter(SemanticMetricRegistry registry) {
         final MetricId id = MetricId.build().tagged("component", COMPONENT);
@@ -43,11 +45,18 @@ public class SemanticIngestionManagerReporter implements IngestionManagerReporte
             id.tagged("what", "metadata-write", "unit", Units.FAILURE));
         this.concurrentWritesCounter =
             registry.counter(id.tagged("what", "concurrent-writes", "unit", Units.WRITE));
+        this.droppedByFilter =
+            registry.meter(id.tagged("what", "dropped-by-filter", "unit", Units.DROP));
     }
 
     @Override
     public Context reportMetadataWrite() {
         return metadataWrite.setup();
+    }
+
+    @Override
+    public void reportDroppedByFilter() {
+        droppedByFilter.mark();
     }
 
     @Override
