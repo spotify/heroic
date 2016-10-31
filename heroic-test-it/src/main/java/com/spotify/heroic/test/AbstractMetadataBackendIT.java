@@ -84,6 +84,7 @@ public abstract class AbstractMetadataBackendIT {
     private HeroicCoreInstance core;
     private MetadataBackend backend;
 
+    protected boolean deleteSupport = true;
     protected boolean findTagsSupport = true;
     protected boolean orFilterSupport = true;
 
@@ -213,6 +214,8 @@ public abstract class AbstractMetadataBackendIT {
 
     @Test
     public void deleteSeriesTest() throws Exception {
+        assumeTrue(deleteSupport);
+
         {
             final DeleteSeries.Request request =
                 new DeleteSeries.Request(not(matchKey(s2.getKey())), range, OptionalLimit.empty());
@@ -220,14 +223,16 @@ public abstract class AbstractMetadataBackendIT {
             backend.deleteSeries(request).get();
         }
 
-        {
+        /* deletes are eventually consistent, wait until they are no longer present
+         * but only for a limited period of time */
+        retrySome(() -> {
             final FindSeries.Request f =
                 new FindSeries.Request(TrueFilter.get(), range, OptionalLimit.empty());
 
             final FindSeries result = backend.findSeries(f).get();
 
             assertEquals(ImmutableSet.of(s2), result.getSeries());
-        }
+        });
     }
 
     @Test
@@ -250,6 +255,33 @@ public abstract class AbstractMetadataBackendIT {
             findIds(and(matchKey(s1.getKey()), matchTag("role", "foo"))));
 
         assertEquals(ImmutableSet.of(s1.hash(), s2.hash(), s3.hash()), findIds(hasTag("role")));
+    }
+
+    /**
+     * Retry action for a given period of time.
+     *
+     * @param action Action to retry if failing
+     */
+    private void retrySome(final ThrowingRunnable action) throws Exception {
+        AssertionError error = null;
+
+        for (int i = 0; i < 10; i++) {
+            try {
+                action.run();
+            } catch (final AssertionError e) {
+                if (error != null) {
+                    e.addSuppressed(error);
+                }
+
+                error = e;
+                Thread.sleep(100L);
+                continue;
+            }
+
+            return;
+        }
+
+        throw error;
     }
 
     private Set<String> findIds(final Filter filter) throws Exception {
@@ -276,5 +308,10 @@ public abstract class AbstractMetadataBackendIT {
                     return null;
                 }), RetryPolicy.timed(10000, RetryPolicy.exponential(100, 200)))
                 .directTransform(r -> null));
+    }
+
+    @FunctionalInterface
+    interface ThrowingRunnable {
+        void run() throws Exception;
     }
 }

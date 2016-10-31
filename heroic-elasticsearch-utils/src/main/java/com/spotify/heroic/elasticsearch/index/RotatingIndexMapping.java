@@ -28,6 +28,7 @@ import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Duration;
 import lombok.ToString;
 import org.elasticsearch.action.count.CountRequestBuilder;
+import org.elasticsearch.action.delete.DeleteRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.client.Client;
@@ -142,6 +143,19 @@ public class RotatingIndexMapping implements IndexMapping {
     public CountRequestBuilder count(final Client client, final DateRange range, final String type)
         throws NoIndexSelectedException {
         return client.prepareCount(readIndices(range)).setIndicesOptions(options()).setTypes(type);
+    }
+
+    @Override
+    public List<DeleteRequestBuilder> delete(
+        final Client client, final DateRange range, final String type, final String id
+    ) throws NoIndexSelectedException {
+        final List<DeleteRequestBuilder> requests = new ArrayList<>();
+
+        for (final String index : readIndices(range)) {
+            requests.add(client.prepareDelete(index, type, id));
+        }
+
+        return requests;
     }
 
     private IndicesOptions options() {

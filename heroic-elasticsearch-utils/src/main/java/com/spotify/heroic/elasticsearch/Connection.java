@@ -35,6 +35,7 @@ import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateRequestBuilder;
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateResponse;
 import org.elasticsearch.action.count.CountRequestBuilder;
+import org.elasticsearch.action.delete.DeleteRequestBuilder;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchScrollRequestBuilder;
@@ -132,5 +133,10 @@ public class Connection {
 
     public SearchScrollRequestBuilder prepareSearchScroll(String scrollId) {
         return client.getClient().prepareSearchScroll(scrollId);
+    }
+
+    public List<DeleteRequestBuilder> delete(DateRange range, String type, String id)
+        throws NoIndexSelectedException {
+        return index.delete(client.getClient(), range, type, id);
     }
 }
