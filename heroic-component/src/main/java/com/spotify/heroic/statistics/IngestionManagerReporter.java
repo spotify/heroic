@@ -24,6 +24,8 @@ package com.spotify.heroic.statistics;
 public interface IngestionManagerReporter {
     FutureReporter.Context reportMetadataWrite();
 
+    void reportDroppedByFilter();
+
     void incrementConcurrentWrites();
 
     void decrementConcurrentWrites();
