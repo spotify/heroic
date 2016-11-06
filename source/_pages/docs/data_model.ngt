@@ -153,7 +153,7 @@ system { host=database.example.com, site=lon, what=cpu-idle-percentage, ... }
 </ul>
 
 <p>
-  By promiting the use of tags, and a convention over which tags should be used
+  By promoting the use of tags, and a convention over which tags should be used
   <em>how</em>, the problem becomes more manageable.
 </p>
 
