@@ -33,4 +33,5 @@ final class Units {
     public static final String BYTE = "B";
     public static final String MILLISECOND = "ms";
     public static final String DROP = "drop";
+    public static final String COUNT = "count";
 }
