@@ -65,6 +65,11 @@ public interface ClusterManager extends UsableGroupManager<List<ClusterShard>> {
 
     List<ClusterNode> getNodes();
 
+    /**
+     * Perform a refresh of the cluster information.
+     *
+     * @return a future indicating the state of the refresh
+     */
     AsyncFuture<Void> refresh();
 
     Statistics getStatistics();
