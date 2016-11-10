@@ -46,6 +46,7 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.StreamCollector;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -61,6 +62,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Slf4j
 @ToString(of = {})
@@ -70,6 +73,8 @@ public class LocalMetricManager implements MetricManager {
         QueryTrace.identifier(LocalMetricManager.class, "query");
     private static final QueryTrace.Identifier FETCH =
         QueryTrace.identifier(LocalMetricManager.class, "fetch");
+
+    private static Logger queryLog = LoggerFactory.getLogger("query.log");
 
     private final OptionalLimit groupLimit;
     private final OptionalLimit seriesLimit;
@@ -453,6 +458,17 @@ public class LocalMetricManager implements MetricManager {
                 groups.add(new ResultGroup(group.getKey(), group.getSeries(), group.getMetrics(),
                     aggregation.cadence()));
             }
+
+            // Gather statistics and save in QueryTrace
+            final Map<String, Long> statisticsCounters = result.getStatistics().getCounters();
+            final long preAggregationSampleSize = statisticsCounters.getOrDefault(
+                "Aggregation.sampleSize", 0L);
+            long numSeries = 0;
+            for (ResultGroup g : groups) {
+                numSeries += g.getSeries().size();
+            }
+            trace.setPreAggregationSampleSize(preAggregationSampleSize);
+            trace.setNumSeries(numSeries);
 
             return new FullQuery(trace, ImmutableList.of(), groups, result.getStatistics(),
                 new ResultLimits(limits.build()));

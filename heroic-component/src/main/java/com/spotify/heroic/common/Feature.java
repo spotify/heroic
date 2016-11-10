@@ -46,7 +46,15 @@ public enum Feature {
      * This will assert that there are data outside of the range queried for, which is a useful
      * feature when using a dashboarding system.
      */
-    SHIFT_RANGE("com.spotify.heroic.shift_range");
+    SHIFT_RANGE("com.spotify.heroic.shift_range"),
+
+    /**
+     * Enable feature to log queries 1) as they arrive & 2) when they're complete
+     * <p>
+     * This will write to two logs, query.access.log and query.done.log with log level TRACE. Please
+     * make sure to handle this in log4j config.
+     */
+    LOG_QUERIES("com.spotify.heroic.log_queries");
 
     private final String id;
 

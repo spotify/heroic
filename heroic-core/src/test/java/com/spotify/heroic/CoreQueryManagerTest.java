@@ -39,7 +39,7 @@ public class CoreQueryManagerTest {
     public void setup() {
         manager =
             new CoreQueryManager(Features.empty(), async, cluster, parser, queryCache, aggregations,
-                OptionalLimit.empty());
+                OptionalLimit.empty(), false, OptionalLimit.empty());
     }
 
     @Test

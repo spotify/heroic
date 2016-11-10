@@ -23,15 +23,27 @@ package com.spotify.heroic.metric;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.spotify.heroic.QueryOriginContext;
 import com.spotify.heroic.aggregation.AggregationCombiner;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.OptionalLimit;
 import eu.toolchain.async.Collector;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.TimeZone;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 import lombok.Data;
 
 import java.util.ArrayList;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+@Slf4j
 @Data
 public class QueryResult {
     /**
@@ -95,8 +107,8 @@ public class QueryResult {
                 limits.add(ResultLimit.GROUP);
             }
 
-            return new QueryResult(range, groupLimit.limitList(groups), errors, trace,
-                new ResultLimits(limits.build()));
+            return new QueryResult(range, groupLimit.limitList(groups), errors,
+                trace, new ResultLimits(limits.build()));
         };
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2016 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,24 +19,22 @@
  * under the License.
  */
 
-package com.spotify.heroic;
+package com.spotify.heroic.http.query;
 
-import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.common.FeatureSet;
-import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.metric.MetricType;
-import lombok.Data;
+import com.spotify.heroic.QueryOriginContext;
+import javax.servlet.http.HttpServletRequest;
 
-import java.util.Optional;
+public class CoreQueryOriginContextFactory {
 
-@Data
-public class Query {
-    private final Optional<Aggregation> aggregation;
-    private final Optional<MetricType> source;
-    private final Optional<QueryDateRange> range;
-    private final Optional<Filter> filter;
-    private final Optional<QueryOptions> options;
-    /* set of experimental features to enable */
-    private final Optional<FeatureSet> features;
-    private final Optional<QueryOriginContext> originContext;
+    public static QueryOriginContext create(HttpServletRequest httpServletRequest, String query) {
+        String userAgent = httpServletRequest.getHeader("User-Agent");
+        String clientId = httpServletRequest.getHeader("X-Client-Id");
+        return QueryOriginContext.of(httpServletRequest.getRemoteAddr(),
+            httpServletRequest.getRemoteHost(),
+            httpServletRequest.getRemotePort(),
+            userAgent == null ? "" : userAgent,
+            clientId == null ? "" : clientId,
+            query);
+    }
+
 }

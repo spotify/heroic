@@ -50,6 +50,7 @@ public class QueryBuilder {
     private Optional<Aggregation> aggregation = Optional.empty();
     private Optional<QueryOptions> options = Optional.empty();
     private Optional<FeatureSet> features = Optional.empty();
+    private Optional<QueryOriginContext> originContext = Optional.empty();
 
     /**
      * Specify a set of tags that has to match.
@@ -147,8 +148,15 @@ public class QueryBuilder {
         return this;
     }
 
+    public QueryBuilder originContext(final Optional<QueryOriginContext> m) {
+        checkNotNull(m, "originContext");
+        this.originContext = m;
+        return this;
+    }
+
     public Query build() {
-        return new Query(legacyAggregation(), source, range, legacyFilter(), options, features);
+        return new Query(legacyAggregation(), source, range, legacyFilter(), options, features,
+            originContext);
     }
 
     /**
