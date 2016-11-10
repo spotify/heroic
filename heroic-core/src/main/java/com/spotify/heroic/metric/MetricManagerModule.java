@@ -54,6 +54,7 @@ import static java.util.Optional.of;
 public class MetricManagerModule {
     public static final int DEFAULT_FETCH_PARALLELISM = 100;
     public static final boolean DEFAULT_FAIL_ON_LIMITS = false;
+    public static final long DEFAULT_LOG_QUERIES_THRESHOLD = 1000000;
 
     private final List<MetricModule> backends;
     private final Optional<List<String>> defaultBackends;
@@ -87,6 +88,11 @@ public class MetricManagerModule {
      * If {@code true}, will cause any limits applied to be reported as a failure.
      */
     private final boolean failOnLimits;
+
+    /**
+     * Limit which queries that are logged
+     */
+    private final OptionalLimit logQueriesThresholdDataPoints;
 
     @Provides
     @MetricScope
@@ -184,6 +190,13 @@ public class MetricManagerModule {
         return failOnLimits;
     }
 
+    @Provides
+    @MetricScope
+    @Named("logQueriesThresholdDataPoints")
+    public OptionalLimit logQueriesThresholdDataPoints() {
+        return logQueriesThresholdDataPoints;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -199,6 +212,7 @@ public class MetricManagerModule {
         private OptionalLimit dataLimit = OptionalLimit.empty();
         private Optional<Integer> fetchParallelism = empty();
         private Optional<Boolean> failOnLimits = empty();
+        private OptionalLimit logQueriesThresholdDataPoints = OptionalLimit.empty();
 
         public Builder backends(List<MetricModule> backends) {
             this.backends = of(backends);
@@ -240,6 +254,11 @@ public class MetricManagerModule {
             return this;
         }
 
+        public Builder logQueriesThresholdDataPoints(long logQueriesThresholdDataPoints) {
+            this.logQueriesThresholdDataPoints = OptionalLimit.of(logQueriesThresholdDataPoints);
+            return this;
+        }
+
         public Builder merge(final Builder o) {
             // @formatter:off
             return new Builder(
@@ -250,7 +269,8 @@ public class MetricManagerModule {
                 aggregationLimit.orElse(o.aggregationLimit),
                 dataLimit.orElse(o.dataLimit),
                 pickOptional(fetchParallelism, o.fetchParallelism),
-                pickOptional(failOnLimits, o.failOnLimits)
+                pickOptional(failOnLimits, o.failOnLimits),
+                logQueriesThresholdDataPoints.orElse(o.logQueriesThresholdDataPoints)
             );
             // @formatter:on
         }
@@ -265,7 +285,9 @@ public class MetricManagerModule {
                 aggregationLimit,
                 dataLimit,
                 fetchParallelism.orElse(DEFAULT_FETCH_PARALLELISM),
-                failOnLimits.orElse(DEFAULT_FAIL_ON_LIMITS)
+                failOnLimits.orElse(DEFAULT_FAIL_ON_LIMITS),
+                logQueriesThresholdDataPoints.orElse(
+                    OptionalLimit.of(DEFAULT_LOG_QUERIES_THRESHOLD))
             );
             // @formatter:on
         }

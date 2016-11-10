@@ -32,6 +32,7 @@ import javax.inject.Named;
 @Data
 public class QueryModule {
     private final OptionalLimit groupLimit;
+    private final OptionalLimit logQueriesThresholdDataPoints;
 
     @Provides
     @QueryScope
@@ -39,4 +40,12 @@ public class QueryModule {
     public OptionalLimit groupLimit() {
         return groupLimit;
     }
+
+    @Provides
+    @QueryScope
+    @Named("logQueriesThresholdDataPoints")
+    public OptionalLimit logQueriesThresholdDataPoints() {
+        return logQueriesThresholdDataPoints;
+    }
+
 }
