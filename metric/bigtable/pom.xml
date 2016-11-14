@@ -22,7 +22,7 @@
   </description>
 
   <properties>
-    <bigtable.version>0.9.3</bigtable.version>
+    <bigtable.version>0.9.4</bigtable.version>
   </properties>
 
   <dependencies>

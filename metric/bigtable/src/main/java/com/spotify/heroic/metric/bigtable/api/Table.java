@@ -68,7 +68,7 @@ public class Table {
         final ImmutableMap.Builder<String, ColumnFamily> columnFamilies = ImmutableMap.builder();
 
         for (final Entry<String, com.google.bigtable.admin.v2.ColumnFamily> e : table
-            .getColumnFamiliesMap()
+            .getColumnFamilies()
             .entrySet()) {
             final ColumnFamily columnFamily = new ColumnFamily(cluster, tableId, e.getKey());
             columnFamilies.put(columnFamily.getName(), columnFamily);
