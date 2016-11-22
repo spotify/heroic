@@ -25,17 +25,36 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.io.PrintWriter;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import lombok.extern.slf4j.Slf4j;
 
+@AllArgsConstructor
 @Data
+@Slf4j
 public class QueryTrace {
     private final Identifier what;
     private final long elapsed;
     private final List<QueryTrace> children;
+
+    private long preAggregationSampleSize;
+    private long numSeries;
+
+    public QueryTrace(final Identifier what, final long elapsed, final List<QueryTrace> children) {
+        this.what = what;
+        this.elapsed = elapsed;
+        this.children = children;
+        preAggregationSampleSize = 0;
+        numSeries = 0;
+        for (QueryTrace child : children) {
+            preAggregationSampleSize += child.getPreAggregationSampleSize();
+            numSeries += child.getNumSeries();
+        }
+    }
 
     public static QueryTrace of(final Identifier what) {
         return new QueryTrace(what, 0L, ImmutableList.of());
@@ -49,6 +68,15 @@ public class QueryTrace {
         final Identifier what, final long elapsed, final List<QueryTrace> children
     ) {
         return new QueryTrace(what, elapsed, children);
+    }
+
+    public static QueryTrace of(
+        final Identifier what, final long elapsed, final List<QueryTrace> children,
+        final long preAggregationSampleSize, final long numSeries
+    ) {
+        QueryTrace qt = new QueryTrace(what, elapsed, children, preAggregationSampleSize,
+                                       numSeries);
+        return qt;
     }
 
     public void formatTrace(PrintWriter out) {

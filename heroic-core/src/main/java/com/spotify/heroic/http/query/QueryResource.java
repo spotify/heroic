@@ -28,6 +28,8 @@ import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.metric.QueryResult;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.core.Context;
 import lombok.Data;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -66,9 +68,11 @@ public class QueryResource {
     @Path("metrics")
     @Consumes(MediaType.TEXT_PLAIN)
     public void metricsText(
-        @Suspended final AsyncResponse response, @QueryParam("group") String group, String query
+        @Suspended final AsyncResponse response, @QueryParam("group") String group,
+        @Context HttpServletRequest servletRequest, String query
     ) {
         final Query q = this.query.newQueryFromString(query).build();
+        q.setRequestMetadata(Optional.of(CoreQueryRequestMetadataFactory.create(servletRequest)));
 
         final QueryManager.Group g = this.query.useOptionalGroup(Optional.ofNullable(group));
         final AsyncFuture<QueryResult> callback = g.query(q);
@@ -81,9 +85,10 @@ public class QueryResource {
     @Consumes(MediaType.APPLICATION_JSON)
     public void metrics(
         @Suspended final AsyncResponse response, @QueryParam("group") String group,
-        QueryMetrics query
+        @Context HttpServletRequest servletRequest, QueryMetrics query
     ) {
         final Query q = query.toQueryBuilder(this.query::newQueryFromString).build();
+        q.setRequestMetadata(Optional.of(CoreQueryRequestMetadataFactory.create(servletRequest)));
 
         final QueryManager.Group g = this.query.useOptionalGroup(Optional.ofNullable(group));
         final AsyncFuture<QueryResult> callback = g.query(q);
@@ -95,7 +100,7 @@ public class QueryResource {
     @Path("batch")
     public void metrics(
         @Suspended final AsyncResponse response, @QueryParam("backend") String group,
-        final QueryBatch query
+        @Context HttpServletRequest servletRequest, final QueryBatch query
     ) {
         final QueryManager.Group g = this.query.useOptionalGroup(Optional.ofNullable(group));
 
@@ -108,6 +113,8 @@ public class QueryResource {
                     .toQueryBuilder(this.query::newQueryFromString)
                     .rangeIfAbsent(query.getRange())
                     .build();
+                q.setRequestMetadata(Optional.of(CoreQueryRequestMetadataFactory.
+                    create(servletRequest)));
 
                 futures.add(g.query(q).directTransform(r -> Pair.of(e.getKey(), r)));
             }
