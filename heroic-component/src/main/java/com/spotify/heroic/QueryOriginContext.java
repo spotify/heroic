@@ -21,33 +21,32 @@
 
 package com.spotify.heroic;
 
+import java.util.UUID;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
+@AllArgsConstructor
 @Data
-public class QueryRequestMetadata {
+public class QueryOriginContext {
     private final String remoteAddr;
     private final String remoteHost;
     private final int    remotePort;
     private final String remoteUserAgent;
     private final String remoteClientId;
+    private final UUID   queryId;
+    private final String queryString;
 
-    public QueryRequestMetadata() {
-        remoteAddr = "";
-        remoteHost = "";
-        remotePort = 0;
-        remoteUserAgent = "";
-        remoteClientId = "";
+    public static QueryOriginContext of() {
+        return new QueryOriginContext("", "", 0, "", "", UUID.randomUUID(), "");
     }
 
-    public QueryRequestMetadata(final String  remoteAddr,
-                                final String  remoteHost,
-                                final int     remotePort,
-                                final String  remoteUserAgent,
-                                final String  remoteClientId) {
-        this.remoteAddr = remoteAddr;
-        this.remoteHost = remoteHost;
-        this.remotePort = remotePort;
-        this.remoteUserAgent = remoteUserAgent;
-        this.remoteClientId = remoteClientId;
+    public static QueryOriginContext of(final String  remoteAddr,
+                                        final String  remoteHost,
+                                        final int     remotePort,
+                                        final String  remoteUserAgent,
+                                        final String  remoteClientId,
+                                        final String  queryString) {
+        return new QueryOriginContext(remoteAddr, remoteHost, remotePort, remoteUserAgent,
+                                      remoteClientId, UUID.randomUUID(), queryString);
     }
 }

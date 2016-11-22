@@ -21,16 +21,26 @@
 
 package com.spotify.heroic.http.query;
 
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.Query;
 import com.spotify.heroic.QueryManager;
+import com.spotify.heroic.QueryOriginContext;
 import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.metric.QueryResult;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.TimeZone;
+import javax.inject.Named;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Context;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 
 import javax.inject.Inject;
@@ -48,20 +58,27 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Path("query")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Slf4j
 public class QueryResource {
+    private static Logger queryAccessLog = LoggerFactory.getLogger("query.access.log");
     private final JavaxRestFramework httpAsync;
     private final QueryManager query;
     private final AsyncFramework async;
+    private final ObjectMapper objectMapper;
 
     @Inject
-    public QueryResource(JavaxRestFramework httpAsync, QueryManager query, AsyncFramework async) {
+    public QueryResource(JavaxRestFramework httpAsync, QueryManager query, AsyncFramework async,
+                         @Named(MediaType.APPLICATION_JSON) final ObjectMapper mapper) {
         this.httpAsync = httpAsync;
         this.query = query;
         this.async = async;
+        this.objectMapper = mapper;
     }
 
     @POST
@@ -69,10 +86,14 @@ public class QueryResource {
     @Consumes(MediaType.TEXT_PLAIN)
     public void metricsText(
         @Suspended final AsyncResponse response, @QueryParam("group") String group,
-        @Context HttpServletRequest servletRequest, String query
+        @Context HttpServletRequest servletReq, String query
     ) {
-        final Query q = this.query.newQueryFromString(query).build();
-        q.setRequestMetadata(Optional.of(CoreQueryRequestMetadataFactory.create(servletRequest)));
+        final Query q = this.query.newQueryFromString(query)
+            .queryRequestMetadata(Optional.of(
+                CoreQueryOriginContextFactory.create(servletReq, query)))
+            .build();
+
+        logQueryAccess(query, q);
 
         final QueryManager.Group g = this.query.useOptionalGroup(Optional.ofNullable(group));
         final AsyncFuture<QueryResult> callback = g.query(q);
@@ -83,12 +104,22 @@ public class QueryResource {
     @POST
     @Path("metrics")
     @Consumes(MediaType.APPLICATION_JSON)
-    public void metrics(
+    public void metricsJson(
         @Suspended final AsyncResponse response, @QueryParam("group") String group,
-        @Context HttpServletRequest servletRequest, QueryMetrics query
+        @Context HttpServletRequest servletReq, String queryString
     ) {
-        final Query q = query.toQueryBuilder(this.query::newQueryFromString).build();
-        q.setRequestMetadata(Optional.of(CoreQueryRequestMetadataFactory.create(servletRequest)));
+        QueryMetrics query = parseQueryMetricsFrom(queryString);
+        if (query == null) {
+            response.cancel();
+            return;
+        }
+
+        final Query q = query.toQueryBuilder(this.query::newQueryFromString)
+            .queryRequestMetadata(Optional.of(
+                CoreQueryOriginContextFactory.create(servletReq, queryString)))
+            .build();
+
+        logQueryAccess(queryString, q);
 
         final QueryManager.Group g = this.query.useOptionalGroup(Optional.ofNullable(group));
         final AsyncFuture<QueryResult> callback = g.query(q);
@@ -98,10 +129,18 @@ public class QueryResource {
 
     @POST
     @Path("batch")
-    public void metrics(
+    public void metricsBatch(
         @Suspended final AsyncResponse response, @QueryParam("backend") String group,
-        @Context HttpServletRequest servletRequest, final QueryBatch query
+        @Context HttpServletRequest servletReq, final String queryString
     ) {
+        QueryBatch query = parseQueryBatchFrom(queryString);
+        if (query == null) {
+            response.cancel();
+            return;
+        }
+
+        logQueryAccess(queryString, null);
+
         final QueryManager.Group g = this.query.useOptionalGroup(Optional.ofNullable(group));
 
         final List<AsyncFuture<Pair<String, QueryResult>>> futures = new ArrayList<>();
@@ -112,9 +151,9 @@ public class QueryResource {
                     .getValue()
                     .toQueryBuilder(this.query::newQueryFromString)
                     .rangeIfAbsent(query.getRange())
+                    .queryRequestMetadata(Optional.of(
+                        CoreQueryOriginContextFactory.create(servletReq, queryString)))
                     .build();
-                q.setRequestMetadata(Optional.of(CoreQueryRequestMetadataFactory.
-                    create(servletRequest)));
 
                 futures.add(g.query(q).directTransform(r -> Pair.of(e.getKey(), r)));
             }
@@ -148,6 +187,62 @@ public class QueryResource {
         httpAsync.bind(response, callback,
             r -> new QueryMetricsResponse(r.getRange(), r.getGroups(), r.getErrors(), r.getTrace(),
                 r.getLimits()));
+    }
+
+    private void logQueryAccess(String query, Query q) {
+        String idString;
+        QueryOriginContext originContext;
+        if (q != null && q.getOriginContext().isPresent()) {
+            originContext = q.getOriginContext().get();
+            idString = originContext.getQueryId().toString();
+        } else {
+            originContext = QueryOriginContext.of();
+            idString = "";
+        }
+
+        TimeZone tz = TimeZone.getTimeZone("UTC");
+        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'");
+        dateFormat.setTimeZone(tz);
+        String currentTimeAsISO = dateFormat.format(new Date());
+
+        boolean isIPv6 = originContext.getRemoteAddr().indexOf(':') != -1;
+        String json = "{" +
+                      " \"@timestamp\": \"" + currentTimeAsISO + "\"," +
+                      " \"@message\": {" +
+                      " \"UUID\": \"" + originContext.getQueryId() + "\"," +
+                      " \"fromIP\": \"" +
+                      (isIPv6 ? "[" : "") + originContext.getRemoteAddr() + (isIPv6 ? "]" : "") +
+                      ":" + originContext.getRemotePort() + "\"" + "," +
+                      " \"fromHost\": \"" + originContext.getRemoteHost() + "\"," +
+                      " \"user-agent\": \"" + originContext.getRemoteUserAgent() + "\"," +
+                      " \"client-id\": \"" + originContext.getRemoteClientId() + "\"," +
+                      " \"query\": " + originContext.getQueryString() +
+                      "}" +
+                      "}";
+
+        queryAccessLog.trace(json);
+    }
+
+    private QueryMetrics parseQueryMetricsFrom(String queryString) {
+        QueryMetrics query = null;
+        try {
+            query = objectMapper.readValue(queryString, QueryMetrics.class);
+        } catch (IOException e) {
+            log.info("Failed to deserialize JSON to QueryMetrics object! \"" + queryString + "\"");
+            log.info("Error: " + e.toString());
+        }
+        return query;
+    }
+
+    private QueryBatch parseQueryBatchFrom(String queryString) {
+        QueryBatch query = null;
+        try {
+            query = objectMapper.readValue(queryString, QueryBatch.class);
+        } catch (IOException e) {
+            log.info("Failed to deserialize JSON to QueryBatch object! \"" + queryString + "\"");
+            log.info("Error: " + e.toString());
+        }
+        return query;
     }
 
     @Data

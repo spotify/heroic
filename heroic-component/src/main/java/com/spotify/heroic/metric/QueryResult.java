@@ -23,7 +23,7 @@ package com.spotify.heroic.metric;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.spotify.heroic.QueryRequestMetadata;
+import com.spotify.heroic.QueryOriginContext;
 import com.spotify.heroic.aggregation.AggregationCombiner;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.OptionalLimit;
@@ -46,7 +46,7 @@ import org.slf4j.LoggerFactory;
 @Slf4j
 @Data
 public class QueryResult {
-    private static Logger queryLog = LoggerFactory.getLogger("query.log");
+    private static Logger queryDoneLog = LoggerFactory.getLogger("query.done.log");
 
     /**
      * The range in which all result groups metric's should be contained in.
@@ -87,7 +87,7 @@ public class QueryResult {
         final QueryTrace.Identifier what, final DateRange range, final AggregationCombiner combiner,
         final OptionalLimit groupLimit,
         final FullQuery.Request request,
-        final QueryRequestMetadata requestMetadata,
+        final QueryOriginContext originContext,
         final boolean logQueries,
         final OptionalLimit logQueriesThresholdDataPoints
 
@@ -122,7 +122,7 @@ public class QueryResult {
             QueryResult queryResult = new QueryResult(range, groupLimit.limitList(groups), errors,
                                                       trace, new ResultLimits(limits.build()));
 
-            queryResult.logQueryInfo(request, requestMetadata,
+            queryResult.logQueryInfo(request, originContext,
                                      logQueries, logQueriesThresholdDataPoints);
 
             return queryResult;
@@ -130,7 +130,7 @@ public class QueryResult {
     }
 
     public void logQueryInfo(final FullQuery.Request request,
-                             final QueryRequestMetadata requestMetadata,
+                             final QueryOriginContext originContext,
                              final boolean logQueries,
                              final OptionalLimit logQueriesThresholdDataPoints
     ) {
@@ -160,10 +160,11 @@ public class QueryResult {
         dateFormat.setTimeZone(tz);
         String currentTimeAsISO = dateFormat.format(new Date());
 
-        boolean isIPv6 = requestMetadata.getRemoteAddr().indexOf(':') != -1;
+        boolean isIPv6 = originContext.getRemoteAddr().indexOf(':') != -1;
         String json = "{" +
                       " \"@timestamp\": \"" + currentTimeAsISO + "\"," +
                       " \"@message\": {" +
+                      " \"UUID\": \"" + originContext.getQueryId() + "\"," +
                       " \"numQueriesAboveThreshold\": " + currQueriesAboveThreshold + "," +
                       " \"totalQueries\": " + totalQueriesProcessed + "," +
                       " \"numDataPoints\": " + totalDataPoints + "," +
@@ -176,12 +177,12 @@ public class QueryResult {
                       "," +
                       " \"numSeries\": " + trace.getNumSeries() + "," +
                       " \"fromIP\": \"" +
-                      (isIPv6 ? "[" : "") + requestMetadata.getRemoteAddr() + (isIPv6 ? "]" : "") +
-                      ":" + requestMetadata.getRemotePort() + "\"" + "," +
-                      " \"fromHost\": \"" + requestMetadata.getRemoteHost() + "\"," +
-                      " \"user-agent\": \"" + requestMetadata.getRemoteUserAgent() + "\"," +
-                      " \"client-id\": \"" + requestMetadata.getRemoteClientId() + "\"," +
-                      " \"query\": \"" + escapeForJSON(request.toString()) + "\"," +
+                      (isIPv6 ? "[" : "") + originContext.getRemoteAddr() + (isIPv6 ? "]" : "") +
+                      ":" + originContext.getRemotePort() + "\"" + "," +
+                      " \"fromHost\": \"" + originContext.getRemoteHost() + "\"," +
+                      " \"user-agent\": \"" + originContext.getRemoteUserAgent() + "\"," +
+                      " \"client-id\": \"" + originContext.getRemoteClientId() + "\"," +
+                      " \"query\": " + originContext.getQueryString() + "," +
                       " \"children\": [";
 
         json += jsonForQueryTraceChildren(trace.getChildren());
@@ -190,7 +191,7 @@ public class QueryResult {
         json += "}";
         json += "}";
 
-        queryLog.info(json);
+        queryDoneLog.trace(json);
     }
 
     public String jsonForQueryTraceChildren(final List<QueryTrace> children) {
@@ -210,20 +211,6 @@ public class QueryResult {
             out += "]";
             out += "}";
             out += (iterator.hasNext() ? ", " : "");
-        }
-        return out;
-    }
-
-    public String escapeForJSON(String s) {
-        String out = new String();
-        for (char c : s.toCharArray()) {
-            if (c == '"') {
-                out += "\\\"";
-            } else if (c == '\\') {
-                out += "\\\\";
-            } else {
-                out += c;
-            }
         }
         return out;
     }

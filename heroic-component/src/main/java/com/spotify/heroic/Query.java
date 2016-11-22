@@ -38,6 +38,5 @@ public class Query {
     private final Optional<QueryOptions> options;
     /* set of experimental features to enable */
     private final Optional<FeatureSet> features;
-    private Optional<QueryRequestMetadata> requestMetadata =
-                                                    Optional.of(new QueryRequestMetadata());
+    private final Optional<QueryOriginContext> originContext;
 }
