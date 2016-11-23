@@ -49,6 +49,7 @@ import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 
+
 @ToString
 @RequiredArgsConstructor
 @Module
@@ -93,7 +94,7 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
                 return async.call(
                     new BigtableConnectionBuilder(project, cluster, credentials, async,
                         executorService, DEFAULT_DISABLE_BULK_MUTATIONS,
-                        DEFAULT_FLUSH_INTERVAL_SECONDS));
+                        DEFAULT_FLUSH_INTERVAL_SECONDS, Optional.empty()));
             }
 
             @Override
