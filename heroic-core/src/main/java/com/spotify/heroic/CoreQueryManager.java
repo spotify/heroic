@@ -97,12 +97,16 @@ public class CoreQueryManager implements QueryManager {
     private final QueryCache queryCache;
     private final AggregationFactory aggregations;
     private final OptionalLimit groupLimit;
+    private boolean logQueries;
+    private OptionalLimit logQueriesThresholdDataPoints;
 
     @Inject
     public CoreQueryManager(
         @Named("features") final Features features, final AsyncFramework async,
         final ClusterManager cluster, final QueryParser parser, final QueryCache queryCache,
-        final AggregationFactory aggregations, @Named("groupLimit") final OptionalLimit groupLimit
+        final AggregationFactory aggregations, @Named("groupLimit") final OptionalLimit groupLimit,
+        @Named("logQueries") final boolean logQueries,
+        @Named ("logQueriesThresholdDataPoints") final OptionalLimit logQueriesThresholdDataPoints
     ) {
         this.features = features;
         this.async = async;
@@ -111,6 +115,8 @@ public class CoreQueryManager implements QueryManager {
         this.queryCache = queryCache;
         this.aggregations = aggregations;
         this.groupLimit = groupLimit;
+        this.logQueries = logQueries;
+        this.logQueriesThresholdDataPoints = logQueriesThresholdDataPoints;
     }
 
     @Override
@@ -233,7 +239,10 @@ public class CoreQueryManager implements QueryManager {
                 final OptionalLimit limit = options.getGroupLimit().orElse(groupLimit);
 
                 return async.collect(futures,
-                    QueryResult.collectParts(QUERY, range, combiner, limit));
+                    QueryResult.collectParts(QUERY, range, combiner, limit,
+                                         request,
+                                         q.getRequestMetadata().orElse(new QueryRequestMetadata()),
+                                         logQueries, logQueriesThresholdDataPoints));
             });
         }
 

@@ -243,7 +243,6 @@
 
     <profile>
       <id>repackaged</id>
-
       <modules>
         <module>repackaged/bigtable</module>
       </modules>
