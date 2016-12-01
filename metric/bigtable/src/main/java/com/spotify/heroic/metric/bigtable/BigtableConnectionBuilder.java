@@ -23,6 +23,7 @@ package com.spotify.heroic.metric.bigtable;
 
 import com.google.appengine.repackaged.com.google.common.collect.ImmutableList;
 import com.google.cloud.bigtable.config.BigtableOptions;
+import com.google.cloud.bigtable.config.BulkOptions;
 import com.google.cloud.bigtable.config.CredentialOptions;
 import com.google.cloud.bigtable.config.RetryOptions;
 import com.google.cloud.bigtable.grpc.BigtableSession;
@@ -38,6 +39,7 @@ import eu.toolchain.async.AsyncFuture;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 
@@ -56,6 +58,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
 
     private final boolean disableBulkMutations;
     private final int flushIntervalSeconds;
+    private final Optional<Integer> batchSize;
 
     @Override
     public BigtableConnection call() throws Exception {
@@ -66,6 +69,9 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
             .setAllowRetriesWithoutTimestamp(true)
             .build();
 
+        final BulkOptions bulkOptions = batchSize
+            .map(integer -> new BulkOptions.Builder().setBulkMaxRowKeyCount(integer).build())
+            .orElseGet(() -> new BulkOptions.Builder().build());
 
         final BigtableOptions options = new BigtableOptions.Builder()
             .setProjectId(project)
@@ -74,6 +80,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
             .setDataChannelCount(64)
             .setCredentialOptions(credentials)
             .setRetryOptions(retryOptions)
+            .setBulkOptions(bulkOptions)
             .build();
 
         final BigtableSession session = new BigtableSession(options, executorService);
