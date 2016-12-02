@@ -67,6 +67,11 @@ public class CoreQueryLogger implements QueryLogger {
     }
 
     public void logQueryAccess(Query query) {
+        if (!logQueries) {
+            log.info("QueryResult:logQueryAccess won't log queries");
+            return;
+        }
+
         String idString;
         QueryOriginContext originContext;
         if (query != null && query.getOriginContext().isPresent()) {
@@ -116,23 +121,23 @@ public class CoreQueryLogger implements QueryLogger {
         final QueryOriginContext originContext = query.getOriginContext()
             .orElse(QueryOriginContext.of());
 
-        log.info("QueryResult:logQueryInfo entering");
+        log.info("QueryResult:logQueryDone entering");
 
         if (!logQueries) {
-            log.info("QueryResult:logQueryInfo won't log queries");
+            log.info("QueryResult:logQueryDone won't log queries");
             return;
         }
 
         totalQueriesProcessed.increment();
 
-        long totalDataPoints = 0;
+        long postAggregationDataPoints = 0;
         for (ShardedResultGroup g : groups) {
-            totalDataPoints += g.getMetrics().getData().size();
+            postAggregationDataPoints += g.getMetrics().getData().size();
         }
 
-        if (totalDataPoints < logQueriesThresholdDataPoints.orElse(
+        if (postAggregationDataPoints < logQueriesThresholdDataPoints.orElse(
             OptionalLimit.of(0)).asLong().get()) {
-            log.info("QueryResult:logQueryInfo Won't log because of threshold");
+            log.info("QueryResult:logQueryDone Won't log because of threshold");
             return;
         }
 
@@ -144,6 +149,11 @@ public class CoreQueryLogger implements QueryLogger {
         String currentTimeAsISO = dateFormat.format(new Date());
 
         boolean isIPv6 = originContext.getRemoteAddr().indexOf(':') != -1;
+        long postAggregationDataPointsPerS = 0;
+        if (trace.getElapsed() != 0) {
+            postAggregationDataPointsPerS =
+                (1000000 * postAggregationDataPoints) / trace.getElapsed();
+        }
         String json = "{" +
                       " \"@timestamp\": \"" + currentTimeAsISO + "\"," +
                       " \"status\": \"" + status + "\"," +
@@ -152,15 +162,13 @@ public class CoreQueryLogger implements QueryLogger {
                       " \"UUID\": \"" + originContext.getQueryId() + "\"," +
                       " \"numQueriesAboveThreshold\": " + currQueriesAboveThreshold + "," +
                       " \"totalQueries\": " + totalQueriesProcessed + "," +
-                      " \"numDataPoints\": " + totalDataPoints + "," +
+                      " \"postAggregationDataPoints\": " + postAggregationDataPoints + "," +
                       " \"elapsed\": " + trace.getElapsed() + "," +
-                      " \"total/s\": " + (trace.getElapsed() == 0 ?
-                                          0 : (1000000 * totalDataPoints) / trace.getElapsed()) +
-                      "," +
-                      " \"trace-what\": \"" + trace.getWhat().toString() + "\"," +
+                      " \"postAggregationDataPoints/s\": " + postAggregationDataPointsPerS + "," +
                       " \"preAggregationSampleSize\": " + trace.getPreAggregationSampleSize() +
                       "," +
                       " \"numSeries\": " + trace.getNumSeries() + "," +
+                      " \"trace-what\": \"" + trace.getWhat().toString() + "\"," +
                       " \"fromIP\": \"" +
                       (isIPv6 ? "[" : "") + originContext.getRemoteAddr() + (isIPv6 ? "]" : "") +
                       ":" + originContext.getRemotePort() + "\"" + "," +
