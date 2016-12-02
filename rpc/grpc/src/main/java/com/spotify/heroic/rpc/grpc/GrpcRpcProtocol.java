@@ -125,11 +125,8 @@ public class GrpcRpcProtocol implements RpcProtocol {
             @Override
             public AsyncFuture<Void> destruct(final ManagedChannel value) throws Exception {
                 return async.call(() -> {
-                    log.info("ManagedChannel::destruct will shutdown");
                     value.shutdown();
-                    boolean didTerminate = value.awaitTermination(10, TimeUnit.SECONDS);
-                    log.info("ManagedChannel::destruct has " + (didTerminate ? "" : "NOT") +
-                             " terminated");
+                    value.awaitTermination(10, TimeUnit.SECONDS);
                     return null;
                 });
             }
