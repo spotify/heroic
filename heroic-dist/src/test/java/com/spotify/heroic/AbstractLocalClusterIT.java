@@ -153,7 +153,7 @@ public abstract class AbstractLocalClusterIT {
                 discovery = new StaticListDiscoveryModule(uris);
                 break;
             case "grpc":
-                protocol = GrpcRpcProtocolModule.builder().build();
+                protocol = GrpcRpcProtocolModule.builder().port(0).build();
                 discovery = new StaticListDiscoveryModule(ImmutableList.of());
                 break;
             default:
