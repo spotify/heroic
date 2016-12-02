@@ -93,8 +93,6 @@ public class QueryResource {
                 CoreQueryOriginContextFactory.create(servletReq, query)))
             .build();
 
-        logQueryAccess(query, q);
-
         final QueryManager.Group g = this.query.useOptionalGroup(Optional.ofNullable(group));
         final AsyncFuture<QueryResult> callback = g.query(q);
 
@@ -119,8 +117,6 @@ public class QueryResource {
                 CoreQueryOriginContextFactory.create(servletReq, queryString)))
             .build();
 
-        logQueryAccess(queryString, q);
-
         final QueryManager.Group g = this.query.useOptionalGroup(Optional.ofNullable(group));
         final AsyncFuture<QueryResult> callback = g.query(q);
 
@@ -138,8 +134,6 @@ public class QueryResource {
             response.cancel();
             return;
         }
-
-        logQueryAccess(queryString, null);
 
         final QueryManager.Group g = this.query.useOptionalGroup(Optional.ofNullable(group));
 
@@ -187,40 +181,6 @@ public class QueryResource {
         httpAsync.bind(response, callback,
             r -> new QueryMetricsResponse(r.getRange(), r.getGroups(), r.getErrors(), r.getTrace(),
                 r.getLimits()));
-    }
-
-    private void logQueryAccess(String query, Query q) {
-        String idString;
-        QueryOriginContext originContext;
-        if (q != null && q.getOriginContext().isPresent()) {
-            originContext = q.getOriginContext().get();
-            idString = originContext.getQueryId().toString();
-        } else {
-            originContext = QueryOriginContext.of();
-            idString = "";
-        }
-
-        TimeZone tz = TimeZone.getTimeZone("UTC");
-        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'");
-        dateFormat.setTimeZone(tz);
-        String currentTimeAsISO = dateFormat.format(new Date());
-
-        boolean isIPv6 = originContext.getRemoteAddr().indexOf(':') != -1;
-        String json = "{" +
-                      " \"@timestamp\": \"" + currentTimeAsISO + "\"," +
-                      " \"@message\": {" +
-                      " \"UUID\": \"" + originContext.getQueryId() + "\"," +
-                      " \"fromIP\": \"" +
-                      (isIPv6 ? "[" : "") + originContext.getRemoteAddr() + (isIPv6 ? "]" : "") +
-                      ":" + originContext.getRemotePort() + "\"" + "," +
-                      " \"fromHost\": \"" + originContext.getRemoteHost() + "\"," +
-                      " \"user-agent\": \"" + originContext.getRemoteUserAgent() + "\"," +
-                      " \"client-id\": \"" + originContext.getRemoteClientId() + "\"," +
-                      " \"query\": " + originContext.getQueryString() +
-                      "}" +
-                      "}";
-
-        queryAccessLog.trace(json);
     }
 
     private QueryMetrics parseQueryMetricsFrom(String queryString) {

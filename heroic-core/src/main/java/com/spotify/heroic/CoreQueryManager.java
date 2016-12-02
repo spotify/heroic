@@ -97,16 +97,14 @@ public class CoreQueryManager implements QueryManager {
     private final QueryCache queryCache;
     private final AggregationFactory aggregations;
     private final OptionalLimit groupLimit;
-    private boolean logQueries;
-    private OptionalLimit logQueriesThresholdDataPoints;
+    private QueryLogger queryLogger;
 
     @Inject
     public CoreQueryManager(
         @Named("features") final Features features, final AsyncFramework async,
         final ClusterManager cluster, final QueryParser parser, final QueryCache queryCache,
         final AggregationFactory aggregations, @Named("groupLimit") final OptionalLimit groupLimit,
-        @Named("logQueries") final boolean logQueries,
-        @Named ("logQueriesThresholdDataPoints") final OptionalLimit logQueriesThresholdDataPoints
+        CoreQueryLogger queryLogger
     ) {
         this.features = features;
         this.async = async;
@@ -115,8 +113,7 @@ public class CoreQueryManager implements QueryManager {
         this.queryCache = queryCache;
         this.aggregations = aggregations;
         this.groupLimit = groupLimit;
-        this.logQueries = logQueries;
-        this.logQueriesThresholdDataPoints = logQueriesThresholdDataPoints;
+        this.queryLogger = queryLogger;
     }
 
     @Override
@@ -182,6 +179,8 @@ public class CoreQueryManager implements QueryManager {
 
         @Override
         public AsyncFuture<QueryResult> query(Query q) {
+            queryLogger.logQueryAccess(q);
+
             final List<AsyncFuture<QueryResultPart>> futures = new ArrayList<>();
 
             final MetricType source = q.getSource().orElse(MetricType.POINT);
@@ -239,10 +238,15 @@ public class CoreQueryManager implements QueryManager {
                 final OptionalLimit limit = options.getGroupLimit().orElse(groupLimit);
 
                 return async.collect(futures,
-                    QueryResult.collectParts(QUERY, range, combiner, limit,
-                                         request,
-                                         q.getOriginContext().orElse(QueryOriginContext.of()),
-                                         logQueries, logQueriesThresholdDataPoints));
+                    QueryResult.collectParts(QUERY, range, combiner, limit))
+                    .directTransform(queryResult -> {
+                        queryLogger.logQueryResolved(q, queryResult);
+                        return queryResult;
+                    });
+                /*
+                 * FIXME: Is this a suitable place to do catchFailed and catchCancelled to log
+                 * those? What to return? An empty QueryResult? Or is that handled somewhere else?
+                 */
             });
         }
 
