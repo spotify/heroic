@@ -28,7 +28,7 @@ public class CoreQueryOriginContextFactory {
 
     public static QueryOriginContext create(HttpServletRequest httpServletRequest, String query) {
         String userAgent = httpServletRequest.getHeader("User-Agent");
-        String clientId = httpServletRequest.getHeader("X-Alient-Client-Id");
+        String clientId = httpServletRequest.getHeader("X-Client-Id");
         return QueryOriginContext.of(httpServletRequest.getRemoteAddr(),
                                      httpServletRequest.getRemoteHost(),
                                      httpServletRequest.getRemotePort(),
