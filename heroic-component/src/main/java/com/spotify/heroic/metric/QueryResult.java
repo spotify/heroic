@@ -23,7 +23,7 @@ package com.spotify.heroic.metric;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.spotify.heroic.QueryRequestMetadata;
+import com.spotify.heroic.QueryOriginContext;
 import com.spotify.heroic.aggregation.AggregationCombiner;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.OptionalLimit;
@@ -46,7 +46,7 @@ import org.slf4j.LoggerFactory;
 @Slf4j
 @Data
 public class QueryResult {
-    private static Logger queryLog = LoggerFactory.getLogger("query.log");
+    private static Logger queryDoneLog = LoggerFactory.getLogger("query.done.log");
 
     /**
      * The range in which all result groups metric's should be contained in.
@@ -85,12 +85,7 @@ public class QueryResult {
      */
     public static Collector<QueryResultPart, QueryResult> collectParts(
         final QueryTrace.Identifier what, final DateRange range, final AggregationCombiner combiner,
-        final OptionalLimit groupLimit,
-        final FullQuery.Request request,
-        final QueryRequestMetadata requestMetadata,
-        final boolean logQueries,
-        final OptionalLimit logQueriesThresholdDataPoints
-
+        final OptionalLimit groupLimit
     ) {
         final QueryTrace.NamedWatch w = QueryTrace.watch(what);
 
@@ -119,112 +114,8 @@ public class QueryResult {
                 limits.add(ResultLimit.GROUP);
             }
 
-            QueryResult queryResult = new QueryResult(range, groupLimit.limitList(groups), errors,
-                                                      trace, new ResultLimits(limits.build()));
-
-            queryResult.logQueryInfo(request, requestMetadata,
-                                     logQueries, logQueriesThresholdDataPoints);
-
-            return queryResult;
+            return new QueryResult(range, groupLimit.limitList(groups), errors,
+                                   trace, new ResultLimits(limits.build()));
         };
-    }
-
-    public void logQueryInfo(final FullQuery.Request request,
-                             final QueryRequestMetadata requestMetadata,
-                             final boolean logQueries,
-                             final OptionalLimit logQueriesThresholdDataPoints
-    ) {
-        log.info("QueryResult:logQueryInfo entering");
-        if (!logQueries) {
-            log.info("QueryResult:logQueryInfo won't log queries");
-            return;
-        }
-
-        totalQueriesProcessed.increment();
-
-        long totalDataPoints = 0;
-        for (ShardedResultGroup g : groups) {
-            totalDataPoints += g.getMetrics().getData().size();
-        }
-
-        if (totalDataPoints < logQueriesThresholdDataPoints.orElse(
-                                    OptionalLimit.of(0)).asLong().get()) {
-            log.info("QueryResult:logQueryInfo Won't log because of threshold");
-            return;
-        }
-
-        long currQueriesAboveThreshold = queriesAboveThreshold.incrementAndGet();
-
-        TimeZone tz = TimeZone.getTimeZone("UTC");
-        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'");
-        dateFormat.setTimeZone(tz);
-        String currentTimeAsISO = dateFormat.format(new Date());
-
-        boolean isIPv6 = requestMetadata.getRemoteAddr().indexOf(':') != -1;
-        String json = "{" +
-                      " \"@timestamp\": \"" + currentTimeAsISO + "\"," +
-                      " \"@message\": {" +
-                      " \"numQueriesAboveThreshold\": " + currQueriesAboveThreshold + "," +
-                      " \"totalQueries\": " + totalQueriesProcessed + "," +
-                      " \"numDataPoints\": " + totalDataPoints + "," +
-                      " \"elapsed\": " + trace.getElapsed() + "," +
-                      " \"total/s\": " + (trace.getElapsed() == 0 ?
-                                          0 : (1000000 * totalDataPoints) / trace.getElapsed()) +
-                      "," +
-                      " \"trace-what\": \"" + trace.getWhat().toString() + "\"," +
-                      " \"preAggregationSampleSize\": " + trace.getPreAggregationSampleSize() +
-                      "," +
-                      " \"numSeries\": " + trace.getNumSeries() + "," +
-                      " \"fromIP\": \"" +
-                      (isIPv6 ? "[" : "") + requestMetadata.getRemoteAddr() + (isIPv6 ? "]" : "") +
-                      ":" + requestMetadata.getRemotePort() + "\"" + "," +
-                      " \"fromHost\": \"" + requestMetadata.getRemoteHost() + "\"," +
-                      " \"user-agent\": \"" + requestMetadata.getRemoteUserAgent() + "\"," +
-                      " \"client-id\": \"" + requestMetadata.getRemoteClientId() + "\"," +
-                      " \"query\": \"" + escapeForJSON(request.toString()) + "\"," +
-                      " \"children\": [";
-
-        json += jsonForQueryTraceChildren(trace.getChildren());
-
-        json += "]";
-        json += "}";
-        json += "}";
-
-        queryLog.info(json);
-    }
-
-    public String jsonForQueryTraceChildren(final List<QueryTrace> children) {
-
-        String out = new String();
-        Iterator<QueryTrace> iterator = children.iterator();
-        while (iterator.hasNext()) {
-            QueryTrace child = iterator.next();
-            out += "{" +
-                   " \"what\": \"" + child.getWhat().toString() + "\"," +
-                   " \"elapsed\": " + child.getElapsed() + "," +
-                   " \"preAggregationSampleSize\": " + child.getPreAggregationSampleSize() +
-                   "," +
-                   " \"numSeries\": " + child.getNumSeries() + "," +
-                   " \"children\": [";
-            out += jsonForQueryTraceChildren(child.getChildren());
-            out += "]";
-            out += "}";
-            out += (iterator.hasNext() ? ", " : "");
-        }
-        return out;
-    }
-
-    public String escapeForJSON(String s) {
-        String out = new String();
-        for (char c : s.toCharArray()) {
-            if (c == '"') {
-                out += "\\\"";
-            } else if (c == '\\') {
-                out += "\\\\";
-            } else {
-                out += c;
-            }
-        }
-        return out;
     }
 }

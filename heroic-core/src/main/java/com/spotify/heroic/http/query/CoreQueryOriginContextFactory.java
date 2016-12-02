@@ -21,19 +21,20 @@
 
 package com.spotify.heroic.http.query;
 
-import com.spotify.heroic.QueryRequestMetadata;
+import com.spotify.heroic.QueryOriginContext;
 import javax.servlet.http.HttpServletRequest;
 
-public class CoreQueryRequestMetadataFactory {
+public class CoreQueryOriginContextFactory {
 
-    public static QueryRequestMetadata create(HttpServletRequest httpServletRequest) {
+    public static QueryOriginContext create(HttpServletRequest httpServletRequest, String query) {
         String userAgent = httpServletRequest.getHeader("User-Agent");
-        String clientId = httpServletRequest.getHeader("X-Alient-Client-Id");
-        return new QueryRequestMetadata(httpServletRequest.getRemoteAddr(),
-                                        httpServletRequest.getRemoteHost(),
-                                        httpServletRequest.getRemotePort(),
+        String clientId = httpServletRequest.getHeader("X-Client-Id");
+        return QueryOriginContext.of(httpServletRequest.getRemoteAddr(),
+                                     httpServletRequest.getRemoteHost(),
+                                     httpServletRequest.getRemotePort(),
                                         userAgent == null ? "" : userAgent,
-                                        clientId == null ? "" : clientId);
+                                        clientId == null ? "" : clientId,
+                                     query);
     }
 
 }
