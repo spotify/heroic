@@ -46,6 +46,7 @@
   </licenses>
 
   <properties>
+    <threadCount>1</threadCount>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <jersey.version>2.13</jersey.version>
@@ -135,9 +136,8 @@
             <version>2.19.1</version>
             <configuration>
               <argLine>${failsafeArgLine}</argLine>
-              <parallel>classesAndMethods</parallel>
-              <threadCount>2</threadCount>
-              <perCoreThreadCount>true</perCoreThreadCount>
+              <parallel>all</parallel>
+              <threadCount>${threadCount}</threadCount>
             </configuration>
             <executions>
               <execution>
@@ -763,9 +763,8 @@
         <version>2.19.1</version>
         <configuration>
           <argLine>${surefireArgLine}</argLine>
-          <parallel>classesAndMethods</parallel>
-          <threadCount>2</threadCount>
-          <perCoreThreadCount>true</perCoreThreadCount>
+          <parallel>all</parallel>
+          <threadCount>${threadCount}</threadCount>
         </configuration>
       </plugin>
     </plugins>
