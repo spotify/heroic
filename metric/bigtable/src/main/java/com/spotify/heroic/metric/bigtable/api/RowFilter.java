@@ -42,6 +42,15 @@ public interface RowFilter {
     }
 
     /**
+     * Build a filter that only matches the latest cell in each column.
+     *
+     * @return A filter that only matches the latest cell in each column.
+     */
+    static RowFilter onlyLatestCell() {
+        return new OnlyLatestCell();
+    }
+
+    /**
      * Apply all the given row filters.
      *
      * @param filters Filter to apply.
@@ -124,6 +133,17 @@ public interface RowFilter {
                 return new ColumnRange(family, startQualifierClosed, startQualifierOpen,
                     endQualifierClosed, endQualifierOpen);
             }
+        }
+    }
+
+    @Data
+    public class OnlyLatestCell implements RowFilter {
+        @Override
+        public com.google.bigtable.v2.RowFilter toPb() {
+            return com.google.bigtable.v2.RowFilter
+                .newBuilder()
+                .setCellsPerColumnLimitFilter(1)
+                .build();
         }
     }
 

@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
+import com.google.cloud.bigtable.grpc.scanner.FlatRow;
 import com.google.protobuf.ByteString;
 import com.spotify.heroic.async.AsyncObservable;
 import eu.toolchain.async.AsyncFuture;
@@ -37,7 +38,7 @@ public interface BigtableDataClient {
      * @param request Request to use when reading rows.
      * @return A future that will be resolved when all rows are available.
      */
-    AsyncFuture<List<Row>> readRows(String tableName, ReadRowsRequest request);
+    AsyncFuture<List<FlatRow>> readRows(String tableName, ReadRowsRequest request);
 
     /**
      * Read the given set of rows in an observable way.
