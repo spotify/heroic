@@ -41,19 +41,12 @@ import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
+import com.spotify.heroic.statistics.DataInMemoryReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.StreamCollector;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.NotImplementedException;
-import org.apache.commons.lang3.tuple.Pair;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -61,6 +54,13 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import javax.inject.Inject;
+import javax.inject.Named;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang3.tuple.Pair;
 
 @Slf4j
 @ToString(of = {})
@@ -155,9 +155,12 @@ public class LocalMetricManager implements MetricManager {
             final AggregationInstance aggregation = request.getAggregation();
             final DateRange range = request.getRange();
 
-            final FetchQuotaWatcher watcher =
+            final FetchQuotaWatcher delegateQuotaWatcher =
                 options.getDataLimit().orElse(dataLimit).asLong().<FetchQuotaWatcher>map(
                     LimitedFetchQuotaWatcher::new).orElse(FetchQuotaWatcher.NO_QUOTA);
+            final DataInMemoryReporter dataInMemoryReporter = reporter.newDataInMemoryReporter();
+            final InstrumentedFetchQuotaWatcher watcher =
+                new InstrumentedFetchQuotaWatcher(delegateQuotaWatcher, dataInMemoryReporter);
 
             final OptionalLimit seriesLimit =
                 options.getSeriesLimit().orElse(LocalMetricManager.this.seriesLimit);
@@ -218,31 +221,33 @@ public class LocalMetricManager implements MetricManager {
 
                 if (options.isTracing()) {
                     // tracing enabled, keeps track of each individual FetchData trace.
-                    collector = new ResultCollector(watcher, aggregation, session, limits,
-                        options.getGroupLimit().orElse(groupLimit), failOnLimits) {
-                        final ConcurrentLinkedQueue<QueryTrace> traces =
-                            new ConcurrentLinkedQueue<>();
+                    collector =
+                        new ResultCollector(watcher, dataInMemoryReporter, aggregation, session,
+                            limits, options.getGroupLimit().orElse(groupLimit), failOnLimits) {
+                            final ConcurrentLinkedQueue<QueryTrace> traces =
+                                new ConcurrentLinkedQueue<>();
 
-                        @Override
-                        public void resolved(Pair<Series, FetchData> result) throws Exception {
-                            traces.add(result.getRight().getTrace());
-                            super.resolved(result);
-                        }
+                            @Override
+                            public void resolved(Pair<Series, FetchData> result) throws Exception {
+                                traces.add(result.getRight().getTrace());
+                                super.resolved(result);
+                            }
 
-                        @Override
-                        public QueryTrace buildTrace() {
-                            return w.end(ImmutableList.copyOf(traces));
-                        }
-                    };
+                            @Override
+                            public QueryTrace buildTrace() {
+                                return w.end(ImmutableList.copyOf(traces));
+                            }
+                        };
                 } else {
                     // very limited tracing, does not collected each individual FetchData trace.
-                    collector = new ResultCollector(watcher, aggregation, session, limits,
-                        options.getGroupLimit().orElse(groupLimit), failOnLimits) {
-                        @Override
-                        public QueryTrace buildTrace() {
-                            return w.end();
-                        }
-                    };
+                    collector =
+                        new ResultCollector(watcher, dataInMemoryReporter, aggregation, session,
+                            limits, options.getGroupLimit().orElse(groupLimit), failOnLimits) {
+                            @Override
+                            public QueryTrace buildTrace() {
+                                return w.end();
+                            }
+                        };
                 }
 
                 return async.eventuallyCollect(fetches, collector, fetchParallelism);
@@ -379,6 +384,7 @@ public class LocalMetricManager implements MetricManager {
         final ConcurrentLinkedQueue<Throwable> errors = new ConcurrentLinkedQueue<>();
 
         final FetchQuotaWatcher watcher;
+        final DataInMemoryReporter dataInMemoryReporter;
         final AggregationInstance aggregation;
         final AggregationSession session;
         final ResultLimits limits;
@@ -392,6 +398,7 @@ public class LocalMetricManager implements MetricManager {
             for (final MetricCollection g : f.getGroups()) {
                 g.updateAggregation(session, result.getLeft().getTags(),
                     ImmutableSet.of(result.getLeft()));
+                dataInMemoryReporter.reportDataNoLongerNeeded(g.size());
             }
         }
 
@@ -409,6 +416,9 @@ public class LocalMetricManager implements MetricManager {
         @Override
         public FullQuery end(int resolved, int failed, int cancelled) throws Exception {
             final QueryTrace trace = buildTrace();
+
+            // Signal that we're done processing this
+            dataInMemoryReporter.reportOperationEnded();
 
             if (watcher.isQuotaViolated()) {
                 final List<RequestError> errors = checkIssues(failed, cancelled)
@@ -465,6 +475,34 @@ public class LocalMetricManager implements MetricManager {
             }
 
             return Optional.empty();
+        }
+    }
+
+    @RequiredArgsConstructor
+    private static class InstrumentedFetchQuotaWatcher implements FetchQuotaWatcher {
+        private final FetchQuotaWatcher delegateQuotaWatcher;
+        private final DataInMemoryReporter dataInMemoryReporter;
+
+        @Override
+        public void readData(final long n) {
+            delegateQuotaWatcher.readData(n);
+            // Must be called after readData above, since that one might throw an exception.
+            dataInMemoryReporter.reportDataHasBeenRead(n);
+        }
+
+        @Override
+        public boolean mayReadData() {
+            return delegateQuotaWatcher.mayReadData();
+        }
+
+        @Override
+        public int getReadDataQuota() {
+            return delegateQuotaWatcher.getReadDataQuota();
+        }
+
+        @Override
+        public boolean isQuotaViolated() {
+            return delegateQuotaWatcher.isQuotaViolated();
         }
     }
 }
