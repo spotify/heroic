@@ -28,6 +28,12 @@ import lombok.Data;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * This filter strategy calculates the area under the graphs of the time series and
+ * selects the time series with either the biggest (TopK) or smallest (BottomK) area.
+ *
+ *  Time series without any data points are disregarded and never part of the result.
+ */
 @Data
 public class FilterKAreaStrategy implements FilterStrategy {
     private final FilterKAreaType filterType;
@@ -37,6 +43,7 @@ public class FilterKAreaStrategy implements FilterStrategy {
     public <T> List<T> filter(List<FilterableMetrics<T>> metrics) {
         return metrics
             .stream()
+            .filter(m -> m.getMetricSupplier().get().size() > 0)
             .map(Area::new)
             .sorted((a, b) -> filterType.compare(a.getValue(), b.getValue()))
             .limit(k)
