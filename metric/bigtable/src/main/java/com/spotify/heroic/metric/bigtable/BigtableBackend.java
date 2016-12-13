@@ -24,6 +24,7 @@ package com.spotify.heroic.metric.bigtable;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.cloud.bigtable.grpc.scanner.FlatRow;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -50,10 +51,8 @@ import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.bigtable.api.BigtableDataClient;
 import com.spotify.heroic.metric.bigtable.api.BigtableTableAdminClient;
 import com.spotify.heroic.metric.bigtable.api.ColumnFamily;
-import com.spotify.heroic.metric.bigtable.api.Family;
 import com.spotify.heroic.metric.bigtable.api.Mutations;
 import com.spotify.heroic.metric.bigtable.api.ReadRowsRequest;
-import com.spotify.heroic.metric.bigtable.api.Row;
 import com.spotify.heroic.metric.bigtable.api.RowFilter;
 import com.spotify.heroic.metric.bigtable.api.Table;
 import com.spotify.heroic.metrics.Meter;
@@ -76,6 +75,7 @@ import javax.inject.Named;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -380,17 +380,19 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         final List<AsyncFuture<FetchData>> fetches = new ArrayList<>(prepared.size());
 
         for (final PreparedQuery p : prepared) {
-            final AsyncFuture<List<Row>> readRows = client.readRows(table, ReadRowsRequest
+            final AsyncFuture<List<FlatRow>> readRows = client.readRows(table, ReadRowsRequest
                 .builder()
                 .rowKey(p.keyBlob)
-                .filter(RowFilter
-                    .newColumnRangeBuilder(columnFamily)
-                    .startQualifierOpen(p.startKey)
-                    .endQualifierClosed(p.endKey)
-                    .build())
+                .filter(RowFilter.chain(Arrays.asList(
+                    RowFilter
+                        .newColumnRangeBuilder(columnFamily)
+                        .startQualifierOpen(p.startKey)
+                        .endQualifierClosed(p.endKey)
+                        .build(),
+                    RowFilter.onlyLatestCell())))
                 .build());
 
-            final Function<Family.LatestCellValueColumn, T> transform = cell -> {
+            final Function<FlatRow.Cell, T> transform = cell -> {
                 final long timestamp = p.base + deserializeOffset(cell.getQualifier());
                 return deserializer.apply(timestamp, cell.getValue());
             };
@@ -398,14 +400,11 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             final QueryTrace.NamedWatch w = QueryTrace.watch(FETCH_SEGMENT);
 
             fetches.add(readRows.directTransform(result -> {
-                watcher.readData(result.size());
-
                 final List<Iterable<T>> points = new ArrayList<>();
 
-                for (final Row row : result) {
-                    row.getFamily(columnFamily).ifPresent(f -> {
-                        points.add(Iterables.transform(f.latestCellValue(), transform));
-                    });
+                for (final FlatRow row : result) {
+                    watcher.readData(row.getCells().size());
+                    points.add(Iterables.transform(row.getCells(), transform));
                 }
 
                 final QueryTrace trace = w.end();

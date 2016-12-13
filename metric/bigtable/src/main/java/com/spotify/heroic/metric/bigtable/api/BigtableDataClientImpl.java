@@ -23,6 +23,7 @@ package com.spotify.heroic.metric.bigtable.api;
 
 import com.google.bigtable.v2.ReadModifyWriteRowRequest;
 import com.google.cloud.bigtable.grpc.scanner.ResultScanner;
+import com.google.cloud.bigtable.grpc.scanner.FlatRow;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -37,7 +38,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 @RequiredArgsConstructor
@@ -66,12 +66,12 @@ public class BigtableDataClientImpl implements BigtableDataClient {
     }
 
     @Override
-    public AsyncFuture<List<Row>> readRows(
+    public AsyncFuture<List<FlatRow>> readRows(
         final String tableName, final ReadRowsRequest request
     ) {
-        return convertRows(session
-                .getDataClient()
-                .readRowsAsync(request.toPb(Table.toURI(clusterUri, tableName))));
+        return convert(session
+            .getDataClient()
+            .readFlatRowsAsync(request.toPb(Table.toURI(clusterUri, tableName))));
     }
 
     @Override
@@ -132,20 +132,6 @@ public class BigtableDataClientImpl implements BigtableDataClient {
 
             scanAsync(scanner, observer);
         };
-    }
-
-    AsyncFuture<List<Row>> convertRows(
-        final ListenableFuture<List<com.google.bigtable.v2.Row>> readRowsAsync
-    ) {
-        return convert(readRowsAsync).directTransform(result -> {
-            final List<Row> rows = new ArrayList<>();
-
-            for (final com.google.bigtable.v2.Row row : result) {
-                rows.add(convertRow(row));
-            }
-
-            return rows;
-        });
     }
 
     Row convertRow(final com.google.bigtable.v2.Row row) {
