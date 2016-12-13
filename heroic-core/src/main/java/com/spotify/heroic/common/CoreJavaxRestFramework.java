@@ -97,7 +97,7 @@ public final class CoreJavaxRestFramework implements JavaxRestFramework {
         response.register(new CompletionCallback() {
             @Override
             public void onComplete(Throwable throwable) {
-                log.warn("Client completed");
+                log.debug("Client completed");
                 callback.cancel();
             }
         });
