@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.statistics.semantic;
 
+import com.codahale.metrics.Counter;
 import com.codahale.metrics.Meter;
 import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.HeroicTimer;
@@ -35,6 +36,7 @@ public class SemanticFutureReporter implements FutureReporter {
     private final Meter failed;
     private final Meter resolved;
     private final Meter cancelled;
+    private final Counter pending;
 
     public SemanticFutureReporter(SemanticMetricRegistry registry, MetricId id) {
         final String what = id.getTags().get("what");
@@ -50,10 +52,13 @@ public class SemanticFutureReporter implements FutureReporter {
             registry.meter(id.tagged("what", what + "-resolve-rate", "unit", Units.RESOLVE));
         this.cancelled =
             registry.meter(id.tagged("what", what + "-cancel-rate", "unit", Units.CANCEL));
+        this.pending =
+            registry.counter(id.tagged("what", what + "-pending", "unit", Units.COUNT));
     }
 
     @Override
     public FutureReporter.Context setup() {
+        pending.inc();
         return new SemanticContext(timer.time());
     }
 
@@ -63,18 +68,21 @@ public class SemanticFutureReporter implements FutureReporter {
 
         @Override
         public void failed(Throwable e) throws Exception {
+            pending.dec();
             failed.mark();
             context.stop();
         }
 
         @Override
         public void resolved(Object result) throws Exception {
+            pending.dec();
             resolved.mark();
             context.stop();
         }
 
         @Override
         public void cancelled() throws Exception {
+            pending.dec();
             cancelled.mark();
             context.stop();
         }
