@@ -400,11 +400,10 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             final QueryTrace.NamedWatch w = QueryTrace.watch(FETCH_SEGMENT);
 
             fetches.add(readRows.directTransform(result -> {
-                watcher.readData(result.size());
-
                 final List<Iterable<T>> points = new ArrayList<>();
 
                 for (final FlatRow row : result) {
+                    watcher.readData(row.getCells().size());
                     points.add(Iterables.transform(row.getCells(), transform));
                 }
 
