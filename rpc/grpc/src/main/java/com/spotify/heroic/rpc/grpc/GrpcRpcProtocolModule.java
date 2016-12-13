@@ -47,7 +47,7 @@ public class GrpcRpcProtocolModule implements RpcProtocolModule {
     private static final Object PARENT = new Object();
 
     private static final String DEFAULT_HOST = "0.0.0.0";
-    private static final int DEFAULT_PORT = 0;
+    private static final int DEFAULT_PORT = 9698;
     private static final int DEFAULT_PARENT_THREADS = 2;
     private static final int DEFAULT_CHILD_THREADS = 100;
     private static final int DEFAULT_MAX_FRAME_SIZE = 10 * 1000000;
