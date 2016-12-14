@@ -1,5 +1,7 @@
 language: java
 
+sudo: false
+
 jdk:
   - oraclejdk8
 
@@ -17,7 +19,7 @@ install:
   - tools/install-repackaged
 
 script:
-  - mvn -nsu -T 2 -D environment=test -P '!findbugs,codecov' verify
+  - mvn -nsu -T 1 -D threadCount=2 -D perCoreThreadCount=false -D environment=test -P '!findbugs,codecov' verify
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
