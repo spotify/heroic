@@ -1,5 +1,6 @@
 package com.spotify.heroic;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.cache.QueryCache;
 import com.spotify.heroic.cluster.ClusterManager;
@@ -39,7 +40,8 @@ public class CoreQueryManagerTest {
     public void setup() {
         manager =
             new CoreQueryManager(Features.empty(), async, cluster, parser, queryCache, aggregations,
-                OptionalLimit.empty());
+                OptionalLimit.empty(), new CoreQueryLogger(OptionalLimit.of(0),
+                new ObjectMapper()));
     }
 
     @Test

@@ -97,12 +97,14 @@ public class CoreQueryManager implements QueryManager {
     private final QueryCache queryCache;
     private final AggregationFactory aggregations;
     private final OptionalLimit groupLimit;
+    private final QueryLogger queryLogger;
 
     @Inject
     public CoreQueryManager(
         @Named("features") final Features features, final AsyncFramework async,
         final ClusterManager cluster, final QueryParser parser, final QueryCache queryCache,
-        final AggregationFactory aggregations, @Named("groupLimit") final OptionalLimit groupLimit
+        final AggregationFactory aggregations, @Named("groupLimit") final OptionalLimit groupLimit,
+        CoreQueryLogger queryLogger
     ) {
         this.features = features;
         this.async = async;
@@ -111,6 +113,7 @@ public class CoreQueryManager implements QueryManager {
         this.queryCache = queryCache;
         this.aggregations = aggregations;
         this.groupLimit = groupLimit;
+        this.queryLogger = queryLogger;
     }
 
     @Override
@@ -176,6 +179,11 @@ public class CoreQueryManager implements QueryManager {
 
         @Override
         public AsyncFuture<QueryResult> query(Query q) {
+            boolean shouldLogQueries = features.hasFeature(Feature.LOG_QUERIES);
+            if (shouldLogQueries) {
+                queryLogger.logQueryAccess(q);
+            }
+
             final List<AsyncFuture<QueryResultPart>> futures = new ArrayList<>();
 
             final MetricType source = q.getSource().orElse(MetricType.POINT);
@@ -232,8 +240,17 @@ public class CoreQueryManager implements QueryManager {
 
                 final OptionalLimit limit = options.getGroupLimit().orElse(groupLimit);
 
-                return async.collect(futures,
+                AsyncFuture<QueryResult> queryResult = async.collect(futures,
                     QueryResult.collectParts(QUERY, range, combiner, limit));
+
+                if (shouldLogQueries) {
+                    queryResult = queryResult.directTransform(_queryResult -> {
+                        queryLogger.logQueryResolved(q, _queryResult);
+                        return _queryResult;
+                    });
+                }
+
+                return queryResult;
             });
         }
 

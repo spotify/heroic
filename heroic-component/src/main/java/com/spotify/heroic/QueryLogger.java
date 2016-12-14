@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2016 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -21,22 +21,12 @@
 
 package com.spotify.heroic;
 
-import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.common.FeatureSet;
-import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.metric.MetricType;
-import lombok.Data;
+import com.spotify.heroic.metric.QueryResult;
 
-import java.util.Optional;
+public interface QueryLogger {
 
-@Data
-public class Query {
-    private final Optional<Aggregation> aggregation;
-    private final Optional<MetricType> source;
-    private final Optional<QueryDateRange> range;
-    private final Optional<Filter> filter;
-    private final Optional<QueryOptions> options;
-    /* set of experimental features to enable */
-    private final Optional<FeatureSet> features;
-    private final Optional<QueryOriginContext> originContext;
+    void logQueryAccess(Query query);
+    void logQueryFailed(Query query, Throwable t);
+    void logQueryResolved(Query query, QueryResult queryResult);
+    void logQueryCancelled(Query query);
 }
