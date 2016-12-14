@@ -26,7 +26,6 @@ public interface FetchQuotaWatcher {
      * Indicates that backend has read {@code n} more datapoints.
      *
      * @param n The number of datapoints read by the backend.
-     * @return A {@code boolean} indicating weither the operation may continue or not.
      * @throws QuotaViolationException if quota has been violated.
      */
     void readData(long n);

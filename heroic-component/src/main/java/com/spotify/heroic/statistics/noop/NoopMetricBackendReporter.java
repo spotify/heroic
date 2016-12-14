@@ -22,16 +22,40 @@
 package com.spotify.heroic.statistics.noop;
 
 import com.spotify.heroic.metric.MetricBackend;
+import com.spotify.heroic.statistics.DataInMemoryReporter;
 import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 
 public class NoopMetricBackendReporter implements MetricBackendReporter {
+
+    public static final DataInMemoryReporter DATA_IN_MEMORY_REPORTER = new DataInMemoryReporter() {
+        @Override
+        public void reportDataHasBeenRead(final long n) {
+
+        }
+
+        @Override
+        public void reportDataNoLongerNeeded(final long n) {
+
+        }
+
+        @Override
+        public void reportOperationEnded() {
+
+        }
+    };
+
     private NoopMetricBackendReporter() {
     }
 
     @Override
     public MetricBackend decorate(final MetricBackend backend) {
         return backend;
+    }
+
+    @Override
+    public DataInMemoryReporter newDataInMemoryReporter() {
+        return DATA_IN_MEMORY_REPORTER;
     }
 
     @Override

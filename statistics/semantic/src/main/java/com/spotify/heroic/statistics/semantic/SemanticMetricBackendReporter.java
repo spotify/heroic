@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.statistics.semantic;
 
+import com.codahale.metrics.Counter;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.Groups;
@@ -34,15 +35,16 @@ import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.WriteMetric;
+import com.spotify.heroic.statistics.DataInMemoryReporter;
 import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 import eu.toolchain.async.AsyncFuture;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
-
-import java.util.List;
 
 @ToString(of = {"base"})
 public class SemanticMetricBackendReporter implements MetricBackendReporter {
@@ -57,6 +59,18 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
 
     private final FutureReporter findSeries;
     private final FutureReporter queryMetrics;
+
+    /*
+     * Incremented on readData - i.e. when we get data from backend
+     * As soon as a Slice is released, this is decremented
+     */
+    private final Counter sampleSizeLive;
+
+    /*
+     * Incremented on readData - i.e. when we get data from backend
+     * When a request finishes (Slice & aggregation done), this is decremented
+     */
+    private final Counter sampleSizeAccumulated;
 
     public SemanticMetricBackendReporter(SemanticMetricRegistry registry) {
         final MetricId base = MetricId.build().tagged("component", COMPONENT);
@@ -78,11 +92,40 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
             base.tagged("what", "find-series", "unit", Units.QUERY));
         this.queryMetrics = new SemanticFutureReporter(registry,
             base.tagged("what", "query-metrics", "unit", Units.QUERY));
+
+        sampleSizeLive =
+            registry.counter(base.tagged("what", "sample-size-live", "unit", Units.SAMPLE));
+        sampleSizeAccumulated =
+            registry.counter(base.tagged("what", "sample-size-accumulated", "unit", Units.SAMPLE));
     }
 
     @Override
     public MetricBackend decorate(final MetricBackend backend) {
         return new InstrumentedMetricBackend(backend);
+    }
+
+    @Override
+    public DataInMemoryReporter newDataInMemoryReporter() {
+        return new DataInMemoryReporter() {
+            private final AtomicLong dataInMemory = new AtomicLong();
+
+            @Override
+            public void reportDataHasBeenRead(final long n) {
+                dataInMemory.addAndGet(n);
+                sampleSizeLive.inc(n);
+                sampleSizeAccumulated.inc(n);
+            }
+
+            @Override
+            public void reportDataNoLongerNeeded(final long n) {
+                sampleSizeLive.dec(n);
+            }
+
+            @Override
+            public void reportOperationEnded() {
+                sampleSizeAccumulated.dec(dataInMemory.get());
+            }
+        };
     }
 
     @Override

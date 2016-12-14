@@ -21,14 +21,31 @@
 
 package com.spotify.heroic.statistics;
 
-import com.spotify.heroic.metric.MetricBackend;
+/*
+ * Keep track of amount of expected in-memory data. One instance of this class per operation (i.e.
+ * a query).
+ */
+public interface DataInMemoryReporter {
+    /**
+     * report that data has been read into memory
+     *
+     * @param n amount of data
+     */
+    void reportDataHasBeenRead(long n);
 
-public interface MetricBackendReporter {
-    MetricBackend decorate(MetricBackend backend);
+    /**
+     * report that data is no longer needed in memory
+     * <p>
+     * The data in question is expected to be garbage collected. If it isn't, then something else is
+     * unexpectantly having a reference to it, which could indicate a problem/bug.
+     *
+     * @param n amount of data
+     */
+    void reportDataNoLongerNeeded(long n);
 
-    DataInMemoryReporter newDataInMemoryReporter();
-
-    FutureReporter.Context reportFindSeries();
-
-    FutureReporter.Context reportQueryMetrics();
+    /**
+     * report that the whole operation is done, meaning that all data referenced in this
+     * DataInMemory instance is expected to be garbage collected.
+     */
+    void reportOperationEnded();
 }
