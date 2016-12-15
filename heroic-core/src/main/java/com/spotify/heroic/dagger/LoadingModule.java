@@ -120,8 +120,10 @@ public class LoadingModule {
     @Provides
     @LoadingScope
     ScheduledExecutorService scheduledExecutorService() {
-        return new ScheduledThreadPoolExecutor(10,
+        ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(10,
             new ThreadFactoryBuilder().setNameFormat("heroic-scheduler#%d").build());
+        executor.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
+        return executor;
     }
 
     @Provides
