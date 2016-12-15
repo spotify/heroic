@@ -12,16 +12,17 @@
     '_pages/docs/aggregations.ngt',
     '_pages/docs/shell.ngt',
     '_pages/docs/profiles.ngt',
-    '_pages/docs/config.ngt',
     '_pages/docs/federation.ngt',
     '_pages/docs/federation-tail.ngt',
+    '_pages/docs/config.ngt',
     '_pages/docs/config/cluster.ngt',
     '_pages/docs/config/metrics.ngt',
     '_pages/docs/config/metadata.ngt',
     '_pages/docs/config/suggest.ngt',
     '_pages/docs/config/elasticsearch_connection.ngt',
     '_pages/docs/config/shell_server.ngt',
-    '_pages/docs/config/consumer.ngt'
+    '_pages/docs/config/consumer.ngt',
+    '_pages/docs/config/features.ngt'
   ]);
 
   function DocumentationCtrl($scope) {
@@ -123,6 +124,10 @@
       .state('docs.config.consumer', {
         url: '/consumer',
         templateUrl: '_pages/docs/config/consumer.ngt'
+      })
+      .state('docs.config.features', {
+        url: '/features',
+        templateUrl: '_pages/docs/config/features.ngt'
       });
   });
 })();

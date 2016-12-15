@@ -36,6 +36,13 @@
         Given time series <code language="json">{"a": 1, "b": 2}</code> and <code language="json">{"b": 3, "c": 4}</code>, and a <code>groupBy</code> of <code language="json">["a", "b"]</code>
         the returned result groups would be <code language="json">[{"a": 1, "b": 2}, {"a": null, "b": 3}]</code>.
       </api-field>
+
+      <api-field name="features" type-json="[<string>, ...]">
+        <p>
+          Enable or disable a feature on a per-query basis.
+          See <a ui-sref="docs.config.features">Features Configuration</a> for more details.
+        </p>
+      </api-field>
     </api-type>
 
     <h4>Example Request</h4>
