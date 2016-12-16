@@ -143,7 +143,7 @@ public class Keys implements ShellTask {
     }
 
     @ToString
-    private static class Parameters extends Tasks.KeyspaceBase {
+    static class Parameters extends Tasks.KeyspaceBase {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")
         private Optional<String> group = Optional.empty();
@@ -156,10 +156,11 @@ public class Keys implements ShellTask {
             usage = "Use the high-level paging mechanism when streaming keys")
         private boolean keysPaged = false;
 
-        @Option(name = "--keys-page-size", usage = "Use the given page-size when paging keys")
+        @Option(name = "--keys-page-size", usage = "Use the given page-size when paging keys",
+            metaVar = "<number>")
         private int keysPageSize = 10;
 
-        @Option(name = "--fetch-size", usage = "Use the given fetch size")
+        @Option(name = "--fetch-size", usage = "Use the given fetch size", metaVar = "<number>")
         private Optional<Integer> fetchSize = Optional.empty();
 
         @Override

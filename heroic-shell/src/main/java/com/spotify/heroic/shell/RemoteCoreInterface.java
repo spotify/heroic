@@ -22,7 +22,6 @@
 package com.spotify.heroic.shell;
 
 import com.spotify.heroic.shell.protocol.Acknowledge;
-import com.spotify.heroic.shell.protocol.CommandDefinition;
 import com.spotify.heroic.shell.protocol.CommandDone;
 import com.spotify.heroic.shell.protocol.CommandOutput;
 import com.spotify.heroic.shell.protocol.CommandOutputFlush;
@@ -250,9 +249,9 @@ public class RemoteCoreInterface implements CoreInterface {
     }
 
     @Override
-    public List<CommandDefinition> commands() throws Exception {
+    public CommandsResponse commands() throws Exception {
         try (final ShellConnection c = connect()) {
-            return c.request(new CommandsRequest(), CommandsResponse.class).getCommands();
+            return c.request(new CommandsRequest(), CommandsResponse.class);
         }
     }
 

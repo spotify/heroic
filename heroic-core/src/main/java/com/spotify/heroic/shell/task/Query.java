@@ -125,7 +125,7 @@ public class Query implements ShellTask {
     }
 
     @ToString
-    private static class Parameters extends AbstractShellTaskParams {
+    static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")
         private String group = null;

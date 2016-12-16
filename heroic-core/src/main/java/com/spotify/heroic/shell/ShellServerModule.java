@@ -35,11 +35,11 @@ import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import javax.inject.Named;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.util.Optional;
 import java.util.concurrent.Callable;
-import javax.inject.Named;
 
 import static java.util.Optional.empty;
 import static java.util.Optional.of;

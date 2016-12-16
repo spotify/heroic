@@ -21,26 +21,44 @@
 
 package com.spotify.heroic;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.spotify.heroic.shell.CoreInterface;
-import com.spotify.heroic.shell.QuoteParser;
+import com.spotify.heroic.shell.HeroicParser;
 import com.spotify.heroic.shell.ShellIO;
+import com.spotify.heroic.shell.SyntaxError;
 import com.spotify.heroic.shell.Tasks;
-import com.spotify.heroic.shell.protocol.CommandDefinition;
+import com.spotify.heroic.shell.protocol.Command;
+import com.spotify.heroic.shell.protocol.CommandsResponse;
 import eu.toolchain.async.AsyncFuture;
-import jline.console.ConsoleReader;
-import jline.console.UserInterruptException;
-import jline.console.completer.StringsCompleter;
-import jline.console.history.FileHistory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.jline.reader.Completer;
+import org.jline.reader.EndOfFileException;
+import org.jline.reader.History;
+import org.jline.reader.LineReader;
+import org.jline.reader.LineReaderBuilder;
+import org.jline.reader.ParsedLine;
+import org.jline.reader.Parser;
+import org.jline.reader.UserInterruptException;
+import org.jline.reader.impl.completer.StringsCompleter;
+import org.jline.reader.impl.history.DefaultHistory;
+import org.jline.terminal.Terminal;
+import org.jline.terminal.TerminalBuilder;
+import org.jline.utils.InfoCmp;
 
-import java.io.File;
+import java.io.FileDescriptor;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -48,71 +66,89 @@ import java.util.concurrent.TimeoutException;
 @Slf4j
 @RequiredArgsConstructor
 public class HeroicInteractiveShell {
-    final ConsoleReader reader;
-    final List<CommandDefinition> commands;
-    final FileHistory history;
+    private static final String PROMPT = "heroic> ";
+    private static final String HEROIC_HISTORY = ".heroic_history";
 
-    boolean running = true;
+    private static final String EXIT = "exit";
+    private static final String HELP = "help";
+    private static final String CLEAR = "clear";
+    private static final String TIMEOUT = "timeout";
 
-    // mutable state, a.k.a. settings
+    private static final Joiner COMMAND_JOINER = Joiner.on(" ");
+
+    public static final List<Command> BUILTIN =
+        ImmutableList.of(new Command(HELP, ImmutableList.of(), "Show help"),
+            new Command(CLEAR, ImmutableList.of(), "Clear the current shell"),
+            new Command(TIMEOUT, ImmutableList.of(), "Get or set the current task timeout"),
+            new Command(EXIT, ImmutableList.of(), "Exit the shell"));
+
+    final Optional<History> history;
+    final Terminal terminal;
+    final LineReader reader;
+    final List<Command> commands;
+    final FileInputStream input;
+
+    // settings
     int timeout = 10;
 
     public void run(final CoreInterface core) throws Exception {
-        final PrintWriter out = new PrintWriter(reader.getOutput());
+        final PrintWriter out = terminal.writer();
 
-        while (running) {
+        outer:
+        while (true) {
             final String raw;
 
             try {
-                raw = reader.readLine();
-            } catch (UserInterruptException e) {
-                out.println("Interrupted");
+                raw = reader.readLine(PROMPT);
+            } catch (final UserInterruptException e) {
+                out.println("INT");
                 break;
+            } catch (final EndOfFileException e) {
+                out.println("EOF");
+                break;
+            } catch (final SyntaxError syntax) {
+                out.println(String.format("%d:%d: %s", syntax.getLine(), syntax.getCol(),
+                    syntax.getMessage()));
+
+                final String[] lines = syntax.getInput().split("\n");
+                out.println(lines[syntax.getLine()]);
+                out.println(StringUtils.repeat(' ', syntax.getCol()) + "^");
+
+                continue;
             }
 
             if (raw == null) {
                 break;
             }
 
-            final List<List<String>> lines;
+            final ParsedLine parsed = reader.getParsedLine();
 
-            try {
-                lines = QuoteParser.parse(raw);
-            } catch (Exception e) {
-                log.error("Line syntax invalid", e);
-                return;
-            }
+            final Iterable<List<String>> commands = HeroicParser.splitCommands(parsed.words());
 
-            lines.forEach(command -> {
-                if (command.isEmpty()) {
-                    return;
+            for (final List<String> words : commands) {
+                if (words.isEmpty()) {
+                    continue;
                 }
 
-                final String commandName = command.iterator().next();
+                final String commandName = words.iterator().next();
 
-                if ("exit".equals(commandName)) {
-                    running = false;
-                    return;
+                if (EXIT.equals(commandName)) {
+                    break outer;
                 }
 
-                if ("help".equals(commandName)) {
-                    printTasksHelp(out);
-                    return;
+                if (HELP.equals(commandName)) {
+                    printHelp(out);
+                    continue;
                 }
 
-                if ("clear".equals(commandName)) {
-                    try {
-                        reader.clearScreen();
-                    } catch (IOException e) {
-                        log.error("Failed to clear screen", e);
-                    }
-
-                    return;
+                if (CLEAR.equals(commandName)) {
+                    terminal.puts(InfoCmp.Capability.clear_screen);
+                    continue;
                 }
 
-                if ("timeout".equals(commandName)) {
-                    internalTimeoutTask(out, command);
-                    return;
+                if (TIMEOUT.equals(commandName)) {
+                    internalTimeoutTask(out, words);
+                    continue;
                 }
 
                 final ShellIO io = new DirectShellIO(out);
@@ -120,37 +156,50 @@ public class HeroicInteractiveShell {
                 final long start = System.nanoTime();
 
                 try {
-                    runTask(command, io, core);
-                } catch (Exception e) {
-                    e.printStackTrace();
+                    runTask(words, io, core);
+                } catch (final Exception e) {
+                    e.printStackTrace(out);
                 }
-                final long diff = System.nanoTime() - start;
 
+                final long diff = System.nanoTime() - start;
                 out.println(String.format("time: %s", Tasks.formatTimeNanos(diff)));
-            });
+            }
         }
 
         out.println();
         out.println("Exiting...");
     }
 
-    public void shutdown() throws IOException {
-        if (history != null) {
-            history.flush();
-        }
-
-        reader.shutdown();
+    public void shutdown() {
+        history.ifPresent(History::save);
     }
 
-    void printTasksHelp(PrintWriter out) {
-        out.println("Available commands:");
+    void printHelp(PrintWriter out) {
+        out.println("Built-in:");
 
-        for (final CommandDefinition c : commands) {
-            out.println(String.format("%s - %s", c.getName(), c.getUsage()));
+        for (final Command c : BUILTIN) {
+            printCommandUsage(out, c);
+        }
 
-            if (!c.getAliases().isEmpty()) {
-                out.println(String.format("  aliases: %s", StringUtils.join(", ", c.getAliases())));
-            }
+        out.println();
+
+        out.println("Commands:");
+
+        for (final Command c : commands) {
+            printCommandUsage(out, c);
+        }
+    }
+
+    void printCommandUsage(final PrintWriter out, final Command c) {
+        final List<String> parts = new ArrayList<>();
+        parts.add(c.getName());
+
+        final String commandSpec = COMMAND_JOINER.join(parts);
+
+        out.println(String.format("%s - %s", commandSpec, c.getUsage()));
+
+        if (!c.getAliases().isEmpty()) {
+            out.println(String.format("  aliases: %s", StringUtils.join(", ", c.getAliases())));
         }
     }
 
@@ -224,32 +273,55 @@ public class HeroicInteractiveShell {
         return t.get();
     }
 
-    public static HeroicInteractiveShell buildInstance(
-        final List<CommandDefinition> commands, FileInputStream input
+    static HeroicInteractiveShell buildInstance(
+        final CommandsResponse commandsResponse, FileInputStream input
     ) throws Exception {
-        final ConsoleReader reader = new ConsoleReader("heroicsh", input, System.out, null);
+        final List<Command> commands = commandsResponse.getCommands();
+        final List<String> names = ImmutableList.copyOf(
+            Iterables.transform(Iterables.concat(BUILTIN, commands), Command::getName));
+        final Completer completer = new StringsCompleter(names);
 
-        final FileHistory history = setupHistory(reader);
+        final FileOutputStream output = new FileOutputStream(FileDescriptor.out);
+        final Terminal terminal = buildTerminal(input, output);
 
-        if (history != null) {
-            reader.setHistory(history);
-        }
+        final Parser parser = new HeroicParser();
 
-        reader.setPrompt(String.format("heroic> "));
-        reader.addCompleter(new StringsCompleter(
-            ImmutableList.copyOf(commands.stream().map((d) -> d.getName()).iterator())));
-        reader.setHandleUserInterrupt(true);
+        final LineReaderBuilder readerBuilder =
+            LineReaderBuilder.builder().terminal(terminal).completer(completer).parser(parser);
 
-        return new HeroicInteractiveShell(reader, commands, history);
+        final Optional<Path> historyPath = historyPath();
+
+        final Optional<History> history = historyPath.map(path -> new DefaultHistory());
+
+        historyPath.ifPresent(
+            path -> readerBuilder.variable(LineReader.HISTORY_FILE, path.toAbsolutePath()));
+
+        history.ifPresent(readerBuilder::history);
+
+        return new HeroicInteractiveShell(history, terminal, readerBuilder.build(), commands,
+            input);
     }
 
-    private static FileHistory setupHistory(final ConsoleReader reader) throws IOException {
+    private static Terminal buildTerminal(
+        final FileInputStream input, final FileOutputStream output
+    ) throws IOException {
+        final TerminalBuilder terminalBuilder =
+            TerminalBuilder.builder().system(true).streams(input, output);
+        term().ifPresent(terminalBuilder::type);
+        return terminalBuilder.build();
+    }
+
+    private static Optional<String> term() throws IOException {
+        return Optional.ofNullable(System.getenv("TERM"));
+    }
+
+    private static Optional<Path> historyPath() throws IOException {
         final String home = System.getProperty("user.home");
 
         if (home == null) {
-            return null;
+            return Optional.empty();
         }
 
-        return new FileHistory(new File(home, ".heroicsh-history"));
+        return Optional.of(Paths.get(home, HEROIC_HISTORY));
     }
 }

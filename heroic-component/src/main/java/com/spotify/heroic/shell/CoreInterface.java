@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.shell;
 
-import com.spotify.heroic.shell.protocol.CommandDefinition;
+import com.spotify.heroic.shell.protocol.CommandsResponse;
 import eu.toolchain.async.AsyncFuture;
 
 import java.util.List;
@@ -40,5 +40,5 @@ public interface CoreInterface {
     /**
      * Get information about available commands.
      */
-    List<CommandDefinition> commands() throws Exception;
+    CommandsResponse commands() throws Exception;
 }

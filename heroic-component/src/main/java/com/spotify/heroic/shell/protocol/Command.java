@@ -19,19 +19,22 @@
  * under the License.
  */
 
-package com.spotify.heroic;
+package com.spotify.heroic.shell.protocol;
 
-import com.spotify.heroic.shell.ShellIO;
-import com.spotify.heroic.shell.ShellTask;
-import com.spotify.heroic.shell.protocol.Command;
-import eu.toolchain.async.AsyncFuture;
+import com.google.common.collect.ImmutableList;
+import eu.toolchain.serializer.AutoSerialize;
+import lombok.Data;
 
 import java.util.List;
 
-public interface ShellTasks {
-    List<Command> commands();
+@AutoSerialize
+@Data
+public class Command {
+    final String name;
+    final List<String> aliases;
+    final String usage;
 
-    AsyncFuture<Void> evaluate(List<String> command, ShellIO io) throws Exception;
-
-    ShellTask resolve(String name);
+    public List<String> getAllNames() {
+        return ImmutableList.<String>builder().add(name).addAll(aliases).build();
+    }
 }

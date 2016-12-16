@@ -103,7 +103,7 @@ public class SerializeKey implements ShellTask {
     }
 
     @ToString
-    private static class Parameters extends AbstractShellTaskParams {
+    static class Parameters extends AbstractShellTaskParams {
         @Option(name = "--group", usage = "Backend group to use", metaVar = "<group>")
         private String group = null;
 
@@ -116,7 +116,7 @@ public class SerializeKey implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         SerializeKey task();
     }
 }

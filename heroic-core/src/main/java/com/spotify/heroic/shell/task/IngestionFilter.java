@@ -78,8 +78,8 @@ public class IngestionFilter implements ShellTask {
     }
 
     @ToString
-    private static class Parameters extends AbstractShellTaskParams {
-        @Argument(metaVar = "<filter>", usage = "Filter to use")
+    static class Parameters extends AbstractShellTaskParams {
+        @Argument(usage = "Filter to use", metaVar = "<filter>")
         private List<String> filter = new ArrayList<>();
     }
 

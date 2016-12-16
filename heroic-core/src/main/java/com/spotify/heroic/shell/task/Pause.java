@@ -72,7 +72,7 @@ public class Pause implements ShellTask {
         return async.collectAndDiscard(futures.build());
     }
 
-    private static class Parameters extends AbstractShellTaskParams {
+    static class Parameters extends AbstractShellTaskParams {
         @Option(name = "--skip-consumers", usage = "Do not pause consumers")
         private boolean skipConsumers = false;
     }

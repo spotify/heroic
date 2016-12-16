@@ -80,8 +80,8 @@ public class TestReadFile implements ShellTask {
         return async.resolved();
     }
 
-    private static class Parameters extends AbstractShellTaskParams {
-        @Option(name = "-i", usage = "File to read from")
+    static class Parameters extends AbstractShellTaskParams {
+        @Option(name = "-i", aliases = "--in", usage = "File to read from", metaVar = "<file>")
         private Path in = Paths.get("in.txt");
     }
 

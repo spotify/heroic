@@ -29,7 +29,7 @@ import java.util.List;
 @AutoSerialize
 @Data
 public class CommandsResponse implements Message {
-    final List<CommandDefinition> commands;
+    final List<Command> commands;
 
     @Override
     public <R> R visit(Visitor<R> visitor) throws Exception {

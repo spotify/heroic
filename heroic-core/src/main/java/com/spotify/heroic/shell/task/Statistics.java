@@ -128,7 +128,7 @@ public class Statistics implements ShellTask {
     }
 
     @ToString
-    private static class Parameters extends AbstractShellTaskParams {
+    static class Parameters extends AbstractShellTaskParams {
     }
 
     public static Statistics setup(final CoreComponent core) {
@@ -136,7 +136,7 @@ public class Statistics implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         Statistics task();
     }
 }

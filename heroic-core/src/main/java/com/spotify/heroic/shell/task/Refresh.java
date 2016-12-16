@@ -56,7 +56,7 @@ public class Refresh implements ShellTask {
     }
 
     @ToString
-    private static class Parameters extends AbstractShellTaskParams {
+    static class Parameters extends AbstractShellTaskParams {
     }
 
     public static Refresh setup(final CoreComponent core) {

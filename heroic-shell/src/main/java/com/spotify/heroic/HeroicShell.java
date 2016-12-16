@@ -22,7 +22,6 @@
 package com.spotify.heroic;
 
 import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicCore.Builder;
 import com.spotify.heroic.args4j.CmdLine;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
@@ -32,7 +31,7 @@ import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellProtocol;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskParameters;
-import com.spotify.heroic.shell.protocol.CommandDefinition;
+import com.spotify.heroic.shell.protocol.CommandsResponse;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.TinyAsync;
@@ -168,8 +167,8 @@ public class HeroicShell {
             }
 
             @Override
-            public List<CommandDefinition> commands() throws Exception {
-                return tasks.commands();
+            public CommandsResponse commands() throws Exception {
+                return new CommandsResponse(tasks.commands());
             }
 
             @Override
@@ -205,16 +204,11 @@ public class HeroicShell {
     }
 
     static void runInteractiveShell(final CoreInterface core) throws Exception {
-        final List<CommandDefinition> commands = new ArrayList<>(core.commands());
-
-        commands.add(new CommandDefinition("clear", ImmutableList.of(), "Clear the current shell"));
-        commands.add(new CommandDefinition("timeout", ImmutableList.of(),
-            "Get or set the current task timeout"));
-        commands.add(new CommandDefinition("exit", ImmutableList.of(), "Exit the shell"));
+        final CommandsResponse commandsResponse = core.commands();
 
         try (final FileInputStream input = new FileInputStream(FileDescriptor.in)) {
             final HeroicInteractiveShell interactive =
-                HeroicInteractiveShell.buildInstance(commands, input);
+                HeroicInteractiveShell.buildInstance(commandsResponse, input);
 
             try {
                 interactive.run(core);
@@ -272,18 +266,6 @@ public class HeroicShell {
         } finally {
             instance.shutdown().get();
         }
-    }
-
-    @SuppressWarnings("unchecked")
-    static Class<ShellTask> resolveShellTask(final String taskName)
-        throws ClassNotFoundException, Exception {
-        final Class<?> taskType = Class.forName(taskName);
-
-        if (!(ShellTask.class.isAssignableFrom(taskType))) {
-            throw new Exception(String.format("Not an instance of ShellTask (%s)", taskName));
-        }
-
-        return (Class<ShellTask>) taskType;
     }
 
     static PrintWriter standaloneOutput(final TaskParameters params, final PrintStream original)

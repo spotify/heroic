@@ -175,16 +175,17 @@ public class MetadataLoad implements ShellTask {
     }
 
     @ToString
-    private static class Parameters extends AbstractShellTaskParams {
+    static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-t", aliases = {"--target"}, usage = "Backend group to migrate to",
-            metaVar = "<metadata-group>")
+            metaVar = "<group>")
         private String target;
 
-        @Option(name = "-f", usage = "File to load from", required = true)
+        @Option(name = "-f", usage = "File to load from", metaVar = "<file>", required = true)
         @Getter
         private Path file = Paths.get("series");
 
-        @Option(name = "-r", usage = "Rate-limit for writing to ES. 0 means disabled")
+        @Option(name = "-r", usage = "Rate-limit for writing to Elasticsearch, 0 means disabled",
+            metaVar = "<number>")
         @Getter
         private int rate = 0;
     }

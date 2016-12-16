@@ -171,7 +171,7 @@ public class Fetch implements ShellTask {
     }
 
     @ToString
-    private static class Parameters extends AbstractShellTaskParams {
+    static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-s", aliases = {"--series"}, usage = "Series to fetch", metaVar = "<json>")
         private Optional<String> series = Optional.empty();
 
@@ -186,7 +186,7 @@ public class Fetch implements ShellTask {
         private Optional<String> end = Optional.empty();
 
         @Option(name = "--limit", usage = "Maximum number of datapoints to fetch",
-            metaVar = "<int>")
+            metaVar = "<number>")
         private int limit = 1000;
 
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",

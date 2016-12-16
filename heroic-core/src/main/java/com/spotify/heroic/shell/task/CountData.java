@@ -157,7 +157,7 @@ public class CountData implements ShellTask {
     }
 
     @ToString
-    private static class Parameters extends AbstractShellTaskParams {
+    static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-f", aliases = {"--file"}, usage = "File to read keys from",
             metaVar = "<file>")
         private Optional<Path> file = Optional.empty();

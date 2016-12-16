@@ -61,7 +61,7 @@ public class TestPrint implements ShellTask {
         return async.resolved();
     }
 
-    private static class Parameters extends AbstractShellTaskParams {
+    static class Parameters extends AbstractShellTaskParams {
         @Option(name = "--count", usage = "Number of lines to print")
         private long count = 10000;
     }

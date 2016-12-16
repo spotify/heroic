@@ -94,7 +94,7 @@ public class AnalyticsDumpFetchSeries implements ShellTask {
     }
 
     @ToString
-    private static class Parameters extends AbstractShellTaskParams {
+    static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-d", aliases = {"--date"}, usage = "Date to fetch data for",
             metaVar = "<yyyy-MM-dd>")
         private Optional<String> date = Optional.empty();

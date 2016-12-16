@@ -119,13 +119,13 @@ public class LoadGenerated implements ShellTask {
     }
 
     @ToString
-    private static class Parameters extends AbstractShellTaskParams {
+    static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")
         private Optional<String> group = Optional.empty();
 
         @Option(name = "-c", aliases = {"--count"},
-            usage = "The number of series to generate (default: 100)")
+            usage = "The number of series to generate (default: 100)", metaVar = "<number>")
         @Getter
         private int seriesCount = 100;
 

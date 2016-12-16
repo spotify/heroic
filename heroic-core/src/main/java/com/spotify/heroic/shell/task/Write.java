@@ -208,7 +208,7 @@ public class Write implements ShellTask {
     }
 
     @ToString
-    private static class Parameters extends AbstractShellTaskParams {
+    static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-s", aliases = {"--series"}, usage = "Series to fetch", metaVar = "<json>")
         private String series;
 

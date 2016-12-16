@@ -82,7 +82,7 @@ public class ReadWriteTest implements ShellTask {
     }
 
     @ToString
-    private static class Parameters extends AbstractShellTaskParams {
+    static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-f", aliases = {"--file"}, usage = "File to perform test against",
             metaVar = "<file>")
         private String file = null;
@@ -93,7 +93,7 @@ public class ReadWriteTest implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         ReadWriteTest task();
     }
 }

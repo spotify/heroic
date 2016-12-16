@@ -78,11 +78,11 @@ public class DeserializeKey implements ShellTask {
     }
 
     @ToString
-    private static class Parameters extends AbstractShellTaskParams {
+    static class Parameters extends AbstractShellTaskParams {
         @Option(name = "--group", usage = "Backend group to use", metaVar = "<group>")
         private Optional<String> group = Optional.empty();
 
-        @Argument(metaVar = "<hex>", usage = "Key to deserialize (in hex)")
+        @Argument(usage = "Key to deserialize (in hex)", metaVar = "<hex>")
         private Optional<String> key = Optional.empty();
     }
 

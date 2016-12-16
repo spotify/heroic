@@ -40,6 +40,7 @@ import com.spotify.heroic.lifecycle.LifeCycleManager;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.ShellTaskDefinition;
 import com.spotify.heroic.shell.Tasks;
+import com.spotify.heroic.shell.protocol.Command;
 import com.spotify.heroic.statistics.HeroicReporter;
 import dagger.Module;
 import dagger.Provides;
@@ -142,7 +143,9 @@ public class PrimaryModule {
         for (final ShellTaskDefinition def : commands) {
             final ShellTask instance = def.setup(injector);
 
-            for (final String n : def.names()) {
+            final Command command = def.command();
+
+            for (final String n : command.getAllNames()) {
                 tasks.put(n, instance);
             }
         }

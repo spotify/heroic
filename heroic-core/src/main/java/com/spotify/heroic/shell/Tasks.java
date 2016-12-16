@@ -32,6 +32,7 @@ import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metric.BackendKeyFilter;
+import com.spotify.heroic.shell.protocol.Command;
 import com.spotify.heroic.shell.task.AnalyticsDumpFetchSeries;
 import com.spotify.heroic.shell.task.AnalyticsReportFetchSeries;
 import com.spotify.heroic.shell.task.BackendKeyArgument;
@@ -78,9 +79,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -97,7 +96,6 @@ import org.kohsuke.args4j.Option;
 
 public final class Tasks {
     static final List<ShellTaskDefinition> available = new ArrayList<>();
-    static final Map<Class<?>, ShellTaskDefinition> availableMap = new HashMap<>();
 
     static {
         shellTask(TestReadFile::setup, TestReadFile.class);
@@ -146,38 +144,15 @@ public final class Tasks {
         return available;
     }
 
-    public static Map<Class<?>, ShellTaskDefinition> availableMap() {
-        return availableMap;
-    }
-
     static <T extends ShellTask> ShellTaskDefinition shellTask(
         final Function<CoreComponent, T> task, Class<T> type
     ) {
-        final String usage = taskUsage(type);
-
-        final String name = name(type);
-        final List<String> names = allNames(type);
-        final List<String> aliases = aliases(type);
+        final Command command = TaskSpecification.fromClass(type).toCommand();
 
         final ShellTaskDefinition d = new ShellTaskDefinition() {
             @Override
-            public String name() {
-                return name;
-            }
-
-            @Override
-            public List<String> names() {
-                return names;
-            }
-
-            @Override
-            public List<String> aliases() {
-                return aliases;
-            }
-
-            @Override
-            public String usage() {
-                return usage;
+            public Command command() {
+                return command;
             }
 
             @Override
@@ -187,62 +162,7 @@ public final class Tasks {
         };
 
         available.add(d);
-        availableMap.put(type, d);
         return d;
-    }
-
-    public static String taskUsage(final Class<? extends ShellTask> task) {
-        final TaskUsage u = task.getAnnotation(TaskUsage.class);
-
-        if (u != null) {
-            return u.value();
-        }
-
-        return String.format("<no @ShellTaskUsage annotation for %s>", task.getCanonicalName());
-    }
-
-    public static String name(final Class<? extends ShellTask> task) {
-        final TaskName n = task.getAnnotation(TaskName.class);
-
-        if (n != null) {
-            return n.value();
-        }
-
-        throw new IllegalStateException(
-            String.format("No name configured with @TaskName on %s", task.getCanonicalName()));
-    }
-
-    public static List<String> allNames(final Class<? extends ShellTask> task) {
-        final TaskName n = task.getAnnotation(TaskName.class);
-        final List<String> names = new ArrayList<>();
-
-        if (n != null) {
-            names.add(n.value());
-
-            for (final String alias : n.aliases()) {
-                names.add(alias);
-            }
-        }
-
-        if (names.isEmpty()) {
-            throw new IllegalStateException(
-                String.format("No name configured with @TaskName on %s", task.getCanonicalName()));
-        }
-
-        return names;
-    }
-
-    public static List<String> aliases(final Class<? extends ShellTask> task) {
-        final TaskName n = task.getAnnotation(TaskName.class);
-        final List<String> names = new ArrayList<>();
-
-        if (n != null) {
-            for (final String alias : n.aliases()) {
-                names.add(alias);
-            }
-        }
-
-        return names;
     }
 
     public static Filter setupFilter(

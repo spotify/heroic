@@ -90,7 +90,7 @@ public class ParseQuery implements ShellTask {
         return async.resolved();
     }
 
-    private static class Parameters extends AbstractShellTaskParams {
+    static class Parameters extends AbstractShellTaskParams {
         @Option(name = "--no-indent", usage = "Do not indent output")
         private boolean noIndent = false;
 

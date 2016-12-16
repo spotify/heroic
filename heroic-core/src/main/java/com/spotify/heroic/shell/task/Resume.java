@@ -75,7 +75,7 @@ public class Resume implements ShellTask {
     }
 
     @ToString
-    private static class Parameters extends AbstractShellTaskParams {
+    static class Parameters extends AbstractShellTaskParams {
         @Option(name = "--skip-consumers", usage = "Do not resume consumers")
         @Getter
         private boolean skipConsumers = false;
@@ -86,7 +86,7 @@ public class Resume implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         Resume task();
     }
 }

@@ -79,7 +79,9 @@ class ShellServerClientThread implements Runnable {
                         @Override
                         public AsyncFuture<Void> visitCommandsRequest(CommandsRequest message)
                             throws Exception {
-                            ch.send(new CommandsResponse(tasks.commands()));
+                            final CommandsResponse response =
+                                new CommandsResponse(tasks.commands());
+                            ch.send(response);
                             return async.resolved();
                         }
 

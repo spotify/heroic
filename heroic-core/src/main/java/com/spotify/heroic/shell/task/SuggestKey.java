@@ -87,7 +87,7 @@ public class SuggestKey implements ShellTask {
     }
 
     @ToString
-    private static class Parameters extends Tasks.QueryParamsBase {
+    static class Parameters extends Tasks.QueryParamsBase {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")
         private Optional<String> group = Optional.empty();

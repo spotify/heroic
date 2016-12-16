@@ -71,7 +71,7 @@ public class AnalyticsReportFetchSeries implements ShellTask {
     }
 
     @ToString
-    private static class Parameters extends AbstractShellTaskParams {
+    static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-s", aliases = {"--series"}, usage = "Series to report fetch for",
             metaVar = "<json>")
         private Optional<String> series = Optional.empty();

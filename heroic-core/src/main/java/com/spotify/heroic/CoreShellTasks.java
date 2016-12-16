@@ -28,7 +28,7 @@ import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.ShellTaskDefinition;
 import com.spotify.heroic.shell.TaskParameters;
-import com.spotify.heroic.shell.protocol.CommandDefinition;
+import com.spotify.heroic.shell.protocol.Command;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.RequiredArgsConstructor;
@@ -57,11 +57,11 @@ public class CoreShellTasks implements ShellTasks {
     final AsyncFramework async;
 
     @Override
-    public List<CommandDefinition> commands() {
-        final List<CommandDefinition> commands = new ArrayList<>();
+    public List<Command> commands() {
+        final List<Command> commands = new ArrayList<>();
 
         for (final ShellTaskDefinition def : available) {
-            commands.add(new CommandDefinition(def.name(), def.aliases(), def.usage()));
+            commands.add(def.command());
         }
 
         return commands;

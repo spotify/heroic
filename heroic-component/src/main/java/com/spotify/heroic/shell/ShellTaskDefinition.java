@@ -22,17 +22,16 @@
 package com.spotify.heroic.shell;
 
 import com.spotify.heroic.HeroicCoreInstance;
-
-import java.util.List;
+import com.spotify.heroic.shell.protocol.Command;
 
 public interface ShellTaskDefinition {
-    String name();
+    Command command();
 
-    List<String> aliases();
-
-    List<String> names();
-
-    String usage();
-
+    /**
+     * Setup the shell task.
+     *
+     * @param injector injector to setup against
+     * @return a new shell task
+     */
     ShellTask setup(HeroicCoreInstance injector) throws Exception;
 }

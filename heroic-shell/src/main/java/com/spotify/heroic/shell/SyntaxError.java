@@ -19,17 +19,20 @@
  * under the License.
  */
 
-package com.spotify.heroic.shell.protocol;
+package com.spotify.heroic.shell;
 
-import eu.toolchain.serializer.AutoSerialize;
 import lombok.Data;
 
-import java.util.List;
-
-@AutoSerialize
 @Data
-public class CommandDefinition {
-    final String name;
-    final List<String> aliases;
-    final String usage;
+public class SyntaxError extends RuntimeException {
+    private final int line;
+    private final int col;
+    private final String input;
+
+    public SyntaxError(final int line, final int col, final String input, final String message) {
+        super(message);
+        this.line = line;
+        this.col = col;
+        this.input = input;
+    }
 }

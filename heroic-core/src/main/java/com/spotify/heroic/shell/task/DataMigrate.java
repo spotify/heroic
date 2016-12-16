@@ -305,8 +305,10 @@ public class DataMigrate implements ShellTask {
             if (n % LINES == 0) {
                 synchronized (io) {
                     try {
-                        io.out().println(" failedKeys: " + failedKeys.get() + ", last: " +
-                            mapper.writeValueAsString(key));
+                        io
+                            .out()
+                            .println(" failedKeys: " + failedKeys.get() + ", last: " +
+                                mapper.writeValueAsString(key));
                     } catch (JsonProcessingException e) {
                         throw new RuntimeException(e);
                     }
@@ -363,7 +365,7 @@ public class DataMigrate implements ShellTask {
     }
 
     @ToString
-    private static class Parameters extends Tasks.KeyspaceBase {
+    public static class Parameters extends Tasks.KeyspaceBase {
         @Option(name = "-f", aliases = {"--from"}, usage = "Backend group to load data from",
             metaVar = "<group>")
         private Optional<String> from = Optional.empty();
@@ -373,7 +375,8 @@ public class DataMigrate implements ShellTask {
         private Optional<String> to = Optional.empty();
 
         @Option(name = "--page-limit",
-            usage = "Limit the number metadata entries to fetch per page (default: 100)")
+            usage = "Limit the number metadata entries to fetch per page (default: 100)",
+            metaVar = "<number>")
         @Getter
         private int pageLimit = 100;
 
@@ -381,10 +384,11 @@ public class DataMigrate implements ShellTask {
             usage = "Use the high-level paging mechanism when streaming keys")
         private boolean keysPaged = false;
 
-        @Option(name = "--keys-page-size", usage = "Use the given page-size when paging keys")
+        @Option(name = "--keys-page-size", usage = "Use the given page-size when paging keys",
+            metaVar = "<number>")
         private int keysPageSize = 10;
 
-        @Option(name = "--fetch-size", usage = "Use the given fetch size")
+        @Option(name = "--fetch-size", usage = "Use the given fetch size", metaVar = "<number>")
         private Optional<Integer> fetchSize = Optional.empty();
 
         @Option(name = "--tracing",
@@ -398,7 +402,7 @@ public class DataMigrate implements ShellTask {
 
         @Argument
         @Getter
-        private List<String> query = new ArrayList<String>();
+        private List<String> query = new ArrayList<>();
     }
 
     public static DataMigrate setup(final CoreComponent core) {
