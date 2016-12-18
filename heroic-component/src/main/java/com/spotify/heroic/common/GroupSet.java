@@ -47,6 +47,13 @@ public class GroupSet<T extends Grouped> implements UsableGroupManager<SelectedG
     private final Set<T> defaults;
 
     /**
+     * All available group names.
+     */
+    public Set<String> names() {
+        return groups.keySet();
+    }
+
+    /**
      * Use all members of this set.
      *
      * @return All members of this set.

@@ -33,6 +33,7 @@ import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskParametersModel;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.time.Clock;
 import dagger.Component;
@@ -48,6 +49,7 @@ import org.kohsuke.args4j.Option;
 
 @TaskUsage("Parse a given expression as a query and print their structure")
 @TaskName("parse-query")
+@TaskParametersModel(ParseQuery.Parameters.class)
 public class ParseQuery implements ShellTask {
     private final Clock clock;
     private final QueryParser parser;

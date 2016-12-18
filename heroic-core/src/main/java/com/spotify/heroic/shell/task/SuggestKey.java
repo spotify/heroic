@@ -29,6 +29,7 @@ import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskParametersModel;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
 import com.spotify.heroic.suggest.KeySuggest;
@@ -48,6 +49,7 @@ import java.util.Optional;
 
 @TaskUsage("Fetch series matching the given query")
 @TaskName("suggest-key")
+@TaskParametersModel(SuggestKey.Parameters.class)
 public class SuggestKey implements ShellTask {
     private final SuggestManager suggest;
     private final QueryParser parser;

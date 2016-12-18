@@ -31,6 +31,7 @@ import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskParametersModel;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
 import dagger.Component;
@@ -47,6 +48,7 @@ import java.util.Optional;
 
 @TaskUsage("Get tags")
 @TaskName("metadata-tags")
+@TaskParametersModel(MetadataTags.Parameters.class)
 public class MetadataTags implements ShellTask {
     private final MetadataManager metadata;
     private final QueryParser parser;

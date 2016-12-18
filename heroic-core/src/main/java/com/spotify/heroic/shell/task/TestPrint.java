@@ -27,6 +27,7 @@ import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskParametersModel;
 import com.spotify.heroic.shell.TaskUsage;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
@@ -37,6 +38,7 @@ import javax.inject.Inject;
 
 @TaskUsage("(Test) Test to print some lines")
 @TaskName("test-print")
+@TaskParametersModel(TestPrint.Parameters.class)
 public class TestPrint implements ShellTask {
     private final AsyncFramework async;
 

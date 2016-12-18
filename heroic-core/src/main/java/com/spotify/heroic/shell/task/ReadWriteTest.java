@@ -28,6 +28,7 @@ import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskParametersModel;
 import com.spotify.heroic.shell.TaskUsage;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
@@ -46,6 +47,7 @@ import java.nio.file.Paths;
 
 @TaskUsage("Test to read and write a file")
 @TaskName("read-write-test")
+@TaskParametersModel(ReadWriteTest.Parameters.class)
 public class ReadWriteTest implements ShellTask {
     private static final Charset UTF8 = Charsets.UTF_8;
 

@@ -46,6 +46,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.SortedMap;
+import java.util.SortedSet;
 import java.util.zip.GZIPOutputStream;
 
 @RequiredArgsConstructor
@@ -54,6 +55,7 @@ public class CoreShellTasks implements ShellTasks {
 
     final List<ShellTaskDefinition> available;
     final SortedMap<String, ShellTask> tasks;
+    final SortedSet<String> groups;
     final AsyncFramework async;
 
     @Override
@@ -65,6 +67,11 @@ public class CoreShellTasks implements ShellTasks {
         }
 
         return commands;
+    }
+
+    @Override
+    public SortedSet<String> groups() {
+        return groups;
     }
 
     @Override

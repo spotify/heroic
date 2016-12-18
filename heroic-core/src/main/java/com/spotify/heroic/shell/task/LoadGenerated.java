@@ -39,6 +39,7 @@ import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskParametersModel;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.time.Clock;
 import dagger.Component;
@@ -56,6 +57,7 @@ import org.kohsuke.args4j.Option;
 
 @TaskUsage("Load generated metrics into backends")
 @TaskName("load-generated")
+@TaskParametersModel(LoadGenerated.Parameters.class)
 public class LoadGenerated implements ShellTask {
     private final Clock clock;
     private final AsyncFramework async;

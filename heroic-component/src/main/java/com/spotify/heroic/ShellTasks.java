@@ -27,9 +27,12 @@ import com.spotify.heroic.shell.protocol.Command;
 import eu.toolchain.async.AsyncFuture;
 
 import java.util.List;
+import java.util.SortedSet;
 
 public interface ShellTasks {
     List<Command> commands();
+
+    SortedSet<String> groups();
 
     AsyncFuture<Void> evaluate(List<String> command, ShellIO io) throws Exception;
 

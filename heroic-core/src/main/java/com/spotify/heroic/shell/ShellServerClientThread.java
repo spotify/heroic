@@ -45,12 +45,14 @@ import java.net.Socket;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
+import java.util.SortedSet;
 
 @Slf4j
 @RequiredArgsConstructor
 class ShellServerClientThread implements Runnable {
     final Socket socket;
     final ShellTasks tasks;
+    final SortedSet<String> groups;
     final SerializerFramework serializer;
     final AsyncFramework async;
 
@@ -80,7 +82,7 @@ class ShellServerClientThread implements Runnable {
                         public AsyncFuture<Void> visitCommandsRequest(CommandsRequest message)
                             throws Exception {
                             final CommandsResponse response =
-                                new CommandsResponse(tasks.commands());
+                                new CommandsResponse(tasks.commands(), groups);
                             ch.send(response);
                             return async.resolved();
                         }

@@ -41,6 +41,7 @@ import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskParametersModel;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
 import dagger.Component;
@@ -65,6 +66,7 @@ import javax.inject.Named;
 
 @TaskUsage("Migrate data from one backend to another")
 @TaskName("data-migrate")
+@TaskParametersModel(DataMigrate.Parameters.class)
 public class DataMigrate implements ShellTask {
     public static final long DOTS = 100;
     public static final long LINES = DOTS * 20;

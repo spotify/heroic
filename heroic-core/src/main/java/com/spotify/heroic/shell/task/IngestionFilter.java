@@ -31,6 +31,7 @@ import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskParametersModel;
 import com.spotify.heroic.shell.TaskUsage;
 import dagger.Component;
 import eu.toolchain.async.AsyncFuture;
@@ -43,6 +44,7 @@ import java.util.List;
 
 @TaskUsage("Configure the ingestion filter")
 @TaskName("ingestion-filter")
+@TaskParametersModel(IngestionFilter.Parameters.class)
 public class IngestionFilter implements ShellTask {
     private final QueryParser parser;
     private final IngestionManager ingestion;

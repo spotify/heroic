@@ -28,6 +28,7 @@ import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskParametersModel;
 import com.spotify.heroic.shell.TaskUsage;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
@@ -43,6 +44,7 @@ import java.nio.file.StandardOpenOption;
 
 @TaskUsage("(Test) Test to read lines from a file")
 @TaskName("test-read-file")
+@TaskParametersModel(TestReadFile.Parameters.class)
 public class TestReadFile implements ShellTask {
     private final AsyncFramework async;
 

@@ -168,7 +168,7 @@ public class HeroicShell {
 
             @Override
             public CommandsResponse commands() throws Exception {
-                return new CommandsResponse(tasks.commands());
+                return new CommandsResponse(tasks.commands(), tasks.groups());
             }
 
             @Override

@@ -33,6 +33,7 @@ import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskParametersModel;
 import com.spotify.heroic.shell.TaskUsage;
 import dagger.Component;
 import eu.toolchain.async.AsyncFuture;
@@ -48,6 +49,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 @TaskUsage("Serialize the given backend key")
 @TaskName("serialize-key")
+@TaskParametersModel(SerializeKey.Parameters.class)
 public class SerializeKey implements ShellTask {
     private final MetricManager metrics;
     private final ObjectMapper mapper;

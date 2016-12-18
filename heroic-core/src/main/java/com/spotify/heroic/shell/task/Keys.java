@@ -38,6 +38,7 @@ import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskParametersModel;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
 import dagger.Component;
@@ -56,6 +57,7 @@ import javax.inject.Named;
 
 @TaskUsage("List available metric keys for all backends")
 @TaskName("keys")
+@TaskParametersModel(Keys.Parameters.class)
 @Slf4j
 public class Keys implements ShellTask {
     private final AsyncFramework async;

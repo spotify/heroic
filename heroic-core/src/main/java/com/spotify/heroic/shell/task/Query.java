@@ -37,6 +37,7 @@ import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskParametersModel;
 import com.spotify.heroic.shell.TaskUsage;
 import dagger.Component;
 import eu.toolchain.async.AsyncFuture;
@@ -54,6 +55,7 @@ import javax.inject.Named;
 
 @TaskUsage("Execute a query")
 @TaskName("query")
+@TaskParametersModel(Query.Parameters.class)
 public class Query implements ShellTask {
     private final QueryManager query;
     private final ObjectMapper mapper;

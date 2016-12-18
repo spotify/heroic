@@ -50,7 +50,9 @@ import lombok.RequiredArgsConstructor;
 import javax.inject.Named;
 import java.util.List;
 import java.util.SortedMap;
+import java.util.SortedSet;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 @RequiredArgsConstructor
 @Module
@@ -64,8 +66,16 @@ public class PrimaryModule {
     ShellTasks tasks(AsyncFramework async, HeroicCoreInstance injector) {
         final List<ShellTaskDefinition> commands = Tasks.available();
 
+        final SortedSet<String> groups = injector.inject(core -> {
+            final SortedSet<String> g = new TreeSet<>();
+            g.addAll(core.metadataManager().groupSet().names());
+            g.addAll(core.suggestManager().groupSet().names());
+            g.addAll(core.metricManager().groupSet().names());
+            return g;
+        });
+
         try {
-            return new CoreShellTasks(commands, setupTasks(commands, injector), async);
+            return new CoreShellTasks(commands, setupTasks(commands, injector), groups, async);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

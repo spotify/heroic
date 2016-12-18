@@ -30,6 +30,7 @@ import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskParametersModel;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
 import com.spotify.heroic.suggest.MatchOptions;
@@ -50,6 +51,7 @@ import java.util.Optional;
 
 @TaskUsage("Get tag suggestions")
 @TaskName("suggest-tag")
+@TaskParametersModel(SuggestTag.Parameters.class)
 public class SuggestTag implements ShellTask {
     private final SuggestManager suggest;
     private final QueryParser parser;

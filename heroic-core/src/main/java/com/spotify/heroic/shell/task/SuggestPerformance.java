@@ -35,6 +35,7 @@ import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskParametersModel;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.suggest.MatchOptions;
 import com.spotify.heroic.suggest.SuggestBackend;
@@ -74,6 +75,7 @@ import org.kohsuke.args4j.Option;
 
 @TaskUsage("Execute a set of suggest performance tests")
 @TaskName("suggest-performance")
+@TaskParametersModel(SuggestPerformance.Parameters.class)
 @Slf4j
 public class SuggestPerformance implements ShellTask {
     private final Clock clock;

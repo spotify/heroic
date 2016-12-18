@@ -99,7 +99,8 @@ public class ShellServer implements LifeCycles {
 
             final ShellTasks tasks = this.tasks.get();
 
-            final Runnable runnable = new ShellServerClientThread(socket, tasks, serializer, async);
+            final Runnable runnable =
+                new ShellServerClientThread(socket, tasks, tasks.groups(), serializer, async);
             final Thread clientThread = new Thread(runnable);
             clientThread.setName(
                 String.format("remote-shell-thread[%s]", socket.getRemoteSocketAddress()));

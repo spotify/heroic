@@ -38,6 +38,7 @@ import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskParametersModel;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
 import com.spotify.heroic.time.Clock;
@@ -57,6 +58,7 @@ import org.kohsuke.args4j.Option;
 
 @TaskUsage("Fetch a range of data points")
 @TaskName("fetch")
+@TaskParametersModel(Fetch.Parameters.class)
 public class Fetch implements ShellTask {
     private final Clock clock;
     private final MetricManager metrics;

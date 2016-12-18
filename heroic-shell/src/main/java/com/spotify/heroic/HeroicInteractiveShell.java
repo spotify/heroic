@@ -25,6 +25,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.spotify.heroic.shell.CoreInterface;
+import com.spotify.heroic.shell.HeroicCompleter;
 import com.spotify.heroic.shell.HeroicParser;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.SyntaxError;
@@ -43,7 +44,6 @@ import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.ParsedLine;
 import org.jline.reader.Parser;
 import org.jline.reader.UserInterruptException;
-import org.jline.reader.impl.completer.StringsCompleter;
 import org.jline.reader.impl.history.DefaultHistory;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
@@ -59,6 +59,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.SortedSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -76,11 +77,15 @@ public class HeroicInteractiveShell {
 
     private static final Joiner COMMAND_JOINER = Joiner.on(" ");
 
-    public static final List<Command> BUILTIN =
-        ImmutableList.of(new Command(HELP, ImmutableList.of(), "Show help"),
-            new Command(CLEAR, ImmutableList.of(), "Clear the current shell"),
-            new Command(TIMEOUT, ImmutableList.of(), "Get or set the current task timeout"),
-            new Command(EXIT, ImmutableList.of(), "Exit the shell"));
+    public static final List<Command> BUILTIN = ImmutableList.of(
+        new Command(HELP, ImmutableList.of(), "Show help", ImmutableList.of(), ImmutableList.of()),
+        new Command(CLEAR, ImmutableList.of(), "Clear the current shell", ImmutableList.of(),
+            ImmutableList.of()),
+        new Command(TIMEOUT, ImmutableList.of(), "Get or set the current task timeout",
+            ImmutableList.of(),
+            ImmutableList.of(new Command.Arg("timeout", new Command.Type.Number(), false, true))),
+        new Command(EXIT, ImmutableList.of(), "Exit the shell", ImmutableList.of(),
+            ImmutableList.of()));
 
     final Optional<History> history;
     final Terminal terminal;
@@ -194,6 +199,10 @@ public class HeroicInteractiveShell {
         final List<String> parts = new ArrayList<>();
         parts.add(c.getName());
 
+        c.getArguments().forEach(argument -> {
+            parts.add(argument.display());
+        });
+
         final String commandSpec = COMMAND_JOINER.join(parts);
 
         out.println(String.format("%s - %s", commandSpec, c.getUsage()));
@@ -277,9 +286,9 @@ public class HeroicInteractiveShell {
         final CommandsResponse commandsResponse, FileInputStream input
     ) throws Exception {
         final List<Command> commands = commandsResponse.getCommands();
-        final List<String> names = ImmutableList.copyOf(
-            Iterables.transform(Iterables.concat(BUILTIN, commands), Command::getName));
-        final Completer completer = new StringsCompleter(names);
+        final SortedSet<String> groups = commandsResponse.getGroups();
+        final Completer completer =
+            new HeroicCompleter(ImmutableList.copyOf(Iterables.concat(BUILTIN, commands)), groups);
 
         final FileOutputStream output = new FileOutputStream(FileDescriptor.out);
         final Terminal terminal = buildTerminal(input, output);

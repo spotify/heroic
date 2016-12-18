@@ -33,6 +33,7 @@ import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskParametersModel;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
 import dagger.Component;
@@ -51,6 +52,7 @@ import java.util.Optional;
 
 @TaskUsage("Delete metadata matching the given query")
 @TaskName("metadata-delete")
+@TaskParametersModel(MetadataDelete.Parameters.class)
 public class MetadataDelete implements ShellTask {
     private final AsyncFramework async;
     private final MetadataManager metadata;

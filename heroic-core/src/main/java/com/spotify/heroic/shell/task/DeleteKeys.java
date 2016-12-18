@@ -34,6 +34,7 @@ import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskParametersModel;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
 import dagger.Component;
@@ -59,6 +60,7 @@ import javax.inject.Named;
 
 @TaskUsage("Delete all data for a set of keys")
 @TaskName("delete-keys")
+@TaskParametersModel(DeleteKeys.Parameters.class)
 public class DeleteKeys implements ShellTask {
     private final MetricManager metrics;
     private final ObjectMapper mapper;

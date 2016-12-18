@@ -19,22 +19,18 @@
  * under the License.
  */
 
-package com.spotify.heroic.shell.protocol;
+package com.spotify.heroic.shell;
 
-import eu.toolchain.serializer.AutoSerialize;
-import lombok.Data;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-import java.util.List;
-import java.util.SortedSet;
-
-@AutoSerialize
-@Data
-public class CommandsResponse implements Message {
-    final List<Command> commands;
-    final SortedSet<String> groups;
-
-    @Override
-    public <R> R visit(Visitor<R> visitor) throws Exception {
-        return visitor.visitCommandsResponse(this);
-    }
+/**
+ * Define model that makes up this tasks parameters.
+ */
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface TaskParametersModel {
+    Class<?> value();
 }

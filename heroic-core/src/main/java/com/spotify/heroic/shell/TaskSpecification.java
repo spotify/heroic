@@ -24,7 +24,10 @@ package com.spotify.heroic.shell;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.shell.protocol.Command;
 import lombok.Data;
+import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.Option;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -32,15 +35,20 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
+import java.util.stream.Stream;
+
+import static java.util.stream.Collectors.toList;
 
 @Data
 public class TaskSpecification {
     private final String name;
     private final List<String> aliases;
     private final String usage;
+    private final List<Command.Opt> options;
+    private final List<Command.Arg> arguments;
 
     public Command toCommand() {
-        return new Command(name, aliases, usage);
+        return new Command(name, aliases, usage, options, arguments);
     }
 
     public static TaskSpecification fromClass(final Class<? extends ShellTask> task) {
@@ -62,7 +70,99 @@ public class TaskSpecification {
                     task.getCanonicalName());
             });
 
-        return new TaskSpecification(name, aliases, usage);
+        final Optional<TaskParametersModel> taskParameters =
+            Optional.ofNullable(task.getAnnotation(TaskParametersModel.class));
+
+        final Optional<List<Class<?>>> parameterClasses =
+            taskParameters.map(TaskParametersModel::value).map(TaskSpecification::traverseClasses);
+
+        final List<Command.Opt> options = parameterClasses.map(classes -> {
+            return classes.stream().flatMap(TaskSpecification::options).collect(toList());
+        }).orElseGet(ImmutableList::of);
+
+        final List<Command.Arg> arguments = parameterClasses.map(classes -> {
+            return classes.stream().flatMap(TaskSpecification::arguments).collect(toList());
+        }).orElseGet(ImmutableList::of);
+
+        return new TaskSpecification(name, aliases, usage, options, arguments);
+    }
+
+    private static Stream<Command.Opt> options(final Class<?> cls) {
+        final Stream.Builder<Command.Opt> parameters = Stream.builder();
+        final Field[] fields = cls.getDeclaredFields();
+
+        for (final Field field : fields) {
+            final Option option = field.getAnnotation(Option.class);
+
+            if (option == null) {
+                continue;
+            }
+
+            final Optional<String> argument;
+
+            if (field.getType().equals(boolean.class)) {
+                argument = Optional.empty();
+            } else {
+                argument = Optional.of(field.getName());
+            }
+
+            final Optional<String> usage;
+
+            if ("".equals(option.usage())) {
+                usage = Optional.empty();
+            } else {
+                usage = Optional.of(option.usage());
+            }
+
+            final boolean optional = !option.required();
+
+            final Command.Type type = typeFromMetavar(option.metaVar());
+
+            parameters.add(
+                new Command.Opt(option.name(), ImmutableList.copyOf(option.aliases()), type,
+                    argument, usage, false, optional));
+        }
+
+        return parameters.build();
+    }
+
+    private static Stream<Command.Arg> arguments(final Class<?> cls) {
+        final Stream.Builder<Command.Arg> arguments = Stream.builder();
+        final Field[] fields = cls.getDeclaredFields();
+
+        for (final Field field : fields) {
+            final Argument argument = field.getAnnotation(Argument.class);
+
+            if (argument == null) {
+                continue;
+            }
+
+            final boolean list = field.getType().equals(List.class);
+            final boolean optional = !argument.required();
+
+            final String name = field.getName();
+            final Command.Type type = typeFromMetavar(argument.metaVar());
+            arguments.add(new Command.Arg(name, type, list, optional));
+        }
+
+        return arguments.build();
+    }
+
+    private static Command.Type typeFromMetavar(
+        final String metaVar
+    ) {
+        switch (metaVar) {
+            case "<file>":
+                return new Command.Type.File();
+            case "<file|->":
+                return new Command.Type.FileOrStd();
+            case "<group>":
+                return new Command.Type.Group();
+            case "<number>":
+                return new Command.Type.Number();
+            default:
+                return new Command.Type.Any();
+        }
     }
 
     private static List<Class<?>> traverseClasses(

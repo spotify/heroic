@@ -30,6 +30,7 @@ import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskParametersModel;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.suggest.SuggestManager;
 import dagger.Component;
@@ -45,6 +46,7 @@ import java.util.Optional;
 
 @TaskUsage("Configure the given group of metric backends")
 @TaskName("configure")
+@TaskParametersModel(Configure.Parameters.class)
 public class Configure implements ShellTask {
     private final AsyncFramework async;
     private final MetricManager metrics;
