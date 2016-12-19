@@ -29,6 +29,7 @@ import com.spotify.heroic.HeroicContext;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
+import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.scheduler.Scheduler;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -69,6 +70,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @ToString(of = {"useLocal"})
 public class CoreClusterManager implements ClusterManager, LifeCycles {
+    public static final QueryTrace.Identifier LOCAL_IDENTIFIER =
+        new QueryTrace.Identifier("[local]");
     private final AsyncFramework async;
     private final ClusterDiscovery discovery;
     private final NodeMetadata localMetadata;
@@ -295,11 +298,18 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
         return protocol.connect(uri).<Update>lazyTransform(node -> {
             if (useLocal && localMetadata.getId().equals(node.metadata().getId())) {
                 log.info("{} using local instead of {} (closing old node)", id, node);
+
+                final TracingClusterNode tracingNode = new TracingClusterNode(local,
+                    new QueryTrace.Identifier(uri.toString() + "[local]"));
+
                 // close old node
-                return node.close().directTransform(v -> new SuccessfulUpdate(uri, true, local));
+                return node
+                    .close()
+                    .directTransform(v -> new SuccessfulUpdate(uri, true, tracingNode));
             }
 
-            return async.resolved(new SuccessfulUpdate(uri, true, node));
+            return async.resolved(new SuccessfulUpdate(uri, true,
+                new TracingClusterNode(node, new QueryTrace.Identifier(uri.toString()))));
         }).catchFailed(Update.error(uri));
     }
 
@@ -425,7 +435,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
 
             if (entries.isEmpty() && useLocal) {
                 log.info("{} [refresh] no nodes discovered, including local node", id);
-                entries.add(local);
+                entries.add(new TracingClusterNode(local, LOCAL_IDENTIFIER));
             }
 
             final Set<Map<String, String>> knownShards = extractKnownShards(entries);
