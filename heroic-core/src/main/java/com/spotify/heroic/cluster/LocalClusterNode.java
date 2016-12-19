@@ -86,11 +86,11 @@ public class LocalClusterNode implements ClusterNode {
 
     @Override
     public Group useOptionalGroup(final Optional<String> group) {
-        return new TracingClusterNodeGroup(LocalClusterNode.class, new LocalGroup(group));
+        return new LocalGroup(group);
     }
 
     @RequiredArgsConstructor
-    private final class LocalGroup implements ClusterNode.Group {
+    private final class LocalGroup implements Group {
         private final Optional<String> group;
 
         @Override

@@ -1,5 +1,17 @@
 package com.spotify.heroic;
 
+import static com.spotify.heroic.test.Data.points;
+import static com.spotify.heroic.test.Matchers.containsChild;
+import static com.spotify.heroic.test.Matchers.hasIdentifier;
+import static com.spotify.heroic.test.Matchers.identifierContains;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.not;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -19,9 +31,6 @@ import com.spotify.heroic.metric.ResultLimit;
 import com.spotify.heroic.metric.ResultLimits;
 import com.spotify.heroic.metric.ShardedResultGroup;
 import eu.toolchain.async.AsyncFuture;
-import org.junit.Before;
-import org.junit.Test;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -29,13 +38,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-
-import static com.spotify.heroic.test.Data.points;
-import static org.hamcrest.Matchers.containsString;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
+import org.junit.Before;
+import org.junit.Test;
 
 public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     private final Series s1 = Series.of("key1", ImmutableMap.of("shared", "a", "diff", "a"));
@@ -122,6 +126,19 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     }
 
     @Test
+    public void distributedQueryTraceTest() throws Exception {
+        final QueryResult result = query("sum(10ms) by shared");
+
+        // Verify that the top level QueryTrace is for CoreQueryManager
+        assertThat(result.getTrace(), hasIdentifier(equalTo(CoreQueryManager.QUERY)));
+        /* Verify that the first level of QueryTrace children contains at least one entry for the
+         * local node and at least one for the remote node */
+        assertThat(result.getTrace(), containsChild(hasIdentifier(identifierContains("[local]"))));
+        assertThat(result.getTrace(),
+            containsChild(hasIdentifier(not(identifierContains("[local]")))));
+    }
+
+    @Test
     public void distributedDifferentQueryTest() throws Exception {
         final QueryResult result = query("sum(10ms) by diff");
 
@@ -162,10 +179,9 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
 
     @Test
     public void deltaQueryTest() throws Exception {
-        final QueryResult result =
-            query("delta", builder -> {
-                builder.features(Optional.empty());
-            });
+        final QueryResult result = query("delta", builder -> {
+            builder.features(Optional.empty());
+        });
 
         final Set<MetricCollection> m = getResults(result);
         final List<Long> cadences = getCadences(result);
@@ -235,8 +251,8 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         for (final RequestError e : result.getErrors()) {
             assertTrue((e instanceof QueryError));
             final QueryError q = (QueryError) e;
-            assertThat(q.getError(), containsString(
-                "Some fetches failed (1) or were cancelled (0)"));
+            assertThat(q.getError(),
+                containsString("Some fetches failed (1) or were cancelled (0)"));
         }
 
         assertEquals(ResultLimits.of(ResultLimit.QUOTA), result.getLimits());

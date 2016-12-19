@@ -29,7 +29,6 @@ import com.google.common.io.ByteStreams;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.cluster.NodeMetadata;
 import com.spotify.heroic.cluster.RpcProtocol;
-import com.spotify.heroic.cluster.TracingClusterNodeGroup;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.UsableGroupManager;
 import com.spotify.heroic.metadata.CountSeries;
@@ -137,7 +136,7 @@ public class GrpcRpcProtocol implements RpcProtocol {
 
             return client
                 .request(METADATA, CallOptions.DEFAULT.withDeadlineAfter(5, TimeUnit.SECONDS))
-                .directTransform(m -> new GrpcRpcClusterNode(uri, client, m));
+                .directTransform(m -> new GrpcRpcClusterNode(client, m));
         });
     }
 
@@ -155,7 +154,6 @@ public class GrpcRpcProtocol implements RpcProtocol {
 
     @RequiredArgsConstructor
     public class GrpcRpcClusterNode implements ClusterNode {
-        private final URI uri;
         private final GrpcRpcClient client;
         private final NodeMetadata metadata;
 
@@ -178,7 +176,7 @@ public class GrpcRpcProtocol implements RpcProtocol {
 
         @Override
         public ClusterNode.Group useOptionalGroup(Optional<String> group) {
-            return new TracingClusterNodeGroup(uri.toString(), new Group(group));
+            return new Group(group);
         }
 
         @Override
