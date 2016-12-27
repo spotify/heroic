@@ -38,15 +38,21 @@ import com.spotify.heroic.common.GroupMember;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
+import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricManagerModule;
 import com.spotify.heroic.metric.MetricModule;
+import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.WriteMetric;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Before;
@@ -58,6 +64,9 @@ import org.junit.runners.model.Statement;
 @Slf4j
 public abstract class AbstractMetricBackendIT {
     protected final Series s1 = Series.of("s1", ImmutableMap.of("id", "s1"));
+    protected final Series s2 = Series.of("s2", ImmutableMap.of("id", "s2"));
+    protected final Series s3 = Series.of("s3", ImmutableMap.of("id", "s3"));
+
     public static final Map<String, String> EVENT = ImmutableMap.of();
 
     protected MetricBackend backend;
@@ -297,4 +306,94 @@ public abstract class AbstractMetricBackendIT {
     interface ThrowingBiConsumer<A, B> {
         void accept(final A a, final B b) throws Exception;
     }
+
+    @Test
+    public void testWriteAndFetchOne() throws Exception {
+        final MetricCollection points = Data.points().p(100000L, 42D).build();
+        backend.write(new WriteMetric.Request(s1, points)).get();
+
+        FetchData.Request request =
+            new FetchData.Request(MetricType.POINT, s1, new DateRange(10000L, 200000L),
+                QueryOptions.builder().build());
+
+        assertEqualMetrics(points, fetchMetrics(request, true));
+        assertEqualMetrics(points, fetchMetrics(request, false));
+    }
+
+    @Test
+    public void testWriteAndFetchMultipleFetches() throws Exception {
+        int fetchSize = 20;
+
+        Points points = Data.points();
+        for (int i = 0; i < 10 * fetchSize; i++) {
+            points.p(100000L + i, 42D);
+        }
+
+        final MetricCollection mc = points.build();
+        backend.write(new WriteMetric.Request(s2, mc)).get();
+
+        FetchData.Request request =
+            new FetchData.Request(MetricType.POINT, s2, new DateRange(10000L, 200000L),
+                QueryOptions.builder().fetchSize(fetchSize).build());
+
+        assertEqualMetrics(mc, fetchMetrics(request, true));
+    }
+
+    @Test
+    public void testWriteAndFetchLongSeries() throws Exception {
+        Random random = new Random(1);
+
+        Points points = Data.points();
+
+        long timestamp = 1;
+        long maxTimestamp = 1000000000000L;
+        // timestamps [1, maxTimestamp] since we can't fetch 0 (range start is exclusive)
+        while (timestamp < maxTimestamp) {
+            points.p(timestamp, random.nextDouble());
+            timestamp += Math.abs(random.nextInt(100000000));
+        }
+        points.p(maxTimestamp, random.nextDouble());
+
+        MetricCollection mc = points.build();
+        backend.write(new WriteMetric.Request(s3, mc)).get();
+
+        FetchData.Request request =
+            new FetchData.Request(MetricType.POINT, s3, new DateRange(0, maxTimestamp),
+                QueryOptions.builder().build());
+
+        assertEqualMetrics(mc, fetchMetrics(request, true));
+        assertEqualMetrics(mc, fetchMetrics(request, false));
+    }
+
+    private List<MetricCollection> fetchMetrics(FetchData.Request request, boolean slicedFetch)
+        throws Exception {
+        if (slicedFetch) {
+            List<MetricCollection> fetchedMetrics = Collections.synchronizedList(new ArrayList<>());
+            backend.fetch(request, FetchQuotaWatcher.NO_QUOTA, fetchedMetrics::add).get();
+            return fetchedMetrics;
+        } else {
+            return backend.fetch(request, FetchQuotaWatcher.NO_QUOTA).get().getGroups();
+        }
+    }
+
+    private static void assertEqualMetrics(
+        MetricCollection expected, List<MetricCollection> actual
+    ) {
+        Stream<MetricType> types = actual.stream().map(MetricCollection::getType);
+        assertEquals(ImmutableSet.of(expected.getType()), types.collect(Collectors.toSet()));
+        actual
+            .stream()
+            .flatMap(mc -> mc.getData().stream())
+            .sorted(Metric.comparator())
+            .forEach(new Consumer<Metric>() {
+                int i;
+
+                @Override
+                public void accept(final Metric metric) {
+                    assertEquals(expected.getData().get(i), metric);
+                    i++;
+                }
+            });
+    }
+
 }

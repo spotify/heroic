@@ -23,15 +23,18 @@ package com.spotify.heroic.shell.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.spotify.heroic.querylogging.QueryContext;
+import com.spotify.heroic.QueryBuilder;
 import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.QueryManager;
 import com.spotify.heroic.QueryOptions;
+import com.spotify.heroic.common.Feature;
+import com.spotify.heroic.common.FeatureSet;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.metric.ShardedResultGroup;
 import com.spotify.heroic.metric.Tracing;
+import com.spotify.heroic.querylogging.QueryContext;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
@@ -40,10 +43,6 @@ import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import dagger.Component;
 import eu.toolchain.async.AsyncFuture;
-import lombok.ToString;
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.Option;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -51,6 +50,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Named;
+import lombok.ToString;
+import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.Option;
 
 @TaskUsage("Execute a query")
 @TaskName("query")
@@ -86,18 +88,19 @@ public class Query implements ShellTask {
         params.groupLimit.ifPresent(optionsBuilder::groupLimit);
         params.seriesLimit.ifPresent(optionsBuilder::seriesLimit);
 
-        final QueryOptions options = optionsBuilder.build();
+        final Optional<QueryOptions> options = Optional.of(optionsBuilder.build());
 
         final Optional<QueryDateRange> range =
             Optional.of(new QueryDateRange.Relative(TimeUnit.DAYS, 1));
 
+        QueryBuilder queryBuilder =
+            query.newQueryFromString(queryString).options(options).rangeIfAbsent(range);
+        if (params.slicedDataFetch) {
+            queryBuilder.features(Optional.of(FeatureSet.of(Feature.SLICED_DATA_FETCH)));
+        }
         return query
             .useGroup(params.group)
-            .query(query
-                .newQueryFromString(queryString)
-                .options(Optional.of(options))
-                .rangeIfAbsent(range)
-                .build(), queryContext)
+            .query(queryBuilder.build(), queryContext)
             .directTransform(result -> {
                 for (final RequestError e : result.getErrors()) {
                     io.out().println(String.format("ERR: %s", e.toString()));
@@ -135,6 +138,10 @@ public class Query implements ShellTask {
 
         @Option(name = "--tracing", usage = "Enable extensive tracing")
         private boolean tracing = false;
+
+        @Option(name = "--sliced-data-fetch", usage = "Enable sliced data fetch")
+        private boolean slicedDataFetch = false;
+
 
         @Option(name = "--data-limit", usage = "Enable data limiting")
         private Optional<Long> dataLimit = Optional.empty();
