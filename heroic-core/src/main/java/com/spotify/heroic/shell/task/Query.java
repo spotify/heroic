@@ -88,6 +88,7 @@ public class Query implements ShellTask {
         params.dataLimit.ifPresent(optionsBuilder::dataLimit);
         params.groupLimit.ifPresent(optionsBuilder::groupLimit);
         params.seriesLimit.ifPresent(optionsBuilder::seriesLimit);
+        params.fetchSize.ifPresent(optionsBuilder::fetchSize);
 
         final Optional<QueryOptions> options = Optional.of(optionsBuilder.build());
 
@@ -153,6 +154,9 @@ public class Query implements ShellTask {
 
         @Option(name = "--sliced-data-fetch", usage = "Enable sliced data fetch")
         private boolean slicedDataFetch = false;
+
+        @Option(name = "--fetch-size", usage = "Set the number of entries to fetch for every slice")
+        private Optional<Integer> fetchSize = Optional.empty();
 
         @Option(name = "--data-limit", usage = "Enable data limiting")
         private Optional<Long> dataLimit = Optional.empty();

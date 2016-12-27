@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
+import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.RequestTimer;
@@ -50,6 +51,7 @@ import com.spotify.heroic.metric.QueryError;
 import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.bigtable.api.BigtableDataClient;
+import com.spotify.heroic.metric.bigtable.api.BigtableDataClient.CellConsumer;
 import com.spotify.heroic.metric.bigtable.api.BigtableTableAdminClient;
 import com.spotify.heroic.metric.bigtable.api.ColumnFamily;
 import com.spotify.heroic.metric.bigtable.api.Mutations;
@@ -259,11 +261,12 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             if (!watcher.mayReadData()) {
                 throw new IllegalArgumentException("query violated data limit");
             }
+            final QueryOptions options = request.getOptions();
             switch (type) {
                 case POINT:
-                    return fetchBatch(watcher, type, pointsRanges(request), c, consumer);
+                    return fetchBatch(watcher, type, options, pointsRanges(request), c, consumer);
                 case EVENT:
-                    return fetchBatch(watcher, type, eventsRanges(request), c, consumer);
+                    return fetchBatch(watcher, type, options, eventsRanges(request), c, consumer);
                 default:
                     return async.resolved(FetchData.errorResult(QueryTrace.of(FETCH),
                         QueryError.fromMessage("unsupported source: " + request.getType())));
@@ -447,8 +450,9 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     }
 
     private AsyncFuture<FetchData.Result> fetchBatch(
-        final FetchQuotaWatcher watcher, final MetricType type, final List<PreparedQuery> prepared,
-        final BigtableConnection c, final Consumer<MetricCollection> metricsConsumer
+        final FetchQuotaWatcher watcher, final MetricType type, final QueryOptions options,
+        final List<PreparedQuery> prepared, final BigtableConnection c,
+        final Consumer<MetricCollection> metricsConsumer
     ) {
         final BigtableDataClient client = c.dataClient();
 
@@ -457,27 +461,23 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         for (final PreparedQuery p : prepared) {
             QueryTrace.NamedWatch fs = QueryTrace.watch(FETCH_SEGMENT);
 
-            final AsyncFuture<List<FlatRow>> readRows = client.readRows(table, ReadRowsRequest
-                .builder()
-                .rowKey(p.request.getRowKey())
-                .filter(RowFilter.chain(Arrays.asList(RowFilter
-                    .newColumnRangeBuilder(p.request.getColumnFamily())
-                    .startQualifierOpen(p.request.getStartQualifierOpen())
-                    .endQualifierClosed(p.request.getEndQualifierClosed())
-                    .build(), RowFilter.onlyLatestCell())))
-                .build());
+            final CellConsumer cellConsumer = new CellConsumer() {
 
-            final Function<FlatRow.Cell, Metric> transform =
-                cell -> p.deserialize(cell.getQualifier(), cell.getValue());
-
-            fetches.add(readRows.directTransform(result -> {
-                for (final FlatRow row : result) {
-                    watcher.readData(row.getCells().size());
-                    final List<Metric> metrics = Lists.transform(row.getCells(), transform);
+                @Override
+                public <T> void consume(
+                    List<? extends T> data, java.util.function.Function<T, ByteString> qualifier,
+                    java.util.function.Function<T, ByteString> value
+                ) {
+                    watcher.readData(data.size());
+                    final List<Metric> metrics = Lists.transform(data,
+                        t -> p.deserialize(qualifier.apply(t), value.apply(t)));
                     metricsConsumer.accept(MetricCollection.build(type, metrics));
                 }
-                return FetchData.result(fs.end());
-            }));
+            };
+
+            final AsyncFuture<Void> future =
+                client.readRowRange(table, p.request, options.getFetchSize(), cellConsumer);
+            fetches.add(future.directTransform(result -> FetchData.result(fs.end())));
         }
         return async.collect(fetches, FetchData.collectResult(FETCH)).directTransform(result -> {
             watcher.accessedRows(prepared.size());

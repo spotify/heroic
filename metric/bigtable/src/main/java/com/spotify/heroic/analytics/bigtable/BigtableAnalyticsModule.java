@@ -89,7 +89,7 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
                 return async.call(
                     new BigtableConnectionBuilder(project, cluster, credentials, async,
                         DEFAULT_DISABLE_BULK_MUTATIONS, DEFAULT_FLUSH_INTERVAL_SECONDS,
-                        Optional.empty()));
+                        Optional.empty(), Optional.empty()));
             }
 
             @Override

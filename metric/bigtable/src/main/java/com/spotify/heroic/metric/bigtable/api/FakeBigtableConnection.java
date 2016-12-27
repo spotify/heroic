@@ -28,6 +28,7 @@ import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.metric.bigtable.BigtableConnection;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.FutureResolved;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -150,6 +151,39 @@ public class FakeBigtableConnection implements BigtableConnection {
             }
 
             return storage.readRows(request);
+        }
+
+        @Override
+        public AsyncFuture<Void> readRowRange(
+            final String tableName, final ReadRowRangeRequest request,
+            final Optional<Integer> fetchSize, final CellConsumer cellConsumer
+        ) {
+            final Optional<ByteString> startQualifierClosed = Optional.empty();
+            final Optional<ByteString> startQualifierOpen =
+                Optional.of(request.getStartQualifierOpen());
+            final Optional<ByteString> endQualifierClosed =
+                Optional.of(request.getEndQualifierClosed());
+            final Optional<ByteString> endQualifierOpen = Optional.empty();
+
+            RowFilter.ColumnRange columnRange =
+                new RowFilter.ColumnRange(request.getColumnFamily(), startQualifierClosed,
+                    startQualifierOpen, endQualifierClosed, endQualifierOpen);
+
+            ReadRowsRequest internalRequest =
+                new ReadRowsRequest(Optional.empty(), Optional.of(columnRange),
+                    Optional.of(request.getRowKey()));
+
+            AsyncFuture<List<FlatRow>> resultFuture = readRows(tableName, internalRequest);
+            AsyncFuture<List<FlatRow>> postConsume = resultFuture.directTransform(flatRows -> {
+                // Run as directTransform so that this is run *before* any postConsume.onResolved
+                for (FlatRow row : flatRows) {
+                    cellConsumer.consume(row.getCells(), FlatRow.Cell::getQualifier,
+                        FlatRow.Cell::getValue);
+                }
+                return flatRows;
+            });
+
+            return postConsume.directTransform(flatRow -> null);
         }
 
         @Override
