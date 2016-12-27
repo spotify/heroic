@@ -34,21 +34,23 @@ import com.spotify.heroic.metric.bigtable.CredentialsBuilder;
 import com.spotify.heroic.metric.bigtable.credentials.ComputeEngineCredentialsBuilder;
 import com.spotify.heroic.statistics.AnalyticsReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
-import dagger.Module;
-import dagger.Provides;
+
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
 
-import javax.inject.Named;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 
+import javax.inject.Named;
+
+import dagger.Module;
+import dagger.Provides;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
 @ToString
 @RequiredArgsConstructor
@@ -94,7 +96,7 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
                 return async.call(
                     new BigtableConnectionBuilder(project, cluster, credentials, async,
                         executorService, DEFAULT_DISABLE_BULK_MUTATIONS,
-                        DEFAULT_FLUSH_INTERVAL_SECONDS, Optional.empty()));
+                        DEFAULT_FLUSH_INTERVAL_SECONDS, Optional.empty(), Optional.empty()));
             }
 
             @Override

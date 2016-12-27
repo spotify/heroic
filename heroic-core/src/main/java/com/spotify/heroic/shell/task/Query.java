@@ -23,9 +23,12 @@ package com.spotify.heroic.shell.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.spotify.heroic.QueryBuilder;
 import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.QueryManager;
 import com.spotify.heroic.QueryOptions;
+import com.spotify.heroic.common.Feature;
+import com.spotify.heroic.common.FeatureSet;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.RequestError;
@@ -37,9 +40,9 @@ import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
-import dagger.Component;
+
 import eu.toolchain.async.AsyncFuture;
-import lombok.ToString;
+
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 
@@ -48,8 +51,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
 import javax.inject.Inject;
 import javax.inject.Named;
+
+import dagger.Component;
+import lombok.ToString;
 
 @TaskUsage("Execute a query")
 @TaskName("query")
@@ -83,43 +90,42 @@ public class Query implements ShellTask {
         params.dataLimit.ifPresent(optionsBuilder::dataLimit);
         params.groupLimit.ifPresent(optionsBuilder::groupLimit);
         params.seriesLimit.ifPresent(optionsBuilder::seriesLimit);
+        params.fetchSize.ifPresent(optionsBuilder::fetchSize);
 
-        final QueryOptions options = optionsBuilder.build();
+        final Optional<QueryOptions> options = Optional.of(optionsBuilder.build());
 
         final Optional<QueryDateRange> range =
             Optional.of(new QueryDateRange.Relative(TimeUnit.DAYS, 1));
 
-        return query
-            .useGroup(params.group)
-            .query(query
-                .newQueryFromString(queryString)
-                .options(Optional.of(options))
-                .rangeIfAbsent(range)
-                .build())
-            .directTransform(result -> {
-                for (final RequestError e : result.getErrors()) {
-                    io.out().println(String.format("ERR: %s", e.toString()));
-                }
+        QueryBuilder queryBuilder =
+            query.newQueryFromString(queryString).options(options).rangeIfAbsent(range);
+        if (params.slicedDataFetch) {
+            queryBuilder.features(Optional.of(FeatureSet.of(Feature.SLICED_DATA_FETCH)));
+        }
+        return query.useGroup(params.group).query(queryBuilder.build()).directTransform(result -> {
+            for (final RequestError e : result.getErrors()) {
+                io.out().println(String.format("ERR: %s", e.toString()));
+            }
 
-                io.out().println(String.format("LIMITS: %s", result.getLimits().getLimits()));
+            io.out().println(String.format("LIMITS: %s", result.getLimits().getLimits()));
 
-                for (final ShardedResultGroup resultGroup : result.getGroups()) {
-                    final MetricCollection group = resultGroup.getMetrics();
+            for (final ShardedResultGroup resultGroup : result.getGroups()) {
+                final MetricCollection group = resultGroup.getMetrics();
 
-                    io
-                        .out()
-                        .println(String.format("%s: %s %s", group.getType(), resultGroup.getShard(),
-                            indent.writeValueAsString(resultGroup.getSeries())));
-                    io.out().println(indent.writeValueAsString(group.getData()));
-                    io.out().flush();
-                }
-
-                io.out().println("TRACE:");
-                result.getTrace().formatTrace(io.out());
+                io
+                    .out()
+                    .println(String.format("%s: %s %s", group.getType(), resultGroup.getShard(),
+                        indent.writeValueAsString(resultGroup.getSeries())));
+                io.out().println(indent.writeValueAsString(group.getData()));
                 io.out().flush();
+            }
 
-                return null;
-            });
+            io.out().println("TRACE:");
+            result.getTrace().formatTrace(io.out());
+            io.out().flush();
+
+            return null;
+        });
     }
 
     @ToString
@@ -133,6 +139,12 @@ public class Query implements ShellTask {
 
         @Option(name = "--tracing", usage = "Enable extensive tracing")
         private boolean tracing = false;
+
+        @Option(name = "--sliced-data-fetch", usage = "Enable sliced data fetch")
+        private boolean slicedDataFetch = false;
+
+        @Option(name = "--fetch-size", usage = "Set the number of entries to fetch for every slice")
+        private Optional<Integer> fetchSize = Optional.empty();
 
         @Option(name = "--data-limit", usage = "Enable data limiting")
         private Optional<Long> dataLimit = Optional.empty();

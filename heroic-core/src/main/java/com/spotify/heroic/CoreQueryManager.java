@@ -239,7 +239,8 @@ public class CoreQueryManager implements QueryManager {
             }
 
             final FullQuery.Request request =
-                new FullQuery.Request(source, filter, range, aggregationInstance, options);
+                new FullQuery.Request(source, filter, range, aggregationInstance, options,
+                    features);
 
             return queryCache.load(request, () -> {
                 for (final ClusterShard shard : shards) {

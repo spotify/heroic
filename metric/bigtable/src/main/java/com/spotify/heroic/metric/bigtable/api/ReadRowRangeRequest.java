@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2016 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,14 +19,16 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric;
+package com.spotify.heroic.metric.bigtable.api;
 
-import eu.toolchain.async.AsyncFuture;
+import com.google.protobuf.ByteString;
 
-public interface MetricBackendGroup extends MetricBackend {
-    /**
-     * Perform a local query for metrics.
-     */
-    AsyncFuture<FullQuery> query(FullQuery.Request request);
+import lombok.Data;
 
+@Data
+public final class ReadRowRangeRequest {
+    private final ByteString rowKey;
+    private final String columnFamily;
+    private final ByteString startQualifierOpen;
+    private final ByteString endQualifierClosed;
 }

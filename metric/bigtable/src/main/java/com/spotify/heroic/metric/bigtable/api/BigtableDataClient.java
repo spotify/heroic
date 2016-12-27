@@ -23,12 +23,23 @@ package com.spotify.heroic.metric.bigtable.api;
 
 import com.google.cloud.bigtable.grpc.scanner.FlatRow;
 import com.google.protobuf.ByteString;
+
 import com.spotify.heroic.async.AsyncObservable;
+
 import eu.toolchain.async.AsyncFuture;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Function;
 
 public interface BigtableDataClient {
+
+    interface CellConsumer {
+        <T> void consume(
+            List<? extends T> data, Function<T, ByteString> qualifier, Function<T, ByteString> value
+        );
+    }
+
     AsyncFuture<Void> mutateRow(String tableName, ByteString rowKey, Mutations mutations);
 
     /**
@@ -39,6 +50,20 @@ public interface BigtableDataClient {
      * @return A future that will be resolved when all rows are available.
      */
     AsyncFuture<List<FlatRow>> readRows(String tableName, ReadRowsRequest request);
+
+    /**
+     * Read the given set of rows, calling cellConsumer with cells as they are available.
+     *
+     * @param tableName Table to read rows from.
+     * @param request Request to use when reading rows.
+     * @param fetchSize The number of cells to fetch for every batch.
+     * @param cellConsumer The consumer of fetched data.
+     * @return A future that will be resolved when all cells have been passed to the cellConsumer.
+     */
+    AsyncFuture<Void> readRowRange(
+        String tableName, ReadRowRangeRequest request, Optional<Integer> fetchSize,
+        CellConsumer cellConsumer
+    );
 
     /**
      * Read the given set of rows in an observable way.

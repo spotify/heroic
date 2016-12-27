@@ -23,50 +23,77 @@ package com.spotify.heroic.metric;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
+
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
+
 import eu.toolchain.async.Collector;
-import lombok.Data;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import lombok.Data;
+
 @Data
 public class FetchData {
-    private final QueryTrace trace;
-    private final List<RequestError> errors;
+    private final Result result;
     private final List<Long> times;
     private final List<MetricCollection> groups;
 
-    public static FetchData error(final QueryTrace trace, final RequestError error) {
-        return new FetchData(trace, ImmutableList.of(error), ImmutableList.of(),
-            ImmutableList.of());
+    public static Result errorResult(final QueryTrace trace, final RequestError error) {
+        return new Result(trace, ImmutableList.of(error));
     }
 
+    public static Result result(final QueryTrace trace) {
+        return new Result(trace, ImmutableList.of());
+    }
+
+    @Deprecated
+    public static FetchData error(final QueryTrace trace, final RequestError error) {
+        return new FetchData(errorResult(trace, error), ImmutableList.of(), ImmutableList.of());
+    }
+
+    @Deprecated
     public static FetchData of(
         final QueryTrace trace, final List<Long> times, final List<MetricCollection> groups
     ) {
-        return new FetchData(trace, ImmutableList.of(), times, groups);
+        return new FetchData(new Result(trace, ImmutableList.of()), times, groups);
     }
 
-    public static Collector<FetchData, FetchData> collect(
+    public static Collector<Result, Result> collectResult(
         final QueryTrace.Identifier what
     ) {
         final QueryTrace.NamedWatch w = QueryTrace.watch(what);
 
         return results -> {
-            final ImmutableList.Builder<Long> times = ImmutableList.builder();
-            final Map<MetricType, ImmutableList.Builder<Metric>> fetchGroups = new HashMap<>();
             final ImmutableList.Builder<QueryTrace> traces = ImmutableList.builder();
             final ImmutableList.Builder<RequestError> errors = ImmutableList.builder();
 
-            for (final FetchData fetch : results) {
+            for (final Result result : results) {
+                traces.add(result.trace);
+                errors.addAll(result.errors);
+            }
+            return new Result(w.end(traces.build()), errors.build());
+        };
+    }
+
+    @Deprecated
+    public static Collector<FetchData, FetchData> collect(
+        final QueryTrace.Identifier what
+    ) {
+        final Collector<Result, Result> resultCollector = collectResult(what);
+
+        return fetchDataCollection -> {
+            final ImmutableList.Builder<Long> times = ImmutableList.builder();
+            final Map<MetricType, ImmutableList.Builder<Metric>> fetchGroups = new HashMap<>();
+            final ImmutableList.Builder<Result> results = ImmutableList.builder();
+
+            for (final FetchData fetch : fetchDataCollection) {
                 times.addAll(fetch.times);
-                traces.add(fetch.trace);
-                errors.addAll(fetch.errors);
+                results.add(fetch.result);
 
                 for (final MetricCollection g : fetch.groups) {
                     ImmutableList.Builder<Metric> data = fetchGroups.get(g.getType());
@@ -87,7 +114,7 @@ public class FetchData {
                     Ordering.from(Metric.comparator()).immutableSortedCopy(e.getValue().build())))
                 .collect(Collectors.toList());
 
-            return new FetchData(w.end(traces.build()), errors.build(), times.build(), groups);
+            return new FetchData(resultCollector.collect(results.build()), times.build(), groups);
         };
     }
 
@@ -97,5 +124,11 @@ public class FetchData {
         private final Series series;
         private final DateRange range;
         private final QueryOptions options;
+    }
+
+    @Data
+    public static class Result {
+        private final QueryTrace trace;
+        private final List<RequestError> errors;
     }
 }

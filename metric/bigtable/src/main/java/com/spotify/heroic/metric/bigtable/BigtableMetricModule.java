@@ -32,19 +32,22 @@ import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.bigtable.credentials.ComputeEngineCredentialsBuilder;
-import dagger.Component;
-import dagger.Module;
-import dagger.Provides;
+
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
 import eu.toolchain.serializer.Serializer;
-import lombok.Data;
 
-import javax.inject.Named;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
+
+import javax.inject.Named;
+
+import dagger.Component;
+import dagger.Module;
+import dagger.Provides;
+import lombok.Data;
 
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
@@ -73,6 +76,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
     private final boolean disableBulkMutations;
     private final int flushIntervalSeconds;
     private final Optional<Integer> batchSize;
+    private final Optional<Integer> defaultFetchSize;
 
     @JsonCreator
     public BigtableMetricModule(
@@ -84,7 +88,8 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         @JsonProperty("configure") Optional<Boolean> configure,
         @JsonProperty("disableBulkMutations") Optional<Boolean> disableBulkMutations,
         @JsonProperty("flushIntervalSeconds") Optional<Integer> flushIntervalSeconds,
-        @JsonProperty("batchSize") Optional<Integer> batchSize
+        @JsonProperty("batchSize") Optional<Integer> batchSize,
+        @JsonProperty("defaultFetchSize") Optional<Integer> defaultFetchSize
     ) {
         this.id = id;
         this.groups = groups.orElseGet(Groups::empty).or(DEFAULT_GROUP);
@@ -96,6 +101,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         this.disableBulkMutations = disableBulkMutations.orElse(DEFAULT_DISABLE_BULK_MUTATIONS);
         this.flushIntervalSeconds = flushIntervalSeconds.orElse(DEFAULT_FLUSH_INTERVAL_SECONDS);
         this.batchSize = batchSize;
+        this.defaultFetchSize = defaultFetchSize;
     }
 
     @Override
@@ -130,8 +136,8 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
                 public AsyncFuture<BigtableConnection> construct() throws Exception {
                     return async.call(
                         new BigtableConnectionBuilder(project, instance, credentials, async,
-                            executorService, disableBulkMutations, flushIntervalSeconds,
-                            batchSize));
+                            executorService, disableBulkMutations, flushIntervalSeconds, batchSize,
+                            defaultFetchSize));
                 }
 
                 @Override
@@ -198,6 +204,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         private Optional<Boolean> disableBulkMutations = empty();
         private Optional<Integer> flushIntervalSeconds = empty();
         private Optional<Integer> batchSize = empty();
+        private Optional<Integer> defaultFetchSize = empty();
 
         public Builder id(String id) {
             this.id = of(id);
@@ -245,6 +252,11 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
             return this;
         }
 
+        public Builder defaultFetchSize(int defaultFetchSize) {
+            this.defaultFetchSize = of(defaultFetchSize);
+            return this;
+        }
+
         public Builder table(final String table) {
             this.table = of(table);
             return this;
@@ -252,7 +264,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
 
         public BigtableMetricModule build() {
             return new BigtableMetricModule(id, groups, project, instance, table, credentials,
-                configure, disableBulkMutations, flushIntervalSeconds, batchSize);
+                configure, disableBulkMutations, flushIntervalSeconds, batchSize, defaultFetchSize);
         }
     }
 }

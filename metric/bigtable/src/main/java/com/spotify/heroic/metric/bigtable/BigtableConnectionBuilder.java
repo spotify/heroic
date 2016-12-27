@@ -22,11 +22,15 @@
 package com.spotify.heroic.metric.bigtable;
 
 import com.google.appengine.repackaged.com.google.common.collect.ImmutableList;
+import com.google.bigtable.v2.BigtableGrpc;
+import com.google.bigtable.v2.BigtableGrpc.Bigtable;
 import com.google.cloud.bigtable.config.BigtableOptions;
 import com.google.cloud.bigtable.config.BulkOptions;
 import com.google.cloud.bigtable.config.CredentialOptions;
 import com.google.cloud.bigtable.config.RetryOptions;
 import com.google.cloud.bigtable.grpc.BigtableSession;
+import com.google.cloud.bigtable.grpc.io.ChannelPool;
+
 import com.spotify.heroic.bigtable.grpc.Status;
 import com.spotify.heroic.metric.bigtable.api.BigtableDataClient;
 import com.spotify.heroic.metric.bigtable.api.BigtableDataClientImpl;
@@ -34,14 +38,17 @@ import com.spotify.heroic.metric.bigtable.api.BigtableMutator;
 import com.spotify.heroic.metric.bigtable.api.BigtableMutatorImpl;
 import com.spotify.heroic.metric.bigtable.api.BigtableTableAdminClient;
 import com.spotify.heroic.metric.bigtable.api.BigtableTableTableAdminClientImpl;
+
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
 
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
+
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
 @ToString(of = {"project", "instance", "credentials"})
 @RequiredArgsConstructor
@@ -59,6 +66,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
     private final boolean disableBulkMutations;
     private final int flushIntervalSeconds;
     private final Optional<Integer> batchSize;
+    private final Optional<Integer> defaultFetchSize;
 
     @Override
     public BigtableConnection call() throws Exception {
@@ -87,16 +95,23 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
 
         final BigtableTableAdminClient adminClient =
             new BigtableTableTableAdminClientImpl(async, session.getTableAdminClient(), project,
-              instance);
+                instance);
 
         final BigtableMutator mutator =
             new BigtableMutatorImpl(async, session, disableBulkMutations, flushIntervalSeconds);
 
-        final BigtableDataClient client =
-            new BigtableDataClientImpl(async, session, mutator, project, instance);
+        final ChannelPool channelPool =
+            BigtableSession.createChannelPool(options.getDataHost(), options,
+                options.getChannelCount());
 
-        return new GrpcBigtableConnection(
-            async, project, instance, session, mutator, adminClient, client);
+        final Bigtable bigtable = BigtableGrpc.newStub(channelPool);
+
+        final BigtableDataClient client =
+            new BigtableDataClientImpl(async, session, mutator, bigtable, project, instance,
+                defaultFetchSize);
+
+        return new GrpcBigtableConnection(async, project, instance, session, channelPool, mutator,
+            adminClient, client);
     }
 
     @RequiredArgsConstructor
@@ -107,6 +122,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
         private final String instance;
 
         final BigtableSession session;
+        final ChannelPool channelPool;
         final BigtableMutator mutator;
         final BigtableTableAdminClient tableAdminClient;
         final BigtableDataClient dataClient;
@@ -127,8 +143,13 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
                 session.close();
                 return null;
             });
-
-            return async.collectAndDiscard(ImmutableList.of(mutator.close(), closeSession));
+            final AsyncFuture<Void> shutdownChannelPool = async.call(() -> {
+                channelPool.shutdown();
+                channelPool.awaitTermination(10, TimeUnit.SECONDS);
+                return null;
+            });
+            return async.collectAndDiscard(
+                ImmutableList.of(mutator.close(), closeSession, shutdownChannelPool));
         }
     }
 }
