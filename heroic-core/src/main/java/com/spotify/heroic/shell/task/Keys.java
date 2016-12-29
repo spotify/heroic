@@ -33,6 +33,7 @@ import com.spotify.heroic.metric.BackendKeyFilter;
 import com.spotify.heroic.metric.BackendKeySet;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
+import com.spotify.heroic.metric.Tracing;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
@@ -47,11 +48,11 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.kohsuke.args4j.Option;
 
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
+import javax.inject.Inject;
+import javax.inject.Named;
 
 @TaskUsage("List available metric keys for all backends")
 @TaskName("keys")
@@ -81,7 +82,8 @@ public class Keys implements ShellTask {
 
         final BackendKeyFilter keyFilter = Tasks.setupKeyFilter(params, mapper);
 
-        final QueryOptions.Builder options = QueryOptions.builder().tracing(params.tracing);
+        final QueryOptions.Builder options =
+            QueryOptions.builder().tracing(Tracing.fromBoolean(params.tracing));
 
         params.fetchSize.ifPresent(options::fetchSize);
 

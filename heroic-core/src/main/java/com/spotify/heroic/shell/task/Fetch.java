@@ -32,6 +32,7 @@ import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Tracing;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
@@ -45,14 +46,14 @@ import eu.toolchain.async.AsyncFuture;
 import lombok.ToString;
 import org.kohsuke.args4j.Option;
 
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import javax.inject.Inject;
+import javax.inject.Named;
 
 @TaskUsage("Fetch a range of data points")
 @TaskName("fetch")
@@ -95,7 +96,8 @@ public class Fetch implements ShellTask {
         final MetricBackendGroup readGroup = metrics.useOptionalGroup(params.group);
         final MetricType source = MetricType.fromIdentifier(params.source).orElse(MetricType.POINT);
 
-        final QueryOptions options = QueryOptions.builder().tracing(params.tracing).build();
+        final QueryOptions options =
+            QueryOptions.builder().tracing(Tracing.fromBoolean(params.tracing)).build();
 
         return readGroup
             .fetch(new FetchData.Request(source, series, range, options))

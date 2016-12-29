@@ -35,6 +35,7 @@ import com.spotify.heroic.metric.BackendKeySet;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricManager;
+import com.spotify.heroic.metric.Tracing;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
@@ -52,8 +53,6 @@ import lombok.ToString;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -61,6 +60,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import javax.inject.Inject;
+import javax.inject.Named;
 
 @TaskUsage("Migrate data from one backend to another")
 @TaskName("data-migrate")
@@ -95,7 +96,8 @@ public class DataMigrate implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, final TaskParameters p) throws Exception {
         final Parameters params = (Parameters) p;
 
-        final QueryOptions.Builder options = QueryOptions.builder().tracing(params.tracing);
+        final QueryOptions.Builder options =
+            QueryOptions.builder().tracing(Tracing.fromBoolean(params.tracing));
 
         params.fetchSize.ifPresent(options::fetchSize);
 

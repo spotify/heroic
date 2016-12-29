@@ -28,6 +28,7 @@ import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
+import com.spotify.heroic.metric.Tracing;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
@@ -42,14 +43,14 @@ import eu.toolchain.async.StreamCollector;
 import lombok.ToString;
 import org.kohsuke.args4j.Option;
 
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicLong;
+import javax.inject.Inject;
+import javax.inject.Named;
 
 @TaskUsage("Count data for a given set of keys")
 @TaskName("count-data")
@@ -78,7 +79,8 @@ public class CountData implements ShellTask {
 
         final MetricBackendGroup group = metrics.useOptionalGroup(params.group);
 
-        final QueryOptions options = QueryOptions.builder().tracing(params.tracing).build();
+        final QueryOptions options =
+            QueryOptions.builder().tracing(Tracing.fromBoolean(params.tracing)).build();
 
         final ImmutableList.Builder<BackendKey> keys = ImmutableList.builder();
 
