@@ -23,6 +23,7 @@ package com.spotify.heroic.cluster;
 
 import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.RuntimeNodeException;
+import com.spotify.heroic.metric.Tracing;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.RetryException;
@@ -50,7 +51,7 @@ public class ClusterShard {
 
     public <T> AsyncFuture<T> apply(
         Function<ClusterNode.Group, AsyncFuture<T>> function,
-        BiFunction<T, List<QueryTrace>, T> handleRetryTraceFn
+        BiFunction<T, List<QueryTrace>, T> handleRetryTraceFn, Tracing tracing
     ) {
         final Iterator<ClusterNode.Group> it = groups.iterator();
 
@@ -84,11 +85,13 @@ public class ClusterShard {
                 });
             }, iteratorPolicy)
             .directTransform(retryResult -> handleRetryTraceFn.apply(retryResult.getResult(),
-                queryTracesFromRetries(retryResult.getErrors(), retryResult.getBackoffTimings())));
+                queryTracesFromRetries(retryResult.getErrors(), retryResult.getBackoffTimings(),
+                    tracing)));
     }
 
     private List<QueryTrace> queryTracesFromRetries(
-        final List<RetryException> retryExceptions, final List<Long> backoffTimings
+        final List<RetryException> retryExceptions, final List<Long> backoffTimings,
+        final Tracing tracing
     ) {
         final List<QueryTrace> traces = new ArrayList<>();
         long lastTS = 0;
@@ -96,21 +99,21 @@ public class ClusterShard {
         for (final RetryException re : retryExceptions) {
             /* For each RetryException, add a QueryTrace in the current shard with information about
              * the cause and elapsed time */
-            final long microTS =
-                TimeUnit.MICROSECONDS.convert(re.getOffsetMillis(), TimeUnit.MILLISECONDS);
-            long elapsed = microTS - lastTS;
-            traces.add(QueryTrace.of(new QueryTrace.Identifier(getMessageFrom(re)), elapsed));
-            lastTS = microTS;
+            final long millisTS = re.getOffsetMillis();
+            long elapsed = millisTS - lastTS;
+            traces.add(tracing.newTrace(new QueryTrace.Identifier(getMessageFrom(re)), elapsed,
+                TimeUnit.MILLISECONDS));
+            lastTS = millisTS;
 
             /* After each retry, a backoff pause is inserted before trying the next node.
              * Here we add a QueryTrace to represent this, including the duration of the pause */
             if (!backoffIterator.hasNext()) {
                 continue;
             }
-            final long backoffTS =
-                TimeUnit.MICROSECONDS.convert(backoffIterator.next(), TimeUnit.MILLISECONDS);
+
+            final long backoffTS = backoffIterator.next();
             elapsed = backoffTS - lastTS;
-            traces.add(QueryTrace.of(RETRY_BACKOFF, elapsed));
+            traces.add(tracing.newTrace(RETRY_BACKOFF, elapsed, TimeUnit.MILLISECONDS));
             lastTS = backoffTS;
         }
         return traces;

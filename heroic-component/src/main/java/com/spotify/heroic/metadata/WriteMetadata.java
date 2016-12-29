@@ -24,50 +24,35 @@ package com.spotify.heroic.metadata;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.cluster.ClusterShard;
 import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.RequestTimer;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.metric.ShardError;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
-import lombok.Data;
-
 import java.util.List;
+import lombok.Data;
 
 @Data
 public class WriteMetadata {
     private final List<RequestError> errors;
-    private final List<Long> times;
 
     public static WriteMetadata of() {
-        return new WriteMetadata(ImmutableList.of(), ImmutableList.of());
-    }
-
-    private static WriteMetadata of(final long time) {
-        return new WriteMetadata(ImmutableList.of(), ImmutableList.of(time));
+        return new WriteMetadata(ImmutableList.of());
     }
 
     public static Transform<Throwable, WriteMetadata> shardError(final ClusterShard c) {
-        return e -> new WriteMetadata(ImmutableList.of(ShardError.fromThrowable(c, e)),
-            ImmutableList.of());
+        return e -> new WriteMetadata(ImmutableList.of(ShardError.fromThrowable(c, e)));
     }
 
     public static Collector<WriteMetadata, WriteMetadata> reduce() {
         return requests -> {
             final ImmutableList.Builder<RequestError> errors = ImmutableList.builder();
-            final ImmutableList.Builder<Long> times = ImmutableList.builder();
-
             for (final WriteMetadata r : requests) {
                 errors.addAll(r.getErrors());
-                times.addAll(r.getTimes());
             }
 
-            return new WriteMetadata(errors.build(), times.build());
+            return new WriteMetadata(errors.build());
         };
-    }
-
-    public static RequestTimer<WriteMetadata> timer() {
-        return new RequestTimer<>(WriteMetadata::of);
     }
 
     @Data

@@ -23,16 +23,14 @@ package com.spotify.heroic.metric;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
-import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import eu.toolchain.async.Collector;
-import lombok.Data;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import lombok.Data;
 
 @Data
 public class FetchData {
@@ -53,19 +51,17 @@ public class FetchData {
     }
 
     public static Collector<FetchData, FetchData> collect(
-        final QueryTrace.Identifier what
+        final QueryTrace.NamedWatch watch
     ) {
-        final QueryTrace.NamedWatch w = QueryTrace.watch(what);
-
         return results -> {
             final ImmutableList.Builder<Long> times = ImmutableList.builder();
             final Map<MetricType, ImmutableList.Builder<Metric>> fetchGroups = new HashMap<>();
-            final ImmutableList.Builder<QueryTrace> traces = ImmutableList.builder();
+            final QueryTrace.Joiner traces = watch.joiner();
             final ImmutableList.Builder<RequestError> errors = ImmutableList.builder();
 
             for (final FetchData fetch : results) {
                 times.addAll(fetch.times);
-                traces.add(fetch.trace);
+                traces.addChild(fetch.trace);
                 errors.addAll(fetch.errors);
 
                 for (final MetricCollection g : fetch.groups) {
@@ -87,7 +83,7 @@ public class FetchData {
                     Ordering.from(Metric.comparator()).immutableSortedCopy(e.getValue().build())))
                 .collect(Collectors.toList());
 
-            return new FetchData(w.end(traces.build()), errors.build(), times.build(), groups);
+            return new FetchData(traces.result(), ImmutableList.of(), times.build(), groups);
         };
     }
 
@@ -96,6 +92,6 @@ public class FetchData {
         private final MetricType type;
         private final Series series;
         private final DateRange range;
-        private final QueryOptions options;
+        private final Tracing tracing;
     }
 }

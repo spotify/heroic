@@ -42,16 +42,15 @@ import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
-import lombok.Getter;
-import lombok.ToString;
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.Option;
-
-import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.inject.Inject;
+import lombok.Getter;
+import lombok.ToString;
+import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.Option;
 
 @TaskUsage("Fetch series matching the given query")
 @TaskName("metadata-migrate")

@@ -26,16 +26,19 @@ import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.SelectedGroup;
 import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.metric.QueryTrace;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
-
-import java.util.List;
 
 @RequiredArgsConstructor
 @ToString(of = {"backends"})
 public class MetadataBackendGroup implements MetadataBackend {
+    private static final QueryTrace.Identifier WRITE =
+        QueryTrace.identifier(MetadataBackendGroup.class, "write");
+
     private final SelectedGroup<MetadataBackend> backends;
     private final AsyncFramework async;
 

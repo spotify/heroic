@@ -40,12 +40,6 @@ import com.spotify.heroic.suggest.WriteSuggest;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.Getter;
-import lombok.ToString;
-import org.kohsuke.args4j.Option;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -53,6 +47,11 @@ import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.zip.GZIPInputStream;
+import javax.inject.Inject;
+import javax.inject.Named;
+import lombok.Getter;
+import lombok.ToString;
+import org.kohsuke.args4j.Option;
 
 @TaskUsage("Load metadata from a file")
 @TaskName("metadata-load")

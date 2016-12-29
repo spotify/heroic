@@ -51,6 +51,7 @@ public interface QueryTrace {
     Watch PASSIVE_WATCH = new PassiveWatch();
     NamedWatch PASSIVE_NAMED_WATCH = new PassiveNamedWatch();
     Joiner PASSIVE_JOINER = new PassiveJoiner();
+    TimeUnit UNIT = TimeUnit.MICROSECONDS;
 
     /**
      * Create an active query trace.

@@ -47,12 +47,6 @@ import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
-import lombok.Data;
-import lombok.Getter;
-import lombok.ToString;
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.Option;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -62,6 +56,11 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.inject.Inject;
 import javax.inject.Named;
+import lombok.Data;
+import lombok.Getter;
+import lombok.ToString;
+import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.Option;
 
 @TaskUsage("Migrate data from one backend to another")
 @TaskName("data-migrate")
@@ -305,8 +304,10 @@ public class DataMigrate implements ShellTask {
             if (n % LINES == 0) {
                 synchronized (io) {
                     try {
-                        io.out().println(" failedKeys: " + failedKeys.get() + ", last: " +
-                            mapper.writeValueAsString(key));
+                        io
+                            .out()
+                            .println(" failedKeys: " + failedKeys.get() + ", last: " +
+                                mapper.writeValueAsString(key));
                     } catch (JsonProcessingException e) {
                         throw new RuntimeException(e);
                     }

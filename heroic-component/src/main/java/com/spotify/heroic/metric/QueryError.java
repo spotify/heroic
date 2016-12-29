@@ -23,11 +23,32 @@ package com.spotify.heroic.metric;
 
 import lombok.Data;
 
+/**
+ * Indicated that an error happened during the query.
+ *
+ * The only information available is a message.
+ */
 @Data
 public class QueryError implements RequestError {
     private final String error;
 
+    /**
+     * Build a query error from a message.
+     *
+     * @param message Message to build error from
+     * @return a {@link com.spotify.heroic.metric.QueryError}
+     */
     public static RequestError fromMessage(final String message) {
         return new QueryError(message);
+    }
+
+    /**
+     * Build a query error from a throwable's message.
+     *
+     * @param e Throwable to build erroo from.
+     * @return a {@link com.spotify.heroic.metric.QueryError}
+     */
+    public static RequestError fromThrowable(final Throwable e) {
+        return new QueryError(e.getMessage());
     }
 }

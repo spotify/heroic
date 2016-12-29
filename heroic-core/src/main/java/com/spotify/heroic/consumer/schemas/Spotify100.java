@@ -40,6 +40,7 @@ import com.spotify.heroic.consumer.ConsumerSchemaValidationException;
 import com.spotify.heroic.consumer.SchemaScope;
 import com.spotify.heroic.ingestion.Ingestion;
 import com.spotify.heroic.ingestion.IngestionGroup;
+import com.spotify.heroic.ingestion.WriteOptions;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.statistics.ConsumerReporter;
@@ -168,8 +169,12 @@ public class Spotify100 implements ConsumerSchema {
             final Point p = new Point(metric.getTime(), metric.getValue());
             final List<Point> points = ImmutableList.of(p);
 
+            final Ingestion.Request request =
+                new Ingestion.Request(WriteOptions.defaults(), series,
+                    MetricCollection.points(points));
+
             reporter.reportMessageDrift(System.currentTimeMillis() - p.getTimestamp());
-            ingestion.write(new Ingestion.Request(series, MetricCollection.points(points)));
+            ingestion.write(request);
         }
     }
 

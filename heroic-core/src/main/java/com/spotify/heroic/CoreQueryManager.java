@@ -194,6 +194,8 @@ public class CoreQueryManager implements QueryManager {
         public AsyncFuture<QueryResult> query(final Query q, final QueryContext queryContext) {
             final QueryOptions options = q.getOptions().orElseGet(QueryOptions::defaults);
             final Tracing tracing = options.getTracing();
+            /* watch should come first to encompass as much of the query as possible */
+            final QueryTrace.NamedWatch watch = tracing.watch(QUERY);
 
             final QueryTrace.NamedWatch shardWatch = tracing.watch(QUERY_SHARD);
             final Stopwatch fullQueryWatch = Stopwatch.createStarted();
@@ -257,8 +259,10 @@ public class CoreQueryManager implements QueryManager {
                 for (final ClusterShard shard : shards) {
                     final QueryTrace.NamedWatch shardLocalWatch =
                         shardWatch.extendIdentifier(shard.getShard().toString());
+
                     final AsyncFuture<QueryResultPart> queryPart = shard
-                        .apply(g -> g.query(request), getStoreTracesTransform(shardLocalWatch))
+                        .apply(g -> g.query(request), getStoreTracesTransform(shardLocalWatch),
+                            tracing)
                         .catchFailed(FullQuery.shardError(shardLocalWatch, shard))
                         .directTransform(fullQuery -> {
                             queryLogger.logIncomingResponseFromShard(queryContext, fullQuery);
@@ -272,7 +276,7 @@ public class CoreQueryManager implements QueryManager {
                 final OptionalLimit limit = options.getGroupLimit().orElse(groupLimit);
 
                 return async
-                    .collect(futures, QueryResult.collectParts(QUERY, range, combiner, limit))
+                    .collect(futures, QueryResult.collectParts(watch, range, combiner, limit))
                     .directTransform(result -> {
                         reportCompletedQuery(result, fullQueryWatch);
                         return result;
@@ -372,12 +376,20 @@ public class CoreQueryManager implements QueryManager {
             final Function<ClusterShard, Transform<Throwable, T>> catcher,
             final Collector<T, T> collector
         ) {
+            return run(function, catcher, collector, (result, traces) -> result, Tracing.DEFAULT);
+        }
+
+        private <T> AsyncFuture<T> run(
+            final Function<ClusterNode.Group, AsyncFuture<T>> function,
+            final Function<ClusterShard, Transform<Throwable, T>> catcher,
+            final Collector<T, T> collector, final BiFunction<T, List<QueryTrace>, T> handler,
+            Tracing tracing
+        ) {
             final List<AsyncFuture<T>> futures = new ArrayList<>(shards.size());
 
             for (final ClusterShard shard : shards) {
-                futures.add(shard
-                    .apply(function::apply, CoreQueryManager::retryTraceHandlerNoop)
-                    .catchFailed(catcher.apply(shard)));
+                futures.add(
+                    shard.apply(function, handler, tracing).catchFailed(catcher.apply(shard)));
             }
 
             return async.collect(futures, collector);
@@ -396,20 +408,14 @@ public class CoreQueryManager implements QueryManager {
             QueryTrace.NamedWatch shardLocalWatch
         ) {
             return (fullQuery, queryTraces) -> {
+                final QueryTrace.Joiner joiner = shardLocalWatch.joiner();
                 /* We want to store the current QT + queryTraces list of QT's.
                  * Create new QT with queryTraces + current QT as a children */
-                final List<QueryTrace> traces = new ArrayList<>();
-                traces.addAll(queryTraces);
-                traces.add(fullQuery.getTrace());
-                final QueryTrace newTrace = shardLocalWatch.end(traces);
-                return fullQuery.withTrace(newTrace);
+                queryTraces.forEach(joiner::addChild);
+                joiner.addChild(fullQuery.getTrace());
+                return fullQuery.withTrace(joiner.result());
             };
         }
-    }
-
-    private static <T> T retryTraceHandlerNoop(T result, List<QueryTrace> traces) {
-        // Ignore QueryTrace list
-        return result;
     }
 
     private static final SortedSet<Long> INTERVAL_FACTORS =

@@ -33,16 +33,12 @@ import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
-
+import dagger.Component;
 import eu.toolchain.async.AsyncFuture;
-
-import org.kohsuke.args4j.Option;
-
 import javax.inject.Inject;
 import javax.inject.Named;
-
-import dagger.Component;
 import lombok.ToString;
+import org.kohsuke.args4j.Option;
 
 @TaskUsage("Write metadata")
 @TaskName("metadata-write")

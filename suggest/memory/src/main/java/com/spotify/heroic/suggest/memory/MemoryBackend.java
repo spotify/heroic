@@ -29,6 +29,7 @@ import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.suggest.KeySuggest;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.TagKeyCount;
@@ -38,10 +39,6 @@ import com.spotify.heroic.suggest.TagValuesSuggest;
 import com.spotify.heroic.suggest.WriteSuggest;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.Data;
-import lombok.ToString;
-
-import javax.inject.Inject;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -59,10 +56,16 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.inject.Inject;
+import lombok.Data;
+import lombok.ToString;
 
 @MemoryScope
 @ToString(of = {})
 public class MemoryBackend implements SuggestBackend, Grouped {
+    private static final QueryTrace.Identifier WRITE =
+        QueryTrace.identifier(MemoryBackend.class, "write");
+
     private static final float SCORE = 1.0f;
 
     private final SortedMap<String, Set<String>> keys = new TreeMap<>();

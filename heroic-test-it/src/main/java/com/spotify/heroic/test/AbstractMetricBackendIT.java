@@ -32,7 +32,6 @@ import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.HeroicConfig;
 import com.spotify.heroic.HeroicCore;
 import com.spotify.heroic.HeroicCoreInstance;
-import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.GroupMember;
 import com.spotify.heroic.common.Series;
@@ -42,6 +41,7 @@ import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricManagerModule;
 import com.spotify.heroic.metric.MetricModule;
+import com.spotify.heroic.metric.Tracing;
 import com.spotify.heroic.metric.WriteMetric;
 import java.util.ArrayList;
 import java.util.List;
@@ -191,8 +191,8 @@ public abstract class AbstractMetricBackendIT {
         backend.write(new WriteMetric.Request(s1, input)).get();
 
         FetchData data = backend
-            .fetch(new FetchData.Request(expected.getType(), s1, range,
-                QueryOptions.builder().build()), FetchQuotaWatcher.NO_QUOTA)
+            .fetch(new FetchData.Request(expected.getType(), s1, range, Tracing.DEFAULT),
+                FetchQuotaWatcher.NO_QUOTA)
             .get();
 
         assertEquals(ImmutableSet.of(expected), ImmutableSet.copyOf(data.getGroups()));

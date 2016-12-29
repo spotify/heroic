@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.ingestion;
 
-import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.Collected;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
@@ -31,14 +30,13 @@ import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.WriteMetadata;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricBackend;
+import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.statistics.IngestionManagerReporter;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.WriteSuggest;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.RequiredArgsConstructor;
-
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -46,9 +44,13 @@ import java.util.Optional;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Supplier;
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class CoreIngestionGroup implements IngestionGroup {
+    private static final QueryTrace.Identifier WRITE =
+        QueryTrace.identifier(CoreIngestionGroup.class, "write");
+
     private final AsyncFramework async;
     private final Supplier<Filter> filter;
     private final Semaphore writePermits;
@@ -82,7 +84,7 @@ public class CoreIngestionGroup implements IngestionGroup {
     protected AsyncFuture<Ingestion> syncWrite(final Ingestion.Request request) {
         if (!filter.get().apply(request.getSeries())) {
             reporter.reportDroppedByFilter();
-            return async.resolved(Ingestion.of(ImmutableList.of()));
+            return async.resolved(Ingestion.of());
         }
 
         try {

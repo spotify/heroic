@@ -23,44 +23,33 @@ package com.spotify.heroic.suggest;
 
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.RequestTimer;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.RequestError;
 import eu.toolchain.async.Collector;
-import lombok.Data;
-
 import java.util.List;
+import lombok.Data;
 
 @Data
 public class WriteSuggest {
     private final List<RequestError> errors;
-    private final List<Long> times;
     private final List<String> ids;
 
     public static WriteSuggest of() {
-        return new WriteSuggest(ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
-    }
-
-    public static WriteSuggest of(final long time) {
-        return new WriteSuggest(ImmutableList.of(), ImmutableList.of(time), ImmutableList.of());
+        return new WriteSuggest(ImmutableList.of(), ImmutableList.of());
     }
 
     public static Collector<WriteSuggest, WriteSuggest> reduce() {
         return requests -> {
             final ImmutableList.Builder<RequestError> errors = ImmutableList.builder();
-            final ImmutableList.Builder<Long> times = ImmutableList.builder();
+            final ImmutableList.Builder<String> ids = ImmutableList.builder();
 
             for (final WriteSuggest r : requests) {
                 errors.addAll(r.getErrors());
-                times.addAll(r.getTimes());
+                ids.addAll(r.getIds());
             }
 
-            return new WriteSuggest(errors.build(), times.build(), ImmutableList.of());
+            return new WriteSuggest(errors.build(), ids.build());
         };
-    }
-
-    public static RequestTimer<WriteSuggest> timer() {
-        return new RequestTimer<>(WriteSuggest::of);
     }
 
     @Data
