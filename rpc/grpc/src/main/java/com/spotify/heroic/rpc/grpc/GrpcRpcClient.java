@@ -33,11 +33,10 @@ import io.grpc.ClientCall;
 import io.grpc.ManagedChannel;
 import io.grpc.Metadata;
 import io.grpc.Status;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -129,6 +128,10 @@ public class GrpcRpcClient {
 
     @Override
     public String toString() {
+        return getUri();
+    }
+
+    public String getUri() {
         return "grpc://" + address.getHostString() +
             (address.getPort() != -1 ? ":" + address.getPort() : "");
     }
