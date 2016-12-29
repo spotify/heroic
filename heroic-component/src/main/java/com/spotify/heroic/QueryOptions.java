@@ -23,13 +23,14 @@ package com.spotify.heroic;
 
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.metric.QueryTrace;
+import com.spotify.heroic.metric.Tracing;
 import lombok.Data;
 
 import java.util.Optional;
 
 @Data
 public class QueryOptions {
-    public static final boolean DEFAULT_TRACING = false;
+    public static final Tracing DEFAULT_TRACING = Tracing.disabled();
 
     /**
      * Indicates if tracing is enabled.
@@ -39,7 +40,7 @@ public class QueryOptions {
      *
      * @return {@code true} if tracing is enabled.
      */
-    private final Optional<Boolean> tracing;
+    private final Tracing tracing;
 
     /**
      * The number of entries to fetch for every batch.
@@ -66,16 +67,12 @@ public class QueryOptions {
      */
     private final Optional<Boolean> failOnLimits;
 
-    public boolean isTracing() {
-        return tracing.orElse(DEFAULT_TRACING);
-    }
-
     public Optional<Integer> getFetchSize() {
         return fetchSize;
     }
 
     public static QueryOptions defaults() {
-        return new QueryOptions(Optional.empty(), Optional.empty(), OptionalLimit.empty(),
+        return new QueryOptions(Tracing.disabled(), Optional.empty(), OptionalLimit.empty(),
             OptionalLimit.empty(), OptionalLimit.empty(), Optional.empty());
     }
 
@@ -84,14 +81,14 @@ public class QueryOptions {
     }
 
     public static class Builder {
-        private Optional<Boolean> tracing = Optional.empty();
+        private Optional<Tracing> tracing = Optional.empty();
         private Optional<Integer> fetchSize = Optional.empty();
         private OptionalLimit dataLimit = OptionalLimit.empty();
         private OptionalLimit groupLimit = OptionalLimit.empty();
         private OptionalLimit seriesLimit = OptionalLimit.empty();
         private Optional<Boolean> failOnLimits = Optional.empty();
 
-        public Builder tracing(boolean tracing) {
+        public Builder tracing(Tracing tracing) {
             this.tracing = Optional.of(tracing);
             return this;
         }
@@ -122,6 +119,8 @@ public class QueryOptions {
         }
 
         public QueryOptions build() {
+            final Tracing tracing = this.tracing.orElse(DEFAULT_TRACING);
+
             return new QueryOptions(tracing, fetchSize, dataLimit, groupLimit, seriesLimit,
                 failOnLimits);
         }
