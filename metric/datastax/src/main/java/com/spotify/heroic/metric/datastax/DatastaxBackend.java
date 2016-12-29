@@ -48,6 +48,7 @@ import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.QueryError;
 import com.spotify.heroic.metric.QueryTrace;
+import com.spotify.heroic.metric.Tracing;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.datastax.schema.Schema;
 import com.spotify.heroic.metric.datastax.schema.Schema.PreparedFetch;
@@ -191,7 +192,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
             prepareCachedStatement(c, select).directTransform(stmt -> {
                 BoundStatement bound = stmt.bind(select.getBindings().toArray());
 
-                if (options.getTracing().isEnabled()) {
+                if (options.getTracing().isEnabled(Tracing.DETAILED)) {
                     bound.enableTracing();
                 }
 
@@ -490,7 +491,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
 
             final Statement stmt;
 
-            if (options.getTracing().isEnabled()) {
+            if (options.getTracing().isEnabled(Tracing.DETAILED)) {
                 stmt = p.fetch(limit).enableTracing();
                 traceBuilder =
                     result -> buildTrace(c, FETCH_SEGMENT.extend(p.toString()), w.elapsed(),
