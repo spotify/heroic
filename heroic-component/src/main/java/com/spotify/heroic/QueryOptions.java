@@ -30,7 +30,7 @@ import java.util.Optional;
 
 @Data
 public class QueryOptions {
-    public static final Tracing DEFAULT_TRACING = Tracing.NONE;
+    public static final Tracing DEFAULT_TRACING = Tracing.DEFAULT;
 
     /**
      * Indicates if tracing is enabled.
