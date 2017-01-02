@@ -454,6 +454,14 @@ public interface QueryTrace {
         NamedWatch watch(Identifier what);
 
         /**
+         * Create another watch that copies everything from this watch, while extending the id.
+         *
+         * @param appendName What to extend the identifier with
+         * @return a {@link com.spotify.heroic.metric.QueryTrace.NamedWatch}
+         */
+        NamedWatch extendIdentifier(String appendName);
+
+        /**
          * How long this trace has elapsed for.
          *
          * @return milliseconds since unix epoch
@@ -493,6 +501,11 @@ public interface QueryTrace {
         }
 
         @Override
+        public NamedWatch extendIdentifier(String appendName) {
+            return new ActiveNamedWatch(what.extend(appendName), w);
+        }
+
+        @Override
         public long elapsed() {
             return w.elapsed(TimeUnit.MICROSECONDS);
         }
@@ -522,6 +535,11 @@ public interface QueryTrace {
 
         @Override
         public NamedWatch watch(final Identifier what) {
+            return PASSIVE_NAMED_WATCH;
+        }
+
+        @Override
+        public NamedWatch extendIdentifier(String appendName) {
             return PASSIVE_NAMED_WATCH;
         }
 

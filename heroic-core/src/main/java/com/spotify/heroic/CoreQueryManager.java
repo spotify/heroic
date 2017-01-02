@@ -60,6 +60,7 @@ import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.QueryResultPart;
 import com.spotify.heroic.metric.QueryTrace;
+import com.spotify.heroic.metric.Tracing;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.suggest.KeySuggest;
 import com.spotify.heroic.suggest.TagKeyCount;
@@ -70,23 +71,23 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.SortedSet;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 import java.util.function.Function;
+import javax.inject.Inject;
+import javax.inject.Named;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class CoreQueryManager implements QueryManager {
     public static final long SHIFT_TOLERANCE = TimeUnit.MILLISECONDS.convert(10, TimeUnit.SECONDS);
-    public static final QueryTrace.Identifier QUERY_NODE =
-        QueryTrace.identifier(CoreQueryManager.class, "query_node");
+    public static final QueryTrace.Identifier QUERY_SHARD =
+        QueryTrace.identifier(CoreQueryManager.class, "query_shard");
     public static final QueryTrace.Identifier QUERY =
         QueryTrace.identifier(CoreQueryManager.class, "query");
 
@@ -176,11 +177,15 @@ public class CoreQueryManager implements QueryManager {
 
         @Override
         public AsyncFuture<QueryResult> query(Query q) {
+            final QueryOptions options = q.getOptions().orElseGet(QueryOptions::defaults);
+            final Tracing tracing = options.getTracing();
+
+            final QueryTrace.NamedWatch shardWatch = tracing.watch(QUERY_SHARD);
+
             final List<AsyncFuture<QueryResultPart>> futures = new ArrayList<>();
 
             final MetricType source = q.getSource().orElse(MetricType.POINT);
 
-            final QueryOptions options = q.getOptions().orElseGet(QueryOptions::defaults);
             final Aggregation aggregation = q.getAggregation().orElse(Empty.INSTANCE);
             final DateRange rawRange = buildRange(q);
 
@@ -194,8 +199,8 @@ public class CoreQueryManager implements QueryManager {
 
             final AggregationInstance aggregationInstance;
 
-            final Features features = CoreQueryManager.this.features
-                .applySet(q.getFeatures().orElseGet(FeatureSet::empty));
+            final Features features = CoreQueryManager.this.features.applySet(
+                q.getFeatures().orElseGet(FeatureSet::empty));
 
             boolean isDistributed = features.hasFeature(Feature.DISTRIBUTED_AGGREGATIONS);
 
@@ -222,9 +227,11 @@ public class CoreQueryManager implements QueryManager {
 
             return queryCache.load(request, () -> {
                 for (final ClusterShard shard : shards) {
+                    final QueryTrace.NamedWatch shardLocalWatch =
+                        shardWatch.extendIdentifier(shard.getShard().toString());
                     final AsyncFuture<QueryResultPart> queryPart = shard
-                        .apply(g -> g.query(request))
-                        .catchFailed(FullQuery.shardError(QUERY_NODE, shard))
+                        .apply(g -> g.query(request), getStoreTracesTransform(shardLocalWatch))
+                        .catchFailed(FullQuery.shardError(shardLocalWatch, shard))
                         .directTransform(QueryResultPart.fromResultGroup(shard));
 
                     futures.add(queryPart);
@@ -320,7 +327,9 @@ public class CoreQueryManager implements QueryManager {
             final List<AsyncFuture<T>> futures = new ArrayList<>(shards.size());
 
             for (final ClusterShard shard : shards) {
-                futures.add(shard.apply(function::apply).catchFailed(catcher.apply(shard)));
+                futures.add(shard
+                    .apply(function::apply, CoreQueryManager::retryTraceHandlerNoop)
+                    .catchFailed(catcher.apply(shard)));
             }
 
             return async.collect(futures, collector);
@@ -334,6 +343,25 @@ public class CoreQueryManager implements QueryManager {
                 .map(r -> r.buildDateRange(now))
                 .orElseThrow(() -> new IllegalArgumentException("Range must be present"));
         }
+
+        private BiFunction<FullQuery, List<QueryTrace>, FullQuery> getStoreTracesTransform(
+            QueryTrace.NamedWatch shardLocalWatch
+        ) {
+            return (fullQuery, queryTraces) -> {
+                /* We want to store the current QT + queryTraces list of QT's.
+                 * Create new QT with queryTraces + current QT as a children */
+                final List<QueryTrace> traces = new ArrayList<>();
+                traces.addAll(queryTraces);
+                traces.add(fullQuery.getTrace());
+                final QueryTrace newTrace = shardLocalWatch.end(traces);
+                return fullQuery.withTrace(newTrace);
+            };
+        }
+    }
+
+    private static <T> T retryTraceHandlerNoop(T result, List<QueryTrace> traces) {
+        // Ignore QueryTrace list
+        return result;
     }
 
     private static final SortedSet<Long> INTERVAL_FACTORS =

@@ -4,6 +4,7 @@ import static com.spotify.heroic.test.Data.points;
 import static com.spotify.heroic.test.Matchers.containsChild;
 import static com.spotify.heroic.test.Matchers.hasIdentifier;
 import static com.spotify.heroic.test.Matchers.identifierContains;
+import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
@@ -131,11 +132,18 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
 
         // Verify that the top level QueryTrace is for CoreQueryManager
         assertThat(result.getTrace(), hasIdentifier(equalTo(CoreQueryManager.QUERY)));
-        /* Verify that the first level of QueryTrace children contains at least one entry for the
+        // Verify that second level is of type QUERY_SHARD
+        assertThat(result.getTrace(), containsChild(
+            hasIdentifier(identifierContains(CoreQueryManager.QUERY_SHARD.toString()))));
+
+        /* Verify that the third level (under QUERY_SHARD) contains at least one entry for the
          * local node and at least one for the remote node */
-        assertThat(result.getTrace(), containsChild(hasIdentifier(identifierContains("[local]"))));
-        assertThat(result.getTrace(),
-            containsChild(hasIdentifier(not(identifierContains("[local]")))));
+        assertThat(result.getTrace(), containsChild(
+            allOf(hasIdentifier(identifierContains(CoreQueryManager.QUERY_SHARD.toString())),
+                containsChild(hasIdentifier(identifierContains("[local]"))))));
+        assertThat(result.getTrace(), containsChild(
+            allOf(hasIdentifier(identifierContains(CoreQueryManager.QUERY_SHARD.toString())),
+                containsChild(hasIdentifier(not(identifierContains("[local]")))))));
     }
 
     @Test

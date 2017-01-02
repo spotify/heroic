@@ -141,5 +141,9 @@ public class TracingClusterNode implements ClusterNode {
         public AsyncFuture<WriteMetric> writeMetric(final WriteMetric.Request request) {
             return delegateGroup.writeMetric(request);
         }
+
+        public String toString() {
+            return queryIdentifier.toString();
+        }
     }
 }
