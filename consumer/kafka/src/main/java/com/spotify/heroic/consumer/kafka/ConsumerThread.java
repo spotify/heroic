@@ -27,16 +27,15 @@ import com.spotify.heroic.statistics.ConsumerReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
-import kafka.consumer.KafkaStream;
-import kafka.message.MessageAndMetadata;
-import lombok.extern.slf4j.Slf4j;
-
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.LongAdder;
+import kafka.consumer.KafkaStream;
+import kafka.message.MessageAndMetadata;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public final class ConsumerThread extends Thread {
@@ -83,21 +82,31 @@ public final class ConsumerThread extends Thread {
     public void run() {
         log.info("{}: Starting thread", name);
 
-        active.incrementAndGet();
+        threadIsStarting();
 
         try {
             guardedRun();
         } catch (final Throwable e) {
             log.error("{}: Error in thread", name, e);
-            active.decrementAndGet();
+            threadIsStopping();
             stopFuture.fail(e);
             return;
         }
 
         log.info("{}: Stopping thread", name);
-        active.decrementAndGet();
+        threadIsStopping();
         stopFuture.resolve(null);
         return;
+    }
+
+    private void threadIsStarting() {
+        active.incrementAndGet();
+        reporter.reportConsumerThreadsIncrement();
+    }
+
+    private void threadIsStopping() {
+        active.decrementAndGet();
+        reporter.reportConsumerThreadsDecrement();
     }
 
     public AsyncFuture<Void> pauseConsumption() {

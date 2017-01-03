@@ -28,5 +28,9 @@ public interface ConsumerReporter {
 
     void reportConsumerSchemaError();
 
+    void reportConsumerThreadsWanted(final long count);
+    void reportConsumerThreadsIncrement();
+    void reportConsumerThreadsDecrement();
+
     void reportMessageDrift(final long ms);
 }

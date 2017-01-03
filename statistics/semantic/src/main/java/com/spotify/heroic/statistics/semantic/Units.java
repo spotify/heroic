@@ -35,4 +35,5 @@ final class Units {
     public static final String DROP = "drop";
     public static final String COUNT = "count";
     public static final String SAMPLE = "sample";
+    public static final String RATIO = "%";
 }
