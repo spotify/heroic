@@ -382,6 +382,7 @@ public class LocalMetricManager implements MetricManager {
     private abstract static class ResultCollector
         implements StreamCollector<Pair<Series, FetchData>, FullQuery> {
         final ConcurrentLinkedQueue<Throwable> errors = new ConcurrentLinkedQueue<>();
+        final ConcurrentLinkedQueue<RequestError> requestErrors = new ConcurrentLinkedQueue<>();
 
         final FetchQuotaWatcher watcher;
         final DataInMemoryReporter dataInMemoryReporter;
@@ -394,6 +395,7 @@ public class LocalMetricManager implements MetricManager {
         @Override
         public void resolved(final Pair<Series, FetchData> result) throws Exception {
             final FetchData f = result.getRight();
+            requestErrors.addAll(f.getErrors());
 
             for (final MetricCollection g : f.getGroups()) {
                 g.updateAggregation(session, result.getLeft().getTags(),
@@ -416,18 +418,18 @@ public class LocalMetricManager implements MetricManager {
         @Override
         public FullQuery end(int resolved, int failed, int cancelled) throws Exception {
             final QueryTrace trace = buildTrace();
+            final ImmutableList.Builder<RequestError> errorsBuilder = ImmutableList.builder();
+            errorsBuilder.addAll(requestErrors);
 
             // Signal that we're done processing this
             dataInMemoryReporter.reportOperationEnded();
 
             if (watcher.isQuotaViolated()) {
-                final List<RequestError> errors = checkIssues(failed, cancelled)
-                    .map(QueryError::fromMessage)
-                    .map(ImmutableList::of)
-                    .orElseGet(ImmutableList::of);
+                checkIssues(failed, cancelled)
+                    .map(QueryError::fromMessage).ifPresent(errorsBuilder::add);
 
-                return new FullQuery(trace, errors, ImmutableList.of(), Statistics.empty(),
-                    limits.add(ResultLimit.QUOTA));
+                return new FullQuery(trace, errorsBuilder.build(), ImmutableList.of(),
+                    Statistics.empty(), limits.add(ResultLimit.QUOTA));
             }
 
             checkIssues(failed, cancelled).map(RuntimeException::new).ifPresent(e -> {
@@ -448,11 +450,12 @@ public class LocalMetricManager implements MetricManager {
             for (final AggregationOutput group : result.getResult()) {
                 if (groupLimit.isGreaterOrEqual(groups.size())) {
                     if (failOnLimits) {
-                        final List<RequestError> errors = ImmutableList.of(QueryError.fromMessage(
+                        errorsBuilder.add(QueryError.fromMessage(
                             "The number of result groups is more than the allowed limit of " +
                                 groupLimit));
 
-                        return new FullQuery(trace, errors, ImmutableList.of(), Statistics.empty(),
+                        return new FullQuery(trace, errorsBuilder.build(), ImmutableList.of(),
+                            Statistics.empty(),
                             new ResultLimits(limits.add(ResultLimit.GROUP).build()));
                     }
 
@@ -464,7 +467,7 @@ public class LocalMetricManager implements MetricManager {
                     aggregation.cadence()));
             }
 
-            return new FullQuery(trace, ImmutableList.of(), groups, result.getStatistics(),
+            return new FullQuery(trace, errorsBuilder.build(), groups, result.getStatistics(),
                 new ResultLimits(limits.build()));
         }
 

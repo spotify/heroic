@@ -61,10 +61,12 @@ public class FetchData {
             final ImmutableList.Builder<Long> times = ImmutableList.builder();
             final Map<MetricType, ImmutableList.Builder<Metric>> fetchGroups = new HashMap<>();
             final ImmutableList.Builder<QueryTrace> traces = ImmutableList.builder();
+            final ImmutableList.Builder<RequestError> errors = ImmutableList.builder();
 
             for (final FetchData fetch : results) {
                 times.addAll(fetch.times);
                 traces.add(fetch.trace);
+                errors.addAll(fetch.errors);
 
                 for (final MetricCollection g : fetch.groups) {
                     ImmutableList.Builder<Metric> data = fetchGroups.get(g.getType());
@@ -85,7 +87,7 @@ public class FetchData {
                     Ordering.from(Metric.comparator()).immutableSortedCopy(e.getValue().build())))
                 .collect(Collectors.toList());
 
-            return new FetchData(w.end(traces.build()), ImmutableList.of(), times.build(), groups);
+            return new FetchData(w.end(traces.build()), errors.build(), times.build(), groups);
         };
     }
 
