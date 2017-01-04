@@ -40,6 +40,7 @@ public class SemanticConsumerReporter implements ConsumerReporter {
     private final Meter messageIn;
     private final Meter messageError;
     private final Meter consumerSchemaError;
+    private final SemanticRatioGauge consumerThreadsLiveRatio;
     private final Histogram messageSize;
     private final Histogram messageDrift;
 
@@ -52,6 +53,9 @@ public class SemanticConsumerReporter implements ConsumerReporter {
         messageError = registry.meter(base.tagged("what", "message-error", "unit", Units.FAILURE));
         consumerSchemaError =
             registry.meter(base.tagged("what", "consumer-schema-error", "unit", Units.FAILURE));
+        consumerThreadsLiveRatio = new SemanticRatioGauge();
+        registry.register(base.tagged("what", "consumer-threads-live-ratio", "unit", Units.RATIO),
+            consumerThreadsLiveRatio);
         messageSize = registry.histogram(base.tagged("what", "message-size", "unit", Units.BYTE));
         messageDrift =
             registry.histogram(base.tagged("what", "message-drift", "unit", Units.MILLISECOND));
@@ -71,6 +75,21 @@ public class SemanticConsumerReporter implements ConsumerReporter {
     @Override
     public void reportConsumerSchemaError() {
         consumerSchemaError.mark();
+    }
+
+    @Override
+    public void reportConsumerThreadsWanted(final long count) {
+        consumerThreadsLiveRatio.setDenominator(count);
+    }
+
+    @Override
+    public void reportConsumerThreadsIncrement() {
+        consumerThreadsLiveRatio.incNumerator();
+    }
+
+    @Override
+    public void reportConsumerThreadsDecrement() {
+        consumerThreadsLiveRatio.decNumerator();
     }
 
     @Override
