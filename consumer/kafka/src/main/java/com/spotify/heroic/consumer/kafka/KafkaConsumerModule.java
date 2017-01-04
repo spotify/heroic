@@ -200,6 +200,9 @@ public class KafkaConsumerModule implements ConsumerModule {
                             buildThreads(async, reporter, streams, consumer, consuming, errors,
                                 consumed);
 
+                        // Report the wanted count of threads before starting the threads below
+                        reporter.reportConsumerThreadsWanted(threads.size());
+
                         for (final ConsumerThread t : threads) {
                             t.start();
                         }

@@ -107,7 +107,12 @@ public class LoadingModule {
     @Provides
     @LoadingScope
     AsyncFramework async(ExecutorService executor, ScheduledExecutorService scheduler) {
-        return TinyAsync.builder().executor(executor).scheduler(scheduler).build();
+        return TinyAsync
+            .builder()
+            .recursionSafe(true)
+            .executor(executor)
+            .scheduler(scheduler)
+            .build();
     }
 
     @Provides

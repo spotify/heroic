@@ -40,6 +40,18 @@ public class NoopConsumerReporter implements ConsumerReporter {
     }
 
     @Override
+    public void reportConsumerThreadsWanted(final long count) {
+    }
+
+    @Override
+    public void reportConsumerThreadsIncrement() {
+    }
+
+    @Override
+    public void reportConsumerThreadsDecrement() {
+    }
+
+    @Override
     public void reportMessageDrift(final long ms) {
     }
 
