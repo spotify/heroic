@@ -24,9 +24,10 @@ package com.spotify.heroic;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.Tracing;
-import lombok.Data;
 
 import java.util.Optional;
+
+import lombok.Data;
 
 @Data
 public class QueryOptions {
@@ -53,6 +54,11 @@ public class QueryOptions {
     private final OptionalLimit dataLimit;
 
     /**
+     * Limit the number of points retained by the aggregation.
+     */
+    private final OptionalLimit aggregationLimit;
+
+    /**
      * Limit the number of returned groups.
      */
     private final OptionalLimit groupLimit;
@@ -73,7 +79,7 @@ public class QueryOptions {
 
     public static QueryOptions defaults() {
         return new QueryOptions(DEFAULT_TRACING, Optional.empty(), OptionalLimit.empty(),
-            OptionalLimit.empty(), OptionalLimit.empty(), Optional.empty());
+            OptionalLimit.empty(), OptionalLimit.empty(), OptionalLimit.empty(), Optional.empty());
     }
 
     public static Builder builder() {
@@ -84,6 +90,7 @@ public class QueryOptions {
         private Optional<Tracing> tracing = Optional.empty();
         private Optional<Integer> fetchSize = Optional.empty();
         private OptionalLimit dataLimit = OptionalLimit.empty();
+        private OptionalLimit aggregationLimit = OptionalLimit.empty();
         private OptionalLimit groupLimit = OptionalLimit.empty();
         private OptionalLimit seriesLimit = OptionalLimit.empty();
         private Optional<Boolean> failOnLimits = Optional.empty();
@@ -103,6 +110,12 @@ public class QueryOptions {
             return this;
         }
 
+        public Builder aggregationLimit(long aggregationLimit) {
+            this.aggregationLimit = OptionalLimit.of(aggregationLimit);
+            return this;
+        }
+
+
         public Builder groupLimit(long groupLimit) {
             this.groupLimit = OptionalLimit.of(groupLimit);
             return this;
@@ -121,8 +134,8 @@ public class QueryOptions {
         public QueryOptions build() {
             final Tracing tracing = this.tracing.orElse(DEFAULT_TRACING);
 
-            return new QueryOptions(tracing, fetchSize, dataLimit, groupLimit, seriesLimit,
-                failOnLimits);
+            return new QueryOptions(tracing, fetchSize, dataLimit, aggregationLimit, groupLimit,
+                seriesLimit, failOnLimits);
         }
     }
 }

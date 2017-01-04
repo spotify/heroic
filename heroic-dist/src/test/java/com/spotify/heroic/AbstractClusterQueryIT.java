@@ -267,6 +267,24 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     }
 
     @Test
+    public void aggregationLimit() throws Exception {
+        final QueryResult result = query("sum(10ms) by *", builder -> {
+            builder.options(Optional.of(QueryOptions.builder().aggregationLimit(1L).build()));
+        });
+
+        // quota limits are always errors
+        assertEquals(2, result.getErrors().size());
+
+        for (final RequestError e : result.getErrors()) {
+            assertTrue((e instanceof QueryError));
+            final QueryError q = (QueryError) e;
+            assertThat(q.getError(), containsString("Query exceeded quota"));
+        }
+
+        assertEquals(ResultLimits.of(ResultLimit.AGGREGATION), result.getLimits());
+    }
+
+    @Test
     public void groupLimit() throws Exception {
         final QueryResult result = query("*", builder -> {
             builder.options(Optional.of(QueryOptions.builder().groupLimit(1L).build()));

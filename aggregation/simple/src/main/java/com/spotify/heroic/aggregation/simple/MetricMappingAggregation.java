@@ -26,6 +26,7 @@ import com.spotify.heroic.aggregation.AggregationResult;
 import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.aggregation.EmptyInstance;
 import com.spotify.heroic.aggregation.AggregationOutput;
+import com.spotify.heroic.aggregation.RetainQuotaWatcher;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.Event;
@@ -42,11 +43,13 @@ import static java.util.stream.Collectors.toList;
 
 @Data
 public abstract class MetricMappingAggregation implements AggregationInstance {
+
+    private static final EmptyInstance INNER = EmptyInstance.INSTANCE;
     private final MetricMappingStrategy metricMappingStrategy;
 
     @Override
     public long estimate(DateRange range) {
-        return -1;
+        return INNER.estimate(range);
     }
 
     @Override
@@ -55,13 +58,13 @@ public abstract class MetricMappingAggregation implements AggregationInstance {
     }
 
     @Override
-    public AggregationSession session(DateRange range) {
-        return new Session(EmptyInstance.INSTANCE.session(range));
+    public AggregationSession session(DateRange range, RetainQuotaWatcher quotaWatcher) {
+        return new Session(INNER.session(range, quotaWatcher));
     }
 
     @Override
     public AggregationInstance distributed() {
-        return EmptyInstance.INSTANCE;
+        return INNER;
     }
 
     class Session implements AggregationSession {

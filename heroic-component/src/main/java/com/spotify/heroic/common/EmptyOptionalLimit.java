@@ -25,7 +25,6 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import lombok.EqualsAndHashCode;
 
 import java.io.IOException;
 import java.util.List;
@@ -33,7 +32,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.function.Consumer;
+import java.util.function.LongSupplier;
 import java.util.stream.Stream;
+
+import lombok.EqualsAndHashCode;
 
 @EqualsAndHashCode
 @JsonSerialize(using = EmptyOptionalLimit.Serializer.class)
@@ -46,7 +48,17 @@ class EmptyOptionalLimit implements OptionalLimit {
     }
 
     @Override
-    public boolean isGreaterOrEqual(final int size) {
+    public boolean isGreater(final LongSupplier size) {
+        return false;
+    }
+
+    @Override
+    public boolean isGreaterOrEqual(final long size) {
+        return false;
+    }
+
+    @Override
+    public boolean isGreaterOrEqual(final LongSupplier size) {
         return false;
     }
 
