@@ -39,78 +39,67 @@ import com.spotify.heroic.metric.MetricManagerModule;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.WriteMetric;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
+import org.junit.runners.model.Statement;
 
 import java.util.Optional;
 
+import lombok.extern.slf4j.Slf4j;
+
 import static org.junit.Assert.assertEquals;
 
+@Slf4j
 public abstract class AbstractMetricBackendIT {
     protected abstract Optional<MetricModule> setupModule();
 
     protected final Series s1 = Series.of("s1", ImmutableMap.of("id", "s1"));
     protected final Series s2 = Series.of("s2", ImmutableMap.of("id", "s2"));
 
-    protected Optional<MetricModule> module;
-    protected HeroicCoreInstance core;
     protected MetricBackend backend;
 
-    @Before
-    public void setup() throws Exception {
-        module = setupModule();
+    @Rule
+    public TestRule setupBackend = (base, description) -> new Statement() {
 
-        // figure out a better way to do this
-        if (!module.isPresent()) {
-            return;
+        @Override
+        public void evaluate() throws Throwable {
+            Optional<MetricModule> module = setupModule();
+            if (module.isPresent()) {
+                final MetricManagerModule.Builder metric =
+                    MetricManagerModule.builder().backends(ImmutableList.of(module.get()));
+
+                final HeroicConfig.Builder fragment = HeroicConfig.builder().metrics(metric);
+
+                final HeroicCoreInstance core = HeroicCore
+                    .builder()
+                    .setupShellServer(false)
+                    .setupService(false)
+                    .configFragment(fragment)
+                    .build()
+                    .newInstance();
+
+                core.start().get();
+
+                backend = core
+                    .inject(c -> c
+                        .metricManager()
+                        .groupSet()
+                        .inspectAll()
+                        .stream()
+                        .map(GroupMember::getMember)
+                        .findFirst())
+                    .orElseThrow(() -> new IllegalStateException("Failed to find backend"));
+                base.evaluate();
+                core.shutdown().get();
+            } else {
+                log.info("Omitting "  + description + " since module is not configured");
+            }
         }
-
-        final MetricManagerModule.Builder metric =
-            MetricManagerModule.builder().backends(ImmutableList.of(module.get()));
-
-        final HeroicConfig.Builder fragment = HeroicConfig.builder().metrics(metric);
-
-        core = HeroicCore
-            .builder()
-            .setupShellServer(false)
-            .setupService(false)
-            .configFragment(fragment)
-            .build()
-            .newInstance();
-
-        core.start().get();
-
-        backend = core
-            .inject(c -> c
-                .metricManager()
-                .groupSet()
-                .inspectAll()
-                .stream()
-                .map(GroupMember::getMember)
-                .findFirst())
-            .orElseThrow(() -> new IllegalStateException("Failed to find backend"));
-    }
-
-    @After
-    public void teardown() throws Exception {
-        module = setupModule();
-
-        // figure out a better way to do this
-        if (!module.isPresent()) {
-            return;
-        }
-
-        core.shutdown().get();
-    }
+    };
 
     @Test
     public void testWrite() throws Exception {
-        // figure out a better way to do this
-        if (!module.isPresent()) {
-            return;
-        }
-
         // write and read data back
         final MetricCollection points = Data.points().p(100000L, 42D).build();
         backend.write(new WriteMetric.Request(s1, points)).get();
