@@ -40,6 +40,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Data
 public class ClusterShard {
+    private static final QueryTrace.Identifier RETRY_BACKOFF =
+        new QueryTrace.Identifier("retry-backoff");
+
     private final AsyncFramework async;
 
     private final Map<String, String> shard;
@@ -81,29 +84,44 @@ public class ClusterShard {
                 });
             }, iteratorPolicy)
             .directTransform(retryResult -> handleRetryTraceFn.apply(retryResult.getResult(),
-                queryTracesFromRetries(retryResult.getErrors())));
+                queryTracesFromRetries(retryResult.getErrors(), retryResult.getBackoffTimings())));
     }
 
-    private List<QueryTrace> queryTracesFromRetries(List<RetryException> retryExceptions) {
-        final List<QueryTrace> traces = new ArrayList<QueryTrace>();
+    private List<QueryTrace> queryTracesFromRetries(
+        final List<RetryException> retryExceptions, final List<Long> backoffTimings
+    ) {
+        final List<QueryTrace> traces = new ArrayList<>();
         long lastTS = 0;
+        final Iterator<Long> backoffIterator = backoffTimings.iterator();
         for (final RetryException re : retryExceptions) {
+            /* For each RetryException, add a QueryTrace in the current shard with information about
+             * the cause and elapsed time */
             final long microTS =
                 TimeUnit.MICROSECONDS.convert(re.getOffsetMillis(), TimeUnit.MILLISECONDS);
-            final long elapsed = microTS - lastTS;
-            final QueryTrace trace =
-                QueryTrace.of(new QueryTrace.Identifier(getMessageFrom(re.getCause())), elapsed);
+            long elapsed = microTS - lastTS;
+            traces.add(QueryTrace.of(new QueryTrace.Identifier(getMessageFrom(re)), elapsed));
             lastTS = microTS;
-            traces.add(trace);
+
+            /* After each retry, a backoff pause is inserted before trying the next node.
+             * Here we add a QueryTrace to represent this, including the duration of the pause */
+            if (!backoffIterator.hasNext()) {
+                continue;
+            }
+            final long backoffTS =
+                TimeUnit.MICROSECONDS.convert(backoffIterator.next(), TimeUnit.MILLISECONDS);
+            elapsed = backoffTS - lastTS;
+            traces.add(QueryTrace.of(RETRY_BACKOFF, elapsed));
+            lastTS = backoffTS;
         }
         return traces;
     }
 
-    private String getMessageFrom(Throwable throwable) {
-        if (throwable instanceof RuntimeNodeException) {
-            final RuntimeNodeException rne = (RuntimeNodeException) throwable;
-            return rne.getUri() + " error=" + throwable.getMessage();
+    private String getMessageFrom(final Throwable throwable) {
+        final Throwable cause = throwable.getCause();
+        if (cause instanceof RuntimeNodeException) {
+            final RuntimeNodeException rne = (RuntimeNodeException) cause;
+            return rne.getUri() + " error=" + cause.getMessage();
         }
-        return "error=" + throwable.getMessage();
+        return "error=" + cause.getMessage();
     }
 }
