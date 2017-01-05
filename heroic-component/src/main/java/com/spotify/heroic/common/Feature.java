@@ -33,6 +33,13 @@ import com.fasterxml.jackson.annotation.JsonValue;
  */
 public enum Feature {
     /**
+     * Enable feature to only perform aggregations that can be performed with limited resources.
+     * <p>
+     * Aggregations are commonly performed per-shard, and the result concatenated. This enabled
+     * experimental support for distributed aggregations which behave transparently across shards.
+     */
+    DETERMINISTIC_AGGREGATIONS("com.spotify.heroic.deterministic_aggregations"),
+    /**
      * Enable feature to perform distributed aggregations.
      * <p>
      * Aggregations are commonly performed per-shard, and the result concatenated. This enabled

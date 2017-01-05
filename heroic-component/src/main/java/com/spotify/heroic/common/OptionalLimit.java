@@ -34,13 +34,18 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.function.Consumer;
+import java.util.function.LongSupplier;
 import java.util.stream.Stream;
 
 @JsonDeserialize(using = OptionalLimit.Deserializer.class)
 public interface OptionalLimit {
     boolean isGreater(long size);
 
-    boolean isGreaterOrEqual(int size);
+    boolean isGreater(LongSupplier size);
+
+    boolean isGreaterOrEqual(long size);
+
+    boolean isGreaterOrEqual(LongSupplier size);
 
     boolean isZero();
 

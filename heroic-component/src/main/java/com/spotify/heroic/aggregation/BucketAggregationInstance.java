@@ -222,8 +222,9 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
     }
 
     @Override
-    public AggregationSession session(DateRange range) {
+    public AggregationSession session(DateRange range, RetainQuotaWatcher quotaWatcher) {
         final List<B> buckets = buildBuckets(range, size);
+        quotaWatcher.retainData(buckets.size());
         return new Session(buckets, range.start());
     }
 

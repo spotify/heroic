@@ -19,44 +19,47 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric;
 
-public interface FetchQuotaWatcher {
+package com.spotify.heroic.aggregation;
+
+public interface RetainQuotaWatcher {
+
     /**
-     * Indicates that backend has read {@code n} more datapoints.
+     * Indicates that aggregation session has retained {@code n} more datapoints.
      *
-     * @param n The number of datapoints read by the backend.
+     * @param n The number of datapoints retained by the aggregation session.
      * @throws com.spotify.heroic.common.QuotaViolationException if quota has been violated.
      */
-    void readData(long n);
+    void retainData(long n);
 
     /**
-     * Indicates if readData quota has been breached or not.
+     * Indicates if quota has been breached or not.
      *
-     * @return {@code true} if there is data left to be read, {@code false} otherwise.
+     * @return {@code true} if there is data left to be retain, {@code false} otherwise.
      */
-    boolean mayReadData();
+    boolean mayRetainMoreData();
 
     /**
-     * Get how much data you are allowed to read.
+     * Get how much data you are allowed to retain.
      */
-    int getReadDataQuota();
+    int getRetainQuota();
 
     /**
      * Special quota watcher indicating no quota should be applied.
      */
-    FetchQuotaWatcher NO_QUOTA = new FetchQuotaWatcher() {
+    RetainQuotaWatcher NO_QUOTA = new RetainQuotaWatcher() {
+
         @Override
-        public void readData(long n) {
+        public void retainData(final long n) {
         }
 
         @Override
-        public boolean mayReadData() {
+        public boolean mayRetainMoreData() {
             return true;
         }
 
         @Override
-        public int getReadDataQuota() {
+        public int getRetainQuota() {
             return Integer.MAX_VALUE;
         }
     };

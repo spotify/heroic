@@ -25,6 +25,7 @@ import com.spotify.heroic.aggregation.AggregationResult;
 import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.aggregation.AggregationOutput;
 import com.spotify.heroic.aggregation.EmptyInstance;
+import com.spotify.heroic.aggregation.RetainQuotaWatcher;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.MetricCollection;
@@ -46,11 +47,11 @@ import java.util.stream.Collectors;
 
 @Data
 public class DeltaInstance implements AggregationInstance {
-    private final EmptyInstance inner = new EmptyInstance();
+    private static final EmptyInstance INNER = EmptyInstance.INSTANCE;
 
     @Override
     public long estimate(DateRange range) {
-        return -1;
+        return INNER.estimate(range);
     }
 
     @Override
@@ -90,8 +91,8 @@ public class DeltaInstance implements AggregationInstance {
 
 
     @Override
-    public AggregationSession session(DateRange range) {
-        return new Session(inner.session(range));
+    public AggregationSession session(DateRange range, RetainQuotaWatcher quotaWatcher) {
+        return new Session(INNER.session(range, quotaWatcher));
     }
 
     private class Session implements AggregationSession {

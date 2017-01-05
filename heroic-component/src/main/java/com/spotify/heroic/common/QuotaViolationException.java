@@ -19,7 +19,7 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric;
+package com.spotify.heroic.common;
 
 public class QuotaViolationException extends RuntimeException {
 }

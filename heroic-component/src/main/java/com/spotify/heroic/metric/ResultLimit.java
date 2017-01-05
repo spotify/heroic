@@ -24,5 +24,6 @@ package com.spotify.heroic.metric;
 public enum ResultLimit {
     SERIES,
     GROUP,
-    QUOTA
+    QUOTA,
+    AGGREGATION
 }
