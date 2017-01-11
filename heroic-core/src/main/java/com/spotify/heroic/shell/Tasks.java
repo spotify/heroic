@@ -54,6 +54,7 @@ import com.spotify.heroic.shell.task.MetadataFindSeriesIds;
 import com.spotify.heroic.shell.task.MetadataLoad;
 import com.spotify.heroic.shell.task.MetadataMigrate;
 import com.spotify.heroic.shell.task.MetadataTags;
+import com.spotify.heroic.shell.task.MetadataWrite;
 import com.spotify.heroic.shell.task.ParseQuery;
 import com.spotify.heroic.shell.task.Pause;
 import com.spotify.heroic.shell.task.Query;
@@ -139,6 +140,7 @@ public final class Tasks {
         shellTask(AnalyticsReportFetchSeries::setup, AnalyticsReportFetchSeries.class);
         shellTask(AnalyticsDumpFetchSeries::setup, AnalyticsDumpFetchSeries.class);
         shellTask(LoadGenerated::setup, LoadGenerated.class);
+        shellTask(MetadataWrite::setup, MetadataWrite.class);
     }
 
     public static List<ShellTaskDefinition> available() {
