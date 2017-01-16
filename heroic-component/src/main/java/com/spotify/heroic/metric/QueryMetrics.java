@@ -19,7 +19,7 @@
  * under the License.
  */
 
-package com.spotify.heroic.http.query;
+package com.spotify.heroic.metric;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -30,7 +30,6 @@ import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.Chain;
 import com.spotify.heroic.common.FeatureSet;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.metric.MetricType;
 import lombok.Data;
 
 import java.util.List;

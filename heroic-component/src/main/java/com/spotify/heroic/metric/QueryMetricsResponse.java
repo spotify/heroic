@@ -19,7 +19,7 @@
  * under the License.
  */
 
-package com.spotify.heroic.http.query;
+package com.spotify.heroic.metric;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
@@ -27,12 +27,6 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Statistics;
-import com.spotify.heroic.metric.MetricCollection;
-import com.spotify.heroic.metric.QueryTrace;
-import com.spotify.heroic.metric.RequestError;
-import com.spotify.heroic.metric.ResultLimits;
-import com.spotify.heroic.metric.SeriesValues;
-import com.spotify.heroic.metric.ShardedResultGroup;
 import lombok.Data;
 import lombok.NonNull;
 

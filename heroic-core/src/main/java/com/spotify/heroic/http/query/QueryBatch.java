@@ -22,6 +22,7 @@
 package com.spotify.heroic.http.query;
 
 import com.spotify.heroic.QueryDateRange;
+import com.spotify.heroic.metric.QueryMetrics;
 import lombok.Data;
 
 import java.util.Map;

@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.http.query;
 
+import com.spotify.heroic.metric.QueryMetricsResponse;
 import lombok.Data;
 
 import java.util.Map;
