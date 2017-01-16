@@ -8,6 +8,10 @@ import com.spotify.heroic.cluster.RpcProtocolModule;
 import com.spotify.heroic.cluster.discovery.simple.StaticListDiscoveryModule;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.profile.MemoryProfile;
+import com.spotify.heroic.querylogging.QueryLogger;
+import com.spotify.heroic.querylogging.QueryLoggerFactory;
+import com.spotify.heroic.querylogging.QueryLoggingComponent;
+import com.spotify.heroic.querylogging.QueryLoggingModule;
 import com.spotify.heroic.rpc.grpc.GrpcRpcProtocolModule;
 import com.spotify.heroic.rpc.jvm.JvmRpcContext;
 import com.spotify.heroic.rpc.jvm.JvmRpcProtocolModule;
@@ -15,10 +19,14 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.TinyAsync;
 import org.junit.After;
 import org.junit.Before;
+import org.mockito.Mockito;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -31,6 +39,29 @@ public abstract class AbstractLocalClusterIT {
     protected final TinyAsync async = TinyAsync.builder().executor(executor).build();
 
     protected List<HeroicCoreInstance> instances;
+
+    private final Map<String, QueryLogger> loggers = new HashMap<>();
+
+    private final QueryLoggingModule mockQueryLoggingModule = early -> new QueryLoggingComponent() {
+        @Override
+        public QueryLoggerFactory queryLoggerFactory() {
+            return new QueryLoggerFactory() {
+                @Override
+                public QueryLogger create(final String component) {
+                    synchronized (loggers) {
+                        QueryLogger logger = loggers.get(component);
+
+                        if (logger == null) {
+                            logger = Mockito.mock(QueryLogger.class);
+                            loggers.put(component, logger);
+                        }
+
+                        return logger;
+                    }
+                }
+            };
+        }
+    };
 
     protected String protocol() {
         return "jvm";
@@ -56,6 +87,18 @@ public abstract class AbstractLocalClusterIT {
      */
     protected AsyncFuture<Void> prepareEnvironment() {
         return async.resolved(null);
+    }
+
+    /**
+     * Access to locally pre-configured query loggers which have been provided to all instances.
+     *
+     * @param component Component to get logger for
+     * @return a QueryLogger or empty
+     */
+    protected Optional<QueryLogger> getQueryLogger(final String component) {
+        synchronized (loggers) {
+            return Optional.ofNullable(loggers.get(component));
+        }
     }
 
     @Before
@@ -173,6 +216,9 @@ public abstract class AbstractLocalClusterIT {
                     .tags(ImmutableMap.of("shard", uri.getHost()))
                     .protocols(ImmutableList.of(protocol))
                     .discovery(discovery)))
+            .configFragment(HeroicConfig
+                .builder()
+                .queryLogging(mockQueryLoggingModule))
             .profile(new MemoryProfile())
             .modules(HeroicModules.ALL_MODULES)
             .build()
