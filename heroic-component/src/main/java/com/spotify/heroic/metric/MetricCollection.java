@@ -21,21 +21,20 @@
 
 package com.spotify.heroic.metric;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.common.Series;
-import lombok.AccessLevel;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
-
-import static com.google.common.base.Preconditions.checkNotNull;
+import lombok.AccessLevel;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 /**
  * A collection of metrics.

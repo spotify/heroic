@@ -27,9 +27,6 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Statistics;
-import lombok.Data;
-import lombok.NonNull;
-
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -37,6 +34,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
+import lombok.Data;
+import lombok.NonNull;
 
 @Data
 @JsonSerialize(using = QueryMetricsResponse.Serializer.class)
@@ -232,5 +231,21 @@ public class QueryMetricsResponse {
 
             g.writeEndObject();
         }
+    }
+
+    public Summary summarize() {
+        return new Summary(range, ShardedResultGroup.summarize(result), statistics, errors, trace,
+            limits);
+    }
+
+    // Only include data suitable to log to query log
+    @Data
+    public class Summary {
+        private final DateRange range;
+        private final ShardedResultGroup.MultiSummary result;
+        private final Statistics statistics;
+        private final List<RequestError> errors;
+        private final QueryTrace trace;
+        private final ResultLimits limits;
     }
 }

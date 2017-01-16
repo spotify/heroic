@@ -93,6 +93,20 @@ public final class FullQuery {
         return new FullQuery(newTrace, errors, groups, statistics, limits);
     }
 
+    public Summary summarize() {
+        return new Summary(trace, errors, ResultGroup.summarize(groups), statistics, limits);
+    }
+
+    // Only include data suitable to log to query log
+    @Data
+    public class Summary {
+        private final QueryTrace trace;
+        private final List<RequestError> errors;
+        private final ResultGroup.MultiSummary groups;
+        private final Statistics statistics;
+        private final ResultLimits limits;
+    }
+
     @Data
     public static class Request {
         private final MetricType source;
@@ -100,5 +114,18 @@ public final class FullQuery {
         private final DateRange range;
         private final AggregationInstance aggregation;
         private final QueryOptions options;
+
+        public Summary summarize() {
+            return new Summary(source, filter, range, aggregation, options);
+        }
+
+        @Data
+        public class Summary {
+            private final MetricType source;
+            private final Filter filter;
+            private final DateRange range;
+            private final AggregationInstance aggregation;
+            private final QueryOptions options;
+        }
     }
 }
