@@ -1,0 +1,149 @@
+# vim: sw=2 tabstop=2
+# These are Elasticsearch template mappings as used by the querylog tool.
+
+_histogram: &histogram
+  properties:
+    min:
+      type: long
+    max:
+      type: long
+    median:
+      type: long
+    p75:
+      type: long
+    p99:
+      type: long
+    mean:
+      type: double
+    sum:
+      type: long
+
+_raw_object: &raw_object
+  type: object
+  enabled: false
+
+_raw_string: &raw_string
+  type: string
+  analyzer: "keyword"
+
+_HttpContext: &http_context
+  properties:
+    remoteAddress:
+      type: ip
+    remoteHost: *raw_string
+    clientAddress: *raw_string
+    userAgent: *raw_string
+    clientId: *raw_string
+
+_date_range: &date_range
+  properties:
+    start:
+      type: date
+    end:
+      type: date
+
+# com.spotify.heroic.metric.RequestError
+_request_error: &request_error
+  properties:
+    type: *raw_string
+    error: *raw_string
+
+# com.spotify.heroic.metric.FullQuery.Request.Summary
+_full_query_request_summary: &full_query_request_summary
+  properties:
+    source: *raw_string
+    filter: *raw_object
+    range: *date_range
+    aggregation: *raw_object
+    options: *raw_object
+
+# com.spotify.heroic.metric.SeriesSetsSummarizer
+_series_sets_summarizer: &series_sets_summarizer
+  properties:
+    uniqueKeys:
+      type: long
+    tagsSize: *histogram
+    seriesSize: *histogram
+
+# com.spotify.heroic.metric.FullQuery.Summary
+_full_query_summary: &full_query_summary
+  properties:
+    trace: *raw_object
+    errors: *request_error
+    # com.spotify.heroic.metric.ResultGroup.MultiSummary
+    groups:
+      properties:
+        keySize: *histogram
+        series: *series_sets_summarizer
+        dataSize: *histogram
+        cadence:
+          type: long
+    statistics: *raw_object
+    limits: *raw_string
+
+_common:
+  type: *raw_string
+  component: *raw_string
+  queryId: *raw_string
+  clientContext:
+    type: object
+    dynamic: true
+
+"http-query-text":
+  properties:
+    # com.spotify.heroic.querylogging.Slf4jQueryLogger.HttpQueryData
+    data:
+      properties:
+        httpContext: *http_context
+        query: *raw_string
+
+"http-query-json":
+  properties:
+    # com.spotify.heroic.querylogging.Slf4jQueryLogger.HttpQueryData
+    data:
+      properties:
+        httpContext: *http_context
+        query: *raw_object
+
+"query":
+  properties:
+    # com.spotify.heroic.Query
+    data:
+      type: object
+      enabled: false
+
+"outgoing-request-to-shards":
+  properties:
+    data: *full_query_request_summary
+
+"incoming-request-at-node":
+  properties:
+    data: *full_query_request_summary
+
+"outgoing-response-at-node":
+  properties:
+    data: *full_query_summary
+
+"incoming-response-from-shard":
+  properties:
+    data: *full_query_summary
+
+"final-response":
+  properties:
+    # com.spotify.heroic.metric.QueryMetricsResponse.Summary
+    data:
+      properties:
+        range: *date_range
+        # com.spotify.heroic.metric.ShardedResultGroup.MultiSummary
+        result:
+          properties:
+            shards: *raw_object
+            keySize: *histogram
+            series: *series_sets_summarizer
+            dataSize: *histogram
+            cadence:
+              type: long
+        statistics: *raw_object
+        errors: *request_error
+        trace: *raw_object
+        limits: *raw_string
