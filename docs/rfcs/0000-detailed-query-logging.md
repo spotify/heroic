@@ -12,8 +12,8 @@ by Heroic.
 ## Suggestion
 
 The user can provide the system with additional `clientContext` which will be included in each log
-step. The system can either be provided, or will generate an `id` when the query has been received
-that can be used to group or correlate individual queries.
+step. The system will generate a `queryId`, when the query has been received , which can be used to
+group or correlate individual queries.
 
 Each log line has the following structure:
 
@@ -60,12 +60,9 @@ The following field would be added to the query API.
 ```
 {
   "features": ["com.spotify.heroic.query_logging"],
-  "queryLogging": {
-    "queryId": "my-query-id",
-    "clientContext": {
-      "dashboardId": "my-system-metrics",
-      "user": "udoprog"
-    }
+  "clientContext": {
+    "dashboardId": "my-system-metrics",
+    "user": "udoprog"
   }
 }
 ```
