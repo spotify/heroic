@@ -21,7 +21,12 @@
 
 package com.spotify.heroic.metric;
 
+import static com.google.common.hash.Hashing.murmur3_32;
+
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.hash.HashCode;
+import com.google.common.hash.Hasher;
 import com.spotify.heroic.common.Histogram;
 import com.spotify.heroic.common.Series;
 import java.util.List;
@@ -42,6 +47,20 @@ public final class ShardedResultGroup {
 
     public boolean isEmpty() {
         return metrics.isEmpty();
+    }
+
+    public int hashCode() {
+        final Hasher hasher = murmur3_32().newHasher();
+        for (Map.Entry<String, String> e : shard.entrySet()) {
+            hasher.putString(e.getKey(), Charsets.UTF_8);
+            hasher.putString(e.getValue(), Charsets.UTF_8);
+        }
+        for (Map.Entry<String, String> e : key.entrySet()) {
+            hasher.putString(e.getKey(), Charsets.UTF_8);
+            hasher.putString(e.getValue(), Charsets.UTF_8);
+        }
+        HashCode code = hasher.hash();
+        return code.asInt();
     }
 
     public static MultiSummary summarize(List<ShardedResultGroup> resultGroups) {
