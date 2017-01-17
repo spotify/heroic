@@ -168,7 +168,7 @@ public class QueryMetricsResponse {
                 final SeriesValues series = SeriesValues.fromSeries(group.getSeries().iterator());
 
                 g.writeStringField("type", collection.getType().identifier());
-                g.writeStringField("hash", Integer.toHexString(group.hashCode()));
+                g.writeStringField("hash", Integer.toHexString(group.hashGroup()));
                 g.writeObjectField("shard", group.getShard());
                 g.writeNumberField("cadence", group.getCadence());
                 g.writeObjectField("values", collection.getData());

@@ -25,7 +25,7 @@ import static com.google.common.hash.Hashing.murmur3_32;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.hash.HashCode;
+import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
 import com.spotify.heroic.common.Histogram;
 import com.spotify.heroic.common.Series;
@@ -39,6 +39,10 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode
 public final class ShardedResultGroup {
+    // record separator is needed to avoid conflicts
+    private static final int RECORD_SEPARATOR = 0;
+    private static final HashFunction HASH_FUNCTION = murmur3_32();
+
     private final Map<String, String> shard;
     private final Map<String, String> key;
     private final Set<Series> series;
@@ -49,18 +53,26 @@ public final class ShardedResultGroup {
         return metrics.isEmpty();
     }
 
-    public int hashCode() {
-        final Hasher hasher = murmur3_32().newHasher();
+    public int hashGroup() {
+        final Hasher hasher = HASH_FUNCTION.newHasher();
+
         for (Map.Entry<String, String> e : shard.entrySet()) {
+            hasher.putInt(RECORD_SEPARATOR);
             hasher.putString(e.getKey(), Charsets.UTF_8);
+            hasher.putInt(RECORD_SEPARATOR);
             hasher.putString(e.getValue(), Charsets.UTF_8);
         }
+
+        hasher.putInt(RECORD_SEPARATOR);
+
         for (Map.Entry<String, String> e : key.entrySet()) {
+            hasher.putInt(RECORD_SEPARATOR);
             hasher.putString(e.getKey(), Charsets.UTF_8);
+            hasher.putInt(RECORD_SEPARATOR);
             hasher.putString(e.getValue(), Charsets.UTF_8);
         }
-        HashCode code = hasher.hash();
-        return code.asInt();
+
+        return hasher.hash().asInt();
     }
 
     public static MultiSummary summarize(List<ShardedResultGroup> resultGroups) {
