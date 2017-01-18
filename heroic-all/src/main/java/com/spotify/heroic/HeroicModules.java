@@ -34,6 +34,7 @@ import com.spotify.heroic.profile.ElasticsearchSuggestProfile;
 import com.spotify.heroic.profile.KafkaConsumerProfile;
 import com.spotify.heroic.profile.MemoryCacheProfile;
 import com.spotify.heroic.profile.MemoryProfile;
+import com.spotify.heroic.profile.QueryLoggingProfile;
 import com.spotify.heroic.profile.WebProfile;
 
 import java.io.OutputStreamWriter;
@@ -87,6 +88,7 @@ public class HeroicModules {
         .put("collectd", new CollectdConsumerProfile())
         .put("memory-cache", new MemoryCacheProfile())
         .put("web", new WebProfile())
+        .put("query-logging", new QueryLoggingProfile())
     .build();
     // @formatter:on
 
