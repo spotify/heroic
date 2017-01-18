@@ -20,10 +20,10 @@ Into:
 
 ```json
 {
-  "limits": {
+  "limits": [{
     "type": "series",
     "seriesLimit": 20000
-  }
+  }]
 }
 ```
 
