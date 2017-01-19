@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.spotify.heroic.aggregation.AggregationInstance;
+import com.spotify.heroic.test.FakeModuleLoader;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -14,12 +15,7 @@ public class FilterAggregationTest {
 
     @Before
     public void setup() {
-        mapper = new ObjectMapper();
-        mapper.addMixIn(AggregationInstance.class, TypeNameMixin.class);
-        mapper.registerSubtypes(new NamedType(AboveKInstance.class, AboveK.NAME));
-        mapper.registerSubtypes(new NamedType(BelowKInstance.class, BelowK.NAME));
-        mapper.registerSubtypes(new NamedType(BottomKInstance.class, BottomK.NAME));
-        mapper.registerSubtypes(new NamedType(TopKInstance.class, TopK.NAME));
+        mapper = FakeModuleLoader.builder().module(Module.class).build().json();
     }
 
     @Test
