@@ -69,7 +69,9 @@ public class HeroicModules {
         new com.spotify.heroic.rpc.grpc.Module(),
         new com.spotify.heroic.rpc.jvm.Module(),
 
-        new com.spotify.heroic.statistics.semantic.Module()
+        new com.spotify.heroic.statistics.semantic.Module(),
+
+        new com.spotify.heroic.querylogging.Module()
     );
 
     public static final Map<String, HeroicProfile> PROFILES = ImmutableMap.<String,

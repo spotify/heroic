@@ -31,6 +31,7 @@ import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.metric.ResultLimit;
 import com.spotify.heroic.metric.ResultLimits;
 import com.spotify.heroic.metric.ShardedResultGroup;
+import com.spotify.heroic.querylogging.QueryContext;
 import eu.toolchain.async.AsyncFuture;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -49,6 +50,8 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
 
     private QueryManager query;
 
+    private QueryContext queryContext;
+
     protected boolean cardinalitySupport = true;
 
     protected void setupSupport() {
@@ -57,6 +60,8 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     @Before
     public final void setupAbstract() {
         setupSupport();
+
+        queryContext = QueryContext.empty();
 
         query = instances.get(0).inject(CoreComponent::queryManager);
     }
@@ -101,7 +106,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
             .rangeIfAbsent(Optional.of(new QueryDateRange.Absolute(10, 40)));
 
         modifier.accept(builder);
-        return query.useDefaultGroup().query(builder.build()).get();
+        return query.useDefaultGroup().query(builder.build(), queryContext).get();
     }
 
     @Test

@@ -21,6 +21,9 @@
 
 package com.spotify.heroic.filter;
 
+import static com.spotify.heroic.filter.FilterEncoding.filter;
+import static com.spotify.heroic.filter.FilterEncoding.string;
+
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -34,15 +37,11 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.grammar.QueryParser;
-import lombok.RequiredArgsConstructor;
-
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-
-import static com.spotify.heroic.filter.FilterEncoding.filter;
-import static com.spotify.heroic.filter.FilterEncoding.string;
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class FilterRegistry {

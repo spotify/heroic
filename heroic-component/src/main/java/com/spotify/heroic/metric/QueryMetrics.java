@@ -21,8 +21,11 @@
 
 package com.spotify.heroic.metric;
 
+import static com.spotify.heroic.common.Optionals.firstPresent;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.spotify.heroic.QueryBuilder;
 import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.QueryOptions;
@@ -30,15 +33,12 @@ import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.Chain;
 import com.spotify.heroic.common.FeatureSet;
 import com.spotify.heroic.filter.Filter;
-import lombok.Data;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
-
-import static com.spotify.heroic.common.Optionals.firstPresent;
+import lombok.Data;
 
 @Data
 public class QueryMetrics {
@@ -48,6 +48,7 @@ public class QueryMetrics {
     private final Optional<QueryDateRange> range;
     private final Optional<Filter> filter;
     private final Optional<QueryOptions> options;
+    private final Optional<JsonNode> clientContext;
 
     /* legacy state */
     private final Optional<String> key;
@@ -57,7 +58,8 @@ public class QueryMetrics {
 
     public QueryMetrics(
         Optional<String> query, Optional<Aggregation> aggregation, Optional<MetricType> source,
-        Optional<QueryDateRange> range, Optional<Filter> filter, Optional<QueryOptions> options
+        Optional<QueryDateRange> range, Optional<Filter> filter, Optional<QueryOptions> options,
+        final Optional<JsonNode> clientContext
     ) {
         this.query = query;
         this.aggregation = aggregation;
@@ -65,6 +67,7 @@ public class QueryMetrics {
         this.range = range;
         this.filter = filter;
         this.options = options;
+        this.clientContext = clientContext;
 
         this.key = Optional.empty();
         this.tags = Optional.empty();
@@ -79,10 +82,12 @@ public class QueryMetrics {
         @JsonProperty("aggregators") Optional<List<Aggregation>> aggregators,
         @JsonProperty("source") Optional<String> source,
         @JsonProperty("range") Optional<QueryDateRange> range,
-        @JsonProperty("filter") Optional<Filter> filter, @JsonProperty("key") Optional<String> key,
+        @JsonProperty("filter") Optional<Filter> filter,
+        @JsonProperty("options") Optional<QueryOptions> options,
+        @JsonProperty("clientContext") Optional<JsonNode> clientContext,
+        @JsonProperty("key") Optional<String> key,
         @JsonProperty("tags") Optional<Map<String, String>> tags,
         @JsonProperty("groupBy") Optional<List<String>> groupBy,
-        @JsonProperty("options") Optional<QueryOptions> options,
         @JsonProperty("features") Optional<FeatureSet> features,
         /* ignored */ @JsonProperty("noCache") Boolean noCache
     ) {
@@ -93,6 +98,7 @@ public class QueryMetrics {
         this.range = range;
         this.filter = filter;
         this.options = options;
+        this.clientContext = clientContext;
 
         this.key = key;
         this.tags = tags;
@@ -110,7 +116,8 @@ public class QueryMetrics {
                 .range(range)
                 .aggregation(aggregation)
                 .source(source)
-                .options(options);
+                .options(options)
+                .clientContext(clientContext);
         };
 
         return query

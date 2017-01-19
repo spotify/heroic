@@ -58,6 +58,7 @@ import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.PointSerialization;
 import com.spotify.heroic.metric.Spread;
 import com.spotify.heroic.metric.SpreadSerialization;
+import com.spotify.heroic.querylogging.QueryLoggingModule;
 import com.spotify.heroic.statistics.StatisticsModule;
 import com.spotify.heroic.suggest.SuggestModule;
 
@@ -86,6 +87,7 @@ public final class HeroicMappers {
         m.addMixIn(JettyConnectionFactory.Builder.class, TypeNameMixin.class);
         m.addMixIn(AnalyticsModule.Builder.class, TypeNameMixin.class);
         m.addMixIn(StatisticsModule.class, TypeNameMixin.class);
+        m.addMixIn(QueryLoggingModule.class, TypeNameMixin.class);
 
         m.registerModule(commonSerializers());
 

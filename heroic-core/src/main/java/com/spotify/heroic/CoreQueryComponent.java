@@ -24,12 +24,14 @@ package com.spotify.heroic;
 import com.spotify.heroic.cache.CacheComponent;
 import com.spotify.heroic.cluster.ClusterComponent;
 import com.spotify.heroic.dagger.CorePrimaryComponent;
+import com.spotify.heroic.querylogging.QueryLoggingComponent;
 import dagger.Component;
 
 @QueryScope
 @Component(
     modules = QueryModule.class,
-    dependencies = {CorePrimaryComponent.class, ClusterComponent.class, CacheComponent.class})
+    dependencies = {CorePrimaryComponent.class, ClusterComponent.class, CacheComponent.class,
+        QueryLoggingComponent.class})
 public interface CoreQueryComponent extends QueryComponent {
     @Override
     CoreQueryManager queryManager();

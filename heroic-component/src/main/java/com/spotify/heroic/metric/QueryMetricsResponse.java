@@ -34,12 +34,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
+import java.util.UUID;
+
 import lombok.Data;
 import lombok.NonNull;
 
 @Data
 @JsonSerialize(using = QueryMetricsResponse.Serializer.class)
 public class QueryMetricsResponse {
+    @NonNull
+    private final UUID queryId;
+
     @NonNull
     private final DateRange range;
 
@@ -68,6 +73,7 @@ public class QueryMetricsResponse {
 
             g.writeStartObject();
 
+            g.writeObjectField("queryId", response.getQueryId());
             g.writeObjectField("range", response.getRange());
             g.writeObjectField("trace", response.getTrace());
             g.writeObjectField("limits", response.getLimits());

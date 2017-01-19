@@ -25,13 +25,14 @@ import com.spotify.heroic.analytics.AnalyticsComponent;
 import com.spotify.heroic.dagger.CorePrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.metadata.MetadataComponent;
+import com.spotify.heroic.querylogging.QueryLoggingComponent;
 import dagger.Component;
-
 import javax.inject.Named;
 
 @MetricScope
 @Component(modules = MetricManagerModule.class, dependencies = {
-    CorePrimaryComponent.class, MetadataComponent.class, AnalyticsComponent.class
+    CorePrimaryComponent.class, MetadataComponent.class, AnalyticsComponent.class,
+    QueryLoggingComponent.class
 })
 public interface CoreMetricComponent extends MetricComponent {
     @Override

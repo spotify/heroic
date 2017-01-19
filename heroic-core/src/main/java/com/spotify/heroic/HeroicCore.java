@@ -67,6 +67,7 @@ import com.spotify.heroic.metadata.CoreMetadataComponent;
 import com.spotify.heroic.metadata.DaggerCoreMetadataComponent;
 import com.spotify.heroic.metric.CoreMetricComponent;
 import com.spotify.heroic.metric.DaggerCoreMetricComponent;
+import com.spotify.heroic.querylogging.QueryLoggingComponent;
 import com.spotify.heroic.shell.DaggerShellServerComponent;
 import com.spotify.heroic.shell.ShellServerComponent;
 import com.spotify.heroic.shell.ShellServerModule;
@@ -212,8 +213,6 @@ public class HeroicCore implements HeroicConfiguration {
      * <p>
      * <p>
      * Start all the external modules. {@link #startLifeCycles}
-     *
-     * @throws Exception
      */
     public HeroicCoreInstance newInstance() throws Exception {
         final CoreLoadingComponent loading = loadingInjector();
@@ -254,7 +253,6 @@ public class HeroicCore implements HeroicConfiguration {
      *
      * @param early Injector to inject boostrappers using.
      * @param bootstrappers Bootstraps to run.
-     * @throws Exception
      */
     static void runBootstrappers(
         final CoreEarlyComponent early, final List<HeroicBootstrap> bootstrappers
@@ -308,7 +306,6 @@ public class HeroicCore implements HeroicConfiguration {
      * Setup a fixed thread pool executor that correctly handles unhandled exceptions.
      *
      * @param threads Number of threads to configure.
-     * @return
      */
     private ExecutorService setupExecutor(final int threads) {
         return new ThreadPoolExecutor(threads, threads, 0L, TimeUnit.MILLISECONDS,
@@ -360,11 +357,9 @@ public class HeroicCore implements HeroicConfiguration {
         final CoreEarlyComponent early, final HeroicConfig config, final HeroicCoreInstance instance
     ) {
         log.info("Building Primary Injector");
-
         final List<LifeCycle> life = new ArrayList<>();
 
         final StatisticsComponent statistics = config.getStatistics().module(early);
-
         life.add(statistics.life());
 
         final HeroicReporter reporter = statistics.reporter();
@@ -376,8 +371,9 @@ public class HeroicCore implements HeroicConfiguration {
             .primaryModule(new PrimaryModule(instance, config.getFeatures(), reporter))
             .build();
 
-        final Optional<HttpServer> server;
+        final QueryLoggingComponent queryLogging = config.getQueryLogging().component(primary);
 
+        final Optional<HttpServer> server;
         if (setupService) {
             final InetSocketAddress bindAddress = setupBindAddress(config);
 
@@ -424,6 +420,7 @@ public class HeroicCore implements HeroicConfiguration {
             .metadataComponent(metadata)
             .analyticsComponent(analytics)
             .metricManagerModule(config.getMetric())
+            .queryLoggingComponent(queryLogging)
             .build();
 
         life.add(metric.metricLife());
@@ -481,6 +478,7 @@ public class HeroicCore implements HeroicConfiguration {
             .corePrimaryComponent(primary)
             .clusterComponent(cluster)
             .cacheComponent(cache)
+            .queryLoggingComponent(queryLogging)
             .build();
         life.add(query.queryLife());
 
@@ -501,6 +499,7 @@ public class HeroicCore implements HeroicConfiguration {
             .metadataComponent(metadata)
             .suggestComponent(suggest)
             .queryComponent(query)
+            .queryLoggingComponent(queryLogging)
             .ingestionComponent(ingestion)
             .clusterComponent(cluster)
             .generatorComponent(generator)

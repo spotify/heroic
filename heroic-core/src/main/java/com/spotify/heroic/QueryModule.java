@@ -26,9 +26,8 @@ import com.spotify.heroic.statistics.ApiReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
 import dagger.Module;
 import dagger.Provides;
-import lombok.Data;
-
 import javax.inject.Named;
+import lombok.Data;
 
 @Module
 @Data

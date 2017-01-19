@@ -65,12 +65,22 @@ public class HeroicConfigurationTest {
 
         final List<String> starters = instance.inject(c -> {
             final CoreLifeCycleRegistry reg = (CoreLifeCycleRegistry) c.lifeCycleRegistry();
-            return reg.starters().stream().map(LifeCycleNamedHook::id).sorted().collect(Collectors.toList());
+            return reg
+                .starters()
+                .stream()
+                .map(LifeCycleNamedHook::id)
+                .sorted()
+                .collect(Collectors.toList());
         });
 
         final List<String> stoppers = instance.inject(c -> {
             final CoreLifeCycleRegistry reg = (CoreLifeCycleRegistry) c.lifeCycleRegistry();
-            return reg.stoppers().stream().map(LifeCycleNamedHook::id).sorted().collect(Collectors.toList());
+            return reg
+                .stoppers()
+                .stream()
+                .map(LifeCycleNamedHook::id)
+                .sorted()
+                .collect(Collectors.toList());
         });
 
         assertEquals(referenceStarters, starters);
@@ -78,12 +88,22 @@ public class HeroicConfigurationTest {
 
         final List<String> internalStarters = instance.inject(c -> {
             final CoreLifeCycleRegistry reg = (CoreLifeCycleRegistry) c.internalLifeCycleRegistry();
-            return reg.starters().stream().map(LifeCycleNamedHook::id).sorted().collect(Collectors.toList());
+            return reg
+                .starters()
+                .stream()
+                .map(LifeCycleNamedHook::id)
+                .sorted()
+                .collect(Collectors.toList());
         });
 
         final List<String> internalStoppers = instance.inject(c -> {
             final CoreLifeCycleRegistry reg = (CoreLifeCycleRegistry) c.internalLifeCycleRegistry();
-            return reg.stoppers().stream().map(LifeCycleNamedHook::id).sorted().collect(Collectors.toList());
+            return reg
+                .stoppers()
+                .stream()
+                .map(LifeCycleNamedHook::id)
+                .sorted()
+                .collect(Collectors.toList());
         });
 
         assertEquals(internalStarters, referenceInternalStarters);
@@ -94,7 +114,11 @@ public class HeroicConfigurationTest {
     public void testNullShellHost() throws Exception {
         // TODO: get this into the shell server module
         final HeroicCoreInstance instance = testConfiguration("heroic-null-shell-host.yml");
-        instance.start().get();
+    }
+
+    @Test
+    public void testQueryLoggingConfiguration() throws Exception {
+        final HeroicCoreInstance instance = testConfiguration("heroic-query-logging.yml");
     }
 
     private HeroicCoreInstance testConfiguration(final String name) throws Exception {

@@ -1,7 +1,9 @@
 package com.spotify.heroic;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.cache.QueryCache;
@@ -10,6 +12,8 @@ import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Features;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.grammar.QueryParser;
+import com.spotify.heroic.querylogging.QueryLogger;
+import com.spotify.heroic.querylogging.QueryLoggerFactory;
 import com.spotify.heroic.statistics.ApiReporter;
 import eu.toolchain.async.AsyncFramework;
 import org.junit.Before;
@@ -41,9 +45,14 @@ public class CoreQueryManagerTest {
     public void setup() {
         ApiReporter apiReporter = mock(ApiReporter.class);
         long smallQueryThreshold = 0;
+
+        QueryLogger queryLogger = mock(QueryLogger.class);
+        QueryLoggerFactory queryLoggerFactory = mock(QueryLoggerFactory.class);
+        when(queryLoggerFactory.create(any())).thenReturn(queryLogger);
+
         manager =
             new CoreQueryManager(Features.empty(), async, cluster, parser, queryCache, aggregations,
-                OptionalLimit.empty(), smallQueryThreshold, apiReporter);
+                OptionalLimit.empty(), smallQueryThreshold, apiReporter, queryLoggerFactory);
     }
 
     @Test

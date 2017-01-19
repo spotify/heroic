@@ -24,7 +24,6 @@ package com.spotify.heroic.metric;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.AggregationOutput;
@@ -44,14 +43,18 @@ import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
+import com.spotify.heroic.querylogging.QueryContext;
+import com.spotify.heroic.querylogging.QueryLogger;
+import com.spotify.heroic.querylogging.QueryLoggerFactory;
 import com.spotify.heroic.statistics.DataInMemoryReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
-
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.StreamCollector;
-
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -63,13 +66,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
-
 import javax.inject.Inject;
 import javax.inject.Named;
-
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @ToString(of = {})
@@ -91,6 +89,7 @@ public class LocalMetricManager implements MetricManager {
     private final GroupSet<MetricBackend> groupSet;
     private final MetadataManager metadata;
     private final MetricBackendReporter reporter;
+    private final QueryLogger queryLogger;
 
     /**
      * @param groupLimit The maximum amount of groups this manager will allow to be generated.
@@ -109,7 +108,7 @@ public class LocalMetricManager implements MetricManager {
         @Named("fetchParallelism") final int fetchParallelism,
         @Named("failOnLimits") final boolean failOnLimits, final AsyncFramework async,
         final GroupSet<MetricBackend> groupSet, final MetadataManager metadata,
-        final MetricBackendReporter reporter
+        final MetricBackendReporter reporter, final QueryLoggerFactory queryLoggerFactory
     ) {
         this.groupLimit = groupLimit;
         this.seriesLimit = seriesLimit;
@@ -121,6 +120,7 @@ public class LocalMetricManager implements MetricManager {
         this.groupSet = groupSet;
         this.metadata = metadata;
         this.reporter = reporter;
+        this.queryLogger = queryLoggerFactory.create("LocalMetricManager");
     }
 
     @Override
@@ -163,14 +163,16 @@ public class LocalMetricManager implements MetricManager {
             final QueryOptions options = request.getOptions();
             final AggregationInstance aggregation = request.getAggregation();
             final DateRange range = request.getRange();
+            final QueryContext queryContext = request.getContext();
+
+            queryLogger.logIncomingRequestAtNode(queryContext, request);
 
             final QuotaWatcher watcher = new QuotaWatcher(
                 options.getDataLimit().orElse(dataLimit).asLong().orElse(Long.MAX_VALUE), options
                 .getAggregationLimit()
                 .orElse(aggregationLimit)
                 .asLong()
-                .orElse(Long.MAX_VALUE),
-                reporter.newDataInMemoryReporter());
+                .orElse(Long.MAX_VALUE), reporter.newDataInMemoryReporter());
             final DataInMemoryReporter dataInMemoryReporter = reporter.newDataInMemoryReporter();
 
             final OptionalLimit seriesLimit =
@@ -179,6 +181,7 @@ public class LocalMetricManager implements MetricManager {
             final boolean failOnLimits =
                 options.getFailOnLimits().orElse(LocalMetricManager.this.failOnLimits);
 
+            // Transform that takes the result from ES metadata lookup to fetch from backend
             final LazyTransform<FindSeries, FullQuery> transform = (final FindSeries result) -> {
                 final ResultLimits limits;
 
@@ -207,8 +210,8 @@ public class LocalMetricManager implements MetricManager {
                 try {
                     session = aggregation.session(range, watcher);
                 } catch (QuotaViolationException e) {
-                    return async.resolved(new FullQuery(w.end(),
-                        ImmutableList.of(QueryError.fromMessage(String.format(
+                    return async.resolved(new FullQuery(w.end(), ImmutableList.of(
+                        QueryError.fromMessage(String.format(
                             "aggregation needs to retain more data then what is allowed: %d",
                             aggregationLimit.asLong().get()))), ImmutableList.of(),
                         Statistics.empty(), ResultLimits.of(ResultLimit.AGGREGATION)));
@@ -220,6 +223,8 @@ public class LocalMetricManager implements MetricManager {
                 /* setup fetches */
                 accept(b -> {
                     for (final Series s : result.getSeries()) {
+                        /* Setup fetches from metric backend
+                         * The result is a stream of Pair<Series, FetchData> */
                         fetches.add(() -> b
                             .fetch(new FetchData.Request(source, s, range, options), watcher)
                             .directTransform(d -> Pair.of(s, d)));
@@ -268,6 +273,10 @@ public class LocalMetricManager implements MetricManager {
                 .findSeries(new FindSeries.Request(filter, range, seriesLimit))
                 .onDone(reporter.reportFindSeries())
                 .lazyTransform(transform)
+                .directTransform(fullQuery -> {
+                    queryLogger.logOutgoingResponseAtNode(queryContext, fullQuery);
+                    return fullQuery;
+                })
                 .onDone(reporter.reportQueryMetrics());
         }
 

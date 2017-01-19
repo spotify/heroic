@@ -63,6 +63,9 @@ import com.spotify.heroic.metric.QueryResultPart;
 import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.Tracing;
 import com.spotify.heroic.metric.WriteMetric;
+import com.spotify.heroic.querylogging.QueryContext;
+import com.spotify.heroic.querylogging.QueryLogger;
+import com.spotify.heroic.querylogging.QueryLoggerFactory;
 import com.spotify.heroic.statistics.ApiReporter;
 import com.spotify.heroic.suggest.KeySuggest;
 import com.spotify.heroic.suggest.TagKeyCount;
@@ -101,6 +104,7 @@ public class CoreQueryManager implements QueryManager {
     private final AggregationFactory aggregations;
     private final OptionalLimit groupLimit;
     private final ApiReporter reporter;
+    private final QueryLogger queryLogger;
 
     private final long smallQueryThreshold;
 
@@ -109,7 +113,8 @@ public class CoreQueryManager implements QueryManager {
         @Named("features") final Features features, final AsyncFramework async,
         final ClusterManager cluster, final QueryParser parser, final QueryCache queryCache,
         final AggregationFactory aggregations, @Named("groupLimit") final OptionalLimit groupLimit,
-        @Named("smallQueryThreshold") final long smallQueryThreshold, final ApiReporter reporter
+        @Named("smallQueryThreshold") final long smallQueryThreshold, final ApiReporter reporter,
+        final QueryLoggerFactory queryLoggerFactory
     ) {
         this.features = features;
         this.async = async;
@@ -120,6 +125,7 @@ public class CoreQueryManager implements QueryManager {
         this.groupLimit = groupLimit;
         this.reporter = reporter;
         this.smallQueryThreshold = smallQueryThreshold;
+        this.queryLogger = queryLoggerFactory.create("CoreQueryManager");
     }
 
     @Override
@@ -184,13 +190,15 @@ public class CoreQueryManager implements QueryManager {
         private final List<ClusterShard> shards;
 
         @Override
-        public AsyncFuture<QueryResult> query(Query q) {
+        public AsyncFuture<QueryResult> query(final Query q, final QueryContext queryContext) {
             final QueryOptions options = q.getOptions().orElseGet(QueryOptions::defaults);
             final Tracing tracing = options.getTracing();
 
             final QueryTrace.NamedWatch shardWatch = tracing.watch(QUERY_SHARD);
             final Stopwatch fullQueryWatch = Stopwatch.createStarted();
             final long now = System.currentTimeMillis();
+
+            queryLogger.logQuery(queryContext, q);
 
             final List<AsyncFuture<QueryResultPart>> futures = new ArrayList<>();
 
@@ -238,7 +246,10 @@ public class CoreQueryManager implements QueryManager {
             }
 
             final FullQuery.Request request =
-                new FullQuery.Request(source, filter, range, aggregationInstance, options);
+                new FullQuery.Request(source, filter, range, aggregationInstance, options,
+                    queryContext);
+
+            queryLogger.logOutgoingRequestToShards(queryContext, request);
 
             return queryCache.load(request, () -> {
                 for (final ClusterShard shard : shards) {
@@ -247,6 +258,10 @@ public class CoreQueryManager implements QueryManager {
                     final AsyncFuture<QueryResultPart> queryPart = shard
                         .apply(g -> g.query(request), getStoreTracesTransform(shardLocalWatch))
                         .catchFailed(FullQuery.shardError(shardLocalWatch, shard))
+                        .directTransform(fullQuery -> {
+                            queryLogger.logIncomingResponseFromShard(queryContext, fullQuery);
+                            return fullQuery;
+                        })
                         .directTransform(QueryResultPart.fromResultGroup(shard));
 
                     futures.add(queryPart);
