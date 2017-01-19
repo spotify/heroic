@@ -188,3 +188,7 @@ metadata:
 #  # Timeout in milliseconds for reading from a server.
 #  # @default 120000
 #  #readTimeout: 120000
+
+## Detailed Query Logging
+#queryLogging:
+#  type: slf4j
