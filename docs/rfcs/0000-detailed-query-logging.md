@@ -36,13 +36,13 @@ In all relevant stages of query processing, a call to the query logging framewor
 results in logging of json describing the exact structure of the query in that stage. 
 
 Suggested relevant stages and data to log:
+
 * **api** `Query` as received from the user, also includes relevant HTTP-based information.
 * **api** `Query` as received by ClusterManager.
 * **api** `FullQuery.Request` which fans out to all data nodes.
 * **data** `FullQuery.Request` when received by data node.
 * **data** `FullQuery` as it goes back to the API node (excluding data).
 * **api** `FullQuery` as received from data node (excluding data).
-* **api** `QueryTrace` with timing information for the whole query
 * **api** `QueryMetricsResponse` being sent to the user (excluding data).
 
 *Note*: All response paths excludes samples (time series data) to reduce the size of the log. This
@@ -86,6 +86,6 @@ Or with a logger facility:
 
 ```yaml
 queryLogging:
-  type: logger
+  type: slf4j
   name: com.spotify.heroic.query_logging
 ```
