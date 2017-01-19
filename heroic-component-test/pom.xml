@@ -31,11 +31,6 @@
       <artifactId>jackson-annotations</artifactId>
     </dependency>
 
-    <dependency>
-      <groupId>com.spotify.heroic</groupId>
-      <artifactId>heroic-test-base</artifactId>
-    </dependency>
-
     <!-- testing -->
     <dependency>
       <groupId>junit</groupId>

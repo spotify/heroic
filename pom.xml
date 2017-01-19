@@ -13,7 +13,6 @@
   <modules>
     <module>heroic-component</module>
     <module>heroic-component-test</module>
-    <module>heroic-test-base</module>
     <module>heroic-elasticsearch-utils</module>
     <module>heroic-elasticsearch-test</module>
     <module>heroic-loading</module>
