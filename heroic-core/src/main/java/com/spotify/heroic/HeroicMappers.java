@@ -43,7 +43,6 @@ import com.spotify.heroic.filter.FilterRegistry;
 import com.spotify.heroic.generator.MetadataGenerator;
 import com.spotify.heroic.generator.MetricGeneratorModule;
 import com.spotify.heroic.grammar.QueryParser;
-import com.spotify.heroic.jetty.JettyConnectionFactory;
 import com.spotify.heroic.metadata.MetadataModule;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.EventSerialization;
@@ -68,6 +67,10 @@ import com.spotify.heroic.suggest.SuggestModule;
  * @author udoprog
  */
 public final class HeroicMappers {
+    public static final String APPLICATION_JSON_INTERNAL = "application/json+internal";
+    public static final String APPLICATION_JSON = "application/json";
+    public static final String APPLICATION_HEROIC_CONFIG = "application/heroic-config";
+
     /**
      * Setup the ObjectMapper used to deserialize configuration files.
      *
@@ -84,7 +87,6 @@ public final class HeroicMappers {
         m.addMixIn(MetricModule.class, TypeNameMixin.class);
         m.addMixIn(MetricGeneratorModule.class, TypeNameMixin.class);
         m.addMixIn(MetadataGenerator.class, TypeNameMixin.class);
-        m.addMixIn(JettyConnectionFactory.Builder.class, TypeNameMixin.class);
         m.addMixIn(AnalyticsModule.Builder.class, TypeNameMixin.class);
         m.addMixIn(StatisticsModule.class, TypeNameMixin.class);
         m.addMixIn(QueryLoggingModule.class, TypeNameMixin.class);

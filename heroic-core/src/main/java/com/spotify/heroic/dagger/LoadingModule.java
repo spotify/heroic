@@ -27,13 +27,10 @@ import com.spotify.heroic.CoreHeroicConfigurationContext;
 import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.HeroicConfiguration;
 import com.spotify.heroic.HeroicConfigurationContext;
-import com.spotify.heroic.HeroicCore;
 import com.spotify.heroic.HeroicMappers;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.aggregation.AggregationRegistry;
 import com.spotify.heroic.aggregation.CoreAggregationRegistry;
-import com.spotify.heroic.common.CoreJavaxRestFramework;
-import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Series_Serializer;
 import com.spotify.heroic.filter.CoreFilterModifier;
@@ -116,7 +113,7 @@ public class LoadingModule {
     }
 
     @Provides
-    @Named(HeroicCore.APPLICATION_HEROIC_CONFIG)
+    @Named(HeroicMappers.APPLICATION_HEROIC_CONFIG)
     @LoadingScope
     ObjectMapper configMapper() {
         return HeroicMappers.config();
@@ -147,12 +144,6 @@ public class LoadingModule {
     @LoadingScope
     ExecutorService executorService() {
         return executor;
-    }
-
-    @Provides
-    @LoadingScope
-    JavaxRestFramework javaxRestFramework() {
-        return new CoreJavaxRestFramework();
     }
 
     @Provides
