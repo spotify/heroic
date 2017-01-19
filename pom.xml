@@ -12,10 +12,13 @@
 
   <modules>
     <module>heroic-component</module>
+    <module>heroic-component-test</module>
+    <module>heroic-test-base</module>
     <module>heroic-elasticsearch-utils</module>
     <module>heroic-elasticsearch-test</module>
+    <module>heroic-loading</module>
     <module>heroic-core</module>
-    <module>heroic-test-base</module>
+    <module>heroic-test</module>
     <module>heroic-test-it</module>
     <module>heroic-shell</module>
     <module>heroic-parser</module>
@@ -274,6 +277,11 @@
       </dependency>
       <dependency>
         <groupId>com.spotify.heroic</groupId>
+        <artifactId>heroic-loading</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.spotify.heroic</groupId>
         <artifactId>heroic-parser</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -296,6 +304,16 @@
       <dependency>
         <groupId>com.spotify.heroic</groupId>
         <artifactId>heroic-test-base</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.spotify.heroic</groupId>
+        <artifactId>heroic-component-test</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.spotify.heroic</groupId>
+        <artifactId>heroic-test</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

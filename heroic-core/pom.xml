@@ -23,12 +23,8 @@
       <artifactId>heroic-parser</artifactId>
     </dependency>
     <dependency>
-      <groupId>eu.toolchain.serializer</groupId>
-      <artifactId>tiny-serializer-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>eu.toolchain.async</groupId>
-      <artifactId>tiny-async-core</artifactId>
+      <groupId>com.spotify.heroic</groupId>
+      <artifactId>heroic-loading</artifactId>
     </dependency>
     <dependency>
       <groupId>org.projectlombok</groupId>
@@ -91,19 +87,6 @@
     </dependency>
 
     <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-databind</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.dataformat</groupId>
-      <artifactId>jackson-dataformat-yaml</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.datatype</groupId>
-      <artifactId>jackson-datatype-jdk8</artifactId>
-    </dependency>
-
-    <dependency>
       <groupId>org.jfree</groupId>
       <artifactId>jfreechart</artifactId>
     </dependency>
@@ -139,7 +122,7 @@
     <!-- used for testing -->
     <dependency>
       <groupId>com.spotify.heroic</groupId>
-      <artifactId>heroic-test-base</artifactId>
+      <artifactId>heroic-test</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
