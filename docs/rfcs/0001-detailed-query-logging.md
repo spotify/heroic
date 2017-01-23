@@ -4,7 +4,7 @@
 We want to provide a configurable feature that gives a detailed log of how the queries are treated
 by Heroic.
 
-* **Status** Draft
+* **Status** Approved
 * **Author** John-John Tedro <udoprog@spotify.com>, Gabriel Gerhardsson <gabrielg@spotify.com>,
              Martin Parm <parmus@spotify.com>   
 
