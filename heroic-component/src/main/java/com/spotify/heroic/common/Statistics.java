@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.util.Optional;
 import lombok.Data;
 
 import java.util.Map;
@@ -55,6 +56,10 @@ public class Statistics {
         }
 
         return new Statistics(counters.build());
+    }
+
+    public Optional<Long> getCounterValue(String key) {
+        return Optional.ofNullable(counters.get(key));
     }
 
     public static Statistics of(Map<String, Long> samples) {

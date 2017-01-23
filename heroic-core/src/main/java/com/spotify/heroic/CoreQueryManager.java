@@ -22,7 +22,6 @@
 package com.spotify.heroic;
 
 import com.google.common.collect.ImmutableSortedSet;
-
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationCombiner;
 import com.spotify.heroic.aggregation.AggregationContext;
@@ -58,11 +57,9 @@ import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.WriteMetadata;
 import com.spotify.heroic.metric.FullQuery;
 import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.QueryError;
 import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.QueryResultPart;
 import com.spotify.heroic.metric.QueryTrace;
-import com.spotify.heroic.metric.ResultLimits;
 import com.spotify.heroic.metric.Tracing;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.suggest.KeySuggest;
@@ -70,24 +67,19 @@ import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
-
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
-
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.SortedSet;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-
 import javax.inject.Inject;
 import javax.inject.Named;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -224,10 +216,9 @@ public class CoreQueryManager implements QueryManager {
 
             if (features.hasFeature(Feature.DETERMINISTIC_AGGREGATIONS) &&
                 aggregationInstance.estimate(range) < 0) {
-                return async.resolved(new QueryResult(range, Collections.emptyList(),
-                    Collections.singletonList(QueryError.fromMessage(
-                        "Aggregation can not be evaluated with deterministic resources")),
-                    shardWatch.end(), ResultLimits.of()));
+                return async.resolved(QueryResult.error(range,
+                    "Aggregation can not be evaluated with deterministic resources",
+                    shardWatch.end()));
             }
 
             final AggregationCombiner combiner;

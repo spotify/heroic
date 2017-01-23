@@ -22,12 +22,12 @@
 package com.spotify.heroic.metric;
 
 import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.cluster.ClusterShard;
 import eu.toolchain.async.Transform;
-import lombok.Data;
-
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Data;
 
 @Data
 public class QueryResultPart {
@@ -52,6 +52,8 @@ public class QueryResultPart {
 
     private final ResultLimits limits;
 
+    private final long preAggregationSampleSize;
+
     public static Transform<FullQuery, QueryResultPart> fromResultGroup(
         final ClusterShard shard
     ) {
@@ -62,8 +64,19 @@ public class QueryResultPart {
                 .map(ResultGroup.toShardedResultGroup(shard))
                 .iterator());
 
+            final long preAggregationSampleSize = result
+                .getStatistics()
+                .getCounterValue(AggregationInstance.SAMPLE_SIZE)
+                .orElseGet(() -> {
+                    long sum = 0;
+                    for (final ShardedResultGroup g : groups) {
+                        sum += g.getMetrics().getData().size();
+                    }
+                    return sum;
+                });
+
             return new QueryResultPart(groups, result.getErrors(), result.getTrace(),
-                result.getLimits());
+                result.getLimits(), preAggregationSampleSize);
         };
     }
 
