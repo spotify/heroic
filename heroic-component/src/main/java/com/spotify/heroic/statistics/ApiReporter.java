@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2017 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -21,23 +21,6 @@
 
 package com.spotify.heroic.statistics;
 
-import java.util.Map;
-import java.util.Set;
-
-public interface HeroicReporter {
-    ConsumerReporter newConsumer(String id);
-
-    IngestionManagerReporter newIngestionManager();
-
-    AnalyticsReporter newAnalyticsReporter();
-
-    MetadataBackendReporter newMetadataBackend();
-
-    SuggestBackendReporter newSuggestBackend();
-
-    MetricBackendReporter newMetricBackend();
-
-    ApiReporter newApiReporter();
-
-    void registerShards(Set<Map<String, String>> knownShards);
+public interface ApiReporter {
+    void reportSmallQueryLatency(long duration);
 }
