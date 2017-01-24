@@ -1,0 +1,29 @@
+{
+  "queryId": "d11d0ad7-cc27-4667-a617-67a481f61c30",
+  "range": {
+    "start": 1484027520000,
+    "end": 1484038320000
+  },
+  "trace": {
+    "what": {
+      "name": "test"
+    },
+    "elapsed": 0,
+    "children": []
+  },
+  "limits": [],
+  "commonTags": {},
+  "result": [
+    {
+      "type": "points",
+      "hash": "2362f9de",
+      "shard": {},
+      "cadence": 0,
+      "values": [],
+      "key": null,
+      "tags": {},
+      "tagCounts": {}
+    }
+  ],
+  "errors": []
+}

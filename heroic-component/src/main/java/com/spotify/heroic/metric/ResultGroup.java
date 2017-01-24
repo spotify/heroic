@@ -21,17 +21,19 @@
 
 package com.spotify.heroic.metric;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.cluster.ClusterShard;
+import com.spotify.heroic.common.Histogram;
 import com.spotify.heroic.common.Series;
-import lombok.Data;
-
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
-
-import static com.google.common.base.Preconditions.checkNotNull;
+import lombok.Data;
 
 @Data
 public class ResultGroup {
@@ -60,5 +62,29 @@ public class ResultGroup {
     ) {
         return g -> new ShardedResultGroup(shard.getShard(), g.getKey(), g.getSeries(),
             g.getGroup(), g.getCadence());
+    }
+
+    public static MultiSummary summarize(List<ResultGroup> resultGroups) {
+        final Histogram.Builder keySize = Histogram.builder();
+        final SeriesSetsSummarizer seriesSummarizer = new SeriesSetsSummarizer();
+        final Histogram.Builder dataSize = Histogram.builder();
+        Optional<Long> cadence = Optional.empty();
+
+        for (final ResultGroup rg : resultGroups) {
+            keySize.add(rg.getKey().size());
+            seriesSummarizer.add(rg.getSeries());
+            dataSize.add(rg.getGroup().size());
+            cadence = Optional.of(rg.getCadence());
+        }
+
+        return new MultiSummary(keySize.build(), seriesSummarizer.end(), dataSize.build(), cadence);
+    }
+
+    @Data
+    public static class MultiSummary {
+        private final Histogram keySize;
+        private final SeriesSetsSummarizer.Summary series;
+        private final Histogram dataSize;
+        private final Optional<Long> cadence;
     }
 }

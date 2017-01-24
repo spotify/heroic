@@ -19,7 +19,7 @@
  * under the License.
  */
 
-package com.spotify.heroic.http.query;
+package com.spotify.heroic.metric;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
@@ -27,15 +27,6 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Statistics;
-import com.spotify.heroic.metric.MetricCollection;
-import com.spotify.heroic.metric.QueryTrace;
-import com.spotify.heroic.metric.RequestError;
-import com.spotify.heroic.metric.ResultLimits;
-import com.spotify.heroic.metric.SeriesValues;
-import com.spotify.heroic.metric.ShardedResultGroup;
-import lombok.Data;
-import lombok.NonNull;
-
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -43,10 +34,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
+import java.util.UUID;
+
+import lombok.Data;
+import lombok.NonNull;
 
 @Data
 @JsonSerialize(using = QueryMetricsResponse.Serializer.class)
 public class QueryMetricsResponse {
+    @NonNull
+    private final UUID queryId;
+
     @NonNull
     private final DateRange range;
 
@@ -75,6 +73,7 @@ public class QueryMetricsResponse {
 
             g.writeStartObject();
 
+            g.writeObjectField("queryId", response.getQueryId());
             g.writeObjectField("range", response.getRange());
             g.writeObjectField("trace", response.getTrace());
             g.writeObjectField("limits", response.getLimits());
@@ -169,7 +168,7 @@ public class QueryMetricsResponse {
                 final SeriesValues series = SeriesValues.fromSeries(group.getSeries().iterator());
 
                 g.writeStringField("type", collection.getType().identifier());
-                g.writeStringField("hash", Integer.toHexString(group.hashCode()));
+                g.writeStringField("hash", Integer.toHexString(group.hashGroup()));
                 g.writeObjectField("shard", group.getShard());
                 g.writeNumberField("cadence", group.getCadence());
                 g.writeObjectField("values", collection.getData());
@@ -238,5 +237,21 @@ public class QueryMetricsResponse {
 
             g.writeEndObject();
         }
+    }
+
+    public Summary summarize() {
+        return new Summary(range, ShardedResultGroup.summarize(result), statistics, errors, trace,
+            limits);
+    }
+
+    // Only include data suitable to log to query log
+    @Data
+    public class Summary {
+        private final DateRange range;
+        private final ShardedResultGroup.MultiSummary result;
+        private final Statistics statistics;
+        private final List<RequestError> errors;
+        private final QueryTrace trace;
+        private final ResultLimits limits;
     }
 }

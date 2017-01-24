@@ -34,6 +34,7 @@ import com.spotify.heroic.profile.ElasticsearchSuggestProfile;
 import com.spotify.heroic.profile.KafkaConsumerProfile;
 import com.spotify.heroic.profile.MemoryCacheProfile;
 import com.spotify.heroic.profile.MemoryProfile;
+import com.spotify.heroic.profile.QueryLoggingProfile;
 import com.spotify.heroic.profile.WebProfile;
 
 import java.io.OutputStreamWriter;
@@ -69,7 +70,9 @@ public class HeroicModules {
         new com.spotify.heroic.rpc.grpc.Module(),
         new com.spotify.heroic.rpc.jvm.Module(),
 
-        new com.spotify.heroic.statistics.semantic.Module()
+        new com.spotify.heroic.statistics.semantic.Module(),
+
+        new com.spotify.heroic.querylogging.Module()
     );
 
     public static final Map<String, HeroicProfile> PROFILES = ImmutableMap.<String,
@@ -85,6 +88,7 @@ public class HeroicModules {
         .put("collectd", new CollectdConsumerProfile())
         .put("memory-cache", new MemoryCacheProfile())
         .put("web", new WebProfile())
+        .put("query-logging", new QueryLoggingProfile())
     .build();
     // @formatter:on
 

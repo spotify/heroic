@@ -21,6 +21,9 @@
 
 package com.spotify.heroic.rpc.grpc;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+import static io.grpc.MethodDescriptor.generateFullMethodName;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -54,13 +57,6 @@ import io.grpc.ManagedChannel;
 import io.grpc.MethodDescriptor;
 import io.grpc.netty.NettyChannelBuilder;
 import io.netty.channel.nio.NioEventLoopGroup;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -70,9 +66,12 @@ import java.net.URI;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
-
-import static com.google.common.base.Preconditions.checkNotNull;
-import static io.grpc.MethodDescriptor.generateFullMethodName;
+import javax.inject.Inject;
+import javax.inject.Named;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @ToString(of = {})

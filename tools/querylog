@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+import requests
+import yaml
+import argparse
+import json
+
+settings = {
+    "index": {
+        "number_of_replicas": 1
+    }
+}
+
+def setup_parser():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        '--host', dest='hosts', help="Elasticsearch host to configure",
+        action='append', default=[])
+
+    parser.add_argument(
+        '--index-base', help="Base index name to configure, i.e. <index-base>-*",
+        default="heroic-querylog")
+
+    parser.add_argument(
+        '--logstash', help="Use logstash (@message) format for index template",
+        action='store_const', const=True, default=False)
+
+    parser.add_argument(
+        '--commit', help=(
+            "The default run will just print what would have been "
+            "configured, adding --commit causes it to be writtend"),
+        action='store_const', const=True, default=False)
+
+    return parser
+
+def main():
+    parser = setup_parser()
+
+    ns = parser.parse_args()
+
+    hosts = ns.hosts
+    index_base = ns.index_base
+
+    mapping_path = os.path.join(
+        os.path.dirname(os.path.abspath(sys.argv[0])),
+        'querylog_mappings.yaml')
+
+    mappings = None
+
+    with open(mapping_path) as f:
+        mappings = yaml.load(f)
+
+    common = mappings.get('_common', {})
+
+    for (type, mapping) in mappings.items():
+        if type.startswith('_'):
+            continue
+
+        mapping = dict(mapping)
+
+        try:
+            properties = mapping['properties']
+        except KeyError:
+            mapping['properties'] = properties = dict()
+
+        properties.update(common)
+
+        if ns.logstash:
+            message = dict()
+            message.update(mapping)
+
+            # initial @message nesting
+            mapping = {
+              "properties": {
+                "@message": message,
+                "@timestamp": {
+                  "type": "date"
+                }
+              }
+            }
+
+        template = {
+            "template": "{}-{}-*".format(index_base, type),
+            "settings": settings,
+            "mappings": {
+                "entry": mapping
+            }
+        }
+
+        if ns.commit:
+            for host in hosts:
+                url = '{}/_template/{}-{}'.format(host, index_base, type)
+                print("PUT", url)
+                response = requests.put(url, json=template)
+                print(response.text)
+        else:
+            print(json.dumps(template))
+
+if __name__ == "__main__":
+    main()

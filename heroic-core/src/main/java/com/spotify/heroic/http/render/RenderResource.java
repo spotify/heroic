@@ -23,10 +23,12 @@ package com.spotify.heroic.http.render;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.Query;
+import com.spotify.heroic.querylogging.QueryContext;
 import com.spotify.heroic.QueryManager;
 import com.spotify.heroic.metric.QueryResult;
-import org.jfree.chart.JFreeChart;
-
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.util.Map;
 import javax.imageio.ImageIO;
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -37,9 +39,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.util.Map;
+import org.jfree.chart.JFreeChart;
 
 @Path("render")
 public class RenderResource {
@@ -87,9 +87,10 @@ public class RenderResource {
             highlight = null;
         }
 
+        final QueryContext queryContext = QueryContext.empty();
         final Query q = query.newQueryFromString(queryString).build();
 
-        final QueryResult result = this.query.useGroup(backendGroup).query(q).get();
+        final QueryResult result = this.query.useGroup(backendGroup).query(q, queryContext).get();
 
         final JFreeChart chart =
             RenderUtils.createChart(result.getGroups(), title, highlight, threshold, height);
