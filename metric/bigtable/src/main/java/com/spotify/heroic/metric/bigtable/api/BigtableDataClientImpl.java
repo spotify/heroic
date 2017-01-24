@@ -21,24 +21,29 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
+import com.google.bigtable.v2.BigtableGrpc.Bigtable;
 import com.google.bigtable.v2.ReadModifyWriteRowRequest;
-import com.google.cloud.bigtable.grpc.scanner.ResultScanner;
 import com.google.cloud.bigtable.grpc.scanner.FlatRow;
+import com.google.cloud.bigtable.grpc.scanner.ResultScanner;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.protobuf.ByteString;
+
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.async.AsyncObserver;
+
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
+
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
 @RequiredArgsConstructor
 @ToString
@@ -46,15 +51,20 @@ public class BigtableDataClientImpl implements BigtableDataClient {
     private final AsyncFramework async;
     private final com.google.cloud.bigtable.grpc.BigtableSession session;
     private final BigtableMutator mutator;
+    private final Optional<Integer> defaultFetchSize;
+    private final RowRangeReader rangeReader;
     private final String clusterUri;
 
     public BigtableDataClientImpl(
         final AsyncFramework async, final com.google.cloud.bigtable.grpc.BigtableSession session,
-        BigtableMutator mutator, final String project, final String cluster
+        final BigtableMutator mutator, final Bigtable bigtable, final String project,
+        final String cluster, final Optional<Integer> defaultFetchSize
     ) {
         this.async = async;
         this.session = session;
         this.mutator = mutator;
+        this.defaultFetchSize = defaultFetchSize;
+        this.rangeReader = new RowRangeReader(bigtable, async);
         this.clusterUri = String.format("projects/%s/instances/%s", project, cluster);
     }
 
@@ -72,6 +82,16 @@ public class BigtableDataClientImpl implements BigtableDataClient {
         return convert(session
             .getDataClient()
             .readFlatRowsAsync(request.toPb(Table.toURI(clusterUri, tableName))));
+    }
+
+    @Override
+    public AsyncFuture<Void> readRowRange(
+        String tableName, ReadRowRangeRequest request, Optional<Integer> fetchSize,
+        CellConsumer cellConsumer
+    ) {
+        String tableUri = Table.toURI(clusterUri, tableName);
+        fetchSize = fetchSize.isPresent() ? fetchSize : defaultFetchSize;
+        return rangeReader.readRow(tableUri, request, fetchSize, cellConsumer);
     }
 
     @Override
@@ -202,5 +222,4 @@ public class BigtableDataClientImpl implements BigtableDataClient {
 
         return future;
     }
-
 }

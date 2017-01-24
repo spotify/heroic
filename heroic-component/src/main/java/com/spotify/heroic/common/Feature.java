@@ -53,7 +53,12 @@ public enum Feature {
      * This will assert that there are data outside of the range queried for, which is a useful
      * feature when using a dashboarding system.
      */
-    SHIFT_RANGE("com.spotify.heroic.shift_range");
+    SHIFT_RANGE("com.spotify.heroic.shift_range"),
+
+    /**
+     * Enable feature to cause data to be fetched in slices.
+     */
+    SLICED_DATA_FETCH("com.spotify.heroic.sliced_data_fetch");
 
     private final String id;
 

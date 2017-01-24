@@ -34,12 +34,15 @@ import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.WriteMetric;
+
 import eu.toolchain.async.AsyncFuture;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.function.Consumer;
+
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
 @ToString
 @RequiredArgsConstructor
@@ -78,6 +81,14 @@ class BigtableAnalyticsMetricBackend implements MetricBackend {
     ) {
         analytics.reportFetchSeries(LocalDate.now(), request.getSeries());
         return backend.fetch(request, watcher);
+    }
+
+    @Override
+    public AsyncFuture<FetchData.Result> fetch(
+        FetchData.Request request, FetchQuotaWatcher watcher,
+                                          Consumer<MetricCollection> metricsConsumer) {
+        analytics.reportFetchSeries(LocalDate.now(), request.getSeries());
+        return backend.fetch(request, watcher, metricsConsumer);
     }
 
     @Override

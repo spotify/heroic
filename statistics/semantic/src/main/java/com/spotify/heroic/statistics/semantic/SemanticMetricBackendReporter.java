@@ -40,9 +40,13 @@ import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
+
 import eu.toolchain.async.AsyncFuture;
+
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
+
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
@@ -162,6 +166,14 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
             final FetchData.Request request, final FetchQuotaWatcher watcher
         ) {
             return delegate.fetch(request, watcher).onDone(fetch.setup());
+        }
+
+        @Override
+        public AsyncFuture<FetchData.Result> fetch(
+            FetchData.Request request, FetchQuotaWatcher watcher,
+            Consumer<MetricCollection> metricsConsumer
+        ) {
+            return delegate.fetch(request, watcher, metricsConsumer).onDone(fetch.setup());
         }
 
         @Override
