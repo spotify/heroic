@@ -21,6 +21,11 @@
 
 package com.spotify.heroic.metric;
 
+import static com.spotify.heroic.common.Optionals.mergeOptionalList;
+import static com.spotify.heroic.common.Optionals.pickOptional;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.analytics.MetricAnalytics;
@@ -33,27 +38,22 @@ import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 import dagger.Module;
 import dagger.Provides;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-
-import static com.spotify.heroic.common.Optionals.mergeOptionalList;
-import static com.spotify.heroic.common.Optionals.pickOptional;
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
+import javax.inject.Named;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @Module
 public class MetricManagerModule {
     public static final int DEFAULT_FETCH_PARALLELISM = 100;
     public static final boolean DEFAULT_FAIL_ON_LIMITS = false;
+    public static final long DEFAULT_SMALL_QUERY_THRESHOLD = 200000;
 
     private final List<MetricModule> backends;
     private final Optional<List<String>> defaultBackends;
@@ -87,6 +87,11 @@ public class MetricManagerModule {
      * If {@code true}, will cause any limits applied to be reported as a failure.
      */
     private final boolean failOnLimits;
+
+    /**
+     * Threshold for defining a "small" query, measured in pre-aggregation sample size
+     */
+    private final long smallQueryThreshold;
 
     @Provides
     @MetricScope
@@ -184,6 +189,13 @@ public class MetricManagerModule {
         return failOnLimits;
     }
 
+    @Provides
+    @MetricScope
+    @Named("smallQueryThreshold")
+    public long smallQueryThreshold() {
+        return smallQueryThreshold;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -199,6 +211,7 @@ public class MetricManagerModule {
         private OptionalLimit dataLimit = OptionalLimit.empty();
         private Optional<Integer> fetchParallelism = empty();
         private Optional<Boolean> failOnLimits = empty();
+        private Optional<Long> smallQueryThreshold = empty();
 
         public Builder backends(List<MetricModule> backends) {
             this.backends = of(backends);
@@ -240,6 +253,11 @@ public class MetricManagerModule {
             return this;
         }
 
+        public Builder smallQueryThreshold(long smallQueryThreshold) {
+            this.smallQueryThreshold = of(smallQueryThreshold);
+            return this;
+        }
+
         public Builder merge(final Builder o) {
             // @formatter:off
             return new Builder(
@@ -250,7 +268,8 @@ public class MetricManagerModule {
                 aggregationLimit.orElse(o.aggregationLimit),
                 dataLimit.orElse(o.dataLimit),
                 pickOptional(fetchParallelism, o.fetchParallelism),
-                pickOptional(failOnLimits, o.failOnLimits)
+                pickOptional(failOnLimits, o.failOnLimits),
+                pickOptional(smallQueryThreshold, o.smallQueryThreshold)
             );
             // @formatter:on
         }
@@ -265,7 +284,8 @@ public class MetricManagerModule {
                 aggregationLimit,
                 dataLimit,
                 fetchParallelism.orElse(DEFAULT_FETCH_PARALLELISM),
-                failOnLimits.orElse(DEFAULT_FAIL_ON_LIMITS)
+                failOnLimits.orElse(DEFAULT_FAIL_ON_LIMITS),
+                smallQueryThreshold.orElse(DEFAULT_SMALL_QUERY_THRESHOLD)
             );
             // @formatter:on
         }

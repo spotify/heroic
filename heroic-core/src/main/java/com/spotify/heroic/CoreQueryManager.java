@@ -21,8 +21,8 @@
 
 package com.spotify.heroic;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableSortedSet;
-
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationCombiner;
 import com.spotify.heroic.aggregation.AggregationContext;
@@ -58,36 +58,30 @@ import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.WriteMetadata;
 import com.spotify.heroic.metric.FullQuery;
 import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.QueryError;
 import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.QueryResultPart;
 import com.spotify.heroic.metric.QueryTrace;
-import com.spotify.heroic.metric.ResultLimits;
 import com.spotify.heroic.metric.Tracing;
 import com.spotify.heroic.metric.WriteMetric;
+import com.spotify.heroic.statistics.ApiReporter;
 import com.spotify.heroic.suggest.KeySuggest;
 import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
-
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
-
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.SortedSet;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-
 import javax.inject.Inject;
 import javax.inject.Named;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -106,12 +100,16 @@ public class CoreQueryManager implements QueryManager {
     private final QueryCache queryCache;
     private final AggregationFactory aggregations;
     private final OptionalLimit groupLimit;
+    private final ApiReporter reporter;
+
+    private final long smallQueryThreshold;
 
     @Inject
     public CoreQueryManager(
         @Named("features") final Features features, final AsyncFramework async,
         final ClusterManager cluster, final QueryParser parser, final QueryCache queryCache,
-        final AggregationFactory aggregations, @Named("groupLimit") final OptionalLimit groupLimit
+        final AggregationFactory aggregations, @Named("groupLimit") final OptionalLimit groupLimit,
+        @Named("smallQueryThreshold") final long smallQueryThreshold, final ApiReporter reporter
     ) {
         this.features = features;
         this.async = async;
@@ -120,6 +118,8 @@ public class CoreQueryManager implements QueryManager {
         this.queryCache = queryCache;
         this.aggregations = aggregations;
         this.groupLimit = groupLimit;
+        this.reporter = reporter;
+        this.smallQueryThreshold = smallQueryThreshold;
     }
 
     @Override
@@ -189,6 +189,8 @@ public class CoreQueryManager implements QueryManager {
             final Tracing tracing = options.getTracing();
 
             final QueryTrace.NamedWatch shardWatch = tracing.watch(QUERY_SHARD);
+            final Stopwatch fullQueryWatch = Stopwatch.createStarted();
+            final long now = System.currentTimeMillis();
 
             final List<AsyncFuture<QueryResultPart>> futures = new ArrayList<>();
 
@@ -196,8 +198,6 @@ public class CoreQueryManager implements QueryManager {
 
             final Aggregation aggregation = q.getAggregation().orElse(Empty.INSTANCE);
             final DateRange rawRange = buildRange(q);
-
-            final long now = System.currentTimeMillis();
 
             final Filter filter = q.getFilter().orElseGet(TrueFilter::get);
 
@@ -224,10 +224,9 @@ public class CoreQueryManager implements QueryManager {
 
             if (features.hasFeature(Feature.DETERMINISTIC_AGGREGATIONS) &&
                 aggregationInstance.estimate(range) < 0) {
-                return async.resolved(new QueryResult(range, Collections.emptyList(),
-                    Collections.singletonList(QueryError.fromMessage(
-                        "Aggregation can not be evaluated with deterministic resources")),
-                    shardWatch.end(), ResultLimits.of()));
+                return async.resolved(QueryResult.error(range,
+                    "Aggregation can not be evaluated with deterministic resources",
+                    shardWatch.end()));
             }
 
             final AggregationCombiner combiner;
@@ -255,9 +254,22 @@ public class CoreQueryManager implements QueryManager {
 
                 final OptionalLimit limit = options.getGroupLimit().orElse(groupLimit);
 
-                return async.collect(futures,
-                    QueryResult.collectParts(QUERY, range, combiner, limit));
+                return async
+                    .collect(futures, QueryResult.collectParts(QUERY, range, combiner, limit))
+                    .directTransform(result -> {
+                        reportCompletedQuery(result, fullQueryWatch);
+                        return result;
+                    });
             });
+        }
+
+        private void reportCompletedQuery(QueryResult result, Stopwatch fullQueryWatch) {
+            long sampleSize = result.getPreAggregationSampleSize();
+            if (sampleSize > smallQueryThreshold) {
+                return;
+            }
+            long duration = fullQueryWatch.elapsed(TimeUnit.MILLISECONDS);
+            reporter.reportSmallQueryLatency(duration);
         }
 
         @Override

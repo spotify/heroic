@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2017 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,40 +19,18 @@
  * under the License.
  */
 
-package com.spotify.heroic;
+package com.spotify.heroic.statistics.noop;
 
-import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.statistics.ApiReporter;
-import com.spotify.heroic.statistics.HeroicReporter;
-import dagger.Module;
-import dagger.Provides;
-import lombok.Data;
 
-import javax.inject.Named;
+public class NoopApiReporter implements ApiReporter {
+    private static final NoopApiReporter INSTANCE = new NoopApiReporter();
 
-@Module
-@Data
-public class QueryModule {
-    private final OptionalLimit groupLimit;
-    private final long smallQueryThreshold;
-
-    @Provides
-    @QueryScope
-    @Named("groupLimit")
-    public OptionalLimit groupLimit() {
-        return groupLimit;
+    public static NoopApiReporter get() {
+        return INSTANCE;
     }
 
-    @Provides
-    @QueryScope
-    @Named("smallQueryThreshold")
-    public long smallQueryThreshold() {
-        return smallQueryThreshold;
-    }
-
-    @Provides
-    @QueryScope
-    public ApiReporter apiReporter(HeroicReporter heroicReporter) {
-        return heroicReporter.newApiReporter();
+    @Override
+    public void reportSmallQueryLatency(final long duration) {
     }
 }

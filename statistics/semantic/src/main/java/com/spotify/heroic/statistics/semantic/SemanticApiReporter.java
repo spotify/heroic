@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2017 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,40 +19,31 @@
  * under the License.
  */
 
-package com.spotify.heroic;
+package com.spotify.heroic.statistics.semantic;
 
-import com.spotify.heroic.common.OptionalLimit;
+import com.codahale.metrics.Histogram;
 import com.spotify.heroic.statistics.ApiReporter;
-import com.spotify.heroic.statistics.HeroicReporter;
-import dagger.Module;
-import dagger.Provides;
-import lombok.Data;
+import com.spotify.metrics.core.MetricId;
+import com.spotify.metrics.core.SemanticMetricRegistry;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 
-import javax.inject.Named;
+@Slf4j
+@ToString(of = {"base"})
+public class SemanticApiReporter implements ApiReporter {
+    private static final String COMPONENT = "api";
 
-@Module
-@Data
-public class QueryModule {
-    private final OptionalLimit groupLimit;
-    private final long smallQueryThreshold;
+    private final Histogram smallQueryLatency;
 
-    @Provides
-    @QueryScope
-    @Named("groupLimit")
-    public OptionalLimit groupLimit() {
-        return groupLimit;
+    public SemanticApiReporter(SemanticMetricRegistry registry) {
+        final MetricId base = MetricId.build().tagged("component", COMPONENT);
+
+        smallQueryLatency = registry.histogram(
+            base.tagged("what", "small-query-latency", "unit", Units.MILLISECOND));
     }
 
-    @Provides
-    @QueryScope
-    @Named("smallQueryThreshold")
-    public long smallQueryThreshold() {
-        return smallQueryThreshold;
-    }
-
-    @Provides
-    @QueryScope
-    public ApiReporter apiReporter(HeroicReporter heroicReporter) {
-        return heroicReporter.newApiReporter();
+    @Override
+    public void reportSmallQueryLatency(long duration) {
+        smallQueryLatency.update(duration);
     }
 }
