@@ -4,9 +4,10 @@
 We want to provide a configurable feature that gives a detailed log of how the queries are treated
 by Heroic.
 
-* **Status** Approved
+* **Status** Implemented
 * **Author** John-John Tedro <udoprog@spotify.com>, Gabriel Gerhardsson <gabrielg@spotify.com>,
              Martin Parm <parmus@spotify.com>   
+* **PR** https://github.com/spotify/heroic/pull/199
 
 
 ## Suggestion
