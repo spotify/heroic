@@ -22,5 +22,17 @@
 package com.spotify.heroic.statistics;
 
 public interface ApiReporter {
+    /**
+     * Report on a full query, on an API node level
+     */
+    FutureReporter.Context reportQuery();
+
+    /**
+     * Report latency of a full query, including gathering data from shards and doing aggregation,
+     * but only for queries that are deemed "small".
+     * The threshold for what is deemed "small" may be configurable and may change.
+     *
+     * @param duration Duration of query, in ms
+     */
     void reportSmallQueryLatency(long duration);
 }

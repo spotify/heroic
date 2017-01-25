@@ -75,6 +75,7 @@ import com.spotify.heroic.suggest.TagValuesSuggest;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Collector;
+import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.Transform;
 import java.util.ArrayList;
 import java.util.List;
@@ -197,6 +198,7 @@ public class CoreQueryManager implements QueryManager {
             final QueryTrace.NamedWatch shardWatch = tracing.watch(QUERY_SHARD);
             final Stopwatch fullQueryWatch = Stopwatch.createStarted();
             final long now = System.currentTimeMillis();
+            final FutureDone onDoneQueryReporter = reporter.reportQuery();
 
             queryLogger.logQuery(queryContext, q);
 
@@ -274,16 +276,19 @@ public class CoreQueryManager implements QueryManager {
                     .directTransform(result -> {
                         reportCompletedQuery(result, fullQueryWatch);
                         return result;
-                    });
+                    })
+                    .onDone(onDoneQueryReporter);
             });
         }
 
-        private void reportCompletedQuery(QueryResult result, Stopwatch fullQueryWatch) {
-            long sampleSize = result.getPreAggregationSampleSize();
+        private void reportCompletedQuery(
+            final QueryResult result, final Stopwatch fullQueryWatch
+        ) {
+            final long sampleSize = result.getPreAggregationSampleSize();
             if (sampleSize > smallQueryThreshold) {
                 return;
             }
-            long duration = fullQueryWatch.elapsed(TimeUnit.MILLISECONDS);
+            final long duration = fullQueryWatch.elapsed(TimeUnit.MILLISECONDS);
             reporter.reportSmallQueryLatency(duration);
         }
 
