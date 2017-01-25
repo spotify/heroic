@@ -22,12 +22,18 @@
 package com.spotify.heroic.statistics.noop;
 
 import com.spotify.heroic.statistics.ApiReporter;
+import com.spotify.heroic.statistics.FutureReporter;
 
 public class NoopApiReporter implements ApiReporter {
     private static final NoopApiReporter INSTANCE = new NoopApiReporter();
 
     public static NoopApiReporter get() {
         return INSTANCE;
+    }
+
+    @Override
+    public FutureReporter.Context reportQuery() {
+        return NoopFutureReporterContext.get();
     }
 
     @Override

@@ -23,6 +23,7 @@ package com.spotify.heroic.statistics.semantic;
 
 import com.codahale.metrics.Histogram;
 import com.spotify.heroic.statistics.ApiReporter;
+import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 import lombok.ToString;
@@ -33,17 +34,25 @@ import lombok.extern.slf4j.Slf4j;
 public class SemanticApiReporter implements ApiReporter {
     private static final String COMPONENT = "api";
 
+    private final FutureReporter query;
     private final Histogram smallQueryLatency;
 
-    public SemanticApiReporter(SemanticMetricRegistry registry) {
+    public SemanticApiReporter(final SemanticMetricRegistry registry) {
         final MetricId base = MetricId.build().tagged("component", COMPONENT);
 
+        query =
+            new SemanticFutureReporter(registry, base.tagged("what", "query", "unit", Units.QUERY));
         smallQueryLatency = registry.histogram(
             base.tagged("what", "small-query-latency", "unit", Units.MILLISECOND));
     }
 
     @Override
-    public void reportSmallQueryLatency(long duration) {
+    public FutureReporter.Context reportQuery() {
+        return query.setup();
+    }
+
+    @Override
+    public void reportSmallQueryLatency(final long duration) {
         smallQueryLatency.update(duration);
     }
 }
