@@ -221,7 +221,6 @@ Before setting up a pull request, run the comprehensive test suite as specified 
 
 * [A Guide to Dagger 2](docs/guide-to-dagger2.md)
 * [Using IDEA](idea/README.md)
-* [Using Eclipse](eclipse/README.md)
 
 #### Module Orientation
 
