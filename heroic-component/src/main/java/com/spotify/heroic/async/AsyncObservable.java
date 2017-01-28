@@ -21,10 +21,8 @@
 
 package com.spotify.heroic.async;
 
-import com.spotify.heroic.analytics.SeriesHit;
 import com.spotify.heroic.common.Throwing;
 import eu.toolchain.async.AsyncFuture;
-
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Function;
@@ -140,7 +138,7 @@ public interface AsyncObservable<T> {
     /**
      * Create an observable that will always be immediately failed with the given throwable.
      */
-    static <T> AsyncObservable<SeriesHit> failed(final Throwable e) {
+    static <T> AsyncObservable<T> failed(final Throwable e) {
         return observer -> observer.fail(e);
     }
 }
