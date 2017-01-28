@@ -41,17 +41,16 @@ import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.WriteMetric;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.Data;
-import lombok.ToString;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+import javax.inject.Inject;
+import javax.inject.Named;
+import lombok.Data;
+import lombok.ToString;
 
 /**
  * MetricBackend for Heroic cassandra datastore.
@@ -168,7 +167,8 @@ public class MemoryBackend extends AbstractMetricBackend {
         }
 
         synchronized (tree) {
-            final Iterable<Metric> metrics = tree.subMap(range.getStart(), range.getEnd()).values();
+            final Iterable<Metric> metrics =
+                tree.subMap(range.getStart(), false, range.getEnd(), true).values();
             final List<Metric> data = ImmutableList.copyOf(metrics);
             watcher.readData(data.size());
             return ImmutableList.of(MetricCollection.build(key.getSource(), data));
