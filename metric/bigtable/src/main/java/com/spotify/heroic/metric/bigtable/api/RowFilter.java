@@ -22,15 +22,35 @@
 package com.spotify.heroic.metric.bigtable.api;
 
 import com.google.protobuf.ByteString;
+import java.util.List;
+import java.util.Optional;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
-
-import java.util.Optional;
 
 public interface RowFilter {
     static ColumnRange.Builder newColumnRangeBuilder(String family) {
         return new ColumnRange.Builder(family);
     }
+
+    /**
+     * Test if the current filter matches the given column qualifier.
+     *
+     * This method is primarily used when testing.
+     *
+     * @param columnQualifier column qualifier to match
+     * @return {@code true} if the qualifier matches
+     */
+    boolean matchesColumn(final ByteString columnQualifier);
+
+    /**
+     * Test if the current filter matches the given column family.
+     *
+     * This method is primarily used when testing.
+     *
+     * @param familyName family to match
+     * @return {@code true} if the family name matches
+     */
+    boolean matchesColumnFamily(final String familyName);
 
     /**
      * Build a filter that blocks all cells.
@@ -53,18 +73,28 @@ public interface RowFilter {
     /**
      * Apply all the given row filters.
      *
-     * @param filters Filter to apply.
+     * @param chain Filter to apply.
      * @return A filter that is the composition of all given row filters.
      */
-    static RowFilter chain(final Iterable<? extends RowFilter> chain) {
+    static RowFilter chain(final List<? extends RowFilter> chain) {
         return new Chain(chain);
     }
 
     com.google.bigtable.v2.RowFilter toPb();
 
     @Data
-    static class Chain implements RowFilter {
-        private final Iterable<? extends RowFilter> chain;
+    class Chain implements RowFilter {
+        private final List<? extends RowFilter> chain;
+
+        @Override
+        public boolean matchesColumn(final ByteString columnQualifier) {
+            return chain.stream().allMatch(entry -> entry.matchesColumn(columnQualifier));
+        }
+
+        @Override
+        public boolean matchesColumnFamily(final String familyName) {
+            return chain.stream().allMatch(entry -> entry.matchesColumnFamily(familyName));
+        }
 
         @Override
         public com.google.bigtable.v2.RowFilter toPb() {
@@ -76,13 +106,47 @@ public interface RowFilter {
     }
 
     @Data
-    static class ColumnRange implements RowFilter {
+    class ColumnRange implements RowFilter {
         private final String family;
 
         private final Optional<ByteString> startQualifierClosed;
         private final Optional<ByteString> startQualifierOpen;
         private final Optional<ByteString> endQualifierClosed;
         private final Optional<ByteString> endQualifierOpen;
+
+        @Override
+        public boolean matchesColumn(final ByteString columnQualifier) {
+            if (!startQualifierClosed
+                .map(sqo -> compareByteStrings(sqo, columnQualifier) <= 0)
+                .orElse(true)) {
+                return false;
+            }
+
+            if (!startQualifierOpen
+                .map(q -> compareByteStrings(q, columnQualifier) < 0)
+                .orElse(true)) {
+                return false;
+            }
+
+            if (!endQualifierClosed
+                .map(sqo -> compareByteStrings(sqo, columnQualifier) >= 0)
+                .orElse(true)) {
+                return false;
+            }
+
+            if (!endQualifierOpen
+                .map(sqo -> compareByteStrings(sqo, columnQualifier) > 0)
+                .orElse(true)) {
+                return false;
+            }
+
+            return true;
+        }
+
+        @Override
+        public boolean matchesColumnFamily(final String familyName) {
+            return family.equals(familyName);
+        }
 
         @Override
         public com.google.bigtable.v2.RowFilter toPb() {
@@ -137,7 +201,17 @@ public interface RowFilter {
     }
 
     @Data
-    public class OnlyLatestCell implements RowFilter {
+    class OnlyLatestCell implements RowFilter {
+        @Override
+        public boolean matchesColumn(final ByteString columnQualifier) {
+            return true;
+        }
+
+        @Override
+        public boolean matchesColumnFamily(final String familyName) {
+            return true;
+        }
+
         @Override
         public com.google.bigtable.v2.RowFilter toPb() {
             return com.google.bigtable.v2.RowFilter
@@ -148,10 +222,43 @@ public interface RowFilter {
     }
 
     @Data
-    public class BlockAll implements RowFilter {
+    class BlockAll implements RowFilter {
+        @Override
+        public boolean matchesColumn(final ByteString columnQualifier) {
+            return false;
+        }
+
+        @Override
+        public boolean matchesColumnFamily(final String familyName) {
+            return false;
+        }
+
         @Override
         public com.google.bigtable.v2.RowFilter toPb() {
             return com.google.bigtable.v2.RowFilter.newBuilder().setBlockAllFilter(true).build();
         }
+    }
+
+    static int compareByteStrings(final ByteString a, final ByteString b) {
+        final ByteString.ByteIterator left = a.iterator();
+        final ByteString.ByteIterator right = b.iterator();
+
+        while (left.hasNext() && right.hasNext()) {
+            final int c = Integer.compareUnsigned(left.nextByte(), right.nextByte());
+
+            if (c != 0) {
+                return c;
+            }
+        }
+
+        if (left.hasNext()) {
+            return 1;
+        }
+
+        if (right.hasNext()) {
+            return -1;
+        }
+
+        return 0;
     }
 }
