@@ -50,8 +50,9 @@ And with the suggested change, `sum(size=2m)` would be:
 
 #### Other TSDBs
 
-* OpenTSDB, used to have a timestamp which is the average of all data in a given bucket, but now
-  aligns it to the beginning of the interval (as proposed here)
+* [OpenTSDB](http://opentsdb.net/docs/build/html/user_guide/query/downsampling.html),
+  used to have a timestamp which is the average of all data in a given bucket, but now
+  aligns it to the beginning of the interval (as proposed here).
 * InfluxDB, is slightly inconsistent, but most aggregation functions appear to have a timestamp
   aligned to the beginning.
 * Graphite, aligned at beginning of period.
