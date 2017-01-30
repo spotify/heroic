@@ -20,8 +20,10 @@ An interval definition should be picked which makes this easier to avoid.
 The current time buckets have values at timestamp `t` include the range `(t - extent, t]` in each
 bucket.
 
-Define a `DateRange` to be `[start, end)`. And buckets at timestamp `t`, should include data in the
+Define a `DateRange` to be `[start, end)`. Buckets at timestamp `t`, should include data in the
 interval `[t, t + extent)`.
+
+This has partly been implemented in https://github.com/jo-ri/heroic/pull/1 - but should be built in a way that it can be applied prior to https://github.com/spotify/heroic/pull/206 so that test coverage can be increased before the change.
 
 #### Example
 
