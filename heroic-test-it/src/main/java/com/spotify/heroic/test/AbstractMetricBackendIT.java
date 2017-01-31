@@ -21,6 +21,11 @@
 
 package com.spotify.heroic.test;
 
+import static com.spotify.heroic.test.Data.events;
+import static com.spotify.heroic.test.Data.points;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeTrue;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -37,31 +42,31 @@ import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricManagerModule;
 import com.spotify.heroic.metric.MetricModule;
-import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.WriteMetric;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
 import org.junit.runners.model.Statement;
 
-import java.util.Optional;
-
-import lombok.extern.slf4j.Slf4j;
-
-import static org.junit.Assert.assertEquals;
-
 @Slf4j
 public abstract class AbstractMetricBackendIT {
-    protected abstract Optional<MetricModule> setupModule();
-
     protected final Series s1 = Series.of("s1", ImmutableMap.of("id", "s1"));
-    protected final Series s2 = Series.of("s2", ImmutableMap.of("id", "s2"));
+    public static final Map<String, String> EVENT = ImmutableMap.of();
 
     protected MetricBackend backend;
 
+    protected boolean eventSupport = false;
+    protected Optional<Integer> maxBatchSize = Optional.empty();
+
     @Rule
     public TestRule setupBackend = (base, description) -> new Statement() {
-
         @Override
         public void evaluate() throws Throwable {
             Optional<MetricModule> module = setupModule();
@@ -93,21 +98,193 @@ public abstract class AbstractMetricBackendIT {
                 base.evaluate();
                 core.shutdown().get();
             } else {
-                log.info("Omitting "  + description + " since module is not configured");
+                log.info("Omitting " + description + " since module is not configured");
             }
         }
     };
 
+    @Before
+    public void setup() {
+        setupSupport();
+    }
+
+    protected abstract Optional<MetricModule> setupModule();
+
+    protected Optional<Long> period() {
+        return Optional.empty();
+    }
+
+    /**
+     * Setup backend-specific support.
+     */
+    protected void setupSupport() {
+    }
+
     @Test
-    public void testWrite() throws Exception {
-        // write and read data back
-        final MetricCollection points = Data.points().p(100000L, 42D).build();
-        backend.write(new WriteMetric.Request(s1, points)).get();
+    public void testInterval() throws Exception {
+        newCase()
+            .input(99L, 100L, 101L, 199L, 200L, 201L)
+            .expect(101L, 199L, 200L)
+            .forEach((input, expected) -> {
+                verifyReadWrite(input, expected, new DateRange(100L, 200L));
+            });
+    }
+
+    /**
+     * Some backends have optimized code for writing a single sample.
+     */
+    @Test
+    public void testOne() throws Exception {
+        newCase().input(100L).expect(100L).forEach((input, expected) -> {
+            verifyReadWrite(input, expected, new DateRange(99L, 100L));
+        });
+    }
+
+    /**
+     * Some backends have limits on how many metrics should be written in a single request.
+     *
+     * This test case creates a dense pool of metrics after a given max batch size to make sure that
+     * they can be written and read out.
+     */
+    @Test
+    public void testMaxBatchSize() throws Exception {
+        assumeTrue("max batch size", maxBatchSize.isPresent());
+        final int maxBatchSize = this.maxBatchSize.get();
+
+        newCase().denseStart(100).dense(maxBatchSize * 4).forEach((input, expected) -> {
+            verifyReadWrite(input, expected, new DateRange(99L, 100L + (maxBatchSize * 4)));
+        });
+    }
+
+    /**
+     * This test is run if the specific test overrides the {@link #period()} method and returns a
+     * value (not {@link java.util.Optional#empty()}.
+     * <p>
+     * This value will be considered the period of the metric backend, which indicates at what
+     * distance the backend will split samples up into distinct storage parts. These would typically
+     * make up edge cases that this test case attempts to read and write.
+     */
+    @Test
+    public void testPeriod() throws Exception {
+        final Optional<Long> maybePeriod = period();
+        assumeTrue("period is present", maybePeriod.isPresent());
+
+        final long count = 5;
+        final long period = maybePeriod.get();
+
+        final Points points = points();
+
+        // seed data just at the edges of the period
+        for (int i = 1; i < count; i++) {
+            points.p(i * period, 1.0D);
+            points.p((i + 1) * period - 1, 1.0D);
+        }
+
+        final MetricCollection written = points.build();
+
+        verifyReadWrite(written, written, new DateRange(period - 1, (period + 1) * count));
+    }
+
+    private void verifyReadWrite(
+        final MetricCollection input, final MetricCollection expected, final DateRange range
+    ) throws Exception {
+        backend.write(new WriteMetric.Request(s1, input)).get();
+
         FetchData data = backend
-            .fetch(new FetchData.Request(MetricType.POINT, s1, new DateRange(10000L, 200000L),
+            .fetch(new FetchData.Request(expected.getType(), s1, range,
                 QueryOptions.builder().build()), FetchQuotaWatcher.NO_QUOTA)
             .get();
 
-        assertEquals(ImmutableSet.of(points), ImmutableSet.copyOf(data.getGroups()));
+        assertEquals(ImmutableSet.of(expected), ImmutableSet.copyOf(data.getGroups()));
+    }
+
+    private TestCase newCase() {
+        return new TestCase();
+    }
+
+    @lombok.Data
+    private class TestCase {
+        private Optional<Integer> denseStart = Optional.empty();
+        private Optional<Integer> dense = Optional.empty();
+        private final List<Long> input = new ArrayList<>();
+        private final List<Long> expected = new ArrayList<>();
+
+        TestCase denseStart(final int denseStart) {
+            this.denseStart = Optional.of(denseStart);
+            return this;
+        }
+
+        TestCase dense(final int dense) {
+            this.dense = Optional.of(dense);
+            return this;
+        }
+
+        TestCase input(final long... inputs) {
+            for (final long input : inputs) {
+                this.input.add(input);
+            }
+
+            return this;
+        }
+
+        TestCase expect(final long... expected) {
+            for (final long expect : expected) {
+                this.expected.add(expect);
+            }
+
+            return this;
+        }
+
+        void forEach(final ThrowingBiConsumer<MetricCollection, MetricCollection> consumer)
+            throws Exception {
+            // test for events, if supported
+            if (eventSupport) {
+                final Events input = events();
+                final Events expected = events();
+
+                inputStream().forEach(t -> input.e(t, EVENT));
+                expectedStream().forEach(t -> expected.e(t, EVENT));
+
+                consumer.accept(input.build(), expected.build());
+            }
+
+            // test for points
+            {
+                final Points input = points();
+                final Points expected = points();
+
+                inputStream().forEach(t -> input.p(t, 42D));
+                expectedStream().forEach(t -> expected.p(t, 42D));
+
+                consumer.accept(input.build(), expected.build());
+            }
+        }
+
+        private Stream<Long> inputStream() {
+            return Stream.concat(this.input.stream(), this.denseStream());
+        }
+
+        private Stream<Long> expectedStream() {
+            return Stream.concat(this.expected.stream(), this.denseStream());
+        }
+
+        private Stream<Long> denseStream() {
+            return dense.map(d -> {
+                final Stream.Builder<Long> builder = Stream.builder();
+
+                final int start = denseStart.orElse(0);
+
+                for (int t = 0; t < d; t++) {
+                    builder.add((long) (t + start));
+                }
+
+                return builder.build();
+            }).orElseGet(Stream::empty);
+        }
+    }
+
+    @FunctionalInterface
+    interface ThrowingBiConsumer<A, B> {
+        void accept(final A a, final B b) throws Exception;
     }
 }

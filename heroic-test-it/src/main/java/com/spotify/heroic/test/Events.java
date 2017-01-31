@@ -21,12 +21,20 @@
 
 package com.spotify.heroic.test;
 
-public class Data {
-    public static Points points() {
-        return new Points();
+import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.metric.Event;
+import com.spotify.heroic.metric.MetricCollection;
+import java.util.Map;
+
+public class Events {
+    private final ImmutableList.Builder<Event> events = ImmutableList.builder();
+
+    public Events e(final long t, final Map<String, String> payload) {
+        events.add(new Event(t, payload));
+        return this;
     }
 
-    public static Events events() {
-        return new Events();
+    public MetricCollection build() {
+        return MetricCollection.events(events.build());
     }
 }

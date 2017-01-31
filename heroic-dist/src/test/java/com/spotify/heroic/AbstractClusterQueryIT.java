@@ -143,7 +143,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         builder
             .features(Optional.of(FeatureSet.of(Feature.DISTRIBUTED_AGGREGATIONS)))
             .source(Optional.of(MetricType.POINT))
-            .rangeIfAbsent(Optional.of(new QueryDateRange.Absolute(10, 40)));
+            .rangeIfAbsent(Optional.of(new QueryDateRange.Absolute(0, 40)));
 
         modifier.accept(builder);
         return query.useDefaultGroup().query(builder.build(), queryContext).get();
@@ -275,7 +275,9 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         final List<Long> cadences = getCadences(result);
 
         assertEquals(ImmutableList.of(10L), cadences);
-        assertEquals(ImmutableSet.of(points().p(10, 1D).p(20, 1D).p(30, 1D).p(40, 0D).build()), m);
+        assertEquals(
+            ImmutableSet.of(points().p(0, 0.0D).p(10, 1D).p(20, 1D).p(30, 1D).p(40, 0D).build()),
+            m);
     }
 
     @Test
@@ -289,7 +291,9 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         final List<Long> cadences = getCadences(result);
 
         assertEquals(ImmutableList.of(10L), cadences);
-        assertEquals(ImmutableSet.of(points().p(10, 2D).p(20, 1D).p(30, 1D).p(40, 0D).build()), m);
+        assertEquals(
+            ImmutableSet.of(points().p(0, 0.0D).p(10, 2D).p(20, 1D).p(30, 1D).p(40, 0D).build()),
+            m);
     }
 
     @Test
