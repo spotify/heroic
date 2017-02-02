@@ -4,7 +4,7 @@
 
   <properties>
     <bigtable.version>0.9.4</bigtable.version>
-    <tcnative.classifier>linux-x86_64</tcnative.classifier>
+    <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
   </properties>
 
   <groupId>com.spotify.heroic.repackaged</groupId>
@@ -94,5 +94,14 @@
         </executions>
       </plugin>
     </plugins>
+
+    <extensions>
+      <!-- provides os.detected.classifier -->
+      <extension>
+        <groupId>kr.motd.maven</groupId>
+        <artifactId>os-maven-plugin</artifactId>
+        <version>1.5.0.Final</version>
+      </extension>
+    </extensions>
   </build>
 </project>
