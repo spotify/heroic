@@ -7,11 +7,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.spotify.heroic.HeroicMappers;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
-import com.spotify.heroic.grammar.QueryParser;
+import com.spotify.heroic.test.FakeModuleLoader;
 import com.spotify.heroic.test.Resources;
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,10 +19,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 public class BasicSerializationTest {
-    private ObjectMapper mapper = HeroicMappers.json(Mockito.mock(QueryParser.class));
+    private ObjectMapper mapper = FakeModuleLoader.builder().build().json();
 
     @Test
     public void testEvent() throws Exception {
