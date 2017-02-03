@@ -35,6 +35,7 @@ import com.spotify.heroic.cluster.CoreClusterComponent;
 import com.spotify.heroic.cluster.DaggerCoreClusterComponent;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.Optionals;
+import com.spotify.heroic.common.TypeNameMixin;
 import com.spotify.heroic.consumer.ConsumersComponent;
 import com.spotify.heroic.consumer.CoreConsumersModule;
 import com.spotify.heroic.consumer.DaggerCoreConsumersComponent;
@@ -59,6 +60,7 @@ import com.spotify.heroic.http.HttpServer;
 import com.spotify.heroic.http.HttpServerComponent;
 import com.spotify.heroic.http.HttpServerModule;
 import com.spotify.heroic.ingestion.IngestionComponent;
+import com.spotify.heroic.jetty.JettyConnectionFactory;
 import com.spotify.heroic.lifecycle.CoreLifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleHook;
@@ -123,10 +125,6 @@ public class HeroicCore implements HeroicConfiguration {
     static final boolean DEFAULT_ONESHOT = false;
     static final boolean DEFAULT_DISABLE_BACKENDS = false;
     static final boolean DEFAULT_SETUP_SHELL_SERVER = true;
-
-    public static final String APPLICATION_JSON_INTERNAL = "application/json+internal";
-    public static final String APPLICATION_JSON = "application/json";
-    public static final String APPLICATION_HEROIC_CONFIG = "application/heroic-config";
 
     static final UncaughtExceptionHandler uncaughtExceptionHandler = (Thread t, Throwable e) -> {
         try {
@@ -613,7 +611,10 @@ public class HeroicCore implements HeroicConfiguration {
             builder = builder.merge(fragment);
         }
 
-        final ObjectMapper mapper = loading.configMapper();
+        final ObjectMapper mapper = loading.configMapper().copy();
+
+        // TODO: figure out where to put this
+        mapper.addMixIn(JettyConnectionFactory.Builder.class, TypeNameMixin.class);
 
         if (configPath.isPresent()) {
             builder = HeroicConfig

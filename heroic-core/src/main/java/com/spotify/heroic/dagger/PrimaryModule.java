@@ -26,7 +26,6 @@ import com.spotify.heroic.CoreHeroicContext;
 import com.spotify.heroic.CoreQueryManager;
 import com.spotify.heroic.CoreShellTasks;
 import com.spotify.heroic.HeroicContext;
-import com.spotify.heroic.HeroicCore;
 import com.spotify.heroic.HeroicCoreInstance;
 import com.spotify.heroic.HeroicMappers;
 import com.spotify.heroic.QueryManager;
@@ -97,7 +96,7 @@ public class PrimaryModule {
     }
 
     @Provides
-    @Named(HeroicCore.APPLICATION_JSON_INTERNAL)
+    @Named(HeroicMappers.APPLICATION_JSON_INTERNAL)
     @PrimaryScope
     ObjectMapper internalMapper(
         QueryParser parser, AggregationRegistry aggregation
@@ -111,9 +110,9 @@ public class PrimaryModule {
     }
 
     @Provides
-    @Named(HeroicCore.APPLICATION_JSON)
+    @Named(HeroicMappers.APPLICATION_JSON)
     @PrimaryScope
-    ObjectMapper jsonMapper(@Named(HeroicCore.APPLICATION_JSON_INTERNAL) ObjectMapper mapper) {
+    ObjectMapper jsonMapper(@Named(HeroicMappers.APPLICATION_JSON_INTERNAL) ObjectMapper mapper) {
         return mapper;
     }
 

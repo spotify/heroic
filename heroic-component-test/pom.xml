@@ -9,13 +9,14 @@
     <version>0.0.1-SNAPSHOT</version>
   </parent>
 
-  <artifactId>heroic-test-base</artifactId>
+  <artifactId>heroic-component-test</artifactId>
   <packaging>jar</packaging>
 
-  <name>Heroic: Test Utilities Base Project</name>
+  <name>Heroic: Component Test Project</name>
 
   <description>
-    A set of useful testing utilities for Heroic.
+    Contains basic testing utilities that does not depend on any other Heroic
+    component.
   </description>
 
   <dependencies>

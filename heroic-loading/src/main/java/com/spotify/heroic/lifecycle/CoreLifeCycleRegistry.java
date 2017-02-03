@@ -24,16 +24,16 @@ package com.spotify.heroic.lifecycle;
 import com.google.common.collect.ImmutableList;
 import eu.toolchain.async.AsyncFuture;
 import lombok.RequiredArgsConstructor;
-import org.eclipse.jetty.util.ConcurrentArrayQueue;
 
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class CoreLifeCycleRegistry implements LifeCycleRegistry {
     private final Queue<LifeCycleNamedHook<AsyncFuture<Void>>> starters =
-        new ConcurrentArrayQueue<>();
+        new ConcurrentLinkedQueue<>();
     private final Queue<LifeCycleNamedHook<AsyncFuture<Void>>> stoppers =
-        new ConcurrentArrayQueue<>();
+        new ConcurrentLinkedQueue<>();
 
     @Override
     public void start(LifeCycleHook<AsyncFuture<Void>> starter) {
