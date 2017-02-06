@@ -30,6 +30,7 @@ import com.spotify.heroic.metric.FullQuery;
 import com.spotify.heroic.metric.QueryMetrics;
 import com.spotify.heroic.metric.QueryMetricsResponse;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
 import lombok.Data;
@@ -46,24 +47,16 @@ public class Slf4jQueryLogger implements QueryLogger {
 
     @Override
     public void logHttpQueryText(
-        final QueryContext context, final String query, final HttpContext httpContext
+        final QueryContext context, final String query
     ) {
-        performAndCatch(() -> {
-            final JsonNode queryJsonNode = objectMapper.valueToTree(query);
-            final HttpQueryData data = new HttpQueryData(httpContext, queryJsonNode);
-            serializeAndLog(context, "http-query-text", data);
-        });
+        serializeAndLog(context, "http-query-text", query);
     }
 
     @Override
     public void logHttpQueryJson(
-        final QueryContext context, final QueryMetrics query, final HttpContext httpContext
+        final QueryContext context, final QueryMetrics query
     ) {
-        performAndCatch(() -> {
-            final JsonNode queryJsonNode = objectMapper.valueToTree(query);
-            final HttpQueryData data = new HttpQueryData(httpContext, queryJsonNode);
-            serializeAndLog(context, "http-query-json", data);
-        });
+        serializeAndLog(context, "http-query-json", query);
     }
 
     @Override
@@ -125,7 +118,7 @@ public class Slf4jQueryLogger implements QueryLogger {
         performAndCatch(() -> {
             final MessageFormat<T> message =
                 new MessageFormat<>(component, context.getQueryId(), context.getClientContext(),
-                    type, data);
+                    context.getHttpContext(), type, data);
 
             final String timestamp = Instant.now().toString();
             final LogFormat logFormat = new LogFormat(timestamp, message);
@@ -157,14 +150,9 @@ public class Slf4jQueryLogger implements QueryLogger {
     public class MessageFormat<T> {
         private final String component;
         private final UUID queryId;
-        private final JsonNode clientContext;
+        private final Optional<JsonNode> clientContext;
+        private final Optional<HttpContext> httpContext;
         private final String type;
         private final T data;
-    }
-
-    @Data
-    public class HttpQueryData {
-        private final HttpContext httpContext;
-        private final JsonNode query;
     }
 }

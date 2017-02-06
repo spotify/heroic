@@ -88,22 +88,17 @@ _common:
   clientContext:
     type: object
     dynamic: true
+  httpContext: *http_context
 
 "http-query-text":
   properties:
-    # com.spotify.heroic.querylogging.Slf4jQueryLogger.HttpQueryData
-    data:
-      properties:
-        httpContext: *http_context
-        query: *raw_string
+    # String
+    data: *raw_string
 
 "http-query-json":
   properties:
-    # com.spotify.heroic.querylogging.Slf4jQueryLogger.HttpQueryData
-    data:
-      properties:
-        httpContext: *http_context
-        query: *raw_object
+    # com.spotify.heroic.metric.QueryMetrics
+    data: *raw_object
 
 "query":
   properties:

@@ -22,23 +22,27 @@
 package com.spotify.heroic.querylogging;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.Data;
 
 @Data
 public class QueryContext {
-    private static final JsonNode EMPTY = JsonNodeFactory.instance.nullNode();
-
     private final UUID queryId;
-    private final JsonNode clientContext;
+    private final Optional<JsonNode> clientContext;
+    private final Optional<HttpContext> httpContext;
 
     public static QueryContext empty() {
         return create(Optional.empty());
     }
 
     public static QueryContext create(final Optional<JsonNode> clientContext) {
-        return new QueryContext(UUID.randomUUID(), clientContext.orElse(EMPTY));
+        return new QueryContext(UUID.randomUUID(), clientContext, Optional.empty());
+    }
+
+    public static QueryContext create(
+        final Optional<JsonNode> clientContext, final HttpContext httpContext
+    ) {
+        return new QueryContext(UUID.randomUUID(), clientContext, Optional.of(httpContext));
     }
 }

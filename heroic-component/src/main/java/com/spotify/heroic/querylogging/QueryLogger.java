@@ -28,9 +28,9 @@ import com.spotify.heroic.metric.QueryMetricsResponse;
 
 public interface QueryLogger {
 
-    void logHttpQueryText(QueryContext context, String queryString, HttpContext httpContext);
+    void logHttpQueryText(QueryContext context, String queryString);
 
-    void logHttpQueryJson(QueryContext context, QueryMetrics query, HttpContext httpContext);
+    void logHttpQueryJson(QueryContext context, QueryMetrics query);
 
     void logQuery(QueryContext context, Query query);
 

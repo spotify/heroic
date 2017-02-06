@@ -83,8 +83,8 @@ public class QueryResource {
         @Context final HttpServletRequest servletReq, final String query
     ) {
         final HttpContext httpContext = CoreHttpContextFactory.create(servletReq);
-        final QueryContext queryContext = QueryContext.empty();
-        queryLogger.logHttpQueryText(queryContext, query, httpContext);
+        final QueryContext queryContext = QueryContext.create(Optional.empty(), httpContext);
+        queryLogger.logHttpQueryText(queryContext, query);
 
         final Query q = this.query.newQueryFromString(query).build();
 
@@ -102,8 +102,9 @@ public class QueryResource {
         @Context final HttpServletRequest servletReq, final QueryMetrics query
     ) {
         final HttpContext httpContext = CoreHttpContextFactory.create(servletReq);
-        final QueryContext queryContext = QueryContext.create(query.getClientContext());
-        queryLogger.logHttpQueryJson(queryContext, query, httpContext);
+        final QueryContext queryContext =
+            QueryContext.create(query.getClientContext(), httpContext);
+        queryLogger.logHttpQueryJson(queryContext, query);
 
         final Query q = query.toQueryBuilder(this.query::newQueryFromString).build();
 
@@ -134,8 +135,9 @@ public class QueryResource {
                     .rangeIfAbsent(query.getRange())
                     .build();
 
-                final QueryContext queryContext = QueryContext.create(qm.getClientContext());
-                queryLogger.logHttpQueryJson(queryContext, qm, httpContext);
+                final QueryContext queryContext =
+                    QueryContext.create(qm.getClientContext(), httpContext);
+                queryLogger.logHttpQueryJson(queryContext, qm);
 
                 futures.add(g
                     .query(q, queryContext)

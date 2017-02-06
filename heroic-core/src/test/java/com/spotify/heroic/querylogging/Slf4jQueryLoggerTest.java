@@ -59,16 +59,14 @@ public class Slf4jQueryLoggerTest {
 
     @Test
     public void testHttpTextQuery() {
-        final HttpContext httpContext = mock(HttpContext.class);
-        slf4jQueryLogger.logHttpQueryText(queryContext, "", httpContext);
+        slf4jQueryLogger.logHttpQueryText(queryContext, "");
         verify(logger, times(1)).accept(any(String.class));
     }
 
     @Test
     public void testHttpJsonQuery() {
-        final HttpContext httpContext = mock(HttpContext.class);
         final QueryMetrics queryMetrics = mock(QueryMetrics.class);
-        slf4jQueryLogger.logHttpQueryJson(queryContext, queryMetrics, httpContext);
+        slf4jQueryLogger.logHttpQueryJson(queryContext, queryMetrics);
         verify(logger, times(1)).accept(any(String.class));
     }
 

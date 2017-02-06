@@ -36,13 +36,13 @@ import lombok.extern.slf4j.Slf4j;
 public class NoopQueryLogger implements QueryLogger {
     @Override
     public void logHttpQueryText(
-        final QueryContext context, final String query, final HttpContext httpContext
+        final QueryContext context, final String query
     ) {
     }
 
     @Override
     public void logHttpQueryJson(
-        final QueryContext context, final QueryMetrics query, final HttpContext httpContext
+        final QueryContext context, final QueryMetrics query
     ) {
     }
 
