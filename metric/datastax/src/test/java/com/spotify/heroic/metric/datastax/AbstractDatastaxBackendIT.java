@@ -5,7 +5,6 @@ import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.datastax.schema.SchemaModule;
 import com.spotify.heroic.test.AbstractMetricBackendIT;
 import com.spotify.heroic.test.TestProperties;
-
 import java.util.Optional;
 import java.util.UUID;
 
