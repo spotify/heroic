@@ -14,9 +14,7 @@ public class BigtableBackendIT extends AbstractMetricBackendIT {
 
     @Override
     protected Optional<Long> period() {
-        /* BigtableBackend currently does not implement period edge cases correctly,
-         * See: https://github.com/spotify/heroic/pull/208 */
-        return Optional.empty();
+        return Optional.of(BigtableBackend.PERIOD);
     }
 
     @Override
@@ -25,6 +23,7 @@ public class BigtableBackendIT extends AbstractMetricBackendIT {
 
         this.eventSupport = true;
         this.maxBatchSize = Optional.of(BigtableBackend.MAX_BATCH_SIZE);
+        this.brokenSegmentsPr208 = true;
     }
 
     @Override
