@@ -27,13 +27,14 @@ import com.spotify.heroic.lifecycle.LifeCycle;
 import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
+import eu.toolchain.async.AsyncFuture;
 import lombok.RequiredArgsConstructor;
 
 public interface ConsumerSchema {
     Exposed setup(Depends depends);
 
     interface Consumer {
-        void consume(byte[] message) throws ConsumerSchemaException;
+        AsyncFuture<Void> consume(byte[] message) throws ConsumerSchemaException;
     }
 
     @ConsumerSchemaScope

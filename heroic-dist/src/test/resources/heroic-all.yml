@@ -31,3 +31,9 @@ generator:
     type: random
   metrics:
     - type: sine
+
+consumers:
+  - type: kafka
+    schema: com.spotify.heroic.consumer.schemas.Spotify100
+    topics:
+      - testtopic1

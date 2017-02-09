@@ -1,16 +1,15 @@
 package com.spotify.heroic;
 
+import static org.junit.Assert.assertEquals;
+
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.lifecycle.CoreLifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycleNamedHook;
-import org.junit.Test;
-
 import java.io.InputStream;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-
-import static org.junit.Assert.assertEquals;
+import org.junit.Test;
 
 public class HeroicConfigurationTest {
     @Test
@@ -24,6 +23,7 @@ public class HeroicConfigurationTest {
         final List<String> referenceStarters = ImmutableList.of(
             "com.spotify.heroic.analytics.bigtable.BigtableMetricAnalytics",
             "com.spotify.heroic.cluster.CoreClusterManager",
+            "com.spotify.heroic.consumer.kafka.KafkaConsumer",
             "com.spotify.heroic.http.HttpServer",
             "com.spotify.heroic.metadata.elasticsearch.MetadataBackendKV",
             "com.spotify.heroic.metric.bigtable.BigtableBackend",
@@ -38,6 +38,7 @@ public class HeroicConfigurationTest {
         final List<String> referenceStoppers = ImmutableList.of(
             "com.spotify.heroic.analytics.bigtable.BigtableMetricAnalytics",
             "com.spotify.heroic.cluster.CoreClusterManager",
+            "com.spotify.heroic.consumer.kafka.KafkaConsumer",
             "com.spotify.heroic.http.HttpServer",
             "com.spotify.heroic.metadata.elasticsearch.MetadataBackendKV",
             "com.spotify.heroic.metric.bigtable.BigtableBackend",
@@ -119,6 +120,17 @@ public class HeroicConfigurationTest {
     @Test
     public void testQueryLoggingConfiguration() throws Exception {
         final HeroicCoreInstance instance = testConfiguration("heroic-query-logging.yml");
+    }
+
+    @Test
+    public void testKafkaConfiguration() throws Exception {
+        final HeroicCoreInstance instance = testConfiguration("heroic-kafka.yml");
+        instance.inject(coreComponent -> {
+            assertEquals(coreComponent.consumers().size(), 1);
+            assertEquals(coreComponent.consumers().iterator().next().getClass(),
+                com.spotify.heroic.consumer.kafka.KafkaConsumer.class);
+            return null;
+        });
     }
 
     private HeroicCoreInstance testConfiguration(final String name) throws Exception {
