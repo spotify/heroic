@@ -62,6 +62,9 @@ public abstract class AbstractMetricBackendIT {
 
     protected MetricBackend backend;
 
+    /* For backends which  currently does not implement period edge cases correctly,
+     * See: https://github.com/spotify/heroic/pull/208 */
+    protected boolean brokenSegmentsPr208 = false;
     protected boolean eventSupport = false;
     protected Optional<Integer> maxBatchSize = Optional.empty();
 
@@ -176,8 +179,15 @@ public abstract class AbstractMetricBackendIT {
 
         // seed data just at the edges of the period
         for (int i = 1; i < count; i++) {
-            points.p(i * period, 1.0D);
-            points.p((i + 1) * period - 1, 1.0D);
+            long first = i * period;
+
+            if (brokenSegmentsPr208) {
+                // due to off-by-one, points exactly on the period are invisible.
+                first += 1;
+            }
+
+            points.p(first, (double) i);
+            points.p((i + 1) * period - 1, (double) i + .5D);
         }
 
         final MetricCollection written = points.build();
