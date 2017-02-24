@@ -53,11 +53,11 @@ public final class ConsumerThread extends Thread {
     // use a latch as a signal so that we can block on it instead of Thread#sleep (or similar) which
     // would be a pain to
     // interrupt.
-    private final CountDownLatch stopSignal = new CountDownLatch(1);
+    private final CountDownLatch shouldStop = new CountDownLatch(1);
 
-    protected final ResolvableFuture<Void> stopFuture;
+    protected final ResolvableFuture<Void> hasStopped;
 
-    private volatile AtomicReference<CountDownLatch> paused = new AtomicReference<>();
+    private volatile AtomicReference<CountDownLatch> shouldPause = new AtomicReference<>();
 
     public ConsumerThread(
         final AsyncFramework async, final String name, final ConsumerReporter reporter,
@@ -75,7 +75,7 @@ public final class ConsumerThread extends Thread {
         this.errors = errors;
         this.consumed = consumed;
 
-        this.stopFuture = async.future();
+        this.hasStopped = async.future();
     }
 
     @Override
@@ -89,13 +89,13 @@ public final class ConsumerThread extends Thread {
         } catch (final Throwable e) {
             log.error("{}: Error in thread", name, e);
             threadIsStopping();
-            stopFuture.fail(e);
+            hasStopped.fail(e);
             return;
         }
 
         log.info("{}: Stopping thread", name);
         threadIsStopping();
-        stopFuture.resolve(null);
+        hasStopped.resolve(null);
         return;
     }
 
@@ -110,7 +110,7 @@ public final class ConsumerThread extends Thread {
     }
 
     public AsyncFuture<Void> pauseConsumption() {
-        final CountDownLatch old = this.paused.getAndSet(new CountDownLatch(1));
+        final CountDownLatch old = this.shouldPause.getAndSet(new CountDownLatch(1));
 
         if (old != null) {
             old.countDown();
@@ -120,7 +120,7 @@ public final class ConsumerThread extends Thread {
     }
 
     public AsyncFuture<Void> resumeConsumption() {
-        final CountDownLatch old = this.paused.getAndSet(null);
+        final CountDownLatch old = this.shouldPause.getAndSet(null);
 
         if (old != null) {
             old.countDown();
@@ -129,37 +129,37 @@ public final class ConsumerThread extends Thread {
         return async.resolved();
     }
 
-    public boolean isPaused() {
-        return this.paused.get() != null;
+    public boolean isPausing() {
+        return this.shouldPause.get() != null;
     }
 
     public AsyncFuture<Void> shutdown() {
-        stopSignal.countDown();
+        shouldStop.countDown();
 
-        final CountDownLatch old = this.paused.getAndSet(null);
+        final CountDownLatch old = this.shouldPause.getAndSet(null);
 
         if (old != null) {
             old.countDown();
         }
 
-        return stopFuture;
+        return hasStopped;
     }
 
     private void guardedRun() throws Exception {
         for (final MessageAndMetadata<byte[], byte[]> m : stream) {
             parkPaused();
 
-            if (stopSignal.getCount() == 0) {
+            if (shouldStop.getCount() == 0) {
                 break;
             }
 
             final byte[] body = m.message();
-            retryUntilSuccessful(body);
+            consumeOneWithRetry(body);
         }
     }
 
     private void parkPaused() throws InterruptedException {
-        CountDownLatch p = paused.get();
+        CountDownLatch p = shouldPause.get();
 
         if (p == null) {
             return;
@@ -167,20 +167,20 @@ public final class ConsumerThread extends Thread {
 
         log.info("Pausing");
 
-        /* block on stop signal while paused, re-check since multiple calls to {#link #pause()}
+        /* block on stop signal while shouldPause, re-check since multiple calls to {#link #pause()}
          * might swap it */
-        while (p != null && stopSignal.getCount() > 0) {
+        while (p != null && shouldStop.getCount() > 0) {
             p.await();
-            p = paused.get();
+            p = shouldPause.get();
         }
 
         log.info("Resuming");
     }
 
-    private void retryUntilSuccessful(final byte[] body) throws InterruptedException {
+    private void consumeOneWithRetry(final byte[] body) throws InterruptedException {
         long sleep = INITIAL_SLEEP;
 
-        while (stopSignal.getCount() > 0) {
+        while (shouldStop.getCount() > 0) {
             final boolean retry = consumeOne(body);
 
             if (retry) {
@@ -217,7 +217,7 @@ public final class ConsumerThread extends Thread {
         /* decrementing the number of active active consumers indicates an error to the consumer
          * module. This makes sure that the status of the service is set to as 'failing'. */
         active.decrementAndGet();
-        stopSignal.await(sleep, TimeUnit.SECONDS);
+        shouldStop.await(sleep, TimeUnit.SECONDS);
         active.incrementAndGet();
     }
 }
