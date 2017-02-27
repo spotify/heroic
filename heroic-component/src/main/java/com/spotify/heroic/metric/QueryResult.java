@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.metric;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.aggregation.AggregationCombiner;
 import com.spotify.heroic.common.DateRange;
@@ -67,21 +66,19 @@ public class QueryResult {
      * @return A complete QueryResult.
      */
     public static Collector<QueryResultPart, QueryResult> collectParts(
-        final QueryTrace.Identifier what, final DateRange range, final AggregationCombiner combiner,
-        final OptionalLimit groupLimit
+        final QueryTrace.NamedWatch watch, final DateRange range,
+        final AggregationCombiner combiner, final OptionalLimit groupLimit
     ) {
-        final QueryTrace.NamedWatch w = QueryTrace.watch(what);
-
         return parts -> {
             final List<List<ShardedResultGroup>> all = new ArrayList<>();
             final List<RequestError> errors = new ArrayList<>();
-            final ImmutableList.Builder<QueryTrace> queryTraces = ImmutableList.builder();
+            final QueryTrace.Joiner traceJoiner = watch.joiner();
             final ImmutableSet.Builder<ResultLimit> limits = ImmutableSet.builder();
             long preAggregationSampleSize = 0;
 
             for (final QueryResultPart part : parts) {
                 errors.addAll(part.getErrors());
-                queryTraces.add(part.getQueryTrace());
+                traceJoiner.addChild(part.getQueryTrace());
                 limits.addAll(part.getLimits().getLimits());
                 preAggregationSampleSize += part.getPreAggregationSampleSize();
 
@@ -93,14 +90,13 @@ public class QueryResult {
             }
 
             final List<ShardedResultGroup> groups = combiner.combine(all);
-            final QueryTrace trace = w.end(queryTraces.build());
 
             if (groupLimit.isGreaterOrEqual(groups.size())) {
                 limits.add(ResultLimit.GROUP);
             }
 
-            return new QueryResult(range, groupLimit.limitList(groups), errors, trace,
-                new ResultLimits(limits.build()), preAggregationSampleSize);
+            return new QueryResult(range, groupLimit.limitList(groups), errors,
+                traceJoiner.result(), new ResultLimits(limits.build()), preAggregationSampleSize);
         };
     }
 

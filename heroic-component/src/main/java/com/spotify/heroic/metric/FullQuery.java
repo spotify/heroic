@@ -55,25 +55,23 @@ public final class FullQuery {
             limits);
     }
 
-    public static Collector<FullQuery, FullQuery> collect(final QueryTrace.Identifier what) {
-        final QueryTrace.NamedWatch w = QueryTrace.watch(what);
-
+    public static Collector<FullQuery, FullQuery> collect(final QueryTrace.NamedWatch watch) {
         return results -> {
-            final ImmutableList.Builder<QueryTrace> traces = ImmutableList.builder();
+            final QueryTrace.Joiner traceJoiner = watch.joiner();
             final ImmutableList.Builder<RequestError> errors = ImmutableList.builder();
             final ImmutableList.Builder<ResultGroup> groups = ImmutableList.builder();
             Statistics statistics = Statistics.empty();
             final ImmutableSet.Builder<ResultLimit> limits = ImmutableSet.builder();
 
             for (final FullQuery r : results) {
-                traces.add(r.trace);
+                traceJoiner.addChild(r.trace);
                 errors.addAll(r.errors);
                 groups.addAll(r.groups);
                 statistics = statistics.merge(r.statistics);
                 limits.addAll(r.limits.getLimits());
             }
 
-            return new FullQuery(w.end(traces.build()), errors.build(), groups.build(), statistics,
+            return new FullQuery(traceJoiner.result(), errors.build(), groups.build(), statistics,
                 new ResultLimits(limits.build()));
         };
     }
@@ -85,9 +83,8 @@ public final class FullQuery {
             ImmutableList.of(), Statistics.empty(), ResultLimits.of());
     }
 
-    public static Transform<FullQuery, FullQuery> trace(final QueryTrace.Identifier what) {
-        final QueryTrace.NamedWatch w = QueryTrace.watch(what);
-        return r -> new FullQuery(w.end(r.trace), r.errors, r.groups, r.statistics, r.limits);
+    public static Transform<FullQuery, FullQuery> trace(final QueryTrace.NamedWatch watch) {
+        return r -> new FullQuery(watch.end(r.trace), r.errors, r.groups, r.statistics, r.limits);
     }
 
     public FullQuery withTrace(QueryTrace newTrace) {

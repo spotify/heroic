@@ -21,10 +21,9 @@
 
 package com.spotify.heroic.http.write;
 
-import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.ingestion.Ingestion;
-import com.spotify.heroic.metric.Metric;
+import com.spotify.heroic.ingestion.WriteOptions;
 import com.spotify.heroic.metric.MetricCollection;
 import lombok.Data;
 
@@ -32,19 +31,14 @@ import java.util.Optional;
 
 @Data
 public class WriteMetricRequest {
+    final Optional<WriteOptions> options;
     final Optional<Series> series;
     final Optional<MetricCollection> data;
 
-    public boolean isEmpty() {
-        return data.map(MetricCollection::isEmpty).orElse(true);
-    }
-
-    public Iterable<Metric> all() {
-        return data.map(d -> d.getDataAs(Metric.class)).orElseGet(ImmutableList::of);
-    }
-
     public Ingestion.Request toIngestionRequest() {
-        return new Ingestion.Request(series.orElseGet(Series::empty),
-            data.orElseGet(MetricCollection::empty));
+        final WriteOptions options = this.options.orElseGet(WriteOptions::defaults);
+        final Series series = this.series.orElseGet(Series::empty);
+        final MetricCollection data = this.data.orElseGet(MetricCollection::empty);
+        return new Ingestion.Request(options, series, data);
     }
 }

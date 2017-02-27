@@ -22,7 +22,6 @@
 package com.spotify.heroic.metric;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -48,47 +47,9 @@ import java.util.concurrent.TimeUnit;
 public interface QueryTrace {
     Identifier PASSIVE_IDENTIFIER = new Identifier("NO TRACE");
     PassiveTrace PASSIVE = new PassiveTrace();
-    Watch PASSIVE_WATCH = new PassiveWatch();
     NamedWatch PASSIVE_NAMED_WATCH = new PassiveNamedWatch();
     Joiner PASSIVE_JOINER = new PassiveJoiner();
-
-    /**
-     * Create an active query trace.
-     *
-     * @param what Identifier of the trace
-     * @return a {@link com.spotify.heroic.metric.QueryTrace}
-     * @deprecated use {@link #watch(com.spotify.heroic.metric.QueryTrace.Identifier)}
-     */
-    static QueryTrace of(final Identifier what) {
-        return new ActiveTrace(what, 0L, ImmutableList.of());
-    }
-
-    /**
-     * Create an active query trace.
-     *
-     * @param what Identifier of the trace
-     * @param elapsed How long the query trace has elapsed for
-     * @return a {@link com.spotify.heroic.metric.QueryTrace}
-     * @deprecated use {@link #watch(com.spotify.heroic.metric.QueryTrace.Identifier)}
-     */
-    static QueryTrace of(final Identifier what, final long elapsed) {
-        return new ActiveTrace(what, elapsed, ImmutableList.of());
-    }
-
-    /**
-     * Create an active query trace.
-     *
-     * @param what Identifier of the trace
-     * @param elapsed How long the query trace has elapsed for
-     * @param children Children of the query trace
-     * @return a {@link com.spotify.heroic.metric.QueryTrace}
-     * @deprecated use {@link #watch(com.spotify.heroic.metric.QueryTrace.Identifier)}
-     */
-    static QueryTrace of(
-        final Identifier what, final long elapsed, final List<QueryTrace> children
-    ) {
-        return new ActiveTrace(what, elapsed, children);
-    }
+    TimeUnit UNIT = TimeUnit.MICROSECONDS;
 
     /**
      * Create a new identifier for a class.
@@ -122,26 +83,6 @@ public interface QueryTrace {
     }
 
     /**
-     * Create a new watch.
-     *
-     * @return a {@link com.spotify.heroic.metric.QueryTrace.Watch}
-     * @deprecated use {@link Tracing#watch()}
-     */
-    static Watch watch() {
-        return new ActiveWatch(Stopwatch.createStarted());
-    }
-
-    /**
-     * Create a new watch.
-     *
-     * @return a {@link com.spotify.heroic.metric.QueryTrace.Watch}
-     * @deprecated use {@link Tracing#watch(Identifier)}
-     */
-    static NamedWatch watch(final Identifier what) {
-        return new ActiveNamedWatch(what, Stopwatch.createStarted());
-    }
-
-    /**
      * Format the current trace onto the given PrintWriter.
      *
      * @param out {@link java.io.PrintWriter} to format to
@@ -155,24 +96,6 @@ public interface QueryTrace {
      * @param prefix prefix to prepend
      */
     void formatTrace(PrintWriter out, String prefix);
-
-    /**
-     * @deprecated use {@link #elapsed()}
-     */
-    @Deprecated
-    long getElapsed();
-
-    /**
-     * @deprecated use {@link #what()}
-     */
-    @Deprecated
-    Identifier getWhat();
-
-    /**
-     * @deprecated use {@link #children()}
-     */
-    @Deprecated
-    List<QueryTrace> getChildren();
 
     /**
      * How long the trace elapsed for.
@@ -214,24 +137,6 @@ public interface QueryTrace {
         @Override
         public void formatTrace(final PrintWriter out, final String prefix) {
             out.println(prefix + "NO TRACE");
-        }
-
-        @JsonIgnore
-        @Override
-        public long getElapsed() {
-            return elapsed();
-        }
-
-        @JsonIgnore
-        @Override
-        public Identifier getWhat() {
-            return what();
-        }
-
-        @JsonIgnore
-        @Override
-        public List<QueryTrace> getChildren() {
-            return children();
         }
 
         @Override
@@ -309,102 +214,6 @@ public interface QueryTrace {
          */
         ActiveJsonModel toModel() {
             return new ActiveJsonModel(what, elapsed, children);
-        }
-    }
-
-    interface Watch {
-        /**
-         * End the current watch and return a trace.
-         * <p>
-         * The same watch can be used multiple times, weven when ended.
-         *
-         * @param what The thing that is being traced
-         * @return a {@link com.spotify.heroic.metric.QueryTrace}
-         */
-        QueryTrace end(final Identifier what);
-
-        /**
-         * End the current watch and return a trace with the given child.
-         * <p>
-         * The same watch can be used multiple times, weven when ended.
-         *
-         * @param what The thing that is being traced
-         * @param child Child to add to the new {@link com.spotify.heroic.metric.QueryTrace}
-         * @return a {@link com.spotify.heroic.metric.QueryTrace}
-         */
-        QueryTrace end(final Identifier what, final QueryTrace child);
-
-        /**
-         * End the current watch and return a trace with the given children.
-         * <p>
-         * The same watch can be used multiple times, weven when ended.
-         *
-         * @param what The thing that is being traced
-         * @param children Children to add to the new {@link com.spotify.heroic.metric.QueryTrace}
-         * @return a {@link com.spotify.heroic.metric.QueryTrace}
-         */
-        QueryTrace end(final Identifier what, final List<QueryTrace> children);
-
-        /**
-         * How long this trace has elapsed for.
-         *
-         * @return microseconds
-         * @deprecated Makes not distinction between passive and active watches
-         */
-        long elapsed();
-    }
-
-    /**
-     * A watch that is measuring.
-     */
-    @Data
-    class ActiveWatch implements Watch {
-        private final Stopwatch w;
-
-        @Override
-        public QueryTrace end(final Identifier what) {
-            return new ActiveTrace(what, elapsed(), ImmutableList.of());
-        }
-
-        @Override
-        public QueryTrace end(final Identifier what, final QueryTrace child) {
-            return new ActiveTrace(what, elapsed(), ImmutableList.of(child));
-        }
-
-        @Override
-        public QueryTrace end(final Identifier what, final List<QueryTrace> children) {
-            return new ActiveTrace(what, elapsed(), children);
-        }
-
-        @Override
-        public long elapsed() {
-            return w.elapsed(TimeUnit.MICROSECONDS);
-        }
-    }
-
-    /**
-     * A watch that is not measuring.
-     */
-    @Data
-    class PassiveWatch implements Watch {
-        @Override
-        public QueryTrace end(final Identifier what) {
-            return PASSIVE;
-        }
-
-        @Override
-        public QueryTrace end(final Identifier what, final QueryTrace child) {
-            return PASSIVE;
-        }
-
-        @Override
-        public QueryTrace end(final Identifier what, final List<QueryTrace> children) {
-            return PASSIVE;
-        }
-
-        @Override
-        public long elapsed() {
-            return 0L;
         }
     }
 

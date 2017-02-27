@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableList;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A type that encapsulated behaviour if something is tracing or not.
@@ -108,10 +110,28 @@ public enum Tracing {
      * Convert a boolean to a tracing instance.
      *
      * @param value Boolean that will be converted
-     * @return {@code ENABLED} when value is {@code true}, {@code NONE} when value is {@code
-     * false}
+     * @return {@code ENABLED} when value is {@code true}, {@code NONE} when value is {@code false}
      */
     public static Tracing fromBoolean(final boolean value) {
         return value ? DEFAULT : NONE;
+    }
+
+    /**
+     * Create a new trace.
+     *
+     * @param what what was traced
+     * @param elapsed the elapsed time that the trace took
+     * @param unit the unit of the elapsed time
+     * @return a new trace if tracing is enabled
+     */
+    public QueryTrace newTrace(
+        final QueryTrace.Identifier what, final long elapsed, TimeUnit unit
+    ) {
+        if (isEnabled(DEFAULT)) {
+            return new QueryTrace.ActiveTrace(what, QueryTrace.UNIT.convert(elapsed, unit),
+                ImmutableList.of());
+        }
+
+        return QueryTrace.PASSIVE;
     }
 }

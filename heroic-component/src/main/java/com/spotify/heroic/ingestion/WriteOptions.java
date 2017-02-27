@@ -19,20 +19,27 @@
  * under the License.
  */
 
-package com.spotify.heroic.common;
+package com.spotify.heroic.ingestion;
 
-import com.google.common.base.Stopwatch;
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 
-import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
+@Data
+public class WriteOptions {
+    public static final WriteOptions DEFAULTS = builder().build();
 
-@RequiredArgsConstructor
-public class RequestTimer<T> {
-    private final Stopwatch watch = Stopwatch.createStarted();
-    private final Function<Long, T> builder;
+    public static WriteOptions defaults() {
+        return DEFAULTS;
+    }
 
-    public T end() {
-        return builder.apply(watch.elapsed(TimeUnit.MICROSECONDS));
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    @AllArgsConstructor
+    public static class Builder {
+        public WriteOptions build() {
+            return new WriteOptions();
+        }
     }
 }

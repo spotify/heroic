@@ -21,6 +21,18 @@
 
 package com.spotify.heroic.test;
 
+import static com.spotify.heroic.filter.Filter.and;
+import static com.spotify.heroic.filter.Filter.hasTag;
+import static com.spotify.heroic.filter.Filter.matchKey;
+import static com.spotify.heroic.filter.Filter.matchTag;
+import static com.spotify.heroic.filter.Filter.not;
+import static com.spotify.heroic.filter.Filter.or;
+import static com.spotify.heroic.filter.Filter.startsWith;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -49,27 +61,14 @@ import com.spotify.heroic.metadata.WriteMetadata;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.RetryPolicy;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.runners.MockitoJUnitRunner;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-
-import static com.spotify.heroic.filter.Filter.and;
-import static com.spotify.heroic.filter.Filter.hasTag;
-import static com.spotify.heroic.filter.Filter.matchKey;
-import static com.spotify.heroic.filter.Filter.matchTag;
-import static com.spotify.heroic.filter.Filter.not;
-import static com.spotify.heroic.filter.Filter.or;
-import static com.spotify.heroic.filter.Filter.startsWith;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
 
 @RunWith(MockitoJUnitRunner.class)
 public abstract class AbstractMetadataBackendIT {

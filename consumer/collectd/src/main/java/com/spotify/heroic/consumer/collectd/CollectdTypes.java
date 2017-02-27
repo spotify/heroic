@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.ingestion.Ingestion;
+import com.spotify.heroic.ingestion.WriteOptions;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.Point;
 import lombok.RequiredArgsConstructor;
@@ -153,7 +154,10 @@ public class CollectdTypes {
 
             final MetricCollection data = MetricCollection.points(ImmutableList.of(point));
 
-            ingestions.add(new Ingestion.Request(series, data));
+            final Ingestion.Request request = new Ingestion.Request(WriteOptions.defaults(),
+                series, data);
+
+            ingestions.add(request);
         }
 
         return ingestions.build();
@@ -242,7 +246,10 @@ public class CollectdTypes {
 
                     final MetricCollection data = MetricCollection.points(ImmutableList.of(point));
 
-                    ingestions.add(new Ingestion.Request(series, data));
+                    final Ingestion.Request request =
+                        new Ingestion.Request(WriteOptions.defaults(), series, data);
+
+                    ingestions.add(request);
                 }
 
                 return ingestions.build();

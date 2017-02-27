@@ -1,5 +1,19 @@
 package com.spotify.heroic.ingestion;
 
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
@@ -10,31 +24,18 @@ import com.spotify.heroic.statistics.IngestionManagerReporter;
 import com.spotify.heroic.suggest.SuggestBackend;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.Collector;
 import eu.toolchain.async.FutureFinished;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Supplier;
-
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.runners.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
 public class CoreIngestionGroupTest {
@@ -61,6 +62,8 @@ public class CoreIngestionGroupTest {
     @Mock
     private Ingestion.Request request;
     @Mock
+    private WriteOptions writeOptions;
+    @Mock
     private AsyncFuture<Ingestion> expected;
     @Mock
     private AsyncFuture<Ingestion> resolved;
@@ -76,6 +79,7 @@ public class CoreIngestionGroupTest {
     @Before
     public void setup() {
         doReturn(series).when(request).getSeries();
+        doReturn(writeOptions).when(request).getOptions();
 
         doAnswer(invocation -> {
             ((FutureFinished) invocation.getArguments()[0]).finished();
@@ -194,6 +198,7 @@ public class CoreIngestionGroupTest {
         verify(other, never()).onFinished(any(FutureFinished.class));
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void testDoWrite() {
         final CoreIngestionGroup group = setupIngestionGroup(of(metric), of(metadata), of(suggest));
@@ -201,7 +206,7 @@ public class CoreIngestionGroupTest {
         final List<AsyncFuture<Ingestion>> futures = ImmutableList.of(other, other, other);
 
         doReturn(rangeSupplier).when(group).rangeSupplier(request);
-        doReturn(expected).when(async).collect(futures, Ingestion.reduce());
+        doReturn(expected).when(async).collect(eq(futures), any(Collector.class));
 
         doReturn(other).when(group).doMetricWrite(metric, request);
         doReturn(other).when(group).doMetadataWrite(metadata, request, range);
@@ -216,6 +221,7 @@ public class CoreIngestionGroupTest {
         verify(rangeSupplier, times(2)).get();
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void testDoWriteSome() {
         final CoreIngestionGroup group = setupIngestionGroup(of(metric), empty(), of(suggest));
@@ -223,7 +229,7 @@ public class CoreIngestionGroupTest {
         final List<AsyncFuture<Ingestion>> futures = ImmutableList.of(other, other);
 
         doReturn(rangeSupplier).when(group).rangeSupplier(request);
-        doReturn(expected).when(async).collect(futures, Ingestion.reduce());
+        doReturn(expected).when(async).collect(eq(futures), any(Collector.class));
 
         doReturn(other).when(group).doMetricWrite(metric, request);
         doReturn(other).when(group).doMetadataWrite(metadata, request, range);

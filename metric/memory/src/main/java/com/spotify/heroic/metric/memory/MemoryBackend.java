@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
-import com.spotify.heroic.common.RequestTimer;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
@@ -109,14 +108,13 @@ public class MemoryBackend extends AbstractMetricBackend {
 
     @Override
     public AsyncFuture<WriteMetric> write(WriteMetric.Request request) {
-        final RequestTimer<WriteMetric> timer = WriteMetric.timer();
         writeOne(request);
-        return async.resolved(timer.end());
+        return async.resolved(WriteMetric.of());
     }
 
     @Override
     public AsyncFuture<FetchData> fetch(FetchData.Request request, FetchQuotaWatcher watcher) {
-        final QueryTrace.NamedWatch w = QueryTrace.watch(FETCH);
+        final QueryTrace.NamedWatch w = request.getTracing().watch(FETCH);
         final MemoryKey key = new MemoryKey(request.getType(), request.getSeries());
         final List<MetricCollection> groups = doFetch(key, request.getRange(), watcher);
         return async.resolved(FetchData.of(w.end(), ImmutableList.of(), groups));

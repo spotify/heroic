@@ -36,8 +36,9 @@ import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
 import eu.toolchain.async.AsyncFuture;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+
+import java.util.Optional;
 
 public class TracingClusterNode implements ClusterNode {
     private final ClusterNode delegateNode;
@@ -79,7 +80,9 @@ public class TracingClusterNode implements ClusterNode {
 
         @Override
         public AsyncFuture<FullQuery> query(FullQuery.Request request) {
-            return delegateGroup.query(request).directTransform(FullQuery.trace(queryIdentifier));
+            final QueryTrace.NamedWatch watch =
+                request.getOptions().getTracing().watch(queryIdentifier);
+            return delegateGroup.query(request).directTransform(FullQuery.trace(watch));
         }
 
         @Override

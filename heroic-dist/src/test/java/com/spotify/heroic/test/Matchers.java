@@ -21,19 +21,19 @@
 
 package com.spotify.heroic.test;
 
-import static org.hamcrest.Matchers.containsString;
-
 import com.spotify.heroic.metric.QueryTrace;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
+
+import static org.hamcrest.Matchers.containsString;
 
 public class Matchers {
     public static Matcher<QueryTrace> hasIdentifier(final Matcher<QueryTrace.Identifier> inner) {
         return new TypeSafeMatcher<QueryTrace>() {
             @Override
             protected boolean matchesSafely(final QueryTrace queryTrace) {
-                return inner.matches(queryTrace.getWhat());
+                return inner.matches(queryTrace.what());
             }
 
             @Override
@@ -52,7 +52,7 @@ public class Matchers {
         return new TypeSafeMatcher<QueryTrace>() {
             @Override
             protected boolean matchesSafely(final QueryTrace queryTrace) {
-                return queryTrace.getChildren().stream().anyMatch(inner::matches);
+                return queryTrace.children().stream().anyMatch(inner::matches);
             }
 
             @Override
@@ -62,7 +62,7 @@ public class Matchers {
 
             @Override
             public void describeMismatchSafely(QueryTrace item, Description mismatchDescription) {
-                inner.describeMismatch(item.getChildren(), mismatchDescription);
+                inner.describeMismatch(item.children(), mismatchDescription);
             }
         };
     }

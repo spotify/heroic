@@ -25,17 +25,20 @@ import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.SelectedGroup;
 import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.metric.QueryTrace;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.Data;
-import lombok.ToString;
-
 import java.util.List;
 import java.util.function.Function;
+import lombok.Data;
+import lombok.ToString;
 
 @Data
 @ToString(of = {"backends"})
 public class SuggestBackendGroup implements SuggestBackend {
+    private static final QueryTrace.Identifier WRITE =
+        QueryTrace.identifier(SuggestBackendGroup.class, "write");
+
     private final AsyncFramework async;
     private final SelectedGroup<SuggestBackend> backends;
 
