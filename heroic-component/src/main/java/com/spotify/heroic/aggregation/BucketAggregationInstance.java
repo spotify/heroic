@@ -28,27 +28,24 @@ import com.google.common.collect.Iterables;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
-import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
-import lombok.AccessLevel;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.LongAdder;
+import lombok.AccessLevel;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 
 /**
  * A base aggregation that collects data in 'buckets', one for each sampled data point.
@@ -82,7 +79,7 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
     protected final MetricType out;
 
     @Data
-    private final class Session implements AggregationSession {
+    final class Session implements AggregationSession {
         private final ConcurrentLinkedQueue<Set<Series>> series = new ConcurrentLinkedQueue<>();
         private final LongAdder sampleSize = new LongAdder();
 
@@ -143,48 +140,16 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
                     continue;
                 }
 
-                final Iterator<B> buckets = matching(m);
+                final StartEnd startEnd = mapTimestamp(m.getTimestamp());
 
-                while (buckets.hasNext()) {
-                    consumer.apply(buckets.next(), m);
+                for (int i = startEnd.start; i < startEnd.end; i++) {
+                    consumer.apply(buckets.get(i), m);
                 }
 
                 sampleSize += 1;
             }
 
             this.sampleSize.add(sampleSize);
-        }
-
-        private Iterator<B> matching(final Metric m) {
-            final long ts = m.getTimestamp() - offset - 1;
-            final long te = ts + extent;
-
-            if (te < 0) {
-                return Collections.emptyIterator();
-            }
-
-            // iterator that iterates from the largest to the smallest matching bucket for _this_
-            // metric.
-            return new Iterator<B>() {
-                long current = te;
-
-                @Override
-                public boolean hasNext() {
-                    while ((current / size) >= buckets.size()) {
-                        current -= size;
-                    }
-
-                    final long m = current % size;
-                    return (current >= 0 && current > ts) && (m >= 0 && m < extent);
-                }
-
-                @Override
-                public B next() {
-                    final int index = (int) (current / size);
-                    current -= size;
-                    return buckets.get(index);
-                }
-            };
         }
 
         @Override
@@ -210,6 +175,26 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
             final AggregationOutput d = new AggregationOutput(EMPTY_KEY, series, metrics);
             return new AggregationResult(ImmutableList.of(d), statistics);
         }
+
+        /**
+         * Calculate the start and end index of the buckets that should be seeded for the given
+         * timestamp.
+         *
+         * This guarantees that each timestamp ends up in the range (start - extent, end] for any
+         * given bucket.
+         *
+         * @param timestamp timestamp to map
+         * @return a start end and index
+         */
+        protected StartEnd mapTimestamp(final long timestamp) {
+            /* adjust the timestamp to the number of buckets */
+            final long adjusted = timestamp - offset;
+
+            final int start = Math.max((int) ((adjusted - 1) / size), 0);
+            final int end = Math.min((int) ((adjusted + extent - 1) / size), buckets.size());
+
+            return new StartEnd(start, end);
+        }
     }
 
     @Override
@@ -222,7 +207,7 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
     }
 
     @Override
-    public AggregationSession session(DateRange range, RetainQuotaWatcher quotaWatcher) {
+    public Session session(DateRange range, RetainQuotaWatcher quotaWatcher) {
         final List<B> buckets = buildBuckets(range, size);
         quotaWatcher.retainData(buckets.size());
         return new Session(buckets, range.start());
@@ -244,8 +229,8 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
     }
 
     private List<B> buildBuckets(final DateRange range, long size) {
-        final long start = range.start();
-        final long count = (range.diff() + size) / size;
+        final long start = range.start() + size;
+        final long count = (range.diff() + size) / size - 1;
 
         if (count < 1 || count > MAX_BUCKET_COUNT) {
             throw new IllegalArgumentException(String.format("range %s, size %d", range, size));
@@ -266,5 +251,14 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
 
     private interface BucketConsumer<B extends Bucket, M extends Metric> {
         void apply(B bucket, M metric);
+    }
+
+    /**
+     * A start, and an end bucket (exclusive) selected.
+     */
+    @Data
+    public static class StartEnd {
+        private final int start;
+        private final int end;
     }
 }
