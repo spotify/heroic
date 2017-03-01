@@ -193,7 +193,7 @@ public class CoreQueryManager implements QueryManager {
         @Override
         public AsyncFuture<QueryResult> query(final Query q, final QueryContext queryContext) {
             final QueryOptions options = q.getOptions().orElseGet(QueryOptions::defaults);
-            final Tracing tracing = options.getTracing();
+            final Tracing tracing = options.tracing();
 
             final QueryTrace.NamedWatch shardWatch = tracing.watch(QUERY_SHARD);
             final Stopwatch fullQueryWatch = Stopwatch.createStarted();
