@@ -235,7 +235,7 @@ public class LocalMetricManager implements MetricManager {
 
                 final ResultCollector collector;
 
-                if (options.getTracing().isEnabled(Tracing.DETAILED)) {
+                if (options.tracing().isEnabled(Tracing.DETAILED)) {
                     // tracing enabled, keeps track of each individual FetchData trace.
                     collector =
                         new ResultCollector(watcher, dataInMemoryReporter, aggregation, session,

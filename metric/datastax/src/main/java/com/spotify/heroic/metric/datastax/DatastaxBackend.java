@@ -192,7 +192,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
             prepareCachedStatement(c, select).directTransform(stmt -> {
                 BoundStatement bound = stmt.bind(select.getBindings().toArray());
 
-                if (options.getTracing().isEnabled(Tracing.DETAILED)) {
+                if (options.tracing().isEnabled(Tracing.DETAILED)) {
                     bound.enableTracing();
                 }
 
@@ -491,7 +491,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
 
             final Statement stmt;
 
-            if (options.getTracing().isEnabled(Tracing.DETAILED)) {
+            if (options.tracing().isEnabled(Tracing.DETAILED)) {
                 stmt = p.fetch(limit).enableTracing();
                 traceBuilder =
                     result -> buildTrace(c, FETCH_SEGMENT.extend(p.toString()), w.elapsed(),

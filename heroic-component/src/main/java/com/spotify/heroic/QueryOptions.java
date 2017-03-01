@@ -31,8 +31,6 @@ import lombok.Data;
 
 @Data
 public class QueryOptions {
-    public static final Tracing DEFAULT_TRACING = Tracing.DEFAULT;
-
     /**
      * Indicates if tracing is enabled.
      * <p>
@@ -41,7 +39,7 @@ public class QueryOptions {
      *
      * @return {@code true} if tracing is enabled.
      */
-    private final Tracing tracing;
+    private final Optional<Tracing> tracing;
 
     /**
      * The number of entries to fetch for every batch.
@@ -73,12 +71,12 @@ public class QueryOptions {
      */
     private final Optional<Boolean> failOnLimits;
 
-    public Optional<Integer> getFetchSize() {
-        return fetchSize;
+    public Tracing tracing() {
+        return tracing.orElse(Tracing.DEFAULT);
     }
 
     public static QueryOptions defaults() {
-        return new QueryOptions(DEFAULT_TRACING, Optional.empty(), OptionalLimit.empty(),
+        return new QueryOptions(Optional.empty(), Optional.empty(), OptionalLimit.empty(),
             OptionalLimit.empty(), OptionalLimit.empty(), OptionalLimit.empty(), Optional.empty());
     }
 
@@ -132,8 +130,6 @@ public class QueryOptions {
         }
 
         public QueryOptions build() {
-            final Tracing tracing = this.tracing.orElse(DEFAULT_TRACING);
-
             return new QueryOptions(tracing, fetchSize, dataLimit, aggregationLimit, groupLimit,
                 seriesLimit, failOnLimits);
         }
