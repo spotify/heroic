@@ -120,7 +120,7 @@ public class RotatingIndexMapping implements IndexMapping {
 
     @Override
     public String[] readIndices(DateRange range) throws NoIndexSelectedException {
-        return readIndices(range.end());
+        return readIndices(System.currentTimeMillis());
     }
 
     protected String[] writeIndices(long now) {
@@ -129,7 +129,7 @@ public class RotatingIndexMapping implements IndexMapping {
 
     @Override
     public String[] writeIndices(DateRange range) {
-        return writeIndices(range.end());
+        return writeIndices(System.currentTimeMillis());
     }
 
     @Override
