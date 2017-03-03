@@ -187,7 +187,7 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
             try {
                 builder = c
                     .get()
-                    .search(request.getRange(), type)
+                    .search(type)
                     .setSize(ENTRIES_SCAN_SIZE)
                     .setScroll(ENTRIES_TIMEOUT)
                     .setSearchType(SearchType.SCAN)

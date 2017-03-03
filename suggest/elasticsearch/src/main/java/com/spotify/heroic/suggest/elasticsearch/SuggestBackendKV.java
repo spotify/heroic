@@ -25,7 +25,6 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.HashCode;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.OptionalLimit;
@@ -218,7 +217,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 bool.hasClauses() ? filteredQuery(matchAllQuery(), bool) : matchAllQuery();
 
             final SearchRequestBuilder builder = c
-                .search(request.getRange(), TAG_TYPE)
+                .search(TAG_TYPE)
                 .setSearchType(SearchType.COUNT)
                 .setQuery(query)
                 .setTimeout(TIMEOUT);
@@ -292,7 +291,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
             }
 
             final SearchRequestBuilder builder = c
-                .search(request.getRange(), TAG_TYPE)
+                .search(TAG_TYPE)
                 .setSearchType(SearchType.COUNT)
                 .setQuery(query);
 
@@ -328,7 +327,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
             final QueryBuilder root = filteredQuery(matchAllQuery(), filter(request.getFilter()));
 
             final SearchRequestBuilder builder = c
-                .search(request.getRange(), TAG_TYPE)
+                .search(TAG_TYPE)
                 .setSearchType(SearchType.COUNT)
                 .setQuery(root);
 
@@ -425,7 +424,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
             }
 
             final SearchRequestBuilder builder = c
-                .search(request.getRange(), TAG_TYPE)
+                .search(TAG_TYPE)
                 .setSearchType(SearchType.COUNT)
                 .setQuery(query)
                 .setTimeout(TIMEOUT);
@@ -496,7 +495,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
             }
 
             final SearchRequestBuilder builder = c
-                .search(request.getRange(), SERIES_TYPE)
+                .search(SERIES_TYPE)
                 .setSearchType(SearchType.COUNT)
                 .setQuery(query);
 
@@ -534,12 +533,11 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     public AsyncFuture<WriteSuggest> write(final WriteSuggest.Request request) {
         return connection.doto((final Connection c) -> {
             final Series s = request.getSeries();
-            final DateRange range = request.getRange();
 
             final String[] indices;
 
             try {
-                indices = c.writeIndices(range);
+                indices = c.writeIndices();
             } catch (NoIndexSelectedException e) {
                 return async.failed(e);
             }
