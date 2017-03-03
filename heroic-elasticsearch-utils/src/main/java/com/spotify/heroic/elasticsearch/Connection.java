@@ -112,25 +112,25 @@ public class Connection {
     }
 
     public String[] readIndices(DateRange range) throws NoIndexSelectedException {
-        return index.readIndices(range);
+        return index.readIndices();
     }
 
     public String[] writeIndices(DateRange range) throws NoIndexSelectedException {
-        return index.writeIndices(range);
+        return index.writeIndices();
     }
 
     public SearchRequestBuilder search(DateRange range, String type)
         throws NoIndexSelectedException {
-        return index.search(client, range, type);
+        return index.search(client, type);
     }
 
     public CountRequestBuilder count(DateRange range, String type) throws NoIndexSelectedException {
-        return index.count(client, range, type);
+        return index.count(client, type);
     }
 
     public DeleteByQueryRequestBuilder deleteByQuery(DateRange range, String type)
         throws NoIndexSelectedException {
-        return index.deleteByQuery(client, range, type);
+        return index.deleteByQuery(client, type);
     }
 
     public IndexRequestBuilder index(String index, String type) {

@@ -24,7 +24,6 @@ package com.spotify.heroic.elasticsearch.index;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Duration;
 import lombok.ToString;
 import org.elasticsearch.action.count.CountRequestBuilder;
@@ -119,7 +118,7 @@ public class RotatingIndexMapping implements IndexMapping {
     }
 
     @Override
-    public String[] readIndices(DateRange range) throws NoIndexSelectedException {
+    public String[] readIndices() throws NoIndexSelectedException {
         return readIndices(System.currentTimeMillis());
     }
 
@@ -128,31 +127,31 @@ public class RotatingIndexMapping implements IndexMapping {
     }
 
     @Override
-    public String[] writeIndices(DateRange range) {
+    public String[] writeIndices() {
         return writeIndices(System.currentTimeMillis());
     }
 
     @Override
     public DeleteByQueryRequestBuilder deleteByQuery(
-        final Client client, final DateRange range, final String type
+        final Client client, final String type
     ) throws NoIndexSelectedException {
         return client
-            .prepareDeleteByQuery(readIndices(range))
+            .prepareDeleteByQuery(readIndices())
             .setIndicesOptions(options())
             .setTypes(type);
     }
 
     @Override
     public SearchRequestBuilder search(
-        final Client client, final DateRange range, final String type
+        final Client client, final String type
     ) throws NoIndexSelectedException {
-        return client.prepareSearch(readIndices(range)).setIndicesOptions(options()).setTypes(type);
+        return client.prepareSearch(readIndices()).setIndicesOptions(options()).setTypes(type);
     }
 
     @Override
-    public CountRequestBuilder count(final Client client, final DateRange range, final String type)
+    public CountRequestBuilder count(final Client client, final String type)
         throws NoIndexSelectedException {
-        return client.prepareCount(readIndices(range)).setIndicesOptions(options()).setTypes(type);
+        return client.prepareCount(readIndices()).setIndicesOptions(options()).setTypes(type);
     }
 
     private IndicesOptions options() {

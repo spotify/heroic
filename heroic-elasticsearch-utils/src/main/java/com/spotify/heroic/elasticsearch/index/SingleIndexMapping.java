@@ -23,7 +23,6 @@ package com.spotify.heroic.elasticsearch.index;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.common.DateRange;
 import lombok.ToString;
 import org.elasticsearch.action.count.CountRequestBuilder;
 import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
@@ -55,32 +54,28 @@ public class SingleIndexMapping implements IndexMapping {
     }
 
     @Override
-    public String[] readIndices(DateRange range) {
+    public String[] readIndices() {
         return indices;
     }
 
     @Override
-    public String[] writeIndices(DateRange range) {
+    public String[] writeIndices() {
         return indices;
     }
 
     @Override
-    public SearchRequestBuilder search(
-        final Client client, final DateRange range, final String type
-    ) {
+    public SearchRequestBuilder search(final Client client, final String type) {
         return client.prepareSearch(index).setTypes(type);
     }
 
     @Override
-    public CountRequestBuilder count(
-        final Client client, final DateRange range, final String type
-    ) {
+    public CountRequestBuilder count(final Client client, final String type) {
         return client.prepareCount(index).setTypes(type);
     }
 
     @Override
     public DeleteByQueryRequestBuilder deleteByQuery(
-        final Client client, DateRange range, final String type
+        final Client client, final String type
     ) {
         return client.prepareDeleteByQuery(index).setTypes(type);
     }
