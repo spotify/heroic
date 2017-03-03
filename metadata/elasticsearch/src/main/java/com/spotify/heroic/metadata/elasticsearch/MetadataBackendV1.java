@@ -188,7 +188,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
     public AsyncFuture<FindTags> findTags(final FindTags.Request request) {
         return doto(c -> {
             final Callable<SearchRequestBuilder> setup =
-                () -> c.search(request.getRange(), ElasticsearchUtils.TYPE_METADATA);
+                () -> c.search(ElasticsearchUtils.TYPE_METADATA);
 
             final FindTagKeys.Request findTagKeys =
                 new FindTagKeys.Request(request.getFilter(), request.getRange(),
@@ -203,10 +203,9 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
     public AsyncFuture<WriteMetadata> write(final WriteMetadata.Request request) {
         return doto(c -> {
             final Series series = request.getSeries();
-            final DateRange range = request.getRange();
             final String id = series.hash();
 
-            final String[] indices = c.writeIndices(range);
+            final String[] indices = c.writeIndices();
 
             final List<AsyncFuture<WriteMetadata>> futures = new ArrayList<>();
 
@@ -244,7 +243,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
             final FilterBuilder f = CTX.filter(request.getFilter());
 
             final CountRequestBuilder builder =
-                c.count(request.getRange(), ElasticsearchUtils.TYPE_METADATA);
+                c.count(ElasticsearchUtils.TYPE_METADATA);
             limit.asInteger().ifPresent(builder::setTerminateAfter);
 
             builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
@@ -275,7 +274,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
             final FilterBuilder f = CTX.filter(request.getFilter());
 
             final DeleteByQueryRequestBuilder builder =
-                c.deleteByQuery(request.getRange(), ElasticsearchUtils.TYPE_METADATA);
+                c.deleteByQuery(ElasticsearchUtils.TYPE_METADATA);
 
             builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
@@ -288,7 +287,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
             final FilterBuilder f = CTX.filter(filter.getFilter());
 
             final SearchRequestBuilder builder = c
-                .search(filter.getRange(), ElasticsearchUtils.TYPE_METADATA)
+                .search(ElasticsearchUtils.TYPE_METADATA)
                 .setSearchType("count");
 
             builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
@@ -327,7 +326,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
             final FilterBuilder f = CTX.filter(request.getFilter());
 
             final SearchRequestBuilder builder = c
-                .search(request.getRange(), ElasticsearchUtils.TYPE_METADATA)
+                .search(ElasticsearchUtils.TYPE_METADATA)
                 .setSearchType("count");
 
             builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
@@ -381,7 +380,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
             final FilterBuilder f = CTX.filter(filter);
 
             final SearchRequestBuilder builder = c
-                .search(range, ElasticsearchUtils.TYPE_METADATA)
+                .search(ElasticsearchUtils.TYPE_METADATA)
                 .setScroll(SCROLL_TIME)
                 .setSearchType(SearchType.SCAN);
 
