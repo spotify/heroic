@@ -35,11 +35,10 @@ import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateRequestBuilder;
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateResponse;
 import org.elasticsearch.action.count.CountRequestBuilder;
-import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
+import org.elasticsearch.action.delete.DeleteRequestBuilder;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchScrollRequestBuilder;
-import org.elasticsearch.client.Client;
 import org.elasticsearch.client.IndicesAdminClient;
 
 import java.util.ArrayList;
@@ -56,7 +55,7 @@ import java.util.concurrent.Callable;
 public class Connection {
     private final AsyncFramework async;
     private final IndexMapping index;
-    private final Client client;
+    private final ClientSetup.ClientWrapper client;
 
     private final String templateName;
     private final BackendType type;
@@ -65,7 +64,7 @@ public class Connection {
         final List<AsyncFuture<Void>> futures = new ArrayList<>();
 
         futures.add(async.call((Callable<Void>) () -> {
-            client.close();
+            client.getShutdown().run();
             return null;
         }));
 
@@ -73,7 +72,7 @@ public class Connection {
     }
 
     public AsyncFuture<Void> configure() {
-        final IndicesAdminClient indices = client.admin().indices();
+        final IndicesAdminClient indices = client.getClient().admin().indices();
 
         log.info("[{}] updating template for {}", templateName, index.template());
 
@@ -121,23 +120,23 @@ public class Connection {
 
     public SearchRequestBuilder search(DateRange range, String type)
         throws NoIndexSelectedException {
-        return index.search(client, range, type);
+        return index.search(client.getClient(), range, type);
     }
 
     public CountRequestBuilder count(DateRange range, String type) throws NoIndexSelectedException {
-        return index.count(client, range, type);
-    }
-
-    public DeleteByQueryRequestBuilder deleteByQuery(DateRange range, String type)
-        throws NoIndexSelectedException {
-        return index.deleteByQuery(client, range, type);
+        return index.count(client.getClient(), range, type);
     }
 
     public IndexRequestBuilder index(String index, String type) {
-        return client.prepareIndex(index, type);
+        return client.getClient().prepareIndex(index, type);
     }
 
     public SearchScrollRequestBuilder prepareSearchScroll(String scrollId) {
-        return client.prepareSearchScroll(scrollId);
+        return client.getClient().prepareSearchScroll(scrollId);
+    }
+
+    public List<DeleteRequestBuilder> delete(DateRange range, String type, String id)
+        throws NoIndexSelectedException {
+        return index.delete(client.getClient(), range, type, id);
     }
 }

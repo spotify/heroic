@@ -23,13 +23,15 @@ package com.spotify.heroic.elasticsearch.index;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
 import lombok.ToString;
 import org.elasticsearch.action.count.CountRequestBuilder;
-import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
+import org.elasticsearch.action.delete.DeleteRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.client.Client;
 
+import java.util.List;
 import java.util.Optional;
 
 @ToString
@@ -79,10 +81,10 @@ public class SingleIndexMapping implements IndexMapping {
     }
 
     @Override
-    public DeleteByQueryRequestBuilder deleteByQuery(
-        final Client client, DateRange range, final String type
-    ) {
-        return client.prepareDeleteByQuery(index).setTypes(type);
+    public List<DeleteRequestBuilder> delete(
+        final Client client, final DateRange range, final String type, final String id
+    ) throws NoIndexSelectedException {
+        return ImmutableList.of(client.prepareDelete(index, type, id));
     }
 
     public static Builder builder() {

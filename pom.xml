@@ -55,7 +55,7 @@
     <jackson.version>2.7.4</jackson.version>
     <hk2.version>2.3.0</hk2.version>
     <jetty.version>9.3.7.v20160115</jetty.version>
-    <lucene.version>4.10.4</lucene.version>
+    <lucene.version>5.5.0</lucene.version>
     <datastax.version>3.0.2</datastax.version>
     <semantic-metrics.version>0.2.3</semantic-metrics.version>
     <netty.version>4.1.0.CR3</netty.version>
@@ -63,7 +63,7 @@
     <tiny-serializer.version>1.4.5</tiny-serializer.version>
     <antlr.version>4.5</antlr.version>
     <log4j.version>2.2</log4j.version>
-    <elasticsearch.version>1.7.5</elasticsearch.version>
+    <elasticsearch.version>2.3.3</elasticsearch.version>
     <joda-time.version>2.8.2</joda-time.version>
     <lombok.version>1.16.6</lombok.version>
     <findbugs.version>3.0.1</findbugs.version>
