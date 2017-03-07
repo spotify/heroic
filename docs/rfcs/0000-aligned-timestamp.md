@@ -3,7 +3,7 @@
 Strongly define how time buckets are aligned, specifically with an half-open interval
 `[start, end)`.
 
-* **Status** Accepted
+* **Status** Implemented
 * **Author** John-John Tedro <udoprog@spotify.com>
 * **PR** https://github.com/spotify/heroic/pull/208
 
