@@ -29,10 +29,12 @@ import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.AggregationOutput;
 import com.spotify.heroic.aggregation.AggregationResult;
 import com.spotify.heroic.aggregation.AggregationSession;
+import com.spotify.heroic.aggregation.BucketStrategy;
 import com.spotify.heroic.aggregation.RetainQuotaWatcher;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Feature;
+import com.spotify.heroic.common.Features;
 import com.spotify.heroic.common.GroupSet;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.OptionalLimit;
@@ -163,10 +165,16 @@ public class LocalMetricManager implements MetricManager {
             final AggregationInstance aggregation = request.getAggregation();
             final DateRange range = request.getRange();
             final QueryContext queryContext = request.getContext();
+            final Features features = request.getFeatures();
 
             queryLogger.logIncomingRequestAtNode(queryContext, request);
 
-            final boolean slicedFetch = request.getFeatures().hasFeature(Feature.SLICED_DATA_FETCH);
+            final boolean slicedFetch = features.hasFeature(Feature.SLICED_DATA_FETCH);
+
+            final BucketStrategy bucketStrategy =
+                features.withFeature(Feature.END_BUCKET, () -> BucketStrategy.END, () -> {
+                    throw new IllegalArgumentException(Feature.END_BUCKET + ": must be set");
+                });
 
             final QuotaWatcher watcher = new QuotaWatcher(
                 options.getDataLimit().orElse(dataLimit).asLong().orElse(Long.MAX_VALUE), options
@@ -174,6 +182,7 @@ public class LocalMetricManager implements MetricManager {
                 .orElse(aggregationLimit)
                 .asLong()
                 .orElse(Long.MAX_VALUE), reporter.newDataInMemoryReporter());
+
             final DataInMemoryReporter dataInMemoryReporter = reporter.newDataInMemoryReporter();
 
             final OptionalLimit seriesLimit =
@@ -209,7 +218,7 @@ public class LocalMetricManager implements MetricManager {
 
                 final AggregationSession session;
                 try {
-                    session = aggregation.session(range, watcher);
+                    session = aggregation.session(range, watcher, bucketStrategy);
                 } catch (QuotaViolationException e) {
                     return async.resolved(new FullQuery(w.end(), ImmutableList.of(
                         QueryError.fromMessage(String.format(

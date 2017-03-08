@@ -61,7 +61,6 @@ import lombok.Getter;
 @EqualsAndHashCode(of = {"size", "extent"})
 public abstract class BucketAggregationInstance<B extends Bucket> implements AggregationInstance {
     public static final Map<String, String> EMPTY_KEY = ImmutableMap.of();
-    public static final long MAX_BUCKET_COUNT = 100000L;
 
     private static final Map<String, String> EMPTY = ImmutableMap.of();
 
@@ -83,8 +82,8 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
         private final ConcurrentLinkedQueue<Set<Series>> series = new ConcurrentLinkedQueue<>();
         private final LongAdder sampleSize = new LongAdder();
 
+        private final BucketStrategy.Mapping mapping;
         private final List<B> buckets;
-        private final long offset;
 
         @Override
         public void updatePoints(
@@ -140,9 +139,9 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
                     continue;
                 }
 
-                final StartEnd startEnd = mapTimestamp(m.getTimestamp());
+                final BucketStrategy.StartEnd startEnd = mapping.map(m.getTimestamp());
 
-                for (int i = startEnd.start; i < startEnd.end; i++) {
+                for (int i = startEnd.getStart(); i < startEnd.getEnd(); i++) {
                     consumer.apply(buckets.get(i), m);
                 }
 
@@ -175,26 +174,6 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
             final AggregationOutput d = new AggregationOutput(EMPTY_KEY, series, metrics);
             return new AggregationResult(ImmutableList.of(d), statistics);
         }
-
-        /**
-         * Calculate the start and end index of the buckets that should be seeded for the given
-         * timestamp.
-         *
-         * This guarantees that each timestamp ends up in the range (start - extent, end] for any
-         * given bucket.
-         *
-         * @param timestamp timestamp to map
-         * @return a start end and index
-         */
-        protected StartEnd mapTimestamp(final long timestamp) {
-            /* adjust the timestamp to the number of buckets */
-            final long adjusted = timestamp - offset;
-
-            final int start = Math.max((int) ((adjusted - 1) / size), 0);
-            final int end = Math.min((int) ((adjusted + extent - 1) / size), buckets.size());
-
-            return new StartEnd(start, end);
-        }
     }
 
     @Override
@@ -207,10 +186,13 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
     }
 
     @Override
-    public Session session(DateRange range, RetainQuotaWatcher quotaWatcher) {
-        final List<B> buckets = buildBuckets(range, size);
+    public Session session(
+        DateRange range, RetainQuotaWatcher quotaWatcher, BucketStrategy bucketStrategy
+    ) {
+        final BucketStrategy.Mapping mapping = bucketStrategy.setup(range, size, extent);
+        final List<B> buckets = buildBuckets(mapping);
         quotaWatcher.retainData(buckets.size());
-        return new Session(buckets, range.start());
+        return new Session(mapping, buckets);
     }
 
     @Override
@@ -228,18 +210,11 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
         return String.format("%s(size=%d, extent=%d)", getClass().getSimpleName(), size, extent);
     }
 
-    private List<B> buildBuckets(final DateRange range, long size) {
-        final long start = range.start() + size;
-        final long count = (range.diff() + size) / size - 1;
+    private List<B> buildBuckets(final BucketStrategy.Mapping mapping) {
+        final List<B> buckets = new ArrayList<>(mapping.buckets());
 
-        if (count < 1 || count > MAX_BUCKET_COUNT) {
-            throw new IllegalArgumentException(String.format("range %s, size %d", range, size));
-        }
-
-        final List<B> buckets = new ArrayList<>((int) count);
-
-        for (int i = 0; i < count; i++) {
-            buckets.add(buildBucket(start + size * i));
+        for (int i = 0; i < mapping.buckets(); i++) {
+            buckets.add(buildBucket(mapping.start() + size * i));
         }
 
         return buckets;
@@ -251,14 +226,5 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
 
     private interface BucketConsumer<B extends Bucket, M extends Metric> {
         void apply(B bucket, M metric);
-    }
-
-    /**
-     * A start, and an end bucket (exclusive) selected.
-     */
-    @Data
-    public static class StartEnd {
-        private final int start;
-        private final int end;
     }
 }

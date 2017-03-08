@@ -61,7 +61,13 @@ public enum Feature {
      * This will cause data to be fetched and consumed by the aggregation framework in
      * pieces avoiding having to load all data into memory before starting to consume it.
      */
-    SLICED_DATA_FETCH("com.spotify.heroic.sliced_data_fetch");
+    SLICED_DATA_FETCH("com.spotify.heroic.sliced_data_fetch"),
+
+    /**
+     * Use the legacy bucket strategy by default where the resulting value is at the end of the
+     * timestamp of the bucket.
+     */
+    END_BUCKET("com.spotify.heroic.end_bucket_stategy");
 
     private final String id;
 

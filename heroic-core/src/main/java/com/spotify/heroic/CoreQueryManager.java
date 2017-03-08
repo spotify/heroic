@@ -28,6 +28,7 @@ import com.spotify.heroic.aggregation.AggregationCombiner;
 import com.spotify.heroic.aggregation.AggregationContext;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.aggregation.AggregationInstance;
+import com.spotify.heroic.aggregation.BucketStrategy;
 import com.spotify.heroic.aggregation.DistributedAggregationCombiner;
 import com.spotify.heroic.aggregation.Empty;
 import com.spotify.heroic.cache.QueryCache;
@@ -242,10 +243,15 @@ public class CoreQueryManager implements QueryManager {
                     shardWatch.end()));
             }
 
+            final BucketStrategy bucketStrategy =
+                features.withFeature(Feature.END_BUCKET, () -> BucketStrategy.END, () -> {
+                    throw new IllegalArgumentException(Feature.END_BUCKET + ": must be set");
+                });
+
             final AggregationCombiner combiner;
 
             if (isDistributed) {
-                combiner = DistributedAggregationCombiner.create(root, range);
+                combiner = DistributedAggregationCombiner.create(root, range, bucketStrategy);
             } else {
                 combiner = AggregationCombiner.DEFAULT;
             }

@@ -21,16 +21,20 @@
 
 package com.spotify.heroic;
 
+import com.spotify.heroic.aggregation.BucketStrategy;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.Tracing;
-
 import java.util.Optional;
-
 import lombok.Data;
 
 @Data
 public class QueryOptions {
+    /**
+     * Strategy for how to create buckets when performing a sampling aggregation.
+     */
+    private final Optional<BucketStrategy> bucketStrategy;
+
     /**
      * Indicates if tracing is enabled.
      * <p>
@@ -76,8 +80,9 @@ public class QueryOptions {
     }
 
     public static QueryOptions defaults() {
-        return new QueryOptions(Optional.empty(), Optional.empty(), OptionalLimit.empty(),
-            OptionalLimit.empty(), OptionalLimit.empty(), OptionalLimit.empty(), Optional.empty());
+        return new QueryOptions(Optional.empty(), Optional.empty(), Optional.empty(),
+            OptionalLimit.empty(), OptionalLimit.empty(), OptionalLimit.empty(),
+            OptionalLimit.empty(), Optional.empty());
     }
 
     public static Builder builder() {
@@ -85,6 +90,7 @@ public class QueryOptions {
     }
 
     public static class Builder {
+        private Optional<BucketStrategy> bucketStrategy = Optional.empty();
         private Optional<Tracing> tracing = Optional.empty();
         private Optional<Integer> fetchSize = Optional.empty();
         private OptionalLimit dataLimit = OptionalLimit.empty();
@@ -92,6 +98,11 @@ public class QueryOptions {
         private OptionalLimit groupLimit = OptionalLimit.empty();
         private OptionalLimit seriesLimit = OptionalLimit.empty();
         private Optional<Boolean> failOnLimits = Optional.empty();
+
+        public Builder bucketStrategy(BucketStrategy bucketStrategy) {
+            this.bucketStrategy = Optional.of(bucketStrategy);
+            return this;
+        }
 
         public Builder tracing(Tracing tracing) {
             this.tracing = Optional.of(tracing);
@@ -113,7 +124,6 @@ public class QueryOptions {
             return this;
         }
 
-
         public Builder groupLimit(long groupLimit) {
             this.groupLimit = OptionalLimit.of(groupLimit);
             return this;
@@ -130,8 +140,8 @@ public class QueryOptions {
         }
 
         public QueryOptions build() {
-            return new QueryOptions(tracing, fetchSize, dataLimit, aggregationLimit, groupLimit,
-                seriesLimit, failOnLimits);
+            return new QueryOptions(bucketStrategy, tracing, fetchSize, dataLimit, aggregationLimit,
+                groupLimit, seriesLimit, failOnLimits);
         }
     }
 }

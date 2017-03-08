@@ -32,6 +32,7 @@ import lombok.Data;
 public class DistributedAggregationCombiner implements AggregationCombiner {
     private final AggregationInstance reducer;
     private final DateRange range;
+    private final BucketStrategy bucketStrategy;
     private final long cadence;
 
     /**
@@ -45,25 +46,27 @@ public class DistributedAggregationCombiner implements AggregationCombiner {
      * @return
      */
     public static DistributedAggregationCombiner create(
-        final AggregationInstance root, final DateRange range
+        final AggregationInstance root, final DateRange range, final BucketStrategy bucketStrategy
     ) {
-        return new DistributedAggregationCombiner(root.reducer(), range, root.cadence());
+        return new DistributedAggregationCombiner(root.reducer(), range, bucketStrategy,
+            root.cadence());
     }
 
     @Override
     public List<ShardedResultGroup> combine(
         final List<List<ShardedResultGroup>> all
     ) {
-        final AggregationSession session = reducer.session(range);
+        final AggregationSession session =
+            reducer.session(range, RetainQuotaWatcher.NO_QUOTA, bucketStrategy);
 
-            /* iterate through all groups and setup, and feed a reducer session for every group */
+        /* iterate through all groups and setup, and feed a reducer session for every group */
         for (List<ShardedResultGroup> groups : all) {
             for (final ShardedResultGroup g : groups) {
                 g.getMetrics().updateAggregation(session, g.getKey(), g.getSeries());
             }
         }
 
-            /* build results from every reducer group into a final result */
+        /* build results from every reducer group into a final result */
         final ImmutableList.Builder<ShardedResultGroup> groups = ImmutableList.builder();
 
         final AggregationResult result = session.result();
