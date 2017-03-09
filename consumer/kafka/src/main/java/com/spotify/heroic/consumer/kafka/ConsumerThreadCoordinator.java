@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2017 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,28 +19,12 @@
  * under the License.
  */
 
-package com.spotify.heroic.statistics;
+package com.spotify.heroic.consumer.kafka;
 
-public interface ConsumerReporter {
-    void reportMessageSize(int size);
+public interface ConsumerThreadCoordinator {
+    void prepareToCommitConsumerOffsets();
 
-    void reportMessageError();
+    boolean isPreparingToCommitConsumerOffsets();
 
-    void reportConsumerSchemaError();
-
-    void reportConsumerThreadsWanted(final long count);
-
-    void reportConsumerThreadsIncrement();
-
-    void reportConsumerThreadsDecrement();
-
-    void reportMessageDrift(final long ms);
-
-    FutureReporter.Context reportConsumption();
-
-    HeroicTimer.Context reportConsumerCommitOperation();
-
-    HeroicTimer.Context reportConsumerCommitPhase1();
-
-    HeroicTimer.Context reportConsumerCommitPhase2();
+    void commitConsumerOffsets();
 }

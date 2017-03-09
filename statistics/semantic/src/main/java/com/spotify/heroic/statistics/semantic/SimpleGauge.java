@@ -19,28 +19,25 @@
  * under the License.
  */
 
-package com.spotify.heroic.statistics;
+package com.spotify.heroic.statistics.semantic;
 
-public interface ConsumerReporter {
-    void reportMessageSize(int size);
+import com.codahale.metrics.Gauge;
+import java.util.concurrent.atomic.AtomicLong;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
-    void reportMessageError();
+@ToString(of = {})
+@RequiredArgsConstructor
+public class SimpleGauge implements Gauge<Long> {
 
-    void reportConsumerSchemaError();
+    private final AtomicLong value = new AtomicLong(0);
 
-    void reportConsumerThreadsWanted(final long count);
+    public void setValue(final long value) {
+        this.value.set(value);
+    }
 
-    void reportConsumerThreadsIncrement();
-
-    void reportConsumerThreadsDecrement();
-
-    void reportMessageDrift(final long ms);
-
-    FutureReporter.Context reportConsumption();
-
-    HeroicTimer.Context reportConsumerCommitOperation();
-
-    HeroicTimer.Context reportConsumerCommitPhase1();
-
-    HeroicTimer.Context reportConsumerCommitPhase2();
+    @Override
+    public Long getValue() {
+        return value.get();
+    }
 }

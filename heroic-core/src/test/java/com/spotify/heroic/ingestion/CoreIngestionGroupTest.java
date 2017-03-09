@@ -10,6 +10,7 @@ import com.spotify.heroic.statistics.IngestionManagerReporter;
 import com.spotify.heroic.suggest.SuggestBackend;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.FutureFinished;
 import org.junit.Before;
 import org.junit.Test;
@@ -81,6 +82,10 @@ public class CoreIngestionGroupTest {
             ((FutureFinished) invocation.getArguments()[0]).finished();
             return expected;
         }).when(expected).onFinished(any(FutureFinished.class));
+
+        doAnswer(invocation -> {
+            return expected;
+        }).when(expected).onDone(any(FutureDone.class));
 
         doReturn(other).when(other).onFinished(any(FutureFinished.class));
 

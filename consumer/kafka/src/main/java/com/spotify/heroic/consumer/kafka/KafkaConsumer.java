@@ -117,8 +117,7 @@ public class KafkaConsumer implements Consumer, LifeCycles {
         try {
             final Connection c = b.get();
             final int threads = c.getThreads().size();
-            final int paused =
-                c.getThreads().stream().mapToInt(t -> t.isPausing() ? 1 : 0).sum();
+            final int paused = c.getThreads().stream().mapToInt(t -> t.isPausing() ? 1 : 0).sum();
             return String.format(
                 "KafkaConsumer(configured, topics=%s, config=%s, threads=%d, " + "paused=%d)",
                 topics, config, threads, paused);

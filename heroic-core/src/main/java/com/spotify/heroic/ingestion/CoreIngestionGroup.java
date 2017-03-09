@@ -37,8 +37,6 @@ import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.WriteSuggest;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.RequiredArgsConstructor;
-
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -46,6 +44,7 @@ import java.util.Optional;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Supplier;
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class CoreIngestionGroup implements IngestionGroup {

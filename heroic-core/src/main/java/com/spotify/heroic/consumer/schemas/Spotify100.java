@@ -44,6 +44,7 @@ import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.statistics.ConsumerReporter;
 import dagger.Component;
+import eu.toolchain.async.AsyncFuture;
 import lombok.Data;
 import lombok.ToString;
 
@@ -131,7 +132,7 @@ public class Spotify100 implements ConsumerSchema {
         }
 
         @Override
-        public void consume(final byte[] message) throws ConsumerSchemaException {
+        public AsyncFuture<Void> consume(final byte[] message) throws ConsumerSchemaException {
             final JsonMetric metric;
 
             try {
@@ -169,7 +170,12 @@ public class Spotify100 implements ConsumerSchema {
             final List<Point> points = ImmutableList.of(p);
 
             reporter.reportMessageDrift(System.currentTimeMillis() - p.getTimestamp());
-            ingestion.write(new Ingestion.Request(series, MetricCollection.points(points)));
+            AsyncFuture<Ingestion> ingestionFuture =
+                ingestion.write(new Ingestion.Request(series, MetricCollection.points(points)));
+
+            // Return Void future, to not leak unnecessary information from the backend but just
+            // allow monitoring of when the consumption is done.
+            return ingestionFuture.directTransform(future -> (Void) null);
         }
     }
 

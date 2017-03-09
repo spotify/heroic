@@ -1,0 +1,10 @@
+consumers:
+  - type: kafka
+    schema: com.spotify.heroic.consumer.schemas.Spotify100
+    transactional: true
+    topics:
+      - testtopic1
+
+metrics:
+  backends:
+    - type: memory
