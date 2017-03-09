@@ -40,6 +40,7 @@ import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.scheduler.DefaultScheduler;
 import com.spotify.heroic.scheduler.Scheduler;
+import com.spotify.heroic.time.Clock;
 import dagger.Module;
 import dagger.Provides;
 import eu.toolchain.async.AsyncFramework;
@@ -197,5 +198,11 @@ public class LoadingModule {
         if (!terminated) {
             throw new RuntimeException("executor did not shut down in time");
         }
+    }
+
+    @Provides
+    @LoadingScope
+    Clock clock() {
+        return System::currentTimeMillis;
     }
 }
