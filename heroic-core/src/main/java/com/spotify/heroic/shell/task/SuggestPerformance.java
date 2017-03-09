@@ -40,18 +40,10 @@ import com.spotify.heroic.suggest.MatchOptions;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestManager;
 import com.spotify.heroic.suggest.TagSuggest;
+import com.spotify.heroic.time.Clock;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.Data;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
-import org.kohsuke.args4j.Option;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
@@ -71,11 +63,20 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPInputStream;
+import javax.inject.Inject;
+import javax.inject.Named;
+import lombok.Data;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
+import org.kohsuke.args4j.Option;
 
 @TaskUsage("Execute a set of suggest performance tests")
 @TaskName("suggest-performance")
 @Slf4j
 public class SuggestPerformance implements ShellTask {
+    private final Clock clock;
     private final SuggestManager suggest;
     private final QueryParser parser;
     private final ObjectMapper mapper;
@@ -83,9 +84,10 @@ public class SuggestPerformance implements ShellTask {
 
     @Inject
     public SuggestPerformance(
-        SuggestManager suggest, QueryParser parser, @Named("application/json") ObjectMapper mapper,
-        AsyncFramework async
+        Clock clock, SuggestManager suggest, QueryParser parser,
+        @Named("application/json") ObjectMapper mapper, AsyncFramework async
     ) {
+        this.clock = clock;
         this.suggest = suggest;
         this.parser = parser;
         this.mapper = mapper;
@@ -107,7 +109,7 @@ public class SuggestPerformance implements ShellTask {
 
         final List<Callable<TestResult>> tests = new ArrayList<>();
 
-        final DateRange range = DateRange.now();
+        final DateRange range = DateRange.now(clock);
 
         try (final InputStream input = open(io, params.file)) {
             final TestSuite suite = mapper.readValue(input, TestSuite.class);

@@ -33,28 +33,26 @@ import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
-
+import com.spotify.heroic.time.Clock;
+import dagger.Component;
 import eu.toolchain.async.AsyncFuture;
-
-import org.kohsuke.args4j.Option;
-
 import javax.inject.Inject;
 import javax.inject.Named;
-
-import dagger.Component;
 import lombok.ToString;
+import org.kohsuke.args4j.Option;
 
 @TaskUsage("Write metadata")
 @TaskName("metadata-write")
 public class MetadataWrite implements ShellTask {
-
+    private final Clock clock;
     private final MetadataManager metadataManager;
     private final ObjectMapper json;
 
     @Inject
     public MetadataWrite(
-        MetadataManager metadataManager, @Named("application/json") ObjectMapper json
+        Clock clock, MetadataManager metadataManager, @Named("application/json") ObjectMapper json
     ) {
+        this.clock = clock;
         this.metadataManager = metadataManager;
         this.json = json;
     }
@@ -72,7 +70,7 @@ public class MetadataWrite implements ShellTask {
 
         return metadataManager
             .useGroup(params.group)
-            .write(new WriteMetadata.Request(series, DateRange.now()))
+            .write(new WriteMetadata.Request(series, DateRange.now(clock)))
             .directTransform(v -> null);
     }
 

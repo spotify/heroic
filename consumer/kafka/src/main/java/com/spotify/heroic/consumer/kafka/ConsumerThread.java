@@ -25,6 +25,7 @@ import com.spotify.heroic.consumer.ConsumerSchema;
 import com.spotify.heroic.consumer.ConsumerSchemaValidationException;
 import com.spotify.heroic.statistics.ConsumerReporter;
 import com.spotify.heroic.statistics.FutureReporter;
+import com.spotify.heroic.time.Clock;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
@@ -48,6 +49,7 @@ public final class ConsumerThread extends Thread {
     private static final long RETRY_MAX_SLEEP = 40;
 
     private final AsyncFramework async;
+    private final Clock clock;
     private final String name;
     private final ConsumerReporter reporter;
     private final KafkaStream<byte[], byte[]> stream;
@@ -78,15 +80,16 @@ public final class ConsumerThread extends Thread {
     private ConsumerThreadCoordinator coordinator;
 
     public ConsumerThread(
-        final AsyncFramework async, final String name, final ConsumerReporter reporter,
-        final KafkaStream<byte[], byte[]> stream, final ConsumerSchema.Consumer schema,
-        final AtomicInteger active, final AtomicLong errors, final LongAdder consumed,
-        final boolean enablePeriodicCommit, final long periodicCommitInterval,
-        final AtomicLong nextOffsetsCommitTSGlobal
+        final AsyncFramework async, final Clock clock, final String name,
+        final ConsumerReporter reporter, final KafkaStream<byte[], byte[]> stream,
+        final ConsumerSchema.Consumer schema, final AtomicInteger active, final AtomicLong errors,
+        final LongAdder consumed, final boolean enablePeriodicCommit,
+        final long periodicCommitInterval, final AtomicLong nextOffsetsCommitTSGlobal
     ) {
         super(String.format("%s: %s", ConsumerThread.class.getCanonicalName(), name));
 
         this.async = async;
+        this.clock = clock;
         this.name = name;
         this.reporter = reporter;
         this.stream = stream;
@@ -299,7 +302,8 @@ public final class ConsumerThread extends Thread {
             return false;
         }
 
-        final Long currTS = java.lang.System.currentTimeMillis();
+        final Long currTS = clock.currentTimeMillis();
+
         if (nextOffsetsCommitTSThreadLocal > currTS) {
             return false;
         }

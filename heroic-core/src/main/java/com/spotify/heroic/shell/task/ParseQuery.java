@@ -34,29 +34,32 @@ import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
+import com.spotify.heroic.time.Clock;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.Option;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import javax.inject.Inject;
+import javax.inject.Named;
+import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.Option;
 
 @TaskUsage("Parse a given expression as a query and print their structure")
 @TaskName("parse-query")
 public class ParseQuery implements ShellTask {
+    private final Clock clock;
     private final QueryParser parser;
     private final AsyncFramework async;
     private final ObjectMapper mapper;
 
     @Inject
     public ParseQuery(
-        QueryParser parser, AsyncFramework async, @Named("application/json") ObjectMapper mapper
+        Clock clock, QueryParser parser, AsyncFramework async,
+        @Named("application/json") ObjectMapper mapper
     ) {
+        this.clock = clock;
         this.parser = parser;
         this.async = async;
         this.mapper = mapper;
@@ -79,7 +82,7 @@ public class ParseQuery implements ShellTask {
         List<Expression> statements = parser.parse(Joiner.on(" ").join(params.query));
 
         if (params.eval) {
-            final Expression.Scope scope = new DefaultScope(System.currentTimeMillis());
+            final Expression.Scope scope = new DefaultScope(clock.currentTimeMillis());
             statements = statements.stream().map(s -> s.eval(scope)).collect(Collectors.toList());
         }
 

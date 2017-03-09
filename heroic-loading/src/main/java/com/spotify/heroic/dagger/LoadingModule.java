@@ -203,6 +203,6 @@ public class LoadingModule {
     @Provides
     @LoadingScope
     Clock clock() {
-        return System::currentTimeMillis;
+        return Clock.system();
     }
 }

@@ -42,8 +42,12 @@ import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
-import lombok.Data;
-
+import com.spotify.heroic.time.Clock;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -54,24 +58,22 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.MediaType;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
+import lombok.Data;
 
 @Path("metadata")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class MetadataResource {
+    private final Clock clock;
     private final JavaxRestFramework httpAsync;
     private final QueryManager query;
     private final MetadataResourceCache cache;
 
     @Inject
     public MetadataResource(
-        JavaxRestFramework httpAsync, QueryManager query, MetadataResourceCache cache
+        Clock clock, JavaxRestFramework httpAsync, QueryManager query, MetadataResourceCache cache
     ) {
+        this.clock = clock;
         this.httpAsync = httpAsync;
         this.query = query;
         this.cache = cache;
@@ -102,7 +104,7 @@ public class MetadataResource {
     @PUT
     @Path("series")
     public void addSeries(@Suspended final AsyncResponse response, final Series series) {
-        final DateRange range = DateRange.now();
+        final DateRange range = DateRange.now(clock);
         httpAsync.bind(response,
             query.useDefaultGroup().writeSeries(new WriteMetadata.Request(series, range)));
     }
@@ -238,7 +240,7 @@ public class MetadataResource {
         final Supplier<Optional<Filter>> optionalFilter,
         final Supplier<Optional<QueryDateRange>> optionalRange, final Supplier<OptionalLimit> limit
     ) {
-        final long now = System.currentTimeMillis();
+        final long now = clock.currentTimeMillis();
         final Filter c = optionalFilter.get().orElseGet(TrueFilter::get);
         final DateRange range = optionalRange
             .get()
