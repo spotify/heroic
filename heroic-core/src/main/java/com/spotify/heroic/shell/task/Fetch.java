@@ -40,12 +40,10 @@ import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
+import com.spotify.heroic.time.Clock;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.ToString;
-import org.kohsuke.args4j.Option;
-
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -54,18 +52,23 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
 import javax.inject.Named;
+import lombok.ToString;
+import org.kohsuke.args4j.Option;
 
 @TaskUsage("Fetch a range of data points")
 @TaskName("fetch")
 public class Fetch implements ShellTask {
+    private final Clock clock;
     private final MetricManager metrics;
     private final ObjectMapper mapper;
     private final AsyncFramework async;
 
     @Inject
     public Fetch(
-        MetricManager metrics, @Named("application/json") ObjectMapper mapper, AsyncFramework async
+        Clock clock, MetricManager metrics, @Named("application/json") ObjectMapper mapper,
+        AsyncFramework async
     ) {
+        this.clock = clock;
         this.metrics = metrics;
         this.mapper = mapper;
         this.async = async;
@@ -79,7 +82,7 @@ public class Fetch implements ShellTask {
     @Override
     public AsyncFuture<Void> run(final ShellIO io, final TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
-        final long now = System.currentTimeMillis();
+        final long now = clock.currentTimeMillis();
 
         final Series series = Tasks.parseSeries(mapper, params.series);
 

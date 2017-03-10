@@ -42,15 +42,11 @@ import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
+import com.spotify.heroic.time.Clock;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.StreamCollector;
-import lombok.Data;
-import lombok.ToString;
-import org.kohsuke.args4j.Option;
-
-import javax.inject.Inject;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -61,15 +57,21 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.inject.Inject;
+import lombok.Data;
+import lombok.ToString;
+import org.kohsuke.args4j.Option;
 
 @TaskUsage("Perform performance testing")
 @TaskName("write-performance")
 public class WritePerformance implements ShellTask {
+    private final Clock clock;
     private final MetricManager metrics;
     private final AsyncFramework async;
 
     @Inject
-    public WritePerformance(MetricManager metrics, AsyncFramework async) {
+    public WritePerformance(Clock clock, MetricManager metrics, AsyncFramework async) {
+        this.clock = clock;
         this.metrics = metrics;
         this.async = async;
     }
@@ -117,7 +119,7 @@ public class WritePerformance implements ShellTask {
         return async
             .collect(reads, in -> ImmutableList.copyOf(Iterables.concat(in)))
             .lazyTransform(input -> {
-                final long warmupStart = System.currentTimeMillis();
+                final long warmupStart = clock.currentTimeMillis();
 
                 final List<CollectedTimes> warmup = new ArrayList<>();
 
@@ -145,13 +147,13 @@ public class WritePerformance implements ShellTask {
                 for (int i = 0; i < params.loop; i++) {
                     io.out().println(String.format("Running step %d/%d", (i + 1), params.loop));
 
-                    final long start = System.currentTimeMillis();
+                    final long start = clock.currentTimeMillis();
 
                     final List<Callable<AsyncFuture<Times>>> writes =
                         buildWrites(targets, input, params, start);
                     all.add(collectWrites(io.out(), writes, params.parallelism).get());
 
-                    final double totalRuntime = (System.currentTimeMillis() - start) / 1000.0;
+                    final double totalRuntime = (clock.currentTimeMillis() - start) / 1000.0;
 
                     writesPerSecond.add(totalWrites / totalRuntime);
                     runtimes.add(totalRuntime);
@@ -247,7 +249,7 @@ public class WritePerformance implements ShellTask {
                 final MetricBackend target = targets.get(request++ % targets.size());
 
                 writes.add(() -> target.write(w).directTransform(result -> {
-                    final long runtime = System.currentTimeMillis() - start;
+                    final long runtime = clock.currentTimeMillis() - start;
                     return new Times(result.getTimes(), runtime);
                 }));
             }
@@ -344,8 +346,7 @@ public class WritePerformance implements ShellTask {
     @ToString
     public static class Parameters extends AbstractShellTaskParams {
         @Option(name = "--limit",
-            usage = "Maximum number of datapoints to fetch (default: 1000000)",
-            metaVar = "<int>")
+            usage = "Maximum number of datapoints to fetch (default: 1000000)", metaVar = "<int>")
         private int limit = 1000000;
 
         @Option(name = "--series", required = true, usage = "Number of different series to write",

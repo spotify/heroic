@@ -36,6 +36,7 @@ import com.spotify.heroic.ingestion.IngestionManager;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
 import com.spotify.heroic.statistics.ConsumerReporter;
+import com.spotify.heroic.time.Clock;
 import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
@@ -194,7 +195,7 @@ public class KafkaConsumerModule implements ConsumerModule {
         @Provides
         @KafkaScope
         public Managed<Connection> connection(
-            final AsyncFramework async, final ConsumerReporter reporter,
+            final AsyncFramework async, final Clock clock, final ConsumerReporter reporter,
             final ConsumerSchema.Consumer consumer, @Named("consuming") AtomicInteger consuming,
             @Named("total") AtomicInteger total, @Named("errors") AtomicLong errors,
             @Named("consumed") LongAdder consumed,
@@ -233,12 +234,12 @@ public class KafkaConsumerModule implements ConsumerModule {
                             connector.createMessageStreams(streamsMap);
 
                         final AtomicLong nextOffsetsCommitTS = new AtomicLong(
-                            System.currentTimeMillis() +
+                            clock.currentTimeMillis() +
                                 Math.min(COMMIT_INITIAL_DELAY, transactionCommitInterval));
 
                         final List<ConsumerThread> threads =
-                            buildThreads(async, reporter, streams, consumer, consuming, errors,
-                                consumed, transactional, transactionCommitInterval,
+                            buildThreads(async, clock, reporter, streams, consumer, consuming,
+                                errors, consumed, transactional, transactionCommitInterval,
                                 nextOffsetsCommitTS);
 
                         // Report the wanted count of threads before starting the threads below
@@ -293,7 +294,7 @@ public class KafkaConsumerModule implements ConsumerModule {
     }
 
     private List<ConsumerThread> buildThreads(
-        final AsyncFramework async, final ConsumerReporter reporter,
+        final AsyncFramework async, final Clock clock, final ConsumerReporter reporter,
         final Map<String, List<KafkaStream<byte[], byte[]>>> streams,
         final ConsumerSchema.Consumer consumer, final AtomicInteger consuming,
         final AtomicLong errors, final LongAdder consumed, final boolean enablePeriodicCommit,
@@ -314,8 +315,8 @@ public class KafkaConsumerModule implements ConsumerModule {
                 final String name = String.format("%s:%d", topic, count++);
 
                 threads.add(
-                    new ConsumerThread(async, name, reporter, stream, consumer, consuming, errors,
-                        consumed, enablePeriodicCommit, periodicCommitInterval,
+                    new ConsumerThread(async, clock, name, reporter, stream, consumer, consuming,
+                        errors, consumed, enablePeriodicCommit, periodicCommitInterval,
                         nextOffsetsCommitTS));
             }
         }

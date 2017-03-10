@@ -72,6 +72,7 @@ import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
+import com.spotify.heroic.time.Clock;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Collector;
@@ -99,6 +100,7 @@ public class CoreQueryManager implements QueryManager {
 
     private final Features features;
     private final AsyncFramework async;
+    private final Clock clock;
     private final ClusterManager cluster;
     private final QueryParser parser;
     private final QueryCache queryCache;
@@ -111,7 +113,7 @@ public class CoreQueryManager implements QueryManager {
 
     @Inject
     public CoreQueryManager(
-        @Named("features") final Features features, final AsyncFramework async,
+        @Named("features") final Features features, final AsyncFramework async, final Clock clock,
         final ClusterManager cluster, final QueryParser parser, final QueryCache queryCache,
         final AggregationFactory aggregations, @Named("groupLimit") final OptionalLimit groupLimit,
         @Named("smallQueryThreshold") final long smallQueryThreshold, final ApiReporter reporter,
@@ -119,6 +121,7 @@ public class CoreQueryManager implements QueryManager {
     ) {
         this.features = features;
         this.async = async;
+        this.clock = clock;
         this.cluster = cluster;
         this.parser = parser;
         this.queryCache = queryCache;
@@ -138,7 +141,7 @@ public class CoreQueryManager implements QueryManager {
     public QueryBuilder newQueryFromString(final String queryString) {
         final List<Expression> expressions = parser.parse(queryString);
 
-        final Expression.Scope scope = new DefaultScope(System.currentTimeMillis());
+        final Expression.Scope scope = new DefaultScope(clock.currentTimeMillis());
 
         if (expressions.size() != 1) {
             throw new IllegalArgumentException("Expected exactly one expression");
@@ -197,7 +200,7 @@ public class CoreQueryManager implements QueryManager {
 
             final QueryTrace.NamedWatch shardWatch = tracing.watch(QUERY_SHARD);
             final Stopwatch fullQueryWatch = Stopwatch.createStarted();
-            final long now = System.currentTimeMillis();
+            final long now = clock.currentTimeMillis();
             final FutureDone onDoneQueryReporter = reporter.reportQuery();
 
             queryLogger.logQuery(queryContext, q);
@@ -384,7 +387,7 @@ public class CoreQueryManager implements QueryManager {
         }
 
         private DateRange buildRange(Query q) {
-            final long now = System.currentTimeMillis();
+            final long now = clock.currentTimeMillis();
 
             return q
                 .getRange()
