@@ -27,6 +27,7 @@ import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.cluster.ClusterShard;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Features;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.querylogging.QueryContext;
@@ -116,6 +117,7 @@ public final class FullQuery {
         private final AggregationInstance aggregation;
         private final QueryOptions options;
         private final QueryContext context;
+        private final Features features;
 
         public Summary summarize() {
             return new Summary(source, filter, range, aggregation, options);

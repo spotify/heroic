@@ -32,6 +32,7 @@ import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.aggregation.RetainQuotaWatcher;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Feature;
 import com.spotify.heroic.common.GroupSet;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.OptionalLimit;
@@ -52,12 +53,6 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.StreamCollector;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.NotImplementedException;
-import org.apache.commons.lang3.tuple.Pair;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -68,6 +63,10 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.inject.Inject;
 import javax.inject.Named;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.NotImplementedException;
 
 @Slf4j
 @ToString(of = {})
@@ -167,6 +166,8 @@ public class LocalMetricManager implements MetricManager {
 
             queryLogger.logIncomingRequestAtNode(queryContext, request);
 
+            final boolean slicedFetch = request.getFeatures().hasFeature(Feature.SLICED_DATA_FETCH);
+
             final QuotaWatcher watcher = new QuotaWatcher(
                 options.getDataLimit().orElse(dataLimit).asLong().orElse(Long.MAX_VALUE), options
                 .getAggregationLimit()
@@ -217,20 +218,6 @@ public class LocalMetricManager implements MetricManager {
                         Statistics.empty(), ResultLimits.of(ResultLimit.AGGREGATION)));
                 }
 
-                final List<Callable<AsyncFuture<Pair<Series, FetchData>>>> fetches =
-                    new ArrayList<>();
-
-                /* setup fetches */
-                accept(b -> {
-                    for (final Series s : result.getSeries()) {
-                        /* Setup fetches from metric backend
-                         * The result is a stream of Pair<Series, FetchData> */
-                        fetches.add(() -> b
-                            .fetch(new FetchData.Request(source, s, range, options), watcher)
-                            .directTransform(d -> Pair.of(s, d)));
-                    }
-                });
-
                 /* setup collector */
 
                 final ResultCollector collector;
@@ -244,8 +231,8 @@ public class LocalMetricManager implements MetricManager {
                                 new ConcurrentLinkedQueue<>();
 
                             @Override
-                            public void resolved(Pair<Series, FetchData> result) throws Exception {
-                                traces.add(result.getRight().getTrace());
+                            public void resolved(final FetchData.Result result) throws Exception {
+                                traces.add(result.getTrace());
                                 super.resolved(result);
                             }
 
@@ -265,6 +252,28 @@ public class LocalMetricManager implements MetricManager {
                             }
                         };
                 }
+
+                final List<Callable<AsyncFuture<FetchData.Result>>> fetches = new ArrayList<>();
+
+                /* setup fetches */
+                accept(b -> {
+                    for (final Series s : result.getSeries()) {
+                        if (slicedFetch) {
+                            fetches.add(
+                                () -> b.fetch(new FetchData.Request(source, s, range, options),
+                                    watcher, mc -> collector.acceptMetricsCollection(s, mc)));
+                        } else {
+                            fetches.add(() -> b
+                                .fetch(new FetchData.Request(source, s, range, options), watcher)
+                                .directTransform(d -> {
+                                    d.getGroups().forEach(group -> {
+                                        collector.acceptMetricsCollection(s, group);
+                                    });
+                                    return d.getResult();
+                                }));
+                        }
+                    }
+                });
 
                 return async.eventuallyCollect(fetches, collector, fetchParallelism);
             };
@@ -300,8 +309,13 @@ public class LocalMetricManager implements MetricManager {
         }
 
         @Override
-        public AsyncFuture<FetchData> fetch(final FetchData.Request request) {
-            return fetch(request, FetchQuotaWatcher.NO_QUOTA);
+        public AsyncFuture<FetchData.Result> fetch(
+            final FetchData.Request request, final FetchQuotaWatcher watcher,
+            final Consumer<MetricCollection> metricsConsumer
+        ) {
+            final List<AsyncFuture<FetchData.Result>> callbacks =
+                map(b -> b.fetch(request, watcher, metricsConsumer));
+            return async.collect(callbacks, FetchData.collectResult(FETCH));
         }
 
         @Override
@@ -400,7 +414,7 @@ public class LocalMetricManager implements MetricManager {
 
     @RequiredArgsConstructor
     private abstract static class ResultCollector
-        implements StreamCollector<Pair<Series, FetchData>, FullQuery> {
+        implements StreamCollector<FetchData.Result, FullQuery> {
         final ConcurrentLinkedQueue<Throwable> errors = new ConcurrentLinkedQueue<>();
         final ConcurrentLinkedQueue<RequestError> requestErrors = new ConcurrentLinkedQueue<>();
 
@@ -413,19 +427,13 @@ public class LocalMetricManager implements MetricManager {
         final boolean failOnLimits;
 
         @Override
-        public void resolved(final Pair<Series, FetchData> result) throws Exception {
-            final FetchData f = result.getRight();
-            requestErrors.addAll(f.getErrors());
-            try {
-                for (final MetricCollection g : f.getGroups()) {
-                    g.updateAggregation(session, result.getLeft().getTags(),
-                        ImmutableSet.of(result.getLeft()));
-                    dataInMemoryReporter.reportDataNoLongerNeeded(g.size());
-                }
-            } catch (QuotaViolationException e) {
-                // Seems resolved() should not throw exception
-                log.debug("Aggregation quota violated", e);
-            }
+        public void resolved(final FetchData.Result result) throws Exception {
+            requestErrors.addAll(result.getErrors());
+        }
+
+        void acceptMetricsCollection(final Series series, MetricCollection g) {
+            g.updateAggregation(session, series.getTags(), ImmutableSet.of(series));
+            dataInMemoryReporter.reportDataNoLongerNeeded(g.size());
         }
 
         @Override
