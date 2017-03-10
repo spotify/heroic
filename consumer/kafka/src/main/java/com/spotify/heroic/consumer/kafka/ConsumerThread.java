@@ -29,8 +29,6 @@ import com.spotify.heroic.time.Clock;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -38,8 +36,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.LongAdder;
 import kafka.consumer.ConsumerTimeoutException;
-import kafka.consumer.KafkaStream;
-import kafka.message.MessageAndMetadata;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -52,12 +48,11 @@ public final class ConsumerThread extends Thread {
     private final Clock clock;
     private final String name;
     private final ConsumerReporter reporter;
-    private final KafkaStream<byte[], byte[]> stream;
+    private final KafkaStream<byte[]> stream;
     private final ConsumerSchema.Consumer schema;
     private final AtomicInteger active;
     private final AtomicLong errors;
     private final LongAdder consumed;
-    private long threadLocalSequenceNumber = 0;
     // use a latch as a signal so that we can block on it instead of Thread#sleep (or similar) which
     // would be a pain to
     // interrupt.
@@ -69,7 +64,8 @@ public final class ConsumerThread extends Thread {
 
     private final boolean enablePeriodicCommit;
 
-    private final Map<Long, Boolean> outstandingConsumptionRequests;
+    private final AtomicLong outstandingConsumptionRequests = new AtomicLong(0);
+
     private final long periodicCommitInterval;
     // Timestamp specifying when the next consumer commit should happen
     private final AtomicLong nextOffsetsCommitTSGlobal;
@@ -81,7 +77,7 @@ public final class ConsumerThread extends Thread {
 
     public ConsumerThread(
         final AsyncFramework async, final Clock clock, final String name,
-        final ConsumerReporter reporter, final KafkaStream<byte[], byte[]> stream,
+        final ConsumerReporter reporter, final KafkaStream<byte[]> stream,
         final ConsumerSchema.Consumer schema, final AtomicInteger active, final AtomicLong errors,
         final LongAdder consumed, final boolean enablePeriodicCommit,
         final long periodicCommitInterval, final AtomicLong nextOffsetsCommitTSGlobal
@@ -98,7 +94,6 @@ public final class ConsumerThread extends Thread {
         this.errors = errors;
         this.consumed = consumed;
         this.enablePeriodicCommit = enablePeriodicCommit;
-        this.outstandingConsumptionRequests = new ConcurrentHashMap<Long, Boolean>();
 
         this.periodicCommitInterval = periodicCommitInterval;
         this.nextOffsetsCommitTSGlobal = nextOffsetsCommitTSGlobal;
@@ -164,7 +159,7 @@ public final class ConsumerThread extends Thread {
     }
 
     public long getNumOutstandingRequests() {
-        return outstandingConsumptionRequests.size();
+        return outstandingConsumptionRequests.get();
     }
 
     public AsyncFuture<Void> shutdown() {
@@ -182,13 +177,12 @@ public final class ConsumerThread extends Thread {
     private void guardedRun() throws Exception {
         while (true) {
             try {
-                for (final MessageAndMetadata<byte[], byte[]> m : stream) {
-                    if (shouldStop.getCount() == 0) {
+                for (final byte[] messageBody : stream.messageIterable()) {
+                    if (shouldStop.getCount() == 0 || messageBody == null) {
                         break;
                     }
 
-                    final byte[] body = m.message();
-                    consumeOneWithRetry(body);
+                    consumeOneWithRetry(messageBody);
 
                     parkPaused();
                     if (shouldStop.getCount() == 0) {
@@ -259,14 +253,11 @@ public final class ConsumerThread extends Thread {
             final AsyncFuture<Void> future = schema.consume(body);
 
             if (enablePeriodicCommit) {
-                final Long sequenceNumber = ++threadLocalSequenceNumber;
-
-                outstandingConsumptionRequests.put(sequenceNumber, true);
+                outstandingConsumptionRequests.incrementAndGet();
 
                 future.onFinished(() -> {
-                    outstandingConsumptionRequests.remove(sequenceNumber);
-
-                    if (outstandingConsumptionRequests.size() == 0) {
+                    long value = outstandingConsumptionRequests.decrementAndGet();
+                    if (value == 0) {
                         // If applicable, commit consumer offsets
                         coordinator.commitConsumerOffsets();
                     }

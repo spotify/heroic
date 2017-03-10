@@ -59,7 +59,6 @@ import java.util.concurrent.atomic.LongAdder;
 import javax.inject.Named;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
-import kafka.consumer.KafkaStream;
 import kafka.javaapi.consumer.ConsumerConnector;
 import lombok.AccessLevel;
 import lombok.Data;
@@ -72,7 +71,7 @@ import lombok.extern.slf4j.Slf4j;
 public class KafkaConsumerModule implements ConsumerModule {
     public static final int DEFAULT_THREADS_PER_TOPIC = 2;
     private static final Boolean DEFAULT_TRANSACTIONAL = false;
-    private static final long DEFAULT_COMMIT_INTERVAL = TimeUnit.SECONDS.toMillis(30);
+    public static final long DEFAULT_COMMIT_INTERVAL = TimeUnit.SECONDS.toMillis(30);
     private static final long COMMIT_INITIAL_DELAY = TimeUnit.SECONDS.toMillis(2);
     private static final String AUTO_COMMIT_ENABLE = "auto.commit.enable";
 
@@ -83,6 +82,7 @@ public class KafkaConsumerModule implements ConsumerModule {
     private final ConsumerSchema schema;
     private final Boolean transactional;
     private final long transactionCommitInterval;
+    private final Optional<KafkaConnection> fakeKafkaConnection;
 
     @Override
     public Exposed module(
@@ -172,6 +172,13 @@ public class KafkaConsumerModule implements ConsumerModule {
         }
 
         @Provides
+        @Named("fakeKafkaConnection")
+        @KafkaScope
+        Optional<KafkaConnection> fakeKafkaConnection() {
+            return fakeKafkaConnection;
+        }
+
+        @Provides
         @KafkaScope
         ConsumerSchema.Consumer consumer(final IngestionManager ingestionManager) {
             // XXX: make target group configurable?
@@ -200,38 +207,21 @@ public class KafkaConsumerModule implements ConsumerModule {
             @Named("total") AtomicInteger total, @Named("errors") AtomicLong errors,
             @Named("consumed") LongAdder consumed,
             @Named("transactional") final Boolean transactional,
-            @Named("transactionCommitInterval") final Long transactionCommitInterval
+            @Named("transactionCommitInterval") final Long transactionCommitInterval,
+            @Named("fakeKafkaConnection") final Optional<KafkaConnection> fakeKafkaConnection
         ) {
             return async.managed(new ManagedSetup<Connection>() {
                 @Override
                 public AsyncFuture<Connection> construct() {
                     return async.call(() -> {
                         log.info("Starting");
-                        final Properties properties = new Properties();
-
-                        // Defaults
-                        properties.put("consumer.timeout.ms", "1000");
-
-                        properties.putAll(config);
-
-                        if (transactional) {
-                            final String autoCommitEnable =
-                                properties.getProperty(AUTO_COMMIT_ENABLE);
-                            if (autoCommitEnable != null && autoCommitEnable.equals("true")) {
-                                throw new IllegalArgumentException(
-                                    "'transactional' and " + AUTO_COMMIT_ENABLE +
-                                        " are mutually exclusive");
-                            }
-                        }
-
-                        final ConsumerConfig config = new ConsumerConfig(properties);
-                        final ConsumerConnector connector =
-                            Consumer.createJavaConsumerConnector(config);
+                        KafkaConnection kafkaConnection =
+                            fakeKafkaConnection.orElseGet(() -> createKafkaConnection());
 
                         final Map<String, Integer> streamsMap = makeStreams();
 
-                        final Map<String, List<KafkaStream<byte[], byte[]>>> streams =
-                            connector.createMessageStreams(streamsMap);
+                        final Map<String, List<KafkaStream<byte[]>>> streams =
+                            kafkaConnection.createMessageStreams(streamsMap);
 
                         final AtomicLong nextOffsetsCommitTS = new AtomicLong(
                             clock.currentTimeMillis() +
@@ -248,7 +238,7 @@ public class KafkaConsumerModule implements ConsumerModule {
                         total.set(threads.size());
 
                         final Connection connection =
-                            new Connection(async, reporter, connector, threads);
+                            new Connection(async, reporter, kafkaConnection, threads);
                         ConsumerThreadCoordinator coordinator = connection;
 
                         for (final ConsumerThread thread : threads) {
@@ -262,17 +252,43 @@ public class KafkaConsumerModule implements ConsumerModule {
 
                 @Override
                 public AsyncFuture<Void> destruct(final Connection value) {
-                    value.getConnector().shutdown();
-
-                    total.set(0);
-
                     final List<AsyncFuture<Void>> shutdown = ImmutableList.copyOf(
                         value.getThreads().stream().map(ConsumerThread::shutdown).iterator());
+
+                    value.getConnection().shutdown();
+
+                    total.set(0);
 
                     return async.collectAndDiscard(shutdown);
                 }
 
                 /* private */
+
+                private KafkaConnection createKafkaConnection() {
+                    final Properties properties = new Properties();
+
+                    // Defaults
+                    properties.put("consumer.timeout.ms", "1000");
+
+                    properties.putAll(config);
+
+                    if (transactional) {
+                        final String autoCommitEnable = properties.getProperty(AUTO_COMMIT_ENABLE);
+                        if (autoCommitEnable != null && autoCommitEnable.equals("true")) {
+                            throw new IllegalArgumentException(
+                                "'transactional' and " + AUTO_COMMIT_ENABLE +
+                                    " are mutually exclusive");
+                        }
+                    }
+
+                    final ConsumerConfig config = new ConsumerConfig(properties);
+                    final ConsumerConnector connector =
+                        Consumer.createJavaConsumerConnector(config);
+
+                    final RealKafkaConnection kafkaConnection = new RealKafkaConnection(connector);
+
+                    return kafkaConnection;
+                }
 
                 private Map<String, Integer> makeStreams() {
                     final Map<String, Integer> streamsMap = new HashMap<String, Integer>();
@@ -295,23 +311,22 @@ public class KafkaConsumerModule implements ConsumerModule {
 
     private List<ConsumerThread> buildThreads(
         final AsyncFramework async, final Clock clock, final ConsumerReporter reporter,
-        final Map<String, List<KafkaStream<byte[], byte[]>>> streams,
+        final Map<String, List<KafkaStream<byte[]>>> streams,
         final ConsumerSchema.Consumer consumer, final AtomicInteger consuming,
         final AtomicLong errors, final LongAdder consumed, final boolean enablePeriodicCommit,
         final long periodicCommitInterval, final AtomicLong nextOffsetsCommitTS
     ) {
         final List<ConsumerThread> threads = new ArrayList<>();
 
-        final Set<Map.Entry<String, List<KafkaStream<byte[], byte[]>>>> entries =
-            streams.entrySet();
+        final Set<Map.Entry<String, List<KafkaStream<byte[]>>>> entries = streams.entrySet();
 
-        for (final Map.Entry<String, List<KafkaStream<byte[], byte[]>>> entry : entries) {
+        for (final Map.Entry<String, List<KafkaStream<byte[]>>> entry : entries) {
             final String topic = entry.getKey();
-            final List<KafkaStream<byte[], byte[]>> list = entry.getValue();
+            final List<KafkaStream<byte[]>> list = entry.getValue();
 
             int count = 0;
 
-            for (final KafkaStream<byte[], byte[]> stream : list) {
+            for (final KafkaStream<byte[]> stream : list) {
                 final String name = String.format("%s:%d", topic, count++);
 
                 threads.add(
@@ -347,6 +362,7 @@ public class KafkaConsumerModule implements ConsumerModule {
         private Optional<ConsumerSchema> schema = Optional.empty();
         private Optional<Boolean> transactional = Optional.empty();
         private Optional<Long> transactionCommitInterval = Optional.empty();
+        private Optional<KafkaConnection> fakeKafkaConnection = Optional.empty();
 
         @JsonCreator
         public Builder(
@@ -387,7 +403,7 @@ public class KafkaConsumerModule implements ConsumerModule {
             return this;
         }
 
-        public Builder schema(Class<ConsumerSchema> schemaClass) {
+        public Builder schema(Class<? extends ConsumerSchema> schemaClass) {
             this.schema = Optional.of(ReflectionUtils.buildInstance(schemaClass));
             return this;
         }
@@ -405,6 +421,11 @@ public class KafkaConsumerModule implements ConsumerModule {
 
         public Builder transactionCommitInterval(long ms) {
             this.transactionCommitInterval = Optional.of(ms);
+            return this;
+        }
+
+        public Builder fakeKafkaConnection(KafkaConnection fakeKafkaConnection) {
+            this.fakeKafkaConnection = Optional.of(fakeKafkaConnection);
             return this;
         }
 
@@ -426,7 +447,8 @@ public class KafkaConsumerModule implements ConsumerModule {
                 config.orElseGet(ImmutableMap::of),
                 schema.get(),
                 transactional.orElse(DEFAULT_TRANSACTIONAL),
-                transactionCommitInterval.orElse(DEFAULT_COMMIT_INTERVAL)
+                transactionCommitInterval.orElse(DEFAULT_COMMIT_INTERVAL),
+                fakeKafkaConnection
             );
             // @formatter:on
         }

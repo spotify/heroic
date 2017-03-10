@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Spotify AB.
+ * Copyright (c) 2015 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,10 +19,30 @@
  * under the License.
  */
 
-package com.spotify.heroic.consumer.kafka;
+package com.spotify.heroic.instrumentation;
 
-public interface ConsumerThreadCoordinator {
-    void prepareToCommitConsumerOffsets();
+import java.util.concurrent.ConcurrentLinkedQueue;
+import lombok.Data;
 
-    void commitConsumerOffsets();
+@Data
+public class OperationsLogImpl implements OperationsLog {
+    public enum OpType {
+        WRITE_REQUEST, WRITE_COMPLETE, OFFSETS_COMMIT
+    }
+
+    private final ConcurrentLinkedQueue<OpType> log = new ConcurrentLinkedQueue<>();
+
+    @Override
+    public void registerWriteRequest() {
+        log.add(OpType.WRITE_REQUEST);
+    }
+
+    public void registerWriteComplete() {
+        log.add(OpType.WRITE_COMPLETE);
+    }
+
+    public void registerConsumerOffsetsCommit() {
+        log.add(OpType.OFFSETS_COMMIT);
+    }
 }
+
