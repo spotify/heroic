@@ -33,6 +33,20 @@ import java.util.List;
 public class DistributedAggregationCombiner implements AggregationCombiner {
     private final AggregationInstance reducer;
     private final DateRange range;
+    private final long cadence;
+
+    /**
+     * Create a combiner from a global aggregation.
+     *
+     * Notice that the cadence is taken from the root aggregation, since the reducer might
+     * lose it
+     * @param root
+     * @param range
+     * @return
+     */
+    public static DistributedAggregationCombiner create(final AggregationInstance root, final DateRange range ) {
+        return new DistributedAggregationCombiner(root.reducer(), range, root.cadence());
+    }
 
     @Override
     public List<ShardedResultGroup> combine(
@@ -54,7 +68,7 @@ public class DistributedAggregationCombiner implements AggregationCombiner {
 
         for (final AggregationOutput out : result.getResult()) {
             groups.add(new ShardedResultGroup(ImmutableMap.of(), out.getKey(), out.getSeries(),
-                out.getMetrics(), reducer.cadence()));
+                out.getMetrics(), cadence));
         }
 
         return groups.build();
