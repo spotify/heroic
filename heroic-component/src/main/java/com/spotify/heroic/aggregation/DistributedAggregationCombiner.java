@@ -25,9 +25,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.metric.ShardedResultGroup;
-import lombok.Data;
-
 import java.util.List;
+import lombok.Data;
 
 @Data
 public class DistributedAggregationCombiner implements AggregationCombiner {
@@ -37,14 +36,17 @@ public class DistributedAggregationCombiner implements AggregationCombiner {
 
     /**
      * Create a combiner from a global aggregation.
-     *
+     * <p>
      * Notice that the cadence is taken from the root aggregation, since the reducer might
-     * lose it
+     * lose it.
+     *
      * @param root
      * @param range
      * @return
      */
-    public static DistributedAggregationCombiner create(final AggregationInstance root, final DateRange range ) {
+    public static DistributedAggregationCombiner create(
+        final AggregationInstance root, final DateRange range
+    ) {
         return new DistributedAggregationCombiner(root.reducer(), range, root.cadence());
     }
 
