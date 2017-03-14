@@ -44,7 +44,8 @@ public class DistributedAggregationCombiner implements AggregationCombiner {
      * @param range
      * @return
      */
-    public static DistributedAggregationCombiner create(final AggregationInstance root, final DateRange range ) {
+    public static DistributedAggregationCombiner create(final AggregationInstance root,
+                                                        final DateRange range) {
         return new DistributedAggregationCombiner(root.reducer(), range, root.cadence());
     }
 
