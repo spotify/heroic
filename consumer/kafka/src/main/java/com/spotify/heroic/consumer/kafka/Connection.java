@@ -27,8 +27,6 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
-import kafka.javaapi.consumer.ConsumerConnector;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
@@ -38,10 +36,11 @@ public class Connection implements ConsumerThreadCoordinator {
     private final AsyncFramework async;
     private final ConsumerReporter reporter;
 
-    private final ConsumerConnector connector;
+    private final KafkaConnection connection;
     private final List<ConsumerThread> threads;
 
-    private final AtomicReference<Boolean> pleaseCommitConsumerOffsets = new AtomicReference<>();
+    private volatile boolean pleaseCommit = false;
+    private final Object lock = new Object();
 
     private HeroicTimer.Context wholeOperationTimer;
     private HeroicTimer.Context writeCompletionTimer;
@@ -63,22 +62,17 @@ public class Connection implements ConsumerThreadCoordinator {
     }
 
     public void prepareToCommitConsumerOffsets() {
-        synchronized (pleaseCommitConsumerOffsets) {
+        synchronized (lock) {
             log.info("Consumer offsets commit: Preparing");
             wholeOperationTimer = reporter.reportConsumerCommitOperation();
             writeCompletionTimer = reporter.reportConsumerCommitPhase1();
-            pleaseCommitConsumerOffsets.set(true);
+            pleaseCommit = true;
             pause();
         }
     }
 
-    public boolean isPreparingToCommitConsumerOffsets() {
-        return !(pleaseCommitConsumerOffsets.get() == null ||
-            !pleaseCommitConsumerOffsets.get().booleanValue());
-    }
-
     public void commitConsumerOffsets() {
-        if (pleaseCommitConsumerOffsets.get() == null) {
+        if (!pleaseCommit) {
             return;
         }
         // Verify that all threads have 0 outstanding consumption requests
@@ -88,10 +82,9 @@ public class Connection implements ConsumerThreadCoordinator {
             }
         }
 
-        synchronized (pleaseCommitConsumerOffsets) {
-            final Boolean valueRef = pleaseCommitConsumerOffsets.get();
-            if (valueRef == null || !valueRef.booleanValue()) {
-                // pleaseCommitConsumerOffsets changed value while we tried to take the lock
+        synchronized (lock) {
+            if (!pleaseCommit) {
+                // pleaseCommit changed value while we tried to take the lock
                 return;
             }
 
@@ -107,13 +100,13 @@ public class Connection implements ConsumerThreadCoordinator {
             final HeroicTimer.Context offsetsCommitTimer = reporter.reportConsumerCommitPhase2();
 
             // Commit
-            connector.commitOffsets();
+            connection.commitOffsets();
 
             offsetsCommitTimer.stop();
             log.info("Consumer offsets commit: Done committing");
 
             resume();
-            pleaseCommitConsumerOffsets.set(null);
+            pleaseCommit = false;
             wholeOperationTimer.stop();
             wholeOperationTimer = null;
         }

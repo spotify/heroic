@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Spotify AB.
+ * Copyright (c) 2015 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,10 +19,13 @@
  * under the License.
  */
 
-package com.spotify.heroic.consumer.kafka;
+package com.spotify.heroic.instrumentation;
 
-public interface ConsumerThreadCoordinator {
-    void prepareToCommitConsumerOffsets();
+public interface OperationsLog {
+    void registerWriteRequest();
 
-    void commitConsumerOffsets();
+    void registerWriteComplete();
+
+    void registerConsumerOffsetsCommit();
 }
+

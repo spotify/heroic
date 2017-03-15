@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.consumer.kafka;
 
-public interface ConsumerThreadCoordinator {
-    void prepareToCommitConsumerOffsets();
-
-    void commitConsumerOffsets();
+public interface KafkaStream<V> {
+    Iterable<V> messageIterable();
 }

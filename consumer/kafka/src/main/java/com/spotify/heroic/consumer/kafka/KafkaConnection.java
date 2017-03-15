@@ -21,8 +21,13 @@
 
 package com.spotify.heroic.consumer.kafka;
 
-public interface ConsumerThreadCoordinator {
-    void prepareToCommitConsumerOffsets();
+import java.util.List;
+import java.util.Map;
 
-    void commitConsumerOffsets();
+public interface KafkaConnection {
+    Map<String, List<KafkaStream<byte[]>>> createMessageStreams(Map<String, Integer> wantedStreams);
+
+    void commitOffsets();
+
+    void shutdown();
 }
