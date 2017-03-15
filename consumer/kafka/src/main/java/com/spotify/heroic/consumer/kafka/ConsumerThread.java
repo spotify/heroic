@@ -191,7 +191,6 @@ public final class ConsumerThread extends Thread {
                 }
                 break;
             } catch (ConsumerTimeoutException cte) {
-                log.info("ConsumerTimeoutException while waiting for data from Kafka. Will retry.");
                 if (shouldStop.getCount() == 0) {
                     break;
                 }
