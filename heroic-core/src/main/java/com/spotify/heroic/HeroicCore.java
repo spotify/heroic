@@ -93,6 +93,7 @@ import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -934,36 +935,39 @@ public class HeroicCore implements HeroicConfiguration {
                 return null;
             });
 
-            this.stopped = async.collect(ImmutableList.of(started, stop)).directTransform(n -> {
-                final CoreComponent core = coreInjector.get();
-                assert core != null;
+            this.stopped = async.collect(ImmutableList.of(started, stop)).lazyTransform(n -> {
+                return async.call(() -> {
+                    final CoreComponent core = coreInjector.get();
+                    assert core != null;
 
-                final CoreLifeCycleRegistry coreRegistry =
-                    (CoreLifeCycleRegistry) core.lifeCycleRegistry();
+                    final CoreLifeCycleRegistry coreRegistry =
+                        (CoreLifeCycleRegistry) core.lifeCycleRegistry();
 
-                core.stopSignal().run();
+                    core.stopSignal().run();
 
-                log.info("Shutting down Heroic");
+                    log.info("Shutting down Heroic");
 
-                try {
-                    stopLifeCycles(coreRegistry, core, config);
-                } catch (Exception e) {
-                    log.error("Failed to stop all lifecycles, continuing anyway...", e);
-                }
+                    try {
+                        stopLifeCycles(coreRegistry, core, config);
+                    } catch (Exception e) {
+                        log.error("Failed to stop all lifecycles, continuing anyway...", e);
+                    }
 
-                log.info("Stopping internal life cycle");
+                    log.info("Stopping internal life cycle");
 
-                final CoreLifeCycleRegistry internalRegistry =
-                    (CoreLifeCycleRegistry) core.internalLifeCycleRegistry();
+                    final CoreLifeCycleRegistry internalRegistry =
+                        (CoreLifeCycleRegistry) core.internalLifeCycleRegistry();
 
-                try {
-                    stopLifeCycles(internalRegistry, core, config);
-                } catch (Exception e) {
-                    log.error("Failed to stop all internal lifecycles, continuing anyway...", e);
-                }
+                    try {
+                        stopLifeCycles(internalRegistry, core, config);
+                    } catch (Exception e) {
+                        log.error("Failed to stop all internal lifecycles, continuing anyway...",
+                            e);
+                    }
 
-                log.info("Done shutting down, bye bye!");
-                return null;
+                    log.info("Done shutting down, bye bye!");
+                    return null;
+                }, Executors.newSingleThreadExecutor());
             });
         }
 
