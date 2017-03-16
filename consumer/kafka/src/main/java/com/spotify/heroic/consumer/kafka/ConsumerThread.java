@@ -35,7 +35,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.LongAdder;
-import kafka.consumer.ConsumerTimeoutException;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -175,35 +174,22 @@ public final class ConsumerThread extends Thread {
     }
 
     private void guardedRun() throws Exception {
-        while (true) {
-            try {
-                for (final byte[] messageBody : stream.messageIterable()) {
-                    if (shouldStop.getCount() == 0 || messageBody == null) {
-                        break;
-                    }
-
-                    consumeOneWithRetry(messageBody);
-
-                    parkPaused();
-                    if (shouldStop.getCount() == 0) {
-                        break;
-                    }
-                }
+        for (final byte[] messageBody : stream.messageIterable()) {
+            if (shouldStop.getCount() == 0 || messageBody == null) {
+                // Kafka will send a null message when connection is closing
                 break;
-            } catch (ConsumerTimeoutException cte) {
-                if (shouldStop.getCount() == 0) {
-                    break;
-                }
-                parkPaused();
-                if (shouldStop.getCount() == 0) {
-                    break;
-                }
-                continue;
+            }
+
+            consumeOneWithRetry(messageBody);
+
+            maybePause();
+            if (shouldStop.getCount() == 0) {
+                break;
             }
         }
     }
 
-    private void parkPaused() throws InterruptedException {
+    private void maybePause() throws InterruptedException {
         CountDownLatch p = shouldPause.get();
 
         if (p == null) {

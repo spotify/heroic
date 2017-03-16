@@ -266,10 +266,6 @@ public class KafkaConsumerModule implements ConsumerModule {
 
                 private KafkaConnection createKafkaConnection() {
                     final Properties properties = new Properties();
-
-                    // Defaults
-                    properties.put("consumer.timeout.ms", "1000");
-
                     properties.putAll(config);
 
                     if (transactional) {
