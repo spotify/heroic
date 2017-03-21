@@ -59,6 +59,7 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
     public static final int DEFAULT_MAX_PENDING_REPORTS = 1000;
     public static final boolean DEFAULT_DISABLE_BULK_MUTATIONS = false;
     public static final int DEFAULT_FLUSH_INTERVAL_SECONDS = 2;
+    public static final int DEFAULT_FETCH_SIZE = 500000;
 
     private final String project;
     private final String cluster;
@@ -89,7 +90,7 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
                 return async.call(
                     new BigtableConnectionBuilder(project, cluster, credentials, async,
                         DEFAULT_DISABLE_BULK_MUTATIONS, DEFAULT_FLUSH_INTERVAL_SECONDS,
-                        Optional.empty(), Optional.empty()));
+                        Optional.empty(), DEFAULT_FETCH_SIZE));
             }
 
             @Override

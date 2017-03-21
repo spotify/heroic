@@ -56,7 +56,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
     private final boolean disableBulkMutations;
     private final int flushIntervalSeconds;
     private final Optional<Integer> batchSize;
-    private final Optional<Integer> defaultFetchSize;
+    private final int fetchSize;
 
     @Override
     public BigtableConnection call() throws Exception {
@@ -91,8 +91,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
             new BigtableMutatorImpl(async, session, disableBulkMutations, flushIntervalSeconds);
 
         final BigtableDataClient client =
-            new BigtableDataClientImpl(async, session, mutator, project, instance,
-                defaultFetchSize);
+            new BigtableDataClientImpl(async, session, mutator, project, instance, fetchSize);
 
         return new GrpcBigtableConnection(async, project, instance, session, mutator, adminClient,
             client);

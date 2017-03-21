@@ -52,19 +52,19 @@ public class BigtableDataClientImpl implements BigtableDataClient {
     private final AsyncFramework async;
     private final com.google.cloud.bigtable.grpc.BigtableSession session;
     private final BigtableMutator mutator;
-    private final Optional<Integer> defaultFetchSize;
+    private final int fetchSize;
     private final LimitedCellsRequestEmitter rangeReader;
     private final String clusterUri;
 
     public BigtableDataClientImpl(
         final AsyncFramework async, final com.google.cloud.bigtable.grpc.BigtableSession session,
         final BigtableMutator mutator, final String project,
-        final String cluster, final Optional<Integer> defaultFetchSize
+        final String cluster, final int fetchSize
     ) {
         this.async = async;
         this.session = session;
         this.mutator = mutator;
-        this.defaultFetchSize = defaultFetchSize;
+        this.fetchSize = fetchSize;
         this.rangeReader = new LimitedCellsRequestEmitter(this::issueReadRowsRequest, async);
         this.clusterUri = String.format("projects/%s/instances/%s", project, cluster);
     }
@@ -88,10 +88,10 @@ public class BigtableDataClientImpl implements BigtableDataClient {
     @Override
     public AsyncFuture<Void> readRowRange(
         final String tableName, final ReadRowRangeRequest request,
-        final Optional<Integer> fetchSize, final CellConsumer cellConsumer
+        final Optional<Integer> fetchSizeOverride, final CellConsumer cellConsumer
     ) {
         final String tableUri = Table.toURI(clusterUri, tableName);
-        final Optional<Integer> fetchSizeOrDefault = fetchSize.isPresent() ? fetchSize : defaultFetchSize;
+        final int fetchSizeOrDefault = fetchSizeOverride.orElse(this.fetchSize);
         return rangeReader.readRow(tableUri, request, fetchSizeOrDefault, cellConsumer);
     }
 

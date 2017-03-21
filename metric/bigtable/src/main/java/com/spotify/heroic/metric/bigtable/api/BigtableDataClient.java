@@ -56,12 +56,12 @@ public interface BigtableDataClient {
      *
      * @param tableName Table to read rows from.
      * @param request Request to use when reading rows.
-     * @param fetchSize The number of cells to fetch for every batch.
+     * @param fetchSizeOverride The number of cells to fetch for every batch, optional
      * @param cellConsumer The consumer of fetched data.
      * @return A future that will be resolved when all cells have been passed to the cellConsumer.
      */
     AsyncFuture<Void> readRowRange(
-        String tableName, ReadRowRangeRequest request, Optional<Integer> fetchSize,
+        String tableName, ReadRowRangeRequest request, Optional<Integer> fetchSizeOverride,
         CellConsumer cellConsumer
     );
 

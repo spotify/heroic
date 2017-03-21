@@ -29,26 +29,19 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.protobuf.ByteString;
-
 import com.spotify.heroic.metric.bigtable.api.BigtableDataClient.CellConsumer;
-
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
-
 import java.util.List;
-import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @RequiredArgsConstructor
 @Slf4j
 class LimitedCellsRequestEmitter {
-
-    private static final int DEFAULT_FETCH_SIZE = 500000;
 
     private final BiFunction<ReadRowsRequest, CellConsumer, ListenableFuture<?>> requestIssuer;
     private final AsyncFramework async;
@@ -123,18 +116,19 @@ class LimitedCellsRequestEmitter {
     }
 
     public AsyncFuture<Void> readRow(
-        final String tableUri, final ReadRowRangeRequest request, final Optional<Integer> optionalFetchSize,
+        final String tableUri, final ReadRowRangeRequest request, final int fetchSize,
         final CellConsumer consumer
     ) {
         final ResolvableFuture<Void> future = async.future();
-        final int fetchSize = optionalFetchSize.orElse(DEFAULT_FETCH_SIZE);
         final RequestHandler requestHandler =
             new RequestHandler(tableUri, request, fetchSize, future, consumer);
         issueRequest(requestHandler, request.getStartQualifierOpen());
         return future;
     }
 
-    private void issueRequest(final RequestHandler requestHandler, final ByteString startQualifierOpen) {
+    private void issueRequest(
+        final RequestHandler requestHandler, final ByteString startQualifierOpen
+    ) {
         final ReadRowsRequest request = requestHandler.buildRequest(startQualifierOpen);
         final ListenableFuture<?> future = requestIssuer.apply(request, requestHandler);
         Futures.addCallback(future, requestHandler);
