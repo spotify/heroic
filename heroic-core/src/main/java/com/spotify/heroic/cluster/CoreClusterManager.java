@@ -35,13 +35,6 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.Transform;
-import lombok.Data;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.tuple.Pair;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -57,6 +50,12 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import javax.inject.Inject;
+import javax.inject.Named;
+import lombok.Data;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.Pair;
 
 /**
  * Handles management of cluster state.
@@ -81,6 +80,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
     private final HeroicConfiguration options;
     private final LocalClusterNode local;
     private final HeroicContext context;
+    private final Set<Map<String, String>> expectedTopology;
 
     final AtomicReference<Set<URI>> staticNodes = new AtomicReference<>(new HashSet<>());
     final AtomicReference<NodeRegistry> registry = new AtomicReference<>();
@@ -93,7 +93,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
         AsyncFramework async, ClusterDiscovery discovery, NodeMetadata localMetadata,
         Map<String, RpcProtocol> protocols, Scheduler scheduler,
         @Named("useLocal") Boolean useLocal, HeroicConfiguration options, LocalClusterNode local,
-        HeroicContext context
+        HeroicContext context, @Named("topology") Set<Map<String, String>> expectedTopology
     ) {
         this.async = async;
         this.discovery = discovery;
@@ -104,6 +104,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
         this.options = options;
         this.local = local;
         this.context = context;
+        this.expectedTopology = expectedTopology;
     }
 
     @Override
@@ -274,7 +275,33 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
             throw new IllegalStateException("Registry not ready");
         }
 
-        return registry.findFromAllShards(OptionalLimit.empty());
+        final List<Pair<Map<String, String>, List<ClusterNode>>> shards =
+            registry.findFromAllShards(OptionalLimit.empty());
+
+        /* Topology (shards) is detected based on the metadata coming from the nodes. Any shards
+         * mentioned in 'topology' are required (shard error is raised if it isn't), additional
+         * shards may also exist tho. */
+        final Set<Map<String, String>> foundShards =
+            new HashSet<>(shards.stream().map(Pair::getKey).collect(Collectors.toList()));
+
+        final List<Map<String, String>> shardsWithNoNodes = expectedTopology
+            .stream()
+            .filter(e -> !foundShards.contains(e))
+            .collect(Collectors.toList());
+
+        if (shardsWithNoNodes.isEmpty()) {
+            return shards;
+        }
+
+        final List<Pair<Map<String, String>, List<ClusterNode>>> withExpected = new ArrayList<>();
+        withExpected.addAll(shards);
+        for (final Map<String, String> shard : shardsWithNoNodes) {
+            /* For every shard that didn't have a discovered node, add an empty entry in the
+             * shard list. This ensures that suitable code later on will complain that there
+             * were shards with no available nodes/groups. */
+            withExpected.add(Pair.of(shard, ImmutableList.of()));
+        }
+        return withExpected;
     }
 
     Set<Map<String, String>> extractKnownShards(Set<ClusterNode> entries) {

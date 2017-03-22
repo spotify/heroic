@@ -1,5 +1,7 @@
 package com.spotify.heroic;
 
+import static org.junit.Assert.assertEquals;
+
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -17,10 +19,6 @@ import com.spotify.heroic.rpc.jvm.JvmRpcContext;
 import com.spotify.heroic.rpc.jvm.JvmRpcProtocolModule;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.TinyAsync;
-import org.junit.After;
-import org.junit.Before;
-import org.mockito.Mockito;
-
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -31,8 +29,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
-import static org.junit.Assert.assertEquals;
+import org.junit.After;
+import org.junit.Before;
+import org.mockito.Mockito;
 
 public abstract class AbstractLocalClusterIT {
     protected final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -216,9 +215,7 @@ public abstract class AbstractLocalClusterIT {
                     .tags(ImmutableMap.of("shard", uri.getHost()))
                     .protocols(ImmutableList.of(protocol))
                     .discovery(discovery)))
-            .configFragment(HeroicConfig
-                .builder()
-                .queryLogging(mockQueryLoggingModule))
+            .configFragment(HeroicConfig.builder().queryLogging(mockQueryLoggingModule))
             .profile(new MemoryProfile())
             .modules(HeroicModules.ALL_MODULES)
             .build()
