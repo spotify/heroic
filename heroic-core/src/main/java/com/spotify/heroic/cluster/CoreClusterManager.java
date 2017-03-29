@@ -372,7 +372,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
                  * otherwise, re-use the existing node */
                 updated.add(node.fetchMetadata().lazyTransform(m -> {
                     if (!node.metadata().equals(m)) {
-                            /* add to removedNodes list to make sure it is being closed */
+                        /* add to removedNodes list to make sure it is being closed */
                         removedNodes.add(new RemovedNode(uri, node));
                         return createClusterNode(id, uri);
                     }
