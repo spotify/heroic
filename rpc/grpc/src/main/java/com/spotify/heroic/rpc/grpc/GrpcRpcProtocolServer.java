@@ -54,6 +54,7 @@ import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.grpc.stub.ServerCalls.asyncUnaryCall;
@@ -213,13 +214,17 @@ public class GrpcRpcProtocolServer implements LifeCycles {
         final GrpcEndpointHandle<Object, Object> spec
     ) {
         return asyncUnaryCall((request, observer) -> {
+            final UUID id = UUID.randomUUID();
+
+            log.trace("{}: Received request: {}", id, request);
+
             final AsyncFuture<Object> future;
 
             try {
                 final Object obj = mapper.readValue(request, spec.queryType());
                 future = spec.handle(obj);
             } catch (final Exception e) {
-                log.error("Failed to handle request (sent {})", Status.INTERNAL, e);
+                log.error("{}: Failed to handle request (sent {})", id, Status.INTERNAL, e);
                 observer.onError(new StatusException(Status.INTERNAL));
                 return;
             }
@@ -227,6 +232,7 @@ public class GrpcRpcProtocolServer implements LifeCycles {
             future.onDone(new FutureDone<Object>() {
                 @Override
                 public void failed(final Throwable cause) throws Exception {
+                    log.error("{}: Request failed", id, cause);
                     observer.onError(cause);
                 }
 
