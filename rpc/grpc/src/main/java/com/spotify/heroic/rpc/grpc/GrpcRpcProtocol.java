@@ -130,13 +130,19 @@ public class GrpcRpcProtocol implements RpcProtocol {
             }
         });
 
-        return channel.start().lazyTransform(n -> {
+        final AsyncFuture<ClusterNode> setup = channel.start().lazyTransform(n -> {
             final GrpcRpcClient client = new GrpcRpcClient(async, address, mapper, channel);
 
-            return client
-                .request(METADATA, CallOptions.DEFAULT.withDeadlineAfter(5, TimeUnit.SECONDS))
-                .directTransform(m -> new GrpcRpcClusterNode(client, m));
+            return client.request(
+                METADATA,
+                CallOptions.DEFAULT.withDeadlineAfter(5, TimeUnit.SECONDS)
+            ).<ClusterNode>directTransform(m -> new GrpcRpcClusterNode(client, m));
         });
+
+        /* close managed channel on errors */
+        return setup.lazyCatchFailed(e -> channel
+            .stop()
+            .lazyTransform(v -> async.<ClusterNode>failed(e)));
     }
 
     @Override
