@@ -59,7 +59,7 @@ public interface AggregationInstance {
      * Traverse the possible aggregations and build the necessary graph out of them.
      */
     default AggregationSession session(DateRange range) {
-        return session(range, RetainQuotaWatcher.NO_QUOTA, BucketStrategy.END);
+        return session(range, RetainQuotaWatcher.NO_QUOTA, BucketStrategy.START);
     }
 
     /**

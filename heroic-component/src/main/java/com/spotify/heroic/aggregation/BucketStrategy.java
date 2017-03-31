@@ -30,6 +30,7 @@ import lombok.RequiredArgsConstructor;
 public interface BucketStrategy {
     long MAX_BUCKET_COUNT = 100000L;
 
+    BucketStrategy START = new Start();
     BucketStrategy END = new End();
 
     Mapping setup(DateRange range, long size, long extent);
@@ -37,10 +38,71 @@ public interface BucketStrategy {
     @JsonCreator
     static BucketStrategy create(final String strategy) {
         switch (strategy) {
+            case "start":
+                return START;
             case "end":
                 return END;
             default:
                 throw new IllegalArgumentException(strategy);
+        }
+    }
+
+    class Start implements BucketStrategy {
+        @JsonValue
+        public String value() {
+            return "start";
+        }
+
+        @Override
+        public Mapping setup(final DateRange range, final long size, final long extent) {
+            final long start = range.start();
+            final long count = range.diff() / size;
+
+            if (count < 1 || count > MAX_BUCKET_COUNT) {
+                throw new IllegalArgumentException(String.format("range %s, size %d", range, size));
+            }
+
+            return new StartMapping(range.start(), start, size, extent, (int) count);
+        }
+
+        @RequiredArgsConstructor
+        private static class StartMapping implements Mapping {
+            private final long start;
+            private final long offset;
+            private final long size;
+            private final long extent;
+            private final int buckets;
+
+            /**
+             * Calculate the start and end index of the buckets that should be seeded for the given
+             * timestamp.
+             *
+             * This guarantees that each timestamp ends up in the range [start, start + extent) for
+             * any given bucket.
+             *
+             * @param timestamp timestamp to map
+             * @return a start end and index
+             */
+            @Override
+            public StartEnd map(final long timestamp) {
+                /* adjust the timestamp to the number of buckets */
+                final long adjusted = timestamp - offset;
+
+                final int start = Math.max((int) ((adjusted + (size - extent)) / size), 0);
+                final int end = Math.min((int) ((adjusted + size) / size), buckets);
+
+                return new BucketStrategy.StartEnd(start, end);
+            }
+
+            @Override
+            public long start() {
+                return start;
+            }
+
+            @Override
+            public int buckets() {
+                return buckets;
+            }
         }
     }
 
