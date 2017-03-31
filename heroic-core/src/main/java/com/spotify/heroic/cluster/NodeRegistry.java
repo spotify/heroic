@@ -81,12 +81,12 @@ public class NodeRegistry {
     ) {
         final List<Pair<Map<String, String>, List<ClusterNode>>> result = Lists.newArrayList();
 
-        final Multimap<Map<String, String>, ClusterNode> shards = buildShards(entries);
+        final Multimap<Map<String, String>, ClusterNode> shardToNode = buildShards(entries);
 
-        final Set<Entry<Map<String, String>, Collection<ClusterNode>>> entries =
-            shards.asMap().entrySet();
+        final Set<Entry<Map<String, String>, Collection<ClusterNode>>> shardToNodeEntries =
+            shardToNode.asMap().entrySet();
 
-        for (final Entry<Map<String, String>, Collection<ClusterNode>> e : entries) {
+        for (final Entry<Map<String, String>, Collection<ClusterNode>> e : shardToNodeEntries) {
             result.add(Pair.of(e.getKey(), pickN(e.getValue(), n)));
         }
 

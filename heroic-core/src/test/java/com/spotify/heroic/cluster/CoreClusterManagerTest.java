@@ -1,23 +1,23 @@
 package com.spotify.heroic.cluster;
 
-import com.spotify.heroic.HeroicConfiguration;
-import com.spotify.heroic.HeroicContext;
-import com.spotify.heroic.scheduler.Scheduler;
-import eu.toolchain.async.AsyncFramework;
-import eu.toolchain.async.AsyncFuture;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
-
-import java.util.Map;
-
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+
+import com.google.common.collect.ImmutableSet;
+import com.spotify.heroic.HeroicConfiguration;
+import com.spotify.heroic.HeroicContext;
+import com.spotify.heroic.scheduler.Scheduler;
+import eu.toolchain.async.AsyncFramework;
+import eu.toolchain.async.AsyncFuture;
+import java.util.Map;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.runners.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
 public class CoreClusterManagerTest {
@@ -55,7 +55,7 @@ public class CoreClusterManagerTest {
         final boolean useLocal = true;
 
         manager = spy(new CoreClusterManager(async, discovery, localMetadata, protocols, scheduler,
-            useLocal, options, local, context));
+            useLocal, options, local, context, ImmutableSet.of()));
     }
 
     @Test
