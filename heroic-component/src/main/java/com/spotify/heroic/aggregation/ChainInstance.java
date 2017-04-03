@@ -23,7 +23,6 @@ package com.spotify.heroic.aggregation;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
-
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
@@ -32,13 +31,11 @@ import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
-
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
@@ -138,16 +135,18 @@ public class ChainInstance implements AggregationInstance {
     }
 
     @Override
-    public AggregationSession session(final DateRange range, final RetainQuotaWatcher watcher) {
+    public AggregationSession session(
+        final DateRange range, final RetainQuotaWatcher watcher, final BucketStrategy bucketStrategy
+    ) {
         final Iterator<AggregationInstance> it = chain.iterator();
 
         final AggregationInstance first = it.next();
-        final AggregationSession head = first.session(range, watcher);
+        final AggregationSession head = first.session(range, watcher, bucketStrategy);
 
         final List<AggregationSession> tail = new ArrayList<>();
 
         while (it.hasNext()) {
-            final AggregationSession s = it.next().session(range, watcher);
+            final AggregationSession s = it.next().session(range, watcher, bucketStrategy);
             tail.add(s);
         }
 

@@ -9,7 +9,6 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -83,7 +82,7 @@ public class BucketAggregationTest {
     @Test
     public void testSameSampling() {
         final BucketAggregationInstance<TestBucket> a = setup(10, 10);
-        final AggregationSession session = a.session(new DateRange(10, 30));
+        final AggregationSession session = setupSession(a, new DateRange(10, 30));
 
         session.updatePoints(group, series, build()
             .add(10, 1000.0)
@@ -104,7 +103,7 @@ public class BucketAggregationTest {
     @Test
     public void testLongerExtent() {
         final BucketAggregationInstance<TestBucket> a = setup(10, 20);
-        final AggregationSession session = a.session(new DateRange(10, 30));
+        final AggregationSession session = setupSession(a, new DateRange(10, 30));
 
         session.updatePoints(group, series, build()
             .add(0, 1000.0)
@@ -124,7 +123,7 @@ public class BucketAggregationTest {
     @Test
     public void testShorterExtent() {
         final BucketAggregationInstance<TestBucket> a = setup(10, 5);
-        final AggregationSession session = a.session(new DateRange(10, 30));
+        final AggregationSession session = setupSession(a, new DateRange(10, 30));
 
         session.updatePoints(group, series, build()
             .add(15, 1000.0)
@@ -143,22 +142,10 @@ public class BucketAggregationTest {
             result.getResult().get(0).getMetrics().getData());
     }
 
-    private void checkBucketAggregation(
-        List<Point> input, List<Point> expected, final long extent
-    ) {
-        final BucketAggregationInstance<TestBucket> a = setup(1000, extent);
-        final AggregationSession session = a.session(new DateRange(1000, 3000));
-        session.updatePoints(group, series, input);
-
-        final AggregationResult result = session.result();
-
-        assertEquals(expected, result.getResult().get(0).getMetrics().getData());
-    }
-
     @Test
     public void testUnevenSampling() {
         final BucketAggregationInstance<TestBucket> a = setup(10, 15);
-        final AggregationSession session = a.session(new DateRange(10, 40));
+        final AggregationSession session = setupSession(a, new DateRange(10, 40));
 
         session.updatePoints(group, series, build()
             .add(5, 1000.0)
@@ -176,37 +163,9 @@ public class BucketAggregationTest {
             result.getResult().get(0).getMetrics().getData());
     }
 
-    @Test
-    public void testMapTimestamps() {
-        final BucketAggregationInstance<TestBucket> a = setup(10, 10);
-        final BucketAggregationInstance.Session session =
-            (BucketAggregationInstance.Session) a.session(new DateRange(10, 30));
-
-        final Map<Long, BucketAggregationInstance.StartEnd> fromTo = new HashMap<>();
-
-        // underflow
-        for (long ts = 0L; ts <= 10L; ts++) {
-            fromTo.put(ts, new BucketAggregationInstance.StartEnd(0, 0));
-        }
-
-        // first bucket
-        for (long ts = 11L; ts <= 20L; ts++) {
-            fromTo.put(ts, new BucketAggregationInstance.StartEnd(0, 1));
-        }
-
-        // second bucket
-        for (long ts = 21L; ts <= 30L; ts++) {
-            fromTo.put(ts, new BucketAggregationInstance.StartEnd(1, 2));
-        }
-
-        // overflow
-        for (long ts = 31L; ts <= 40L; ts++) {
-            fromTo.put(ts, new BucketAggregationInstance.StartEnd(2, 2));
-        }
-
-        for (final Map.Entry<Long, BucketAggregationInstance.StartEnd> e : fromTo.entrySet()) {
-            assertEquals("Expected same mapping for timestamp " + e.getKey(), e.getValue(),
-                session.mapTimestamp(e.getKey()));
-        }
+    private AggregationSession setupSession(
+        final BucketAggregationInstance<TestBucket> a, final DateRange range
+    ) {
+        return a.session(range, RetainQuotaWatcher.NO_QUOTA, BucketStrategy.END);
     }
 }
