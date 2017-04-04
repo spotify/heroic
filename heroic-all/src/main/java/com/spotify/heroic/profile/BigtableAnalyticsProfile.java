@@ -27,6 +27,7 @@ import com.spotify.heroic.HeroicConfig;
 import com.spotify.heroic.ParameterSpecification;
 import com.spotify.heroic.analytics.bigtable.BigtableAnalyticsModule;
 import com.spotify.heroic.metric.bigtable.credentials.ComputeEngineCredentialsBuilder;
+import com.spotify.heroic.metric.bigtable.credentials.DefaultCredentialsBuilder;
 import com.spotify.heroic.metric.bigtable.credentials.JsonCredentialsBuilder;
 import com.spotify.heroic.metric.bigtable.credentials.ServiceAccountCredentialsBuilder;
 
@@ -37,7 +38,7 @@ import java.util.Optional;
 import static com.spotify.heroic.ParameterSpecification.parameter;
 
 public class BigtableAnalyticsProfile extends HeroicProfileBase {
-    public static final String DEFAULT_CREDENTIALS = "json";
+    public static final String DEFAULT_CREDENTIALS = "default";
 
     @Override
     public HeroicConfig.Builder build(final ExtraParameters params) throws Exception {
@@ -64,6 +65,9 @@ public class BigtableAnalyticsProfile extends HeroicProfileBase {
             case "compute-engine":
                 module.credentials(new ComputeEngineCredentialsBuilder());
                 break;
+            case "default":
+                module.credentials(new DefaultCredentialsBuilder());
+                break;
             default:
                 throw new IllegalArgumentException(
                     "bigtable-analytics.credentials: invalid value: " + credentials);
@@ -86,14 +90,13 @@ public class BigtableAnalyticsProfile extends HeroicProfileBase {
     public List<ParameterSpecification> options() {
         // @formatter:off
         return ImmutableList.of(
-            parameter("configure", "If set, will cause the cluster to be " +
-                    "automatically configured"),
+            parameter("configure", "If set, will cause the cluster to be automatically " +
+                    "configured"),
             parameter("project", "Bigtable project to use", "<project>"),
             parameter("instance", "Bigtable instance to use", "<instance>"),
-            parameter("credentials", "Credentials implementation to use, must " +
-                    "be one of: compute-engine (default), json, service-account", "<credentials>"),
-            parameter("json", "Json file to use when using json credentials",
-                    "<file>"),
+            parameter("credentials", "Credentials implementation to use, must be one of:" +
+                    " default, compute-engine, json, service-account", "<credentials>"),
+            parameter("json", "Json file to use when using json credentials", "<file>"),
             parameter("serviceAccount", "Service account to use when using " +
                     "service-account credentials", "<account>"),
             parameter("keyFile", "Key file to use when using service-account " +
