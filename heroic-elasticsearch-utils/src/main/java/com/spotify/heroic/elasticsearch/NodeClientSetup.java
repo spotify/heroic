@@ -23,11 +23,11 @@ package com.spotify.heroic.elasticsearch;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.base.Optional;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.util.List;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.node.Node;
-import org.elasticsearch.node.NodeBuilder;
 
 public class NodeClientSetup implements ClientSetup {
     public static final String DEFAULT_CLUSTER_NAME = "elasticsearch";
@@ -46,18 +46,23 @@ public class NodeClientSetup implements ClientSetup {
         final Settings settings = Settings
             .builder()
             .put("node.name", InetAddress.getLocalHost().getHostName())
-            .put("discovery.zen.ping.multicast.enabled", false)
             .putArray("discovery.zen.ping.unicast.hosts", seeds)
+            .put("cluster.name", clusterName)
+            .put("node.data", false)
             .build();
 
-        final Node node = NodeBuilder
-            .nodeBuilder()
-            .settings(settings)
-            .client(true)
-            .clusterName(clusterName)
-            .node();
+        final Node node = new Node(settings);
 
-        return new ClientWrapper(node.client(), node::close);
+        return new ClientWrapper(node.client(), new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    node.close();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
     }
 
     private String[] seedsToDiscovery(List<String> seeds) {

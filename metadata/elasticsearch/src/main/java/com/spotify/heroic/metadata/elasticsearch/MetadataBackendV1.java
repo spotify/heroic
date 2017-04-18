@@ -21,11 +21,9 @@
 
 package com.spotify.heroic.metadata.elasticsearch;
 
-import static org.elasticsearch.index.query.QueryBuilders.andQuery;
 import static org.elasticsearch.index.query.QueryBuilders.boolQuery;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 import static org.elasticsearch.index.query.QueryBuilders.nestedQuery;
-import static org.elasticsearch.index.query.QueryBuilders.notQuery;
 import static org.elasticsearch.index.query.QueryBuilders.prefixQuery;
 import static org.elasticsearch.index.query.QueryBuilders.regexpQuery;
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
@@ -90,17 +88,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.elasticsearch.action.count.CountRequestBuilder;
-import org.elasticsearch.action.index.IndexRequest.OpType;
+import org.apache.lucene.search.join.ScoreMode;
+import org.elasticsearch.action.DocWriteRequest;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
-import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.TermQueryBuilder;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
@@ -109,9 +105,9 @@ import org.elasticsearch.search.aggregations.Aggregations;
 import org.elasticsearch.search.aggregations.bucket.SingleBucketAggregation;
 import org.elasticsearch.search.aggregations.bucket.filter.FilterAggregationBuilder;
 import org.elasticsearch.search.aggregations.bucket.nested.Nested;
-import org.elasticsearch.search.aggregations.bucket.nested.NestedBuilder;
+import org.elasticsearch.search.aggregations.bucket.nested.NestedAggregationBuilder;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
-import org.elasticsearch.search.aggregations.bucket.terms.TermsBuilder;
+import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 
 @ElasticsearchScope
 @ToString(of = {"connection"})
@@ -223,7 +219,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
                     .index(index, ElasticsearchUtils.TYPE_METADATA)
                     .setId(id)
                     .setSource(source)
-                    .setOpType(OpType.CREATE);
+                    .setOpType(DocWriteRequest.OpType.CREATE);
 
                 final RequestTimer<WriteMetadata> timer = WriteMetadata.timer();
                 futures.add(bind(builder.execute()).directTransform(result -> timer.end()));
@@ -240,13 +236,13 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
 
             final QueryBuilder f = CTX.filter(request.getFilter());
 
-            final CountRequestBuilder builder = c.count(ElasticsearchUtils.TYPE_METADATA);
+            final SearchRequestBuilder builder = c.count(ElasticsearchUtils.TYPE_METADATA);
             limit.asInteger().ifPresent(builder::setTerminateAfter);
 
-            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+            builder.setQuery(new BoolQueryBuilder().must(f));
 
             return bind(builder.execute()).directTransform(
-                response -> CountSeries.of(response.getCount(), false));
+                response -> CountSeries.of(response.getHits().getTotalHits(), false));
         });
     }
 
@@ -274,16 +270,15 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
         return doto(c -> {
             final QueryBuilder f = CTX.filter(filter.getFilter());
 
-            final SearchRequestBuilder builder =
-                c.search(ElasticsearchUtils.TYPE_METADATA).setSearchType("count");
+            final SearchRequestBuilder builder = c.search(ElasticsearchUtils.TYPE_METADATA);
 
-            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+            builder.setQuery(new BoolQueryBuilder().must(f));
 
             {
-                final AggregationBuilder<?> terms =
-                    AggregationBuilders.terms("terms").field(CTX.tagsKey()).size(0);
-                final AggregationBuilder<?> nested =
-                    AggregationBuilders.nested("nested").path(CTX.tags()).subAggregation(terms);
+                final AggregationBuilder terms =
+                    AggregationBuilders.terms("terms").field(CTX.tagsKey());
+                final AggregationBuilder nested =
+                    AggregationBuilders.nested("nested", CTX.tags()).subAggregation(terms);
                 builder.addAggregation(nested);
             }
 
@@ -312,14 +307,13 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
         return doto(c -> {
             final QueryBuilder f = CTX.filter(request.getFilter());
 
-            final SearchRequestBuilder builder =
-                c.search(ElasticsearchUtils.TYPE_METADATA).setSearchType("count");
+            final SearchRequestBuilder builder = c.search(ElasticsearchUtils.TYPE_METADATA);
 
-            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+            builder.setQuery(new BoolQueryBuilder().must(f));
 
             {
-                final AggregationBuilder<?> terms =
-                    AggregationBuilders.terms("terms").field(CTX.seriesKey()).size(0);
+                final AggregationBuilder terms =
+                    AggregationBuilders.terms("terms").field(CTX.seriesKey());
                 builder.addAggregation(terms);
             }
 
@@ -365,13 +359,11 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
         return doto(c -> {
             final QueryBuilder f = CTX.filter(filter);
 
-            final SearchRequestBuilder builder = c
-                .search(ElasticsearchUtils.TYPE_METADATA)
-                .setScroll(SCROLL_TIME)
-                .setSearchType(SearchType.SCAN);
+            final SearchRequestBuilder builder =
+                c.search(ElasticsearchUtils.TYPE_METADATA).setScroll(SCROLL_TIME);
 
             builder.setSize(limit.asMaxInteger(SCROLL_SIZE));
-            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+            builder.setQuery(new BoolQueryBuilder().must(f));
 
             modifier.accept(builder);
 
@@ -505,34 +497,35 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
 
                     @Override
                     public QueryBuilder visitFalse(final FalseFilter f) {
-                        return notQuery(matchAllQuery());
+                        return new BoolQueryBuilder().mustNot(matchAllQuery());
                     }
 
                     @Override
                     public QueryBuilder visitAnd(final AndFilter and) {
-                        final List<QueryBuilder> filters = new ArrayList<>(and.terms().size());
+                        final BoolQueryBuilder boolBuilder = new BoolQueryBuilder();
 
                         for (final Filter stmt : and.terms()) {
-                            filters.add(filter(stmt));
+                            boolBuilder.must(filter(stmt));
                         }
 
-                        return andQuery(filters.toArray(new QueryBuilder[0]));
+                        return boolBuilder;
                     }
 
                     @Override
                     public QueryBuilder visitOr(final OrFilter or) {
-                        final List<QueryBuilder> filters = new ArrayList<>(or.terms().size());
+                        final BoolQueryBuilder boolBuilder = new BoolQueryBuilder();
 
                         for (final Filter stmt : or.terms()) {
-                            filters.add(filter(stmt));
+                            boolBuilder.should(filter(stmt));
                         }
 
-                        return andQuery(filters.toArray(new QueryBuilder[0]));
+                        boolBuilder.minimumShouldMatch(1);
+                        return boolBuilder;
                     }
 
                     @Override
                     public QueryBuilder visitNot(final NotFilter not) {
-                        return notQuery(filter(not.getFilter()));
+                        return new BoolQueryBuilder().mustNot(filter(not.getFilter()));
                     }
 
                     @Override
@@ -540,7 +533,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
                         final BoolQueryBuilder nested = boolQuery();
                         nested.must(termQuery(tagsKey, matchTag.getTag()));
                         nested.must(termQuery(tagsValue, matchTag.getValue()));
-                        return nestedQuery(tags, nested);
+                        return nestedQuery(tags, nested, ScoreMode.Avg);
                     }
 
                     @Override
@@ -548,7 +541,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
                         final BoolQueryBuilder nested = boolQuery();
                         nested.must(termQuery(tagsKey, startsWith.getTag()));
                         nested.must(prefixQuery(tagsValue, startsWith.getValue()));
-                        return nestedQuery(tags, nested);
+                        return nestedQuery(tags, nested, ScoreMode.Avg);
                     }
 
                     @Override
@@ -556,13 +549,13 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
                         final BoolQueryBuilder nested = boolQuery();
                         nested.must(termQuery(tagsKey, regex.getTag()));
                         nested.must(regexpQuery(tagsValue, regex.getValue()));
-                        return nestedQuery(tags, nested);
+                        return nestedQuery(tags, nested, ScoreMode.Avg);
                     }
 
                     @Override
                     public QueryBuilder visitHasTag(final HasTagFilter hasTag) {
                         final TermQueryBuilder nested = termQuery(tagsKey, hasTag.getTag());
-                        return nestedQuery(tags, nested);
+                        return nestedQuery(tags, nested, ScoreMode.Avg);
                     }
 
                     @Override
@@ -586,19 +579,16 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
     ) throws Exception {
         final SearchRequestBuilder request = setup.call().setSearchType("count").setSize(0);
 
-        request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), filter));
+        request.setQuery(new BoolQueryBuilder().must(filter));
 
         {
-            final TermsBuilder terms =
+            final TermsAggregationBuilder terms =
                 AggregationBuilders.terms("terms").field(ctx.tagsValue()).size(0);
             final FilterAggregationBuilder filterAggregation = AggregationBuilders
-                .filter("filter")
-                .filter(termQuery(ctx.tagsKey(), key))
+                .filter("filter", termQuery(ctx.tagsKey(), key))
                 .subAggregation(terms);
-            final NestedBuilder nestedAggregation = AggregationBuilders
-                .nested("nested")
-                .path(ctx.tags())
-                .subAggregation(filterAggregation);
+            final NestedAggregationBuilder nestedAggregation =
+                AggregationBuilders.nested("nested", ctx.tags()).subAggregation(filterAggregation);
             request.addAggregation(nestedAggregation);
         }
 
