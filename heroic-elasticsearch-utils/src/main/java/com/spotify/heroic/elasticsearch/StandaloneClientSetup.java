@@ -32,7 +32,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.node.Node;
-import org.elasticsearch.node.NodeBuilder;
 
 public class StandaloneClientSetup implements ClientSetup {
     public static final String DEFAULT_CLUSTER_NAME = "heroic-standalone";
@@ -87,11 +86,22 @@ public class StandaloneClientSetup implements ClientSetup {
             // .put("script.disable_dynamic", false)
             // .put("script.groovy.sandbox.enabled",
             // true)
-            .put("discovery.zen.ping.multicast.enabled", false)
+            .put("cluster.name", clusterName)
+            .put("transport.type", "local")
+            .put("http.enabled", false)
             .build();
-        final Node node =
-            NodeBuilder.nodeBuilder().settings(settings).clusterName(clusterName).node();
-        return new ClientWrapper(node.client(), node::close);
+        final Node node = new Node(settings).start();
+
+        return new ClientWrapper(node.client(), new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    node.close();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
     }
 
     public static Builder builder() {

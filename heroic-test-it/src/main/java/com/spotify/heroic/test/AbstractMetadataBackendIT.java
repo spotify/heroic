@@ -296,9 +296,7 @@ public abstract class AbstractMetadataBackendIT {
         final FindSeries.Request f =
             new FindSeries.Request(new MatchKeyFilter(s.getKey()), range, OptionalLimit.empty());
 
-        return metadata
-            .write(new WriteMetadata.Request(s, range))
-            .lazyTransform(v -> async
+        return metadata.write(new WriteMetadata.Request(s, range)).lazyTransform(ignore -> async
                 .retryUntilResolved(() -> metadata.findSeries(f).directTransform(result -> {
                     if (!result.getSeries().contains(s)) {
                         throw new RuntimeException("Expected to find the written series");

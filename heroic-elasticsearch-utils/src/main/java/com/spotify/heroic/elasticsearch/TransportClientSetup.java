@@ -30,6 +30,7 @@ import java.util.List;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.transport.client.PreBuiltTransportClient;
 
 public class TransportClientSetup implements ClientSetup {
     public static final String DEFAULT_CLUSTER_NAME = "elasticsearch";
@@ -51,13 +52,12 @@ public class TransportClientSetup implements ClientSetup {
     public ClientWrapper setup() throws Exception {
         final Settings settings = Settings.builder().put("cluster.name", clusterName).build();
 
-        final TransportClient client = TransportClient.builder().settings(settings).build();
+        final TransportClient client = new PreBuiltTransportClient(settings);
 
         for (final InetSocketTransportAddress seed : seeds) {
             client.addTransportAddress(seed);
         }
-        return new ClientWrapper(client, () -> {
-        });
+        return new ClientWrapper(client, client::close);
     }
 
     private static List<InetSocketTransportAddress> seeds(final List<String> rawSeeds) {
@@ -68,7 +68,6 @@ public class TransportClientSetup implements ClientSetup {
     }
 
     private static InetSocketTransportAddress parseInetSocketTransportAddress(final String seed) {
-        // TODO: handle exceptions in a cleaner way
         if (seed.contains(":")) {
             final String[] parts = seed.split(":");
             try {

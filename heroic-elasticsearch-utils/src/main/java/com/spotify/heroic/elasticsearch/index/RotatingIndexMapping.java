@@ -31,11 +31,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import lombok.ToString;
-import org.elasticsearch.action.count.CountRequestBuilder;
 import org.elasticsearch.action.delete.DeleteRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
 
 @ToString
 public class RotatingIndexMapping implements IndexMapping {
@@ -138,9 +138,13 @@ public class RotatingIndexMapping implements IndexMapping {
     }
 
     @Override
-    public CountRequestBuilder count(final Client client, final String type)
+    public SearchRequestBuilder count(final Client client, final String type)
         throws NoIndexSelectedException {
-        return client.prepareCount(readIndices()).setIndicesOptions(options()).setTypes(type);
+        return client
+            .prepareSearch(readIndices())
+            .setIndicesOptions(options())
+            .setTypes(type)
+            .setSource(new SearchSourceBuilder().size(0));
     }
 
     @Override

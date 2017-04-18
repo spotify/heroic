@@ -37,7 +37,6 @@ import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateRequestBuilder;
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateResponse;
-import org.elasticsearch.action.count.CountRequestBuilder;
 import org.elasticsearch.action.delete.DeleteRequestBuilder;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
@@ -99,7 +98,7 @@ public class Connection {
             }
 
             @Override
-            public void onFailure(Throwable e) {
+            public void onFailure(Exception e) {
                 future.fail(e);
             }
         });
@@ -120,7 +119,7 @@ public class Connection {
         return index.search(client.getClient(), type);
     }
 
-    public CountRequestBuilder count(String type) throws NoIndexSelectedException {
+    public SearchRequestBuilder count(String type) throws NoIndexSelectedException {
         return index.count(client.getClient(), type);
     }
 

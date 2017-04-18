@@ -27,10 +27,10 @@ import com.google.common.collect.ImmutableList;
 import java.util.List;
 import java.util.Optional;
 import lombok.ToString;
-import org.elasticsearch.action.count.CountRequestBuilder;
 import org.elasticsearch.action.delete.DeleteRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
 
 @ToString
 public class SingleIndexMapping implements IndexMapping {
@@ -70,8 +70,11 @@ public class SingleIndexMapping implements IndexMapping {
     }
 
     @Override
-    public CountRequestBuilder count(final Client client, final String type) {
-        return client.prepareCount(index).setTypes(type);
+    public SearchRequestBuilder count(final Client client, final String type) {
+        return client
+            .prepareSearch(index)
+            .setTypes(type)
+            .setSource(new SearchSourceBuilder().size(0));
     }
 
     @Override
