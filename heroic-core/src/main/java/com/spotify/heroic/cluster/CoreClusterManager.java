@@ -452,10 +452,6 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
                     ok.add(s);
                 }, error -> {
                     log.error("{} [failed] {}", id, error.getUri(), error.getError());
-                    ClusterNode toRemove = oldClients.get(error.getUri());
-                    if (toRemove != null) {
-                        removals.add(toRemove.close());
-                    }
                 });
             });
 
