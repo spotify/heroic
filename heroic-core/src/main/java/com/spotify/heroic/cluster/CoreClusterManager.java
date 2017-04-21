@@ -443,7 +443,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
 
             updates.forEach(update -> {
                 update.handle(s -> {
-                    if (!s.isAdded()) {
+                    if (s.isAdded()) {
                         log.info("{} [new] {}", id, s.getUri());
                     }
 
