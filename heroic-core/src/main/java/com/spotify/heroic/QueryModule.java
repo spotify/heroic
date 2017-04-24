@@ -22,7 +22,7 @@
 package com.spotify.heroic;
 
 import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.statistics.ApiReporter;
+import com.spotify.heroic.statistics.QueryReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
 import dagger.Module;
 import dagger.Provides;
@@ -51,7 +51,7 @@ public class QueryModule {
 
     @Provides
     @QueryScope
-    public ApiReporter apiReporter(HeroicReporter heroicReporter) {
-        return heroicReporter.newApiReporter();
+    public QueryReporter queryReporter(HeroicReporter heroicReporter) {
+        return heroicReporter.newQueryReporter();
     }
 }
