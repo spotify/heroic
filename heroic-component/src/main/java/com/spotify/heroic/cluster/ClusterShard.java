@@ -84,7 +84,13 @@ public class ClusterShard {
                      * The point is to get Node identifying information into the exception */
                     throw new RuntimeNodeException(next.toString(), throwable.getMessage(),
                         throwable);
-                }).onCancelled(() -> reporter.reportClusterNodeRpcCancellation());
+                }).catchCancelled(ignore -> {
+                    reporter.reportClusterNodeRpcCancellation();
+                    /* In case of the future being cancelled, we should note it as a node exception
+                     * and try with the next node in the shard.
+                     * It seems like we can get cancellations when there are network issues. */
+                    throw new RuntimeNodeException(next.toString(), "Operation cancelled");
+                });
             }, iteratorPolicy)
             .directTransform(retryResult -> handleRetryTraceFn.apply(retryResult.getResult(),
                 queryTracesFromRetries(retryResult.getErrors(), retryResult.getBackoffTimings())));
