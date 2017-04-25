@@ -21,13 +21,13 @@
 
 package com.spotify.heroic.statistics.noop;
 
-import com.spotify.heroic.statistics.ApiReporter;
+import com.spotify.heroic.statistics.QueryReporter;
 import com.spotify.heroic.statistics.FutureReporter;
 
-public class NoopApiReporter implements ApiReporter {
-    private static final NoopApiReporter INSTANCE = new NoopApiReporter();
+public class NoopQueryReporter implements QueryReporter {
+    private static final NoopQueryReporter INSTANCE = new NoopQueryReporter();
 
-    public static NoopApiReporter get() {
+    public static NoopQueryReporter get() {
         return INSTANCE;
     }
 
@@ -38,5 +38,13 @@ public class NoopApiReporter implements ApiReporter {
 
     @Override
     public void reportSmallQueryLatency(final long duration) {
+    }
+
+    @Override
+    public void reportClusterNodeRpcError() {
+    }
+
+    @Override
+    public void reportClusterNodeRpcCancellation() {
     }
 }

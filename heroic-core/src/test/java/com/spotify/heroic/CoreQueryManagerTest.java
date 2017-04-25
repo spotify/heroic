@@ -14,7 +14,7 @@ import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.querylogging.QueryLogger;
 import com.spotify.heroic.querylogging.QueryLoggerFactory;
-import com.spotify.heroic.statistics.ApiReporter;
+import com.spotify.heroic.statistics.QueryReporter;
 import com.spotify.heroic.time.Clock;
 import eu.toolchain.async.AsyncFramework;
 import org.junit.Before;
@@ -44,7 +44,7 @@ public class CoreQueryManagerTest {
 
     @Before
     public void setup() {
-        ApiReporter apiReporter = mock(ApiReporter.class);
+        QueryReporter queryReporter = mock(QueryReporter.class);
         long smallQueryThreshold = 0;
 
         QueryLogger queryLogger = mock(QueryLogger.class);
@@ -52,7 +52,7 @@ public class CoreQueryManagerTest {
         when(queryLoggerFactory.create(any())).thenReturn(queryLogger);
 
         manager = new CoreQueryManager(Features.empty(), async, Clock.system(), cluster, parser,
-            queryCache, aggregations, OptionalLimit.empty(), smallQueryThreshold, apiReporter,
+            queryCache, aggregations, OptionalLimit.empty(), smallQueryThreshold, queryReporter,
             queryLoggerFactory);
     }
 

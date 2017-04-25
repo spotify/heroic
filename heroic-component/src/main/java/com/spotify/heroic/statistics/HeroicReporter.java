@@ -37,7 +37,7 @@ public interface HeroicReporter {
 
     MetricBackendReporter newMetricBackend();
 
-    ApiReporter newApiReporter();
+    QueryReporter newQueryReporter();
 
     void registerShards(Set<Map<String, String>> knownShards);
 }

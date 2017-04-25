@@ -22,8 +22,9 @@
 package com.spotify.heroic.statistics.semantic;
 
 import com.codahale.metrics.Histogram;
-import com.spotify.heroic.statistics.ApiReporter;
+import com.codahale.metrics.Meter;
 import com.spotify.heroic.statistics.FutureReporter;
+import com.spotify.heroic.statistics.QueryReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 import lombok.ToString;
@@ -31,19 +32,24 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @ToString(of = {"base"})
-public class SemanticApiReporter implements ApiReporter {
-    private static final String COMPONENT = "api";
+public class SemanticQueryReporter implements QueryReporter {
+    private static final String COMPONENT = "query";
 
     private final FutureReporter query;
     private final Histogram smallQueryLatency;
+    private final Meter rpcError;
+    private final Meter rpcCancellation;
 
-    public SemanticApiReporter(final SemanticMetricRegistry registry) {
+    public SemanticQueryReporter(final SemanticMetricRegistry registry) {
         final MetricId base = MetricId.build().tagged("component", COMPONENT);
 
         query =
             new SemanticFutureReporter(registry, base.tagged("what", "query", "unit", Units.QUERY));
         smallQueryLatency = registry.histogram(
             base.tagged("what", "small-query-latency", "unit", Units.MILLISECOND));
+        rpcError = registry.meter(base.tagged("what", "cluster-rpc-error", "unit", Units.FAILURE));
+        rpcCancellation =
+            registry.meter(base.tagged("what", "cluster-rpc-cancellation", "unit", Units.CANCEL));
     }
 
     @Override
@@ -54,5 +60,15 @@ public class SemanticApiReporter implements ApiReporter {
     @Override
     public void reportSmallQueryLatency(final long duration) {
         smallQueryLatency.update(duration);
+    }
+
+    @Override
+    public void reportClusterNodeRpcError() {
+        rpcError.mark();
+    }
+
+    @Override
+    public void reportClusterNodeRpcCancellation() {
+        rpcCancellation.mark();
     }
 }

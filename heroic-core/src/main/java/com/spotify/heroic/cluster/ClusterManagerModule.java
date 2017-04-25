@@ -36,6 +36,8 @@ import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
 import com.spotify.heroic.metadata.MetadataComponent;
 import com.spotify.heroic.metric.MetricComponent;
+import com.spotify.heroic.statistics.HeroicReporter;
+import com.spotify.heroic.statistics.QueryReporter;
 import com.spotify.heroic.suggest.SuggestComponent;
 import dagger.Module;
 import dagger.Provides;
@@ -92,6 +94,12 @@ public class ClusterManagerModule {
     @Named("topology")
     public Set<Map<String, String>> topology() {
         return topology;
+    }
+
+    @Provides
+    @ClusterScope
+    public QueryReporter queryReporter(HeroicReporter heroicReporter) {
+        return heroicReporter.newQueryReporter();
     }
 
     @Provides

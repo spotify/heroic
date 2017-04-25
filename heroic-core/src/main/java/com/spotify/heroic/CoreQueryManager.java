@@ -67,7 +67,7 @@ import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.querylogging.QueryContext;
 import com.spotify.heroic.querylogging.QueryLogger;
 import com.spotify.heroic.querylogging.QueryLoggerFactory;
-import com.spotify.heroic.statistics.ApiReporter;
+import com.spotify.heroic.statistics.QueryReporter;
 import com.spotify.heroic.suggest.KeySuggest;
 import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
@@ -107,7 +107,7 @@ public class CoreQueryManager implements QueryManager {
     private final QueryCache queryCache;
     private final AggregationFactory aggregations;
     private final OptionalLimit groupLimit;
-    private final ApiReporter reporter;
+    private final QueryReporter reporter;
     private final QueryLogger queryLogger;
 
     private final long smallQueryThreshold;
@@ -117,7 +117,7 @@ public class CoreQueryManager implements QueryManager {
         @Named("features") final Features features, final AsyncFramework async, final Clock clock,
         final ClusterManager cluster, final QueryParser parser, final QueryCache queryCache,
         final AggregationFactory aggregations, @Named("groupLimit") final OptionalLimit groupLimit,
-        @Named("smallQueryThreshold") final long smallQueryThreshold, final ApiReporter reporter,
+        @Named("smallQueryThreshold") final long smallQueryThreshold, final QueryReporter reporter,
         final QueryLoggerFactory queryLoggerFactory
     ) {
         this.features = features;
