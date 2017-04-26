@@ -23,6 +23,7 @@ package com.spotify.heroic.cluster;
 
 import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.RuntimeNodeException;
+import com.spotify.heroic.statistics.QueryReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.RetryException;
@@ -47,6 +48,7 @@ public class ClusterShard {
 
     private final Map<String, String> shard;
     private final List<ClusterNode.Group> groups;
+    private final QueryReporter reporter;
 
     public <T> AsyncFuture<T> apply(
         Function<ClusterNode.Group, AsyncFuture<T>> function,
@@ -77,10 +79,17 @@ public class ClusterShard {
             .retryUntilResolved(() -> {
                 final ClusterNode.Group next = it.next();
                 return function.apply(next).catchFailed(throwable -> {
+                    reporter.reportClusterNodeRpcError();
                     /* Actually never return;s, instead throws a new exception with added info.
                      * The point is to get Node identifying information into the exception */
                     throw new RuntimeNodeException(next.toString(), throwable.getMessage(),
                         throwable);
+                }).catchCancelled(ignore -> {
+                    reporter.reportClusterNodeRpcCancellation();
+                    /* In case of the future being cancelled, we should note it as a node exception
+                     * and try with the next node in the shard.
+                     * It seems like we can get cancellations when there are network issues. */
+                    throw new RuntimeNodeException(next.toString(), "Operation cancelled");
                 });
             }, iteratorPolicy)
             .directTransform(retryResult -> handleRetryTraceFn.apply(retryResult.getResult(),

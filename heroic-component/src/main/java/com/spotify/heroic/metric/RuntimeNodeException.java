@@ -27,6 +27,10 @@ import lombok.Data;
 public class RuntimeNodeException extends RuntimeException {
     private final String uri;
 
+    public RuntimeNodeException(final String uri, final String message) {
+        this(uri, message, null);
+    }
+
     public RuntimeNodeException(final String uri, final String message, Throwable cause) {
         super(message, cause);
         this.uri = uri;

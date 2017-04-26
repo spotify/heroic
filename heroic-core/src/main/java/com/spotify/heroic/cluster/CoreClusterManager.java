@@ -31,6 +31,7 @@ import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.scheduler.Scheduler;
+import com.spotify.heroic.statistics.QueryReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.LazyTransform;
@@ -81,6 +82,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
     private final LocalClusterNode local;
     private final HeroicContext context;
     private final Set<Map<String, String>> expectedTopology;
+    private final QueryReporter reporter;
 
     final AtomicReference<Set<URI>> staticNodes = new AtomicReference<>(new HashSet<>());
     final AtomicReference<NodeRegistry> registry = new AtomicReference<>();
@@ -93,7 +95,8 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
         AsyncFramework async, ClusterDiscovery discovery, NodeMetadata localMetadata,
         Map<String, RpcProtocol> protocols, Scheduler scheduler,
         @Named("useLocal") Boolean useLocal, HeroicConfiguration options, LocalClusterNode local,
-        HeroicContext context, @Named("topology") Set<Map<String, String>> expectedTopology
+        HeroicContext context, @Named("topology") Set<Map<String, String>> expectedTopology,
+        final QueryReporter reporter
     ) {
         this.async = async;
         this.discovery = discovery;
@@ -105,6 +108,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
         this.local = local;
         this.context = context;
         this.expectedTopology = expectedTopology;
+        this.reporter = reporter;
     }
 
     @Override
@@ -224,7 +228,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
 
         for (final Pair<Map<String, String>, List<ClusterNode>> e : findFromAllShards()) {
             shards.add(new ClusterShard(async, e.getKey(), ImmutableList.copyOf(
-                e.getValue().stream().map(c -> c.useOptionalGroup(group)).iterator())));
+                e.getValue().stream().map(c -> c.useOptionalGroup(group)).iterator()), reporter));
         }
 
         return shards.build();

@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.statistics;
 
-public interface ApiReporter {
+public interface QueryReporter {
     /**
      * Report on a full query, on an API node level
      */
@@ -35,4 +35,7 @@ public interface ApiReporter {
      * @param duration Duration of query, in ms
      */
     void reportSmallQueryLatency(long duration);
+
+    void reportClusterNodeRpcError();
+    void reportClusterNodeRpcCancellation();
 }
