@@ -480,7 +480,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                 return prefixFilter(TAGS,
                     startsWith.getTag() + TAG_DELIMITER + startsWith.getValue());
             }
-            
+
             @Override
             public FilterBuilder visitRegex(final RegexFilter regex) {
                 return regexpFilter(TAGS,
