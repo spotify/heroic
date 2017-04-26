@@ -46,6 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -341,7 +342,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
 
             return async.resolved(new SuccessfulUpdate(uri, true,
                 new TracingClusterNode(node, new QueryTrace.Identifier(uri.toString()))));
-        }).catchFailed(Update.error(uri));
+        }).catchFailed(Update.error(uri)).catchCancelled(Update.cancellation(uri));
     }
 
     /**
@@ -409,7 +410,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
                     }
 
                     return async.resolved(new SuccessfulUpdate(uri, false, node));
-                }).catchFailed(Update.error(uri)));
+                }).catchFailed(Update.error(uri)).catchCancelled(Update.cancellation(uri)));
             }
 
             /* all the nodes that have not been seen in the updates list of uris have been removed
@@ -526,6 +527,10 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
     interface Update {
         static Transform<Throwable, Update> error(final URI uri) {
             return e -> new FailedUpdate(uri, e);
+        }
+
+        static Transform<Void, Update> cancellation(final URI uri) {
+            return ignore -> new FailedUpdate(uri, new CancellationException());
         }
 
         /**
