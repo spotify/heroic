@@ -21,6 +21,13 @@
 
 package com.spotify.heroic.metadata.elasticsearch;
 
+import static org.elasticsearch.index.query.QueryBuilders.andQuery;
+import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
+import static org.elasticsearch.index.query.QueryBuilders.notQuery;
+import static org.elasticsearch.index.query.QueryBuilders.orQuery;
+import static org.elasticsearch.index.query.QueryBuilders.prefixQuery;
+import static org.elasticsearch.index.query.QueryBuilders.termQuery;
+
 import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.HashCode;
 import com.spotify.heroic.async.AsyncObservable;
@@ -66,6 +73,22 @@ import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
 import eu.toolchain.async.StreamCollector;
 import eu.toolchain.async.Transform;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import javax.inject.Inject;
+import javax.inject.Named;
 import lombok.ToString;
 import org.apache.commons.lang3.tuple.Pair;
 import org.elasticsearch.action.ActionRequestBuilder;
@@ -85,30 +108,6 @@ import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
-
-import javax.inject.Inject;
-import javax.inject.Named;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-
-import static org.elasticsearch.index.query.QueryBuilders.andQuery;
-import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
-import static org.elasticsearch.index.query.QueryBuilders.notQuery;
-import static org.elasticsearch.index.query.QueryBuilders.orQuery;
-import static org.elasticsearch.index.query.QueryBuilders.prefixQuery;
-import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 
 @ElasticsearchScope
 @ToString(of = {"connection"})
@@ -291,8 +290,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
             for (final String id : ids.getIds()) {
                 deletes.add(() -> {
-                    final List<DeleteRequestBuilder> requests =
-                        c.delete(TYPE_METADATA, id);
+                    final List<DeleteRequestBuilder> requests = c.delete(TYPE_METADATA, id);
 
                     return async.collectAndDiscard(requests
                         .stream()
@@ -311,8 +309,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         return doto(c -> {
             final QueryBuilder f = filter(request.getFilter());
 
-            final SearchRequestBuilder builder =
-                c.search(TYPE_METADATA).setSearchType("count");
+            final SearchRequestBuilder builder = c.search(TYPE_METADATA).setSearchType("count");
 
             builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
@@ -363,10 +360,8 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         final QueryBuilder f = filter(filter);
 
         return doto(c -> {
-            final SearchRequestBuilder builder = c
-                .search(TYPE_METADATA)
-                .setScroll(SCROLL_TIME)
-                .setSearchType(SearchType.SCAN);
+            final SearchRequestBuilder builder =
+                c.search(TYPE_METADATA).setScroll(SCROLL_TIME).setSearchType(SearchType.SCAN);
 
             builder.setSize(limit.asMaxInteger(SCROLL_SIZE));
             builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
@@ -422,10 +417,8 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         final QueryBuilder filter = filter(f);
 
         return observer -> connection.doto(c -> {
-            final SearchRequestBuilder builder = c
-                .search(TYPE_METADATA)
-                .setScroll(SCROLL_TIME)
-                .setSearchType(SearchType.SCAN);
+            final SearchRequestBuilder builder =
+                c.search(TYPE_METADATA).setScroll(SCROLL_TIME).setSearchType(SearchType.SCAN);
 
             builder.setSize(limit.asMaxInteger(SCROLL_SIZE));
             builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), filter));

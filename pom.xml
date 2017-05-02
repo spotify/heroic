@@ -818,29 +818,29 @@
                 <transformers>
                   <!-- required for lucene -->
                   <transformer
-                      implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                    implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                     <resource>META-INF/services/org.apache.lucene.codecs.Codec</resource>
                   </transformer>
                   <transformer
-                      implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                    implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                     <resource>META-INF/services/org.apache.lucene.codecs.DocValuesFormat</resource>
                   </transformer>
                   <transformer
-                      implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                    implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                     <resource>META-INF/services/org.apache.lucene.codecs.PostingsFormat</resource>
                   </transformer>
                   <transformer
-                      implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                    implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                     <resource>META-INF/services/org.apache.lucene.analysis.util.CharFilterFactory
                     </resource>
                   </transformer>
                   <transformer
-                      implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                    implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                     <resource>META-INF/services/org.apache.lucene.analysis.util.TokenFilterFactory
                     </resource>
                   </transformer>
                   <transformer
-                      implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                    implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                     <resource>META-INF/services/org.apache.lucene.analysis.util.TokenizerFactory
                     </resource>
                   </transformer>

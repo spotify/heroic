@@ -25,12 +25,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import java.net.UnknownHostException;
+import java.util.List;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
-
-import java.net.UnknownHostException;
-import java.util.List;
 
 public class TransportClientSetup implements ClientSetup {
     public static final String DEFAULT_CLUSTER_NAME = "elasticsearch";
@@ -50,15 +49,15 @@ public class TransportClientSetup implements ClientSetup {
 
     @Override
     public ClientWrapper setup() throws Exception {
-        final Settings settings =
-            Settings.builder().put("cluster.name", clusterName).build();
+        final Settings settings = Settings.builder().put("cluster.name", clusterName).build();
 
         final TransportClient client = TransportClient.builder().settings(settings).build();
 
         for (final InetSocketTransportAddress seed : seeds) {
             client.addTransportAddress(seed);
         }
-        return new ClientWrapper(client, () -> { });
+        return new ClientWrapper(client, () -> {
+        });
     }
 
     private static List<InetSocketTransportAddress> seeds(final List<String> rawSeeds) {
@@ -73,8 +72,7 @@ public class TransportClientSetup implements ClientSetup {
         if (seed.contains(":")) {
             final String[] parts = seed.split(":");
             try {
-                return new InetSocketTransportAddress(
-                    java.net.InetAddress.getByName(parts[0]),
+                return new InetSocketTransportAddress(java.net.InetAddress.getByName(parts[0]),
                     Integer.parseInt(parts[1]));
             } catch (UnknownHostException e) {
                 throw new RuntimeException(e);
@@ -82,8 +80,7 @@ public class TransportClientSetup implements ClientSetup {
         }
 
         try {
-            return new InetSocketTransportAddress(
-                java.net.InetAddress.getByName(seed),
+            return new InetSocketTransportAddress(java.net.InetAddress.getByName(seed),
                 DEFAULT_PORT);
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);

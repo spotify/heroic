@@ -21,12 +21,15 @@
 
 package com.spotify.heroic.elasticsearch;
 
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.elasticsearch.index.IndexMapping;
 import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -40,11 +43,6 @@ import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchScrollRequestBuilder;
 import org.elasticsearch.client.IndicesAdminClient;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Callable;
 
 /**
  * Common connection abstraction between Node and TransportClient.
@@ -118,8 +116,7 @@ public class Connection {
         return index.writeIndices();
     }
 
-    public SearchRequestBuilder search(String type)
-        throws NoIndexSelectedException {
+    public SearchRequestBuilder search(String type) throws NoIndexSelectedException {
         return index.search(client.getClient(), type);
     }
 
