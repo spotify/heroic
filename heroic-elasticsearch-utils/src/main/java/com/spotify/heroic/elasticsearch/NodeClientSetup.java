@@ -23,12 +23,11 @@ package com.spotify.heroic.elasticsearch;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.base.Optional;
+import java.net.InetAddress;
+import java.util.List;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeBuilder;
-
-import java.net.InetAddress;
-import java.util.List;
 
 public class NodeClientSetup implements ClientSetup {
     public static final String DEFAULT_CLUSTER_NAME = "elasticsearch";

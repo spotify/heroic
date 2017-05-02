@@ -24,16 +24,15 @@ package com.spotify.heroic.elasticsearch;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
-import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.node.Node;
-import org.elasticsearch.node.NodeBuilder;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.node.Node;
+import org.elasticsearch.node.NodeBuilder;
 
 public class StandaloneClientSetup implements ClientSetup {
     public static final String DEFAULT_CLUSTER_NAME = "heroic-standalone";
@@ -90,11 +89,8 @@ public class StandaloneClientSetup implements ClientSetup {
             // true)
             .put("discovery.zen.ping.multicast.enabled", false)
             .build();
-        final Node node = NodeBuilder
-            .nodeBuilder()
-            .settings(settings)
-            .clusterName(clusterName)
-            .node();
+        final Node node =
+            NodeBuilder.nodeBuilder().settings(settings).clusterName(clusterName).node();
         return new ClientWrapper(node.client(), node::close);
     }
 

@@ -36,6 +36,13 @@ import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.Managed;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.elasticsearch.action.search.SearchRequestBuilder;
@@ -45,14 +52,6 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
-
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
-import java.util.function.Supplier;
 
 public abstract class AbstractElasticsearchMetadataBackend extends AbstractElasticsearchBackend
     implements MetadataBackend {
@@ -85,9 +84,9 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
             final Supplier<AsyncFuture<SearchResponse>> scroller =
                 () -> bind(c.prepareSearchScroll(scrollId).setScroll(SCROLL_TIME).execute());
 
-            return scroller.get().lazyTransform(
-                new ScrollTransform<>(async, limit, scroller, converter)
-            );
+            return scroller
+                .get()
+                .lazyTransform(new ScrollTransform<>(async, limit, scroller, converter));
         });
     }
 

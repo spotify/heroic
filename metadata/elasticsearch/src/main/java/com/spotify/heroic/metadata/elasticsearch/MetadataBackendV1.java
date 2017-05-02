@@ -21,6 +21,15 @@
 
 package com.spotify.heroic.metadata.elasticsearch;
 
+import static org.elasticsearch.index.query.QueryBuilders.andQuery;
+import static org.elasticsearch.index.query.QueryBuilders.boolQuery;
+import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
+import static org.elasticsearch.index.query.QueryBuilders.nestedQuery;
+import static org.elasticsearch.index.query.QueryBuilders.notQuery;
+import static org.elasticsearch.index.query.QueryBuilders.prefixQuery;
+import static org.elasticsearch.index.query.QueryBuilders.regexpQuery;
+import static org.elasticsearch.index.query.QueryBuilders.termQuery;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.HashCode;
@@ -62,6 +71,20 @@ import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
 import eu.toolchain.async.Transform;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.concurrent.Callable;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import javax.inject.Inject;
+import javax.inject.Named;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
@@ -89,30 +112,6 @@ import org.elasticsearch.search.aggregations.bucket.nested.Nested;
 import org.elasticsearch.search.aggregations.bucket.nested.NestedBuilder;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsBuilder;
-
-import javax.inject.Inject;
-import javax.inject.Named;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
-import java.util.concurrent.Callable;
-import java.util.function.Consumer;
-import java.util.function.Function;
-
-import static org.elasticsearch.index.query.QueryBuilders.andQuery;
-import static org.elasticsearch.index.query.QueryBuilders.boolQuery;
-import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
-import static org.elasticsearch.index.query.QueryBuilders.nestedQuery;
-import static org.elasticsearch.index.query.QueryBuilders.notQuery;
-import static org.elasticsearch.index.query.QueryBuilders.prefixQuery;
-import static org.elasticsearch.index.query.QueryBuilders.regexpQuery;
-import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 
 @ElasticsearchScope
 @ToString(of = {"connection"})
@@ -241,8 +240,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
 
             final QueryBuilder f = CTX.filter(request.getFilter());
 
-            final CountRequestBuilder builder =
-                c.count(ElasticsearchUtils.TYPE_METADATA);
+            final CountRequestBuilder builder = c.count(ElasticsearchUtils.TYPE_METADATA);
             limit.asInteger().ifPresent(builder::setTerminateAfter);
 
             builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
@@ -276,9 +274,8 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
         return doto(c -> {
             final QueryBuilder f = CTX.filter(filter.getFilter());
 
-            final SearchRequestBuilder builder = c
-                .search(ElasticsearchUtils.TYPE_METADATA)
-                .setSearchType("count");
+            final SearchRequestBuilder builder =
+                c.search(ElasticsearchUtils.TYPE_METADATA).setSearchType("count");
 
             builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
@@ -315,9 +312,8 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
         return doto(c -> {
             final QueryBuilder f = CTX.filter(request.getFilter());
 
-            final SearchRequestBuilder builder = c
-                .search(ElasticsearchUtils.TYPE_METADATA)
-                .setSearchType("count");
+            final SearchRequestBuilder builder =
+                c.search(ElasticsearchUtils.TYPE_METADATA).setSearchType("count");
 
             builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
@@ -649,8 +645,6 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
 
         /**
          * Finds a single set of tags, excluding any criteria for this specific set of tags.
-         *
-         * @throws Exception
          */
         private AsyncFuture<FindTags> findSingle(final String tag) throws Exception {
             final Filter filter = modifier.removeTag(this.filter, tag);

@@ -23,14 +23,13 @@ package com.spotify.heroic.suggest.elasticsearch;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.CharStreams;
-import org.apache.commons.lang3.text.StrSubstitutor;
-import org.elasticsearch.common.xcontent.json.JsonXContent;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Map;
 import java.util.function.Function;
+import org.apache.commons.lang3.text.StrSubstitutor;
+import org.elasticsearch.common.xcontent.json.JsonXContent;
 
 public class ElasticsearchSuggestUtils {
     public static Map<String, Object> loadJsonResource(
