@@ -140,9 +140,10 @@ public class GrpcRpcProtocol implements RpcProtocol {
         });
 
         /* close managed channel on errors */
-        return setup.lazyCatchFailed(e -> channel
-            .stop()
-            .lazyTransform(v -> async.<ClusterNode>failed(e)));
+        return setup
+            .lazyCatchFailed(e -> channel.stop().lazyTransform(v -> async.<ClusterNode>failed(e)))
+            .lazyCatchCancelled(
+                ignore -> channel.stop().lazyTransform(v -> async.<ClusterNode>cancelled()));
     }
 
     @Override
