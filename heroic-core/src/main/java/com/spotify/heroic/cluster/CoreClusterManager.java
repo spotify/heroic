@@ -51,6 +51,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -324,7 +325,8 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
 
         if (protocol == null) {
             return async.resolved(new FailedUpdate(uri,
-                new IllegalArgumentException("Unsupported protocol (" + uri.getScheme() + ")")));
+                new IllegalArgumentException("Unsupported protocol (" + uri.getScheme() + ")"),
+                Optional.empty()));
         }
 
         return protocol.connect(uri).<Update>lazyTransform(node -> {
@@ -433,17 +435,17 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
      * Operation the logs all intended operations and prepares for the final step.
      *
      * @param id id of the refresh operation
-     * @param removed clients which should be removed
+     * @param removedNodes clients which should be removed
      * @param oldClients map of clients that should be replaced by a new map of clients
      * @return a lazy transform
      */
     LazyTransform<Collection<Update>, Void> refreshLogAndPrepare(
-        final String id, final List<RemovedNode> removed, final Map<URI, ClusterNode> oldClients
+        final String id, final List<RemovedNode> removedNodes, final Map<URI, ClusterNode> oldClients
     ) {
         return updates -> {
-            final Set<ClusterNode> entries = new HashSet<>();
-            final List<SuccessfulUpdate> ok = new ArrayList<>();
-            final List<AsyncFuture<Void>> removals = new ArrayList<>();
+            final Set<ClusterNode> okNodes = new HashSet<>();
+            final List<SuccessfulUpdate> okUpdates = new ArrayList<>();
+            final List<ClusterNode> failedNodes = new ArrayList<>();
             final Map<URI, ClusterNode> newClients = new HashMap<>();
 
             updates.forEach(update -> {
@@ -453,35 +455,27 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
                     }
 
                     newClients.put(s.getUri(), s.getNode());
-                    entries.add(s.getNode());
-                    ok.add(s);
+                    okNodes.add(s.getNode());
+                    okUpdates.add(s);
                 }, error -> {
                     log.error("{} [failed] {}", id, error.getUri(), error.getError());
-                    ClusterNode toRemove = oldClients.get(error.getUri());
-                    if (toRemove != null) {
-                        removals.add(toRemove.close());
-                    }
+                    error.getExistingNode().ifPresent(existingNode -> {
+                        failedNodes.add(existingNode);
+                    });
                 });
             });
 
-            removed.forEach(remove -> {
-                log.error("{} [remove] {}", id, remove.getUri());
-                removals.add(remove.getNode().close());
-            });
-
-            if (entries.isEmpty() && useLocal) {
+            if (okNodes.isEmpty() && useLocal) {
                 log.info("{} [refresh] no nodes discovered, including local node", id);
-                entries.add(new TracingClusterNode(local, LOCAL_IDENTIFIER));
+                okNodes.add(new TracingClusterNode(local, LOCAL_IDENTIFIER));
             }
 
-            final Set<Map<String, String>> knownShards = extractKnownShards(entries);
+            final Set<Map<String, String>> knownShards = extractKnownShards(okNodes);
 
-            log.info("{} [update] {} {} result(s)", id, knownShards, entries.size());
+            log.info("{} [update] {} {} result(s)", id, knownShards, okNodes.size());
 
             /* shutdown removed node */
-            return async
-                .collectAndDiscard(removals)
-                .lazyTransform(refreshFinalize(id, oldClients, newClients, entries, ok));
+            return refreshFinalize(id, oldClients, newClients, okNodes, okUpdates, removedNodes, failedNodes);
         };
     }
 
@@ -492,33 +486,51 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
      * @param id id of the operation
      * @param oldClients map of clients that should be updated from
      * @param newClients map of clients that should be updated to
-     * @param entries entries to add to registry
-     * @param ok list of successful updates
+     * @param okNodes entries to add to registry
+     * @param okUpdates list of successful updates
+     * @param removedNodes list of nodes that should not be a part of cluster anymore
+     * @param failedNodes list of nodes that failed and should be excluded until they are ok again
      * @return a lazy transform
      */
-    LazyTransform<Void, Void> refreshFinalize(
+    AsyncFuture<Void> refreshFinalize(
         final String id, final Map<URI, ClusterNode> oldClients,
-        final Map<URI, ClusterNode> newClients, final Set<ClusterNode> entries,
-        final List<SuccessfulUpdate> ok
+        final Map<URI, ClusterNode> newClients, final Set<ClusterNode> okNodes,
+        final List<SuccessfulUpdate> okUpdates, final List<RemovedNode> removedNodes,
+        final List<ClusterNode> failedNodes
     ) {
-        return v -> {
-            if (this.clients.compareAndSet(oldClients, newClients)) {
-                registry.getAndSet(
-                    new NodeRegistry(async, new ArrayList<>(entries), entries.size()));
-                return async.resolved();
-            }
+        if (this.clients.compareAndSet(oldClients, newClients)) {
+            registry.getAndSet(
+                new NodeRegistry(async, new ArrayList<>(okNodes), okNodes.size()));
 
-            log.warn("{} another refresh in progress, trying again", id);
+            // Close removed nodes
+            final List<AsyncFuture<Void>> removals = new ArrayList<>();
+            removedNodes.forEach(removedNode -> {
+                log.error("{} [remove] {}", id, removedNode.getUri());
+                removals.add(removedNode.getNode().close());
+            });
 
-            /* shutdown ok updates which are not part of the old collection */
-            final List<AsyncFuture<Void>> shutdown = ok
-                .stream()
-                .filter(SuccessfulUpdate::isAdded)
-                .map(s -> s.getNode().close())
-                .collect(Collectors.toList());
+            // Close failed nodes
+            failedNodes.forEach(failedNode -> {
+                removals.add(failedNode.close());
+            });
 
-            return async.collectAndDiscard(shutdown).lazyTransform(v0 -> refreshDiscovery(id));
-        };
+            return async.collectAndDiscard(removals);
+        }
+
+        log.warn("{} another refresh in progress, trying again", id);
+
+        /* Another refresh was already in progress (our refresh perhaps took unexpectedly long).
+         * We now need to clean up after the current refresh and retry again.
+         * Any *new* nodes that we tried to add in this update should be closed, since they were
+         * not part of the previous registry. */
+        final List<AsyncFuture<Void>> removals = new ArrayList<>();
+        removals.addAll(okUpdates
+            .stream()
+            .filter(SuccessfulUpdate::isAdded)
+            .map(s -> s.getNode().close())
+            .collect(Collectors.toList()));
+
+        return async.collectAndDiscard(removals).lazyTransform(v0 -> refreshDiscovery(id));
     }
 
     /**
@@ -526,11 +538,15 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
      */
     interface Update {
         static Transform<Throwable, Update> error(final URI uri) {
-            return e -> new FailedUpdate(uri, e);
+            return e -> new FailedUpdate(uri, e, Optional.empty());
+        }
+
+        static Transform<Throwable, Update> error(final URI uri, final ClusterNode existingNode) {
+            return e -> new FailedUpdate(uri, e, Optional.of(existingNode));
         }
 
         static Transform<Void, Update> cancellation(final URI uri) {
-            return ignore -> new FailedUpdate(uri, new CancellationException());
+            return ignore -> new FailedUpdate(uri, new CancellationException(), Optional.empty());
         }
 
         /**
@@ -584,6 +600,10 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
          * The error that caused the failure.
          */
         private final Throwable error;
+        /**
+         * The existing node, to be closed
+         */
+        private final Optional<ClusterNode> existingNode;
 
         @Override
         public void handle(
