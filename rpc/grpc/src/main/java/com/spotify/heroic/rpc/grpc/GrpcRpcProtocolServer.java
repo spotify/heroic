@@ -60,6 +60,8 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class GrpcRpcProtocolServer implements LifeCycles {
+    public static final GrpcRpcEmptyBody EMPTY = new GrpcRpcEmptyBody();
+
     private final AsyncFramework async;
     private final MetricManager metrics;
     private final MetadataManager metadata;
@@ -105,6 +107,8 @@ public class GrpcRpcProtocolServer implements LifeCycles {
         container.register(GrpcRpcProtocol.METADATA, empty -> {
             return async.resolved(metadataProvider.getMetadata());
         });
+
+        container.register(GrpcRpcProtocol.PING, empty -> async.resolved(EMPTY));
 
         container.register(GrpcRpcProtocol.METRICS_FULL_QUERY,
             g -> g.apply(metrics, MetricBackendGroup::query));

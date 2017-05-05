@@ -205,6 +205,13 @@ public class GrpcRpcProtocol implements RpcProtocol {
             }
 
             @Override
+            public AsyncFuture<Void> ping() {
+                return client
+                    .request(PING, CallOptions.DEFAULT.withDeadlineAfter(5, TimeUnit.SECONDS))
+                    .directTransform(v -> null);
+            }
+
+            @Override
             public AsyncFuture<FullQuery> query(final FullQuery.Request request) {
                 return request(METRICS_FULL_QUERY, request);
             }
@@ -334,6 +341,12 @@ public class GrpcRpcProtocol implements RpcProtocol {
     public static final GrpcDescriptor<GrpcRpcEmptyBody, NodeMetadata> METADATA =
         descriptor("metadata", new TypeReference<GrpcRpcEmptyBody>() {
         }, new TypeReference<NodeMetadata>() {
+        });
+
+    public static final GrpcDescriptor<GrpcRpcEmptyBody, GrpcRpcEmptyBody>
+        PING =
+        descriptor("ping", new TypeReference<GrpcRpcEmptyBody>() {
+        }, new TypeReference<GrpcRpcEmptyBody>() {
         });
 
     public static final GrpcDescriptor<GroupedQuery<FullQuery.Request>, FullQuery>
