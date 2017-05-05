@@ -35,7 +35,7 @@ public interface RpcProtocolModule {
     String scheme();
 
     interface Provided {
-        NodeMetadata metadata();
+        NodeMetadataProvider metadataProvider();
 
         @Named("local")
         ClusterNode localClusterNode();
