@@ -78,6 +78,11 @@ public class TracingClusterNode implements ClusterNode {
         }
 
         @Override
+        public AsyncFuture<Void> ping() {
+            return delegateGroup.ping();
+        }
+
+        @Override
         public AsyncFuture<FullQuery> query(FullQuery.Request request) {
             return delegateGroup.query(request).directTransform(FullQuery.trace(queryIdentifier));
         }
