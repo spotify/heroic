@@ -27,7 +27,6 @@ import com.spotify.heroic.metadata.MetadataComponent;
 import com.spotify.heroic.metric.MetricComponent;
 import com.spotify.heroic.suggest.SuggestComponent;
 import dagger.Component;
-
 import javax.inject.Named;
 
 @ClusterScope
@@ -40,7 +39,7 @@ public interface CoreClusterComponent extends ClusterComponent {
     CoreClusterManager clusterManager();
 
     @Override
-    NodeMetadata nodeMetadata();
+    NodeMetadataProvider metadataProvider();
 
     @Named("cluster")
     @Override
