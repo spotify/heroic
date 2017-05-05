@@ -6,6 +6,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.cluster.ClusterManagerModule;
+import com.spotify.heroic.cluster.NodeMetadataFactory;
 import com.spotify.heroic.cluster.RpcProtocolModule;
 import com.spotify.heroic.cluster.discovery.simple.StaticListDiscoveryModule;
 import com.spotify.heroic.dagger.CoreComponent;
@@ -78,6 +79,17 @@ public abstract class AbstractLocalClusterIT {
     }
 
     /**
+     * Overload the default metadata behavior.
+     *
+     * If empty, default factories will be used.
+     *
+     * @return a list of metadata factories, that will be round-robined over.
+     */
+    protected List<NodeMetadataFactory> metadataFactories() {
+        return ImmutableList.of();
+    }
+
+    /**
      * Prepare the environment before the test.
      * <p>
      * {@link #instances} have been configured before this is called and can be safely used.
@@ -105,11 +117,18 @@ public abstract class AbstractLocalClusterIT {
         final JvmRpcContext context = new JvmRpcContext();
 
         final List<URI> uris = instanceUris();
+
         final List<Integer> expectedNumberOfNodes =
             uris.stream().map(u -> uris.size()).collect(Collectors.toList());
 
-        instances =
-            uris.stream().map(uri -> setupCore(uri, uris, context)).collect(Collectors.toList());
+        int instanceIndex = 0;
+        final List<HeroicCoreInstance> instances = new ArrayList<>();
+
+        for (final URI uri : uris) {
+            instances.add(setupCore(uri, uris, context, instanceIndex++));
+        }
+
+        this.instances = instances;
 
         final AsyncFuture<Void> startup = async.collectAndDiscard(
             instances.stream().map(HeroicCoreInstance::start).collect(Collectors.toList()));
@@ -173,17 +192,17 @@ public abstract class AbstractLocalClusterIT {
     }
 
     private HeroicCoreInstance setupCore(
-        final URI uri, final List<URI> uris, final JvmRpcContext context
+        final URI uri, final List<URI> uris, final JvmRpcContext context, final int index
     ) {
         try {
-            return setupCoreThrowing(uri, uris, context);
+            return setupCoreThrowing(uri, uris, context, index);
         } catch (Exception e) {
             throw Throwables.propagate(e);
         }
     }
 
     private HeroicCoreInstance setupCoreThrowing(
-        final URI uri, final List<URI> uris, final JvmRpcContext context
+        final URI uri, final List<URI> uris, final JvmRpcContext context, final int index
     ) throws Exception {
         final RpcProtocolModule protocol;
         final StaticListDiscoveryModule discovery;
@@ -210,15 +229,30 @@ public abstract class AbstractLocalClusterIT {
             .executor(executor)
             .configFragment(HeroicConfig
                 .builder()
-                .cluster(ClusterManagerModule
-                    .builder()
-                    .tags(ImmutableMap.of("shard", uri.getHost()))
-                    .protocols(ImmutableList.of(protocol))
-                    .discovery(discovery)))
+                .cluster(buildClusterConfig(uri, protocol, discovery, index)))
             .configFragment(HeroicConfig.builder().queryLogging(mockQueryLoggingModule))
             .profile(new MemoryProfile())
             .modules(HeroicModules.ALL_MODULES)
             .build()
             .newInstance();
+    }
+
+    private ClusterManagerModule.Builder buildClusterConfig(
+        final URI uri, final RpcProtocolModule protocol, final StaticListDiscoveryModule discovery,
+        int index
+    ) {
+        final ClusterManagerModule.Builder cluster = ClusterManagerModule
+            .builder()
+            .tags(ImmutableMap.of("shard", uri.getHost()))
+            .protocols(ImmutableList.of(protocol))
+            .discovery(discovery);
+
+        final List<NodeMetadataFactory> factories = metadataFactories();
+
+        if (!factories.isEmpty()) {
+            cluster.metadataFactory(factories.get(index % factories.size()));
+        }
+
+        return cluster;
     }
 }
