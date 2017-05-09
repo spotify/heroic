@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.spotify.heroic.HeroicConfiguration;
 import com.spotify.heroic.HeroicContext;
-import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.metric.QueryTrace;
@@ -52,13 +51,13 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Named;
 import lombok.Data;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.tuple.Pair;
 
 /**
  * Handles management of cluster state.
@@ -91,6 +90,8 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
     final AtomicReference<Map<URI, ClusterNode>> clients =
         new AtomicReference<>(Collections.emptyMap());
     final AtomicLong refreshId = new AtomicLong();
+
+    final Object updateRegistryLock = new Object();
 
     @Inject
     public CoreClusterManager(
@@ -164,6 +165,9 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
         return refresh();
     }
 
+    /**
+     * Eventually consistent view of the currently known nodes in the cluster
+     */
     @Override
     public List<ClusterNode> getNodes() {
         final NodeRegistry registry = this.registry.get();
@@ -195,13 +199,15 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
      * URIs.
      * </p>
      * <p>
-     * The log and prepare step logs information about which operations happened, closes any clients
-     * that should be closed and sets up for the final step.
+     * The log and prepare step logs information about which operations happened and prepares for
+     * the final step.
      * </p>
      * <p>
      * The finalize step takes the collection of new clients and node entries, replaces it
-     * atomically with the old collection. Finally, if there is a race another refresh operation
-     * will be issued.
+     * atomically with the old collection.
+     * If there is a race another refresh operation will be issued.
+     * If there was no race, the new registry is now active and the old registry can safely be torn
+     * down. Any nodes that were removed or deemed faulty will now have their connections closed.
      * </p>
      *
      * @return a future indicating the state of the refresh.
@@ -224,16 +230,57 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
         return new ClusterManager.Statistics(registry.getOnlineNodes(), registry.getOfflineNodes());
     }
 
+    /**
+     * Eventually consistent view of the currently known shards in the cluster
+     */
     @Override
     public List<ClusterShard> useOptionalGroup(final Optional<String> group) {
         final ImmutableList.Builder<ClusterShard> shards = ImmutableList.builder();
 
-        for (final Pair<Map<String, String>, List<ClusterNode>> e : findFromAllShards()) {
-            shards.add(new ClusterShard(async, e.getKey(), ImmutableList.copyOf(
-                e.getValue().stream().map(c -> c.useOptionalGroup(group)).iterator()), reporter));
+        for (final Map<String, String> shardTags : allShards()) {
+            shards.add(new ClusterShard(async, shardTags, reporter, this));
         }
 
         return shards.build();
+    }
+
+    @Override
+    public <T> Optional<ClusterManager.NodeResult<T>> withNodeInShardButNotWithId(
+        final Map<String, String> shard, final Predicate<ClusterNode> exclude,
+        final Function<ClusterNode.Group, T> fn
+    ) {
+        synchronized (this.updateRegistryLock) {
+            final Optional<ClusterNode> n =
+                registry.get().getNodeInShardButNotWithId(shard, exclude);
+            if (!n.isPresent()) {
+                return Optional.empty();
+            }
+            ClusterNode node = n.get();
+
+            return Optional.of(
+                new ClusterManager.NodeResult<T>(fn.apply(node.useDefaultGroup()), node));
+        }
+    }
+
+    @Override
+    public boolean hasNextButNotWithId(
+        final Map<String, String> shard, final Predicate<ClusterNode> exclude
+    ) {
+        synchronized (this.updateRegistryLock) {
+            final Optional<ClusterNode> n =
+                registry.get().getNodeInShardButNotWithId(shard, exclude);
+            return n.isPresent();
+        }
+    }
+
+    /**
+     * Eventually consistent view of the currently known nodes in a specific shard
+     */
+    @Override
+    public List<ClusterNode> getNodesForShard(Map<String, String> shard) {
+        synchronized (this.updateRegistryLock) {
+            return registry.get().getNodesInShard(shard);
+        }
     }
 
     @Override
@@ -274,38 +321,32 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
             clients.values().stream().map(ClusterNode::close).collect(Collectors.toList()));
     }
 
-    List<Pair<Map<String, String>, List<ClusterNode>>> findFromAllShards() {
+    Set<Map<String, String>> allShards() {
         final NodeRegistry registry = this.registry.get();
 
         if (registry == null) {
             throw new IllegalStateException("Registry not ready");
         }
 
-        final List<Pair<Map<String, String>, List<ClusterNode>>> shards =
-            registry.findFromAllShards(OptionalLimit.empty());
+        final Set<Map<String, String>> shards = registry.getShards();
 
-        /* Topology (shards) is detected based on the metadata coming from the nodes. Any shards
-         * mentioned in 'topology' are required (shard error is raised if it isn't), additional
-         * shards may also exist tho. */
-        final Set<Map<String, String>> foundShards =
-            new HashSet<>(shards.stream().map(Pair::getKey).collect(Collectors.toList()));
-
-        final List<Map<String, String>> shardsWithNoNodes = expectedTopology
-            .stream()
-            .filter(e -> !foundShards.contains(e))
-            .collect(Collectors.toList());
+        /* Actual topology (shards) is detected based on the metadata coming from the nodes.
+         * Expected topology is specified in the optional 'topology'. This specifies the minimum
+         * shards expected, i.e. additional shards may also exist. */
+        final List<Map<String, String>> shardsWithNoNodes =
+            expectedTopology.stream().filter(e -> !shards.contains(e)).collect(Collectors.toList());
 
         if (shardsWithNoNodes.isEmpty()) {
             return shards;
         }
 
-        final List<Pair<Map<String, String>, List<ClusterNode>>> withExpected = new ArrayList<>();
+        final Set<Map<String, String>> withExpected = new HashSet<>();
         withExpected.addAll(shards);
         for (final Map<String, String> shard : shardsWithNoNodes) {
             /* For every shard that didn't have a discovered node, add an empty entry in the
              * shard list. This ensures that suitable code later on will complain that there
              * were shards with no available nodes/groups. */
-            withExpected.add(Pair.of(shard, ImmutableList.of()));
+            withExpected.add(shard);
         }
         return withExpected;
     }
@@ -440,7 +481,8 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
      * @return a lazy transform
      */
     LazyTransform<Collection<Update>, Void> refreshLogAndPrepare(
-        final String id, final List<RemovedNode> removedNodes, final Map<URI, ClusterNode> oldClients
+        final String id, final List<RemovedNode> removedNodes,
+        final Map<URI, ClusterNode> oldClients
     ) {
         return updates -> {
             final Set<ClusterNode> okNodes = new HashSet<>();
@@ -475,7 +517,8 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
             log.info("{} [update] {} {} result(s)", id, knownShards, okNodes.size());
 
             /* shutdown removed node */
-            return refreshFinalize(id, oldClients, newClients, okNodes, okUpdates, removedNodes, failedNodes);
+            return refreshFinalize(id, oldClients, newClients, okNodes, okUpdates, removedNodes,
+                failedNodes);
         };
     }
 
@@ -499,8 +542,10 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
         final List<ClusterNode> failedNodes
     ) {
         if (this.clients.compareAndSet(oldClients, newClients)) {
-            registry.getAndSet(
-                new NodeRegistry(async, new ArrayList<>(okNodes), okNodes.size()));
+            synchronized (this.updateRegistryLock) {
+                registry.getAndSet(
+                    new NodeRegistry(async, new ArrayList<>(okNodes), okNodes.size()));
+            }
 
             // Close removed nodes
             final List<AsyncFuture<Void>> removals = new ArrayList<>();

@@ -24,11 +24,9 @@ package com.spotify.heroic.metric;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.cluster.ClusterShard;
-import lombok.Data;
-
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import lombok.Data;
 
 /**
  * Indicates that a specific shard of the request failed and information on which and why.
@@ -50,8 +48,7 @@ public class ShardError implements RequestError {
     }
 
     public static ShardError fromThrowable(ClusterShard c, Throwable e) {
-        final List<String> nodes =
-            c.getGroups().stream().map(Object::toString).collect(Collectors.toList());
+        final List<String> nodes = c.getNodesAsStringList();
         final String message = errorMessage(e);
         return new ShardError(nodes, c.getShard(), message);
     }
