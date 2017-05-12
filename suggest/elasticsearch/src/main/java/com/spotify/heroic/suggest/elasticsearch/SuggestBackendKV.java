@@ -60,6 +60,7 @@ import com.spotify.heroic.suggest.WriteSuggest;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
+import java.util.Collections;
 import lombok.ToString;
 import org.apache.commons.lang3.tuple.Pair;
 import org.elasticsearch.action.index.IndexRequest.OpType;
@@ -243,6 +244,10 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
             return bind(builder.execute()).directTransform((SearchResponse response) -> {
                 final List<TagValuesSuggest.Suggestion> suggestions = new ArrayList<>();
 
+                if (response.getAggregations() == null) {
+                    return TagValuesSuggest.of(Collections.emptyList(), Boolean.FALSE);
+                }
+
                 final Terms terms = response.getAggregations().get("keys");
 
                 final List<Bucket> buckets = terms.getBuckets();
@@ -290,10 +295,8 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 query = filteredQuery(query, filter(request.getFilter()));
             }
 
-            final SearchRequestBuilder builder = c
-                .search(TAG_TYPE)
-                .setSearchType(SearchType.COUNT)
-                .setQuery(query);
+            final SearchRequestBuilder builder =
+                c.search(TAG_TYPE).setSearchType(SearchType.COUNT).setQuery(query);
 
             final OptionalLimit limit = request.getLimit();
 
@@ -307,6 +310,10 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
             return bind(builder.execute()).directTransform((SearchResponse response) -> {
                 final ImmutableList.Builder<String> suggestions = ImmutableList.builder();
+
+                if (response.getAggregations() == null) {
+                    return TagValueSuggest.of(Collections.emptyList(), Boolean.FALSE);
+                }
 
                 final Terms terms = response.getAggregations().get("values");
 
@@ -326,10 +333,8 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
         return connection.doto((final Connection c) -> {
             final QueryBuilder root = filteredQuery(matchAllQuery(), filter(request.getFilter()));
 
-            final SearchRequestBuilder builder = c
-                .search(TAG_TYPE)
-                .setSearchType(SearchType.COUNT)
-                .setQuery(root);
+            final SearchRequestBuilder builder =
+                c.search(TAG_TYPE).setSearchType(SearchType.COUNT).setQuery(root);
 
             final OptionalLimit limit = request.getLimit();
             final OptionalLimit exactLimit = request.getExactLimit();
@@ -354,6 +359,10 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
             return bind(builder.execute()).directTransform((SearchResponse response) -> {
                 final Set<TagKeyCount.Suggestion> suggestions = new LinkedHashSet<>();
+
+                if (response.getAggregations() == null) {
+                    return TagKeyCount.of(Collections.emptyList(), Boolean.FALSE);
+                }
 
                 final Terms keys = response.getAggregations().get("keys");
 
@@ -494,10 +503,8 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 query = filteredQuery(query, filter(request.getFilter()));
             }
 
-            final SearchRequestBuilder builder = c
-                .search(SERIES_TYPE)
-                .setSearchType(SearchType.COUNT)
-                .setQuery(query);
+            final SearchRequestBuilder builder =
+                c.search(SERIES_TYPE).setSearchType(SearchType.COUNT).setQuery(query);
 
             // aggregation
             {
@@ -515,6 +522,10 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
             return bind(builder.execute()).directTransform((SearchResponse response) -> {
                 final Set<KeySuggest.Suggestion> suggestions = new LinkedHashSet<>();
+
+                if (response.getAggregations() == null) {
+                    return KeySuggest.of(Collections.emptyList());
+                }
 
                 final StringTerms terms = response.getAggregations().get("keys");
 
