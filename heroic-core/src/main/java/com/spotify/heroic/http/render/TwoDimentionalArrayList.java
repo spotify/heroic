@@ -6,6 +6,7 @@ import java.util.ArrayList;
  */
 public class TwoDimentionalArrayList {
 
+    double T;
     public void addToInnerArray(int index, T element) {
         while (index >= this.size()) {
             this.add(new ArrayList<T>());
