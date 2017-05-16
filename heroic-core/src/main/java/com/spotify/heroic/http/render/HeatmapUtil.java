@@ -24,11 +24,12 @@ import org.jfree.data.xy.XYDataset;
 import org.jfree.data.xy.XYSeriesCollection;
 import org.jfree.data.xy.YIntervalSeriesCollection;
 import org.jfree.ui.RectangleAnchor;
-
+import org.jfree.chart.renderer.LookupPaintScale;
+import org.jfree.chart.renderer.PaintScale;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.math.BigDecimal;
-import java.util.ArrayList;
+
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
@@ -38,14 +39,116 @@ import java.util.ArrayList;
 
 
 public class HeatmapUtil {
+    protected static XYDataset dataset;
+    protected static NumberAxis xAxis = new NumberAxis("X");
+    protected static NumberAxis yAxis = new NumberAxis("Y");
+    protected static String dataSetName = "";
 
+    static LookupPaintScale paintScale = null;
     private static final List<Color> COLORS = new ArrayList<>();
+    public static final int PALETTE_BLUE_RED = 0;
+    public static final int PALETTE_RED = 1;
+    public static final int PALETTE_BLUE = 2;
+    public static final int PALETTE_GRAYSCALE = 3;
+    public static final int PALETTE_WHITE_BLUE = 4;
+    //This palette starts with blue at 0 and scales through the values.  Any negative values get the same red color
+    public static final int PALETTE_POSITIVE_WHITE_BLUE_NEGATIVE_BLACK_RED = 5;
+
+    protected static XYBlockRenderer renderer = null;
+
+    protected double[] xValues = null;
+    protected double[] yValues = null;
+    protected double[][] zValues = null;
+
+    protected static double lowerZBound = 0;
+    protected static double upperZBound = 0;
+
+
+    public static final int DEFAULT_PALETTE = PALETTE_BLUE_RED;
+
+    protected static int palette = DEFAULT_PALETTE;
+
+    public static final int DISTINCT_PALETTE_VALUES = 100;
+    public static void setPaintScale(LookupPaintScale newPaintScale)
+    {
+        paintScale = newPaintScale;
+        renderer.setPaintScale(newPaintScale);
+        //repaint();
+    }
+
+    protected static void addValuesToPaintScale(LookupPaintScale paintScale, double lowerBound, double upperBound,
+                                                Color lowColor, Color highColor)
+    {
+        int distinctValues = DISTINCT_PALETTE_VALUES;
+
+        if (upperBound <= lowerBound)
+            upperBound = lowerBound + .0001;
+        double increment = (upperBound - lowerBound) / distinctValues;
+
+        int redDiff = highColor.getRed() - lowColor.getRed();
+        int greenDiff = highColor.getGreen() - lowColor.getGreen();
+        int blueDiff = highColor.getBlue() - lowColor.getBlue();
+        double redIncrement = (redDiff / distinctValues);
+        double greenIncrement = (greenDiff / distinctValues);
+        double blueIncrement = (blueDiff / distinctValues);
+
+
+
+        for (int i=0; i<distinctValues; i++)
+        {
+            int r = (int) (lowColor.getRed() + (i * redIncrement));
+            int g = (int) (lowColor.getGreen() + (i * greenIncrement));
+            int b = (int) (lowColor.getBlue() + (i * blueIncrement));
+            Color incrementColor = new Color(r,g,b);
+            double incrementStart = lowerBound + (i * increment);
+            paintScale.add(incrementStart, incrementColor);
+
+        }
+    }
 
     static {
         COLORS.add(Color.BLUE);
     }
-
-
+    public static LookupPaintScale createPaintScale(double lowerBound,
+                                       double upperBound,
+                                       Color lowColor, Color highColor)
+    {
+        //prevent rounding errors that make highest value undefine
+        LookupPaintScale result = new LookupPaintScale(lowerBound, upperBound+0.01, lowColor);
+        addValuesToPaintScale(result, lowerBound, upperBound, lowColor, highColor);
+        return result;
+    }
+    public static LookupPaintScale createPaintScale(int palette)
+    {
+        LookupPaintScale result;
+        switch (palette)
+        {
+            case PALETTE_BLUE_RED:
+                result = createPaintScale(lowerZBound, upperZBound, Color.BLUE, Color.RED);
+                break;
+            case PALETTE_RED:
+                result = createPaintScale(lowerZBound, upperZBound, new Color(70,5,5), new Color(255,5,5));
+                break;
+            case PALETTE_BLUE:
+                result = createPaintScale(lowerZBound, upperZBound, new Color(5,5,70), new Color(5,5,255));
+                break;
+            case PALETTE_GRAYSCALE:
+                result = createPaintScale(lowerZBound, upperZBound, Color.WHITE, new Color(5,5,5));
+                break;
+            case PALETTE_WHITE_BLUE:
+                result = createPaintScale(lowerZBound, upperZBound, Color.WHITE, Color.BLUE);
+                break;
+            case PALETTE_POSITIVE_WHITE_BLUE_NEGATIVE_BLACK_RED:
+                result = new LookupPaintScale(lowerZBound, upperZBound+0.1, Color.RED);
+                addValuesToPaintScale(result, 0, upperZBound, Color.WHITE, Color.BLUE);
+                addValuesToPaintScale( result, -upperZBound-0.000001, -0.0000001, Color.BLUE, Color.RED);
+                break;
+            default:
+                result = createPaintScale(lowerZBound, upperZBound, Color.WHITE, new Color(5,5,5));
+                break;
+        }
+        return result;
+    }
 
     public static JFreeChart createChart(
         final List<ShardedResultGroup> groups, final String title, Map<String, String> highlight,
@@ -59,6 +162,9 @@ public class HeatmapUtil {
         final DefaultXYZDataset dataset = new DefaultXYZDataset();
         int lineAndShapeCount = 0;
         int intervalCount = 0;
+        final TwoDimentionalArrayList<Double> listzValues = new TwoDimentionalArrayList();
+        final ArrayList<Double> listxValues = new ArrayList();
+        final ArrayList<Double> listyValues = new ArrayList();
 
         for (final ShardedResultGroup resultGroup : groups) {
             final MetricCollection group = resultGroup.getMetrics();
@@ -71,28 +177,43 @@ public class HeatmapUtil {
 
 
 
-                ArrayList<double> listzValues = new TwoDimentionalArrayList();
-                ArrayList<double> listxValues = new ArrayList<double>();
-                ArrayList<double> listyValues = new ArrayList<double>();
 
 
 
-                final double[][] zValues = null;
-                final double[] xValues = null;
-                final double[] yValues = null;
+                int x,y;
+                x=0;
+                y=0;
 
                 for (final Point p :data){
 
                     String[] R;
                     Map<String,Integer> map = new TreeMap<String, Integer>();
+
+                    // Timestamp
                     double t = p.getTimestamp();
-                    listxValues.add(t);
+                    if (listxValues.contains(t)){
+
+                        x=listxValues.indexOf(t);
+                    }else{
+
+                        listxValues.add(t);
+                        x=listxValues.indexOf(t);
+                    }
+
                     //System.out.print("getTimestamp");
                     //System.out.println(  p.getTimestamp());
                     //System.out.println(c);
                     //System.out.print("getValue")  ;
+                    //frequence or coor
                     Double v = p.getValue();
+                    if (listyValues.contains(v)){
 
+                        y=listyValues.indexOf(v);
+                    }else{
+
+                        listyValues.add(v);
+                        y=listyValues.indexOf(v);
+                    }
 
 
                     //System.out.println(value);
@@ -125,19 +246,20 @@ public class HeatmapUtil {
                             //DATA[c][] = Byte.valueOf(value);
                         }
                         String K = pair.getKey();
-                        if (k.equals("orfees") && K.equals("f")){
+                        if (K.equals("orfees") && K.equals("f")){
                             //System.out.println("condition ok ");
                             //g.writeString( values.iterator().next());
                             f = values.iterator().next();
-                            listzValues.addToInnerArray(t, f, v);
+                            listzValues.addToInnerArray(x, y, v);
                         }
 
 
-                        if (k.equals("nrh") && K.equals("coor")){
+                        if (K.equals("nrh") && K.equals("coor")){
                             //System.out.println("condition ok ");
                             //g.writeString( values.iterator().next());
                             f = values.iterator().next();
-                            listzValues.addToInnerArray(t, f, v);
+                            listzValues.addToInnerArray(x, y, v);
+
                         }
 
 
@@ -204,9 +326,15 @@ public class HeatmapUtil {
         //    System.out.println(e.getMessage());
         //}
 
+        Double[] xValues = listxValues.toArray(new Double[listxValues.size()]);
+        Double[] yValues = listyValues.toArray(new Double[listyValues.size()]);
+        Double[][] zValues = listzValues.stream().map(u -> u.toArray(new Double[0])).toArray(Double[][]::new);
 
-        final JFreeChart chart =
-            buildChart(title, regularData, intervalData, lineAndShapeRenderer, intervalRenderer, dataset);
+
+        final JFreeChart chart = setData( xValues, yValues,zValues);
+
+        //final JFreeChart chart =
+         //   buildChart(title, regularData, intervalData, lineAndShapeRenderer, intervalRenderer, dataset);
 
         chart.setAntiAlias(true);
         chart.setBackgroundPaint(Color.WHITE);
@@ -231,12 +359,14 @@ public class HeatmapUtil {
         return chart;
     }
 
-    public void setData(double[] xValues, double[] yValues, double[][] zValues)
+    private static JFreeChart setData(Double[] xValues, Double[] yValues, Double[][] zValues)
     {
-        this.xValues = xValues;
-        this.yValues = yValues;
-        this.zValues = zValues;
-
+        //this.xValues = xValues;
+        //this.yValues = yValues;
+        //this.zValues = zValues;
+        LookupPaintScale paintScale = null;
+        //DefaultXYZDataset dataset = new XYSeriesCollection();
+        XYBlockRenderer renderer = new XYBlockRenderer();
         double minZValue = Double.MAX_VALUE;
         double maxZValue = Double.MIN_VALUE;
         int width = xValues.length;
@@ -261,14 +391,15 @@ public class HeatmapUtil {
                 maxZValue = Math.max(zValues[i][j], maxZValue);
             }
         }
-        lowerZBound = Rounder.round(minZValue,3);
-        upperZBound = Rounder.round(maxZValue,3);
-        if (lowerZBound == upperZBound)
-            upperZBound += .0001;
-        _log.debug("low,high values: " + lowerZBound + ", " + upperZBound);
+        Double lowerZBound = Rounder.round(minZValue,3);
+
+        Double upperZBound = Rounder.round(maxZValue,3);
+        //if (lowerZBound == upperZBound)
+        //    upperZBound += .0001;
+        //_log.debug("low,high values: " + lowerZBound + ", " + upperZBound);
         theDataset.addSeries("Range: " + lowerZBound + "-" + upperZBound,data);
 
-        dataset = theDataset;
+        DefaultXYZDataset dataset = theDataset;
         if (renderer == null)
         {
             renderer = new XYBlockRenderer();
@@ -281,14 +412,14 @@ public class HeatmapUtil {
         //This is necessary to get everything to line up
         renderer.setBlockAnchor(RectangleAnchor.BOTTOM);
 
-        if (getPlot() != null)
-        {
-            ((XYPlot) getPlot()).setDataset(dataset);
-            ((XYPlot) getPlot()).setRenderer(renderer);
+        //if (XYPlot.getPlot() != null)
+        //{
+        //    ((XYPlot) XYPlot.getPlot()).setDataset(dataset);
+        //    ((XYPlot) XYPlot.getPlot()).setRenderer(renderer);
 
-            invalidate();
-            return;
-        }
+            //invalidate();
+        //    return;
+        //}
         XYPlot plot = new XYPlot(dataset, xAxis, yAxis, renderer);
 
         JFreeChart chart = new JFreeChart(dataSetName,JFreeChart.DEFAULT_TITLE_FONT,plot,true);
@@ -316,7 +447,8 @@ public class HeatmapUtil {
         //
         //        chart.getLegend().setSources(new LegendItemSource[]{renderer});
 
-        init(chart);
+        //init(chart);
+        return chart;
     }
 
     private static JFreeChart buildChart(

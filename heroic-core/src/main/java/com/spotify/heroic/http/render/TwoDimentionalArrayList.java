@@ -4,9 +4,10 @@ import java.util.ArrayList;
 /**
  * Created by lucile on 16/05/17.
  */
-public class TwoDimentionalArrayList {
+public class TwoDimentionalArrayList<T> extends ArrayList<ArrayList<T>> {
 
-    double T;
+    private static final long serialVersionUID = 1L;
+
     public void addToInnerArray(int index, T element) {
         while (index >= this.size()) {
             this.add(new ArrayList<T>());
