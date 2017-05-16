@@ -99,6 +99,11 @@ public class LocalClusterNode implements ClusterNode {
         }
 
         @Override
+        public AsyncFuture<Void> ping() {
+            return async.resolved();
+        }
+
+        @Override
         public AsyncFuture<FullQuery> query(final FullQuery.Request request) {
             return metrics().query(request);
         }

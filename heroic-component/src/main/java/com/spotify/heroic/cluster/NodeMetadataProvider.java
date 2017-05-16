@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2017 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -21,19 +21,13 @@
 
 package com.spotify.heroic.cluster;
 
-import com.spotify.heroic.lifecycle.LifeCycle;
-import javax.inject.Named;
+public interface NodeMetadataProvider {
+    /**
+     * Get metadata for this provider.
+     */
+    NodeMetadata getMetadata();
 
-public interface ClusterComponent {
-    ClusterManager clusterManager();
-
-    NodeMetadataProvider metadataProvider();
-
-    @Named("local")
-    ClusterNode localClusterNode();
-
-    @Named("cluster")
-    default LifeCycle clusterLife() {
-        return LifeCycle.empty();
+    static NodeMetadataProvider staticProvider(final NodeMetadata metadata) {
+        return () -> metadata;
     }
 }

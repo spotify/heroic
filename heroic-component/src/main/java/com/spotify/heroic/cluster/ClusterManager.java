@@ -23,12 +23,14 @@ package com.spotify.heroic.cluster;
 
 import com.spotify.heroic.common.UsableGroupManager;
 import eu.toolchain.async.AsyncFuture;
-import lombok.Data;
-
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import lombok.Data;
 
 /**
  * Handles management of cluster state.
@@ -36,8 +38,8 @@ import java.util.Set;
  * The primary responsibility is to receive refresh requests through {@link #refresh()} that should
  * cause the cluster state to be updated.
  * <p>
- * It also provides an interface for looking up nodes through {@link #findNode(Map, NodeCapability)}
- * .
+ * It also provides an interface for applying a function on a node in a shard, via
+ * {@link #withNodeInShardButNotWithId(shardTags, excludeIds, fn)}.
  *
  * @author udoprog
  */
@@ -63,7 +65,39 @@ public interface ClusterManager extends UsableGroupManager<List<ClusterShard>> {
      */
     AsyncFuture<Void> addStaticNode(URI node);
 
+    /**
+     * Eventually consistent view of the currently known nodes in the cluster
+     */
     List<ClusterNode> getNodes();
+
+    /**
+     * Eventually consistent view of the currently known nodes in a specific shard
+     */
+    List<ClusterNode> getNodesForShard(Map<String, String> shard);
+
+    /**
+     * Run function on one random ClusterNode in a specific shard. The caller is allowed the
+     * possibility to decide which nodes that would be suitable.
+     *
+     * @param shard the shard
+     * @param exclude predicate that can decide if a ClusterNode would be suitable to use
+     * @param fn the function to apply on the node
+     * @param <T> type of the return value
+     * @return Return value of the applied function, Id of the node, string representation of node
+     */
+    <T> Optional<NodeResult<T>> withNodeInShardButNotWithId(
+        Map<String, String> shard, Predicate<ClusterNode> exclude, Function<ClusterNode.Group, T> fn
+    );
+
+    /**
+     * Check if there's at this instant any more nodes in the specified shard.
+     * I.e. is a call to withNodeInShardButNotWithId(...) likely to succeed?
+     *
+     * NOTE: This call is eventually consistent. The node registry might change before a call to
+     * withNodeInShardButNotWithId(...), so the result of this method should only be used as an
+     * advice. A call to withNodeInShardButNotWithId could still fail because of no node available.
+     */
+    boolean hasNextButNotWithId(Map<String, String> shard, Predicate<ClusterNode> exclude);
 
     /**
      * Perform a refresh of the cluster information.
@@ -75,4 +109,16 @@ public interface ClusterManager extends UsableGroupManager<List<ClusterShard>> {
     Statistics getStatistics();
 
     Set<RpcProtocol> protocols();
+
+    /**
+     * The result of applying a function to a random node in a shard
+     */
+    @Data
+    class NodeResult<T> {
+        private final T returnValue;
+
+        /* NOTE: No guarantees are made about this object having a live connection. Only made
+         * available to facilitate identifying which node that was used. */
+        private final ClusterNode node;
+    }
 }
