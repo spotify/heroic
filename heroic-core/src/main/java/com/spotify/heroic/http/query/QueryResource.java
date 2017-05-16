@@ -91,6 +91,22 @@ public class QueryResource {
         bindMetricsResponse(response, callback);
     }
 
+
+    @POST
+    @Path("heatmap")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public void heatmap(
+        @Suspended final AsyncResponse response, @QueryParam("group") String group,
+        QueryHeatmap query
+    ) {
+        final Query q = query.toQueryBuilder(this.query::newQueryFromString).build();
+
+        final QueryManager.Group g = this.query.useOptionalGroup(Optional.ofNullable(group));
+        final AsyncFuture<QueryResult> callback = g.query(q);
+
+        bindHeatmapResponse(response, callback);
+    }
+
     @POST
     @Path("batch")
     public void metrics(
@@ -140,6 +156,16 @@ public class QueryResource {
 
         httpAsync.bind(response, callback,
             r -> new QueryMetricsResponse(r.getRange(), r.getGroups(), r.getErrors(), r.getTrace(),
+                r.getLimits()));
+    }
+
+    private void bindHeatmapResponse(
+        final AsyncResponse response, final AsyncFuture<QueryResult> callback
+    ) {
+        response.setTimeout(300, TimeUnit.SECONDS);
+
+        httpAsync.bind(response, callback,
+            r -> new QueryHeatmapResponse(r.getRange(), r.getGroups(), r.getErrors(), r.getTrace(),
                 r.getLimits()));
     }
 
