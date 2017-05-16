@@ -23,6 +23,7 @@ import org.jfree.data.xy.DefaultXYZDataset;
 import org.jfree.data.xy.XYDataset;
 import org.jfree.data.xy.XYSeriesCollection;
 import org.jfree.data.xy.YIntervalSeriesCollection;
+import org.jfree.ui.RectangleAnchor;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -32,6 +33,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeMap;
+import java.util.ArrayList;
+
+
 
 public class HeatmapUtil {
 
@@ -39,6 +43,26 @@ public class HeatmapUtil {
 
     static {
         COLORS.add(Color.BLUE);
+    }
+
+    public void addToInnerArray(int index, T element) {
+        while (index >= this.size()) {
+            this.add(new ArrayList<T>());
+        }
+        this.get(index).add(element);
+    }
+
+    public void addToInnerArray(int index, int index2, T element) {
+        while (index >= this.size()) {
+            this.add(new ArrayList<T>());
+        }
+
+        ArrayList<T> inner = this.get(index);
+        while (index2 >= inner.size()) {
+            inner.add(null);
+        }
+
+        inner.set(index2, element);
     }
 
     public static JFreeChart createChart(
@@ -62,38 +86,34 @@ public class HeatmapUtil {
 
                 final List<Point> data= group.getDataAs(Point.class);
 
-                /**
-                 * Utility method called by createDataset().
-                 *
-                 * @param data  the data array.
-                 * @param c  the column.
-                 * @param r  the row.
-                 * @param value  the value.
-                 *
 
-                private static void setValue(double[][] data,
-                int c, int r, double value) {
 
-                    data[0][(r - 8) * 60 + c] = c;
-                    data[1][(r - 8) * 60 + c] = r;
-                    data[2][(r - 8) * 60 + c] = value;
 
-                }
-                */
+                ArrayList<double> listzValues = new TwoDimentionalArrayList();
+                ArrayList<double> listxValues = new ArrayList<double>();
+                ArrayList<double> listyValues = new ArrayList<double>();
 
-                final double[][] DATA = null;
+
+
+                final double[][] zValues = null;
+                final double[] xValues = null;
+                final double[] yValues = null;
 
                 for (final Point p :data){
 
                     String[] R;
                     Map<String,Integer> map = new TreeMap<String, Integer>();
-                    int c = new BigDecimal(p.getTimestamp()).intValue();
-                    System.out.print("getTimestamp");
-                    System.out.println(  p.getTimestamp());
-                    System.out.println(c);
-                    System.out.print("getValue")  ;
-                    Double value = p.getValue();
-                    System.out.println(value);
+                    double t = p.getTimestamp();
+                    listxValues.add(t);
+                    //System.out.print("getTimestamp");
+                    //System.out.println(  p.getTimestamp());
+                    //System.out.println(c);
+                    //System.out.print("getValue")  ;
+                    Double v = p.getValue();
+
+
+
+                    //System.out.println(value);
                     Map<String, SortedSet<String>> tags = series.getTags();
                     //g.writeStringField("timestamp", strLong);
                     //g.writeStringField("value",strDouble );
@@ -104,12 +124,12 @@ public class HeatmapUtil {
                     for (final Map.Entry<String, SortedSet<String>> pair : tags.entrySet()) {
 
 
-
+                        String f="";
                         final SortedSet<String> values = pair.getValue();
-                        System.out.print("values");
-                        System.out.println(values);
-                        System.out.print("getKey");
-                        System.out.println(pair.getKey());
+                        //System.out.print("values");
+                        //System.out.println(values);
+                        //System.out.print("getKey");
+                        //System.out.println(pair.getKey());
                         if (values.size() != 1) {
                             continue;
                         }
@@ -122,10 +142,29 @@ public class HeatmapUtil {
                             //int r = new BigDecimal(values.iterator().next() ).intValue();
                             //DATA[c][] = Byte.valueOf(value);
                         }
+                        String K = pair.getKey();
+                        if (k.equals("orfees") && K.equals("f")){
+                            //System.out.println("condition ok ");
+                            //g.writeString( values.iterator().next());
+                            f = values.iterator().next();
+                            listzValues.addToInnerArray(t, f, v);
+                        }
+
+
+                        if (k.equals("nrh") && K.equals("coor")){
+                            //System.out.println("condition ok ");
+                            //g.writeString( values.iterator().next());
+                            f = values.iterator().next();
+                            listzValues.addToInnerArray(t, f, v);
+                        }
+
+
                         //map.put(pair.getKey(),new BigDecimal (values.iterator().next()).intValue());
                     }
 
                     //int r = map.get("coor");
+                    System.out.println("list");
+                    System.out.println(listzValues);
 
                     //DATA[c][r] = value;
 
@@ -138,46 +177,46 @@ public class HeatmapUtil {
                 //dataset.addSeries("f", DATA);
 
                 /**
-                for (final Point d : data) {
-                    series.add(d.getTimestamp(), d.getValue());
-                }
+                 for (final Point d : data) {
+                 series.add(d.getTimestamp(), d.getValue());
+                 }
 
-                lineAndShapeRenderer.setSeriesPaint(lineAndShapeCount, Color.BLUE);
-                lineAndShapeRenderer.setSeriesShapesVisible(lineAndShapeCount, false);
-                lineAndShapeRenderer.setSeriesStroke(lineAndShapeCount, new BasicStroke(2.0f));
-                regularData.addSeries(series);
+                 lineAndShapeRenderer.setSeriesPaint(lineAndShapeCount, Color.BLUE);
+                 lineAndShapeRenderer.setSeriesShapesVisible(lineAndShapeCount, false);
+                 lineAndShapeRenderer.setSeriesStroke(lineAndShapeCount, new BasicStroke(2.0f));
+                 regularData.addSeries(series);
                  */
                 ++lineAndShapeCount;
             }
 
 
-                /**
-                intervalRenderer.setSeriesPaint(intervalCount, Color.GREEN);
-                intervalRenderer.setSeriesStroke(intervalCount, new BasicStroke(2.0f));
-                intervalRenderer.setSeriesFillPaint(intervalCount, new Color(200, 255, 200));
-                intervalRenderer.setSeriesShapesVisible(intervalCount, false);
-                intervalData.addSeries(series);
-                ++intervalCount;
-                 */
+            /**
+             intervalRenderer.setSeriesPaint(intervalCount, Color.GREEN);
+             intervalRenderer.setSeriesStroke(intervalCount, new BasicStroke(2.0f));
+             intervalRenderer.setSeriesFillPaint(intervalCount, new Color(200, 255, 200));
+             intervalRenderer.setSeriesShapesVisible(intervalCount, false);
+             intervalData.addSeries(series);
+             ++intervalCount;
+             */
 
         }
         //try {
 
         //    byte[] imageInByte;
-            //BufferedImage originalImage = ImageIO.read(new File("c:/darksouls.jpg"));
+        //BufferedImage originalImage = ImageIO.read(new File("c:/darksouls.jpg"));
 
-            // convert BufferedImage to byte array
-            //ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            //ImageIO.write(originalImage, "jpg", baos);
-            //baos.flush();
-            //imageInByte = baos.toByteArray();
-            //baos.close();
-            //imageInByte = DATA
-            // convert byte array back to BufferedImage
-            //InputStream in = new ByteArrayInputStream(imageInByte);
-            //BufferedImage bImageFromConvert = ImageIO.read(in);
+        // convert BufferedImage to byte array
+        //ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        //ImageIO.write(originalImage, "jpg", baos);
+        //baos.flush();
+        //imageInByte = baos.toByteArray();
+        //baos.close();
+        //imageInByte = DATA
+        // convert byte array back to BufferedImage
+        //InputStream in = new ByteArrayInputStream(imageInByte);
+        //BufferedImage bImageFromConvert = ImageIO.read(in);
 
-            //ImageIO.write(bImageFromConvert, "jpg", new File("c:/new-darksouls.jpg"));
+        //ImageIO.write(bImageFromConvert, "jpg", new File("c:/new-darksouls.jpg"));
 
         //} catch (IOException e) {
         //    System.out.println(e.getMessage());
@@ -208,6 +247,94 @@ public class HeatmapUtil {
         // rangeAxis.setStandardTickUnits(DateAxis.createStandardDateTickUnits());
 
         return chart;
+    }
+
+    public void setData(double[] xValues, double[] yValues, double[][] zValues)
+    {
+        this.xValues = xValues;
+        this.yValues = yValues;
+        this.zValues = zValues;
+
+        double minZValue = Double.MAX_VALUE;
+        double maxZValue = Double.MIN_VALUE;
+        int width = xValues.length;
+        int height = yValues.length;
+        int numCells = width * height;
+
+        if (zValues.length != width || zValues[0].length != height)
+            throw new RuntimeException("PanelWithHeatMap: wrong number of z values for x and y values (" +
+                zValues.length + " vs. " + width + ", " + zValues[0].length + " vs. " + height +
+                ", x/y first, z second)");
+        DefaultXYZDataset theDataset = new DefaultXYZDataset();
+        double[][] data = new double[3][numCells];
+        for(int j=0; j<height; j++){
+            for(int i=0; i<width; i++)
+            {
+                int cellIndex = (j * width) + i;
+                data[0][cellIndex]= xValues[i];
+                data[1][cellIndex]= yValues[j];
+                data[2][cellIndex]= zValues[i][j];
+                //keep track of lowest/highest z values
+                minZValue = Math.min(zValues[i][j], minZValue);
+                maxZValue = Math.max(zValues[i][j], maxZValue);
+            }
+        }
+        lowerZBound = Rounder.round(minZValue,3);
+        upperZBound = Rounder.round(maxZValue,3);
+        if (lowerZBound == upperZBound)
+            upperZBound += .0001;
+        _log.debug("low,high values: " + lowerZBound + ", " + upperZBound);
+        theDataset.addSeries("Range: " + lowerZBound + "-" + upperZBound,data);
+
+        dataset = theDataset;
+        if (renderer == null)
+        {
+            renderer = new XYBlockRenderer();
+        }
+
+        if (paintScale == null)
+        {
+            setPaintScale(createPaintScale(palette));
+        }
+        //This is necessary to get everything to line up
+        renderer.setBlockAnchor(RectangleAnchor.BOTTOM);
+
+        if (getPlot() != null)
+        {
+            ((XYPlot) getPlot()).setDataset(dataset);
+            ((XYPlot) getPlot()).setRenderer(renderer);
+
+            invalidate();
+            return;
+        }
+        XYPlot plot = new XYPlot(dataset, xAxis, yAxis, renderer);
+
+        JFreeChart chart = new JFreeChart(dataSetName,JFreeChart.DEFAULT_TITLE_FONT,plot,true);
+
+        //        chart.addLegend(new LegendTitle(renderer));
+        //        PaintScaleLegend legend = new PaintScaleLegend(paintScale, xAxis);
+        //        chart.addLegend(legend);
+
+
+        //        LegendItemCollection c1 = new LegendItemCollection();
+        //
+        //        LegendItem item1 = new LegendItem("Label", "Description",
+        //                "ToolTip", "URL", true,
+        //                new Rectangle2D.Double(1.0, 2.0, 3.0, 4.0), true, Color.red,
+        //                true, Color.blue, new BasicStroke(1.2f), true,
+        //                new Line2D.Double(1.0, 2.0, 3.0, 4.0),
+        //                new BasicStroke(2.1f), Color.green);
+        //        LegendItem item2 = new LegendItem("Label", "Description",
+        //                "ToolTip", "URL", true,
+        //                new Rectangle2D.Double(1.0, 2.0, 3.0, 4.0),
+        //                true, Color.red, true, Color.blue, new BasicStroke(1.2f), true,
+        //                new Line2D.Double(1.0, 2.0, 3.0, 4.0), new BasicStroke(2.1f),
+        //                Color.green);
+        //        c1.add(item1);
+        //
+        //        chart.getLegend().setSources(new LegendItemSource[]{renderer});
+
+        init(chart);
     }
 
     private static JFreeChart buildChart(
