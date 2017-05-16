@@ -43,6 +43,7 @@ import com.spotify.heroic.filter.MatchKeyFilter;
 import com.spotify.heroic.filter.MatchTagFilter;
 import com.spotify.heroic.filter.NotFilter;
 import com.spotify.heroic.filter.OrFilter;
+import com.spotify.heroic.filter.RegexFilter;
 import com.spotify.heroic.filter.StartsWithFilter;
 import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
@@ -101,6 +102,7 @@ import static org.elasticsearch.index.query.FilterBuilders.matchAllFilter;
 import static org.elasticsearch.index.query.FilterBuilders.notFilter;
 import static org.elasticsearch.index.query.FilterBuilders.orFilter;
 import static org.elasticsearch.index.query.FilterBuilders.prefixFilter;
+import static org.elasticsearch.index.query.FilterBuilders.regexpFilter;
 import static org.elasticsearch.index.query.FilterBuilders.termFilter;
 
 @ElasticsearchScope
@@ -478,6 +480,12 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
             public FilterBuilder visitStartsWith(final StartsWithFilter startsWith) {
                 return prefixFilter(TAGS,
                     startsWith.getTag() + TAG_DELIMITER + startsWith.getValue());
+            }
+
+            @Override
+            public FilterBuilder visitRegex(final RegexFilter regex) {
+                return regexpFilter(TAGS,
+                    regex.getTag() + TAG_DELIMITER + regex.getValue());
             }
 
             @Override
