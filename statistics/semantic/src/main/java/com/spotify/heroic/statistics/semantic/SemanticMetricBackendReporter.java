@@ -22,6 +22,7 @@
 package com.spotify.heroic.statistics.semantic;
 
 import com.codahale.metrics.Counter;
+import com.codahale.metrics.Histogram;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.Groups;
@@ -40,13 +41,10 @@ import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
-
 import eu.toolchain.async.AsyncFuture;
-
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
-
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
@@ -76,6 +74,10 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
      */
     private final Counter sampleSizeAccumulated;
 
+    /* Measuring on a data-node level, can be used for measuring load on metric backend */
+    private final Histogram querySamplesRead;
+    private final Histogram queryRowsAccessed;
+
     public SemanticMetricBackendReporter(SemanticMetricRegistry registry) {
         final MetricId base = MetricId.build().tagged("component", COMPONENT);
 
@@ -101,6 +103,11 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
             registry.counter(base.tagged("what", "sample-size-live", "unit", Units.SAMPLE));
         sampleSizeAccumulated =
             registry.counter(base.tagged("what", "sample-size-accumulated", "unit", Units.SAMPLE));
+
+        querySamplesRead = registry.histogram(
+            base.tagged("what", "query-metrics-samples-read", "unit", Units.COUNT));
+        queryRowsAccessed = registry.histogram(
+            base.tagged("what", "query-metrics-rows-accessed", "unit", Units.COUNT));
     }
 
     @Override
@@ -111,23 +118,41 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
     @Override
     public DataInMemoryReporter newDataInMemoryReporter() {
         return new DataInMemoryReporter() {
-            private final AtomicLong dataInMemory = new AtomicLong();
+            private final AtomicLong dataRead = new AtomicLong(0);
+            private final AtomicLong dataInMemory = new AtomicLong(0);
+            private final AtomicLong rowsAccessed = new AtomicLong(0);
+
+            @Override
+            public void reportRowsAccessed(final long n) {
+                rowsAccessed.addAndGet(n);
+            }
 
             @Override
             public void reportDataHasBeenRead(final long n) {
+                dataRead.addAndGet(n);
                 dataInMemory.addAndGet(n);
+
                 sampleSizeLive.inc(n);
                 sampleSizeAccumulated.inc(n);
             }
 
             @Override
             public void reportDataNoLongerNeeded(final long n) {
+                dataInMemory.addAndGet(-n);
+
                 sampleSizeLive.dec(n);
             }
 
             @Override
             public void reportOperationEnded() {
-                sampleSizeAccumulated.dec(dataInMemory.get());
+                // Decrement any remaining live memory
+                sampleSizeLive.dec(dataInMemory.get());
+                /* The accumulated count has previously been incremented with all of the data read,
+                 * so decrease the full amount now */
+                sampleSizeAccumulated.dec(dataRead.get());
+
+                querySamplesRead.update(dataRead.get());
+                queryRowsAccessed.update(rowsAccessed.get());
             }
         };
     }

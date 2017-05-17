@@ -176,14 +176,14 @@ public class LocalMetricManager implements MetricManager {
                     throw new IllegalArgumentException(Feature.END_BUCKET + ": must be set");
                 });
 
+            final DataInMemoryReporter dataInMemoryReporter = reporter.newDataInMemoryReporter();
+
             final QuotaWatcher watcher = new QuotaWatcher(
                 options.getDataLimit().orElse(dataLimit).asLong().orElse(Long.MAX_VALUE), options
                 .getAggregationLimit()
                 .orElse(aggregationLimit)
                 .asLong()
-                .orElse(Long.MAX_VALUE), reporter.newDataInMemoryReporter());
-
-            final DataInMemoryReporter dataInMemoryReporter = reporter.newDataInMemoryReporter();
+                .orElse(Long.MAX_VALUE), dataInMemoryReporter);
 
             final OptionalLimit seriesLimit =
                 options.getSeriesLimit().orElse(LocalMetricManager.this.seriesLimit);
@@ -565,6 +565,11 @@ public class LocalMetricManager implements MetricManager {
         @Override
         public int getReadDataQuota() {
             return getLeft(dataLimit, read.get());
+        }
+
+        @Override
+        public void accessedRows(final long n) {
+            dataInMemoryReporter.reportRowsAccessed(n);
         }
 
         @Override

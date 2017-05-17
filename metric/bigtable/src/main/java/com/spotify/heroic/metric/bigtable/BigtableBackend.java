@@ -440,13 +440,14 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             }));
         }
 
-        return async.collect(fetches, FetchData.collect(FETCH));
+        return async
+            .collect(fetches, FetchData.collect(FETCH))
+            .onResolved(ignore -> watcher.accessedRows(prepared.size()));
     }
 
     private AsyncFuture<FetchData.Result> fetchBatch(
-        final FetchQuotaWatcher watcher, final MetricType type,
-        final List<PreparedQuery> prepared, final BigtableConnection c,
-        final Consumer<MetricCollection> metricsConsumer
+        final FetchQuotaWatcher watcher, final MetricType type, final List<PreparedQuery> prepared,
+        final BigtableConnection c, final Consumer<MetricCollection> metricsConsumer
     ) {
         final BigtableDataClient client = c.dataClient();
 
@@ -477,7 +478,9 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                 return FetchData.result(fs.end());
             }));
         }
-        return async.collect(fetches, FetchData.collectResult(FETCH));
+        return async
+            .collect(fetches, FetchData.collectResult(FETCH))
+            .onResolved(ignore -> watcher.accessedRows(prepared.size()));
     }
 
     <T> ByteString serialize(T rowKey, Serializer<T> serializer) throws IOException {
