@@ -39,40 +39,42 @@ import java.util.ArrayList;
 
 
 public class HeatmapUtil {
+
     protected static XYDataset dataset;
     protected static NumberAxis xAxis = new NumberAxis("X");
     protected static NumberAxis yAxis = new NumberAxis("Y");
     protected static String dataSetName = "";
 
     static LookupPaintScale paintScale = null;
+
+    protected static XYBlockRenderer renderer = null; 
+
+    protected double[] xValues = null;
+    protected double[] yValues = null;
     private static final List<Color> COLORS = new ArrayList<>();
+    protected double[][] zValues = null;
     public static final int PALETTE_BLUE_RED = 0;
+
     public static final int PALETTE_RED = 1;
+    protected static double lowerZBound = 0;
     public static final int PALETTE_BLUE = 2;
+    protected static double upperZBound = 0;
     public static final int PALETTE_GRAYSCALE = 3;
     public static final int PALETTE_WHITE_BLUE = 4;
     //This palette starts with blue at 0 and scales through the values.  Any negative values get the same red color
     public static final int PALETTE_POSITIVE_WHITE_BLUE_NEGATIVE_BLACK_RED = 5;
-
-    protected static XYBlockRenderer renderer = null;
-
-    protected double[] xValues = null;
-    protected double[] yValues = null;
-    protected double[][] zValues = null;
-
-    protected static double lowerZBound = 0;
-    protected static double upperZBound = 0;
-
-
     public static final int DEFAULT_PALETTE = PALETTE_BLUE_RED;
 
     protected static int palette = DEFAULT_PALETTE;
 
     public static final int DISTINCT_PALETTE_VALUES = 100;
+
     public static void setPaintScale(LookupPaintScale newPaintScale)
     {
         paintScale = newPaintScale;
+
         renderer.setPaintScale(newPaintScale);
+
         //repaint();
     }
 
@@ -120,6 +122,7 @@ public class HeatmapUtil {
     }
     public static LookupPaintScale createPaintScale(int palette)
     {
+        System.out.println("palette");
         LookupPaintScale result;
         switch (palette)
         {
@@ -147,6 +150,8 @@ public class HeatmapUtil {
                 result = createPaintScale(lowerZBound, upperZBound, Color.WHITE, new Color(5,5,5));
                 break;
         }
+        System.out.println("end palette");
+        System.out.println( result);
         return result;
     }
 
@@ -154,17 +159,19 @@ public class HeatmapUtil {
         final List<ShardedResultGroup> groups, final String title, Map<String, String> highlight,
         Double threshold, int height
     ) {
-        final XYLineAndShapeRenderer lineAndShapeRenderer = new XYLineAndShapeRenderer(true, true);
-        final DeviationRenderer intervalRenderer = new DeviationRenderer();
+        //final XYLineAndShapeRenderer lineAndShapeRenderer = new XYLineAndShapeRenderer(true, true);
+        //final DeviationRenderer intervalRenderer = new DeviationRenderer();
 
-        final XYSeriesCollection regularData = new XYSeriesCollection();
-        final YIntervalSeriesCollection intervalData = new YIntervalSeriesCollection();
+        //final XYSeriesCollection regularData = new XYSeriesCollection();
+        //final YIntervalSeriesCollection intervalData = new YIntervalSeriesCollection();
         final DefaultXYZDataset dataset = new DefaultXYZDataset();
-        int lineAndShapeCount = 0;
-        int intervalCount = 0;
-        final TwoDimentionalArrayList<Double> listzValues = new TwoDimentionalArrayList();
-        final ArrayList<Double> listxValues = new ArrayList();
-        final ArrayList<Double> listyValues = new ArrayList();
+
+        //int lineAndShapeCount = 0;
+        //int intervalCount = 0;
+        TwoDimentionalArrayList<Double> listzValues = new TwoDimentionalArrayList();
+        List<Double> listxValues = new ArrayList();
+        List<Double> listyValues = new ArrayList();
+
 
         for (final ShardedResultGroup resultGroup : groups) {
             final MetricCollection group = resultGroup.getMetrics();
@@ -173,12 +180,6 @@ public class HeatmapUtil {
             if (group.getType() == MetricType.POINT) {
 
                 final List<Point> data= group.getDataAs(Point.class);
-
-
-
-
-
-
 
                 int x,y;
                 x=0;
@@ -192,29 +193,20 @@ public class HeatmapUtil {
                     // Timestamp
                     double t = p.getTimestamp();
                     if (listxValues.contains(t)){
-
                         x=listxValues.indexOf(t);
                     }else{
-
                         listxValues.add(t);
                         x=listxValues.indexOf(t);
                     }
 
                     //System.out.print("getTimestamp");
-                    //System.out.println(  p.getTimestamp());
-                    //System.out.println(c);
-                    //System.out.print("getValue")  ;
+                    //System.out.print(  p.getTimestamp());
+                    //System.out.println(listxValues);
+
                     //frequence or coor
                     Double v = p.getValue();
-                    if (listyValues.contains(v)){
 
-                        y=listyValues.indexOf(v);
-                    }else{
-
-                        listyValues.add(v);
-                        y=listyValues.indexOf(v);
-                    }
-
+                    //frequence or coor
 
                     //System.out.println(value);
                     Map<String, SortedSet<String>> tags = series.getTags();
@@ -222,53 +214,68 @@ public class HeatmapUtil {
                     //g.writeStringField("value",strDouble );
                     //writeKey(g, series.getKeys());
                     //writeTags(g, common, series.getTags());
-
+                    String k="";
+                    if (series.getKeys().size() == 1) {
+                        k = series.getKeys().iterator().next();
+                    }
 
                     for (final Map.Entry<String, SortedSet<String>> pair : tags.entrySet()) {
 
 
-                        String f="";
+                        Double f=null;
                         final SortedSet<String> values = pair.getValue();
-                        //System.out.print("values");
-                        //System.out.println(values);
+                        ///System.out.print("get values");
+                        //System.out.print(values);
                         //System.out.print("getKey");
                         //System.out.println(pair.getKey());
                         if (values.size() != 1) {
                             continue;
                         }
 
-
-                        if(pair.getKey()=="coor") {
-                            //byte r = Byte.valueOf(values.iterator().next() );
-                            //map.put(pair.getKey(), new BigDecimal(values.iterator().next()).intValue());
-                            //system.out.println(  val);
-                            //int r = new BigDecimal(values.iterator().next() ).intValue();
-                            //DATA[c][] = Byte.valueOf(value);
-                        }
                         String K = pair.getKey();
-                        if (K.equals("orfees") && K.equals("f")){
-                            //System.out.println("condition ok ");
-                            //g.writeString( values.iterator().next());
-                            f = values.iterator().next();
-                            listzValues.addToInnerArray(x, y, v);
-                        }
 
+                        if (k.equals("orfees") && K.equals("f")){
+                            //System.out.print("Key : ");
 
-                        if (K.equals("nrh") && K.equals("coor")){
-                            //System.out.println("condition ok ");
                             //g.writeString( values.iterator().next());
-                            f = values.iterator().next();
-                            listzValues.addToInnerArray(x, y, v);
+                            String text = values.iterator().next();
+                            f = Double.parseDouble(text);
+                            //System.out.println(f);
 
                         }
 
 
+                        if (k.equals("nrh") && K.equals("coor")){
+                            //System.out.print("Key : ");
+                            //System.out.println("condition ok ");
+                            //g.writeString( values.iterator().next());
+                            String text = values.iterator().next();
+                            f = Double.parseDouble(text);
+                            //System.out.println(f);
+                        }
+                        if (listyValues.contains(f)){
+
+                            y=listyValues.indexOf(f);
+                        }else{
+
+                            listyValues.add(f);
+                            y=listyValues.indexOf(f);
+                        }
+                        //System.out.println(listyValues);
+                        if(k.equals("nrh")||k.equals("orfees")) {
+                            listzValues.addToInnerArray(x, y, v);
+                            //System.out.print(x);
+                            //System.out.print(y);
+                            //System.out.print(v);
+
+                            //System.out.print("getValue");
+                        }
                         //map.put(pair.getKey(),new BigDecimal (values.iterator().next()).intValue());
                     }
 
                     //int r = map.get("coor");
-                    System.out.println("list");
-                    System.out.println(listzValues);
+                    //System.out.print("list : ");
+                    //System.out.println(listzValues);
 
                     //DATA[c][r] = value;
 
@@ -290,7 +297,7 @@ public class HeatmapUtil {
                  lineAndShapeRenderer.setSeriesStroke(lineAndShapeCount, new BasicStroke(2.0f));
                  regularData.addSeries(series);
                  */
-                ++lineAndShapeCount;
+                //++lineAndShapeCount;
             }
 
 
@@ -304,74 +311,54 @@ public class HeatmapUtil {
              */
 
         }
-        //try {
+        /**
+        try {
 
-        //    byte[] imageInByte;
-        //BufferedImage originalImage = ImageIO.read(new File("c:/darksouls.jpg"));
+            byte[] imageInByte;
+        BufferedImage originalImage = ImageIO.read(new File("c:/darksouls.jpg"));
 
         // convert BufferedImage to byte array
-        //ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        //ImageIO.write(originalImage, "jpg", baos);
-        //baos.flush();
-        //imageInByte = baos.toByteArray();
-        //baos.close();
-        //imageInByte = DATA
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(originalImage, "jpg", baos);
+        baos.flush();
+        imageInByte = baos.toByteArray();
+        baos.close();
+        imageInByte = DATA;
         // convert byte array back to BufferedImage
-        //InputStream in = new ByteArrayInputStream(imageInByte);
-        //BufferedImage bImageFromConvert = ImageIO.read(in);
+        InputStream in = new ByteArrayInputStream(imageInByte);
+        BufferedImage bImageFromConvert = ImageIO.read(in);
 
-        //ImageIO.write(bImageFromConvert, "jpg", new File("c:/new-darksouls.jpg"));
+        ImageIO.write(bImageFromConvert, "jpg", new File("c:/new-darksouls.jpg"));
 
-        //} catch (IOException e) {
-        //    System.out.println(e.getMessage());
-        //}
-
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+         */
+        //System.out.println("array");
         Double[] xValues = listxValues.toArray(new Double[listxValues.size()]);
         Double[] yValues = listyValues.toArray(new Double[listyValues.size()]);
         Double[][] zValues = listzValues.stream().map(u -> u.toArray(new Double[0])).toArray(Double[][]::new);
 
-
         final JFreeChart chart = setData( xValues, yValues,zValues);
-
-        //final JFreeChart chart =
-         //   buildChart(title, regularData, intervalData, lineAndShapeRenderer, intervalRenderer, dataset);
-
-        chart.setAntiAlias(true);
-        chart.setBackgroundPaint(Color.WHITE);
-
-        final XYPlot plot = chart.getXYPlot();
-
-        plot.setBackgroundPaint(Color.WHITE);
-        plot.setDomainGridlinePaint(Color.BLACK);
-        plot.setRangeGridlinePaint(Color.BLACK);
-
-        if (threshold != null) {
-            final ValueMarker marker = new ValueMarker(threshold, Color.RED,
-                new BasicStroke(Math.max(Math.min(height / 20, 6), 1)), Color.RED, null, 0.5f);
-            plot.addRangeMarker(marker);
-        }
-
-        plot.setRenderer(lineAndShapeRenderer);
-
-        // final DateAxis rangeAxis = (DateAxis) plot.getRangeAxis();
-        // rangeAxis.setStandardTickUnits(DateAxis.createStandardDateTickUnits());
-
         return chart;
     }
 
     private static JFreeChart setData(Double[] xValues, Double[] yValues, Double[][] zValues)
     {
-        //this.xValues = xValues;
-        //this.yValues = yValues;
-        //this.zValues = zValues;
+        int palette = PALETTE_BLUE_RED;
+        System.out.println("start data");
         LookupPaintScale paintScale = null;
-        //DefaultXYZDataset dataset = new XYSeriesCollection();
-        XYBlockRenderer renderer = new XYBlockRenderer();
-        double minZValue = Double.MAX_VALUE;
-        double maxZValue = Double.MIN_VALUE;
+
+
+        renderer = new XYBlockRenderer();
+        System.out.println(renderer);
+        Double minZValue = Double.MAX_VALUE;
+        Double maxZValue = Double.MIN_VALUE;
         int width = xValues.length;
         int height = yValues.length;
         int numCells = width * height;
+        System.out.print( numCells);
+
 
         if (zValues.length != width || zValues[0].length != height)
             throw new RuntimeException("PanelWithHeatMap: wrong number of z values for x and y values (" +
@@ -380,19 +367,25 @@ public class HeatmapUtil {
         DefaultXYZDataset theDataset = new DefaultXYZDataset();
         double[][] data = new double[3][numCells];
         for(int j=0; j<height; j++){
+
             for(int i=0; i<width; i++)
             {
                 int cellIndex = (j * width) + i;
                 data[0][cellIndex]= xValues[i];
-                data[1][cellIndex]= yValues[j];
+                if (yValues[j]==null) {
+                    data[1][cellIndex] = 0;
+                }else{
+                    data[1][cellIndex] = yValues[j];
+                }
                 data[2][cellIndex]= zValues[i][j];
+
                 //keep track of lowest/highest z values
                 minZValue = Math.min(zValues[i][j], minZValue);
                 maxZValue = Math.max(zValues[i][j], maxZValue);
+
             }
         }
         Double lowerZBound = Rounder.round(minZValue,3);
-
         Double upperZBound = Rounder.round(maxZValue,3);
         //if (lowerZBound == upperZBound)
         //    upperZBound += .0001;
@@ -404,18 +397,18 @@ public class HeatmapUtil {
         {
             renderer = new XYBlockRenderer();
         }
-
         if (paintScale == null)
         {
             setPaintScale(createPaintScale(palette));
         }
+
         //This is necessary to get everything to line up
         renderer.setBlockAnchor(RectangleAnchor.BOTTOM);
 
         //if (XYPlot.getPlot() != null)
         //{
-        //    ((XYPlot) XYPlot.getPlot()).setDataset(dataset);
-        //    ((XYPlot) XYPlot.getPlot()).setRenderer(renderer);
+         //   ((XYPlot) XYPlot.getPlot()).setDataset(dataset);
+         //   ((XYPlot) XYPlot.getPlot()).setRenderer(renderer);
 
             //invalidate();
         //    return;
@@ -451,37 +444,5 @@ public class HeatmapUtil {
         return chart;
     }
 
-    private static JFreeChart buildChart(
-        final String title, final XYDataset lineAndShape, final XYDataset interval,
-        final XYItemRenderer lineAndShapeRenderer, final XYItemRenderer intervalRenderer,XYDataset dataset
-    ) {
-        final ValueAxis timeAxis = new DateAxis();
-        timeAxis.setLowerMargin(0.02);
-        timeAxis.setUpperMargin(0.02);
-
-
-        final NumberAxis valueAxis = new NumberAxis();
-        valueAxis.setAutoRangeIncludesZero(false);
-
-        XYBlockRenderer renderer = new XYBlockRenderer();
-
-        final XYPlot plot = new XYPlot(dataset,timeAxis , valueAxis, renderer);
-
-        //final XYPlot plot = new XYPlot();
-
-        plot.setDomainAxis(0, timeAxis);
-        plot.setRangeAxis(0, valueAxis);
-
-        plot.setDataset(0, lineAndShape);
-        plot.setRenderer(0, lineAndShapeRenderer);
-
-        plot.setDomainAxis(1, timeAxis);
-        plot.setRangeAxis(1, valueAxis);
-
-        plot.setDataset(1, interval);
-        plot.setRenderer(1, intervalRenderer);
-
-        return new JFreeChart(title, JFreeChart.DEFAULT_TITLE_FONT, plot, false);
-    }
 }
 
