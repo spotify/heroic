@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.Test;
@@ -77,7 +78,8 @@ public class BasicSerializationTest {
         final ResultLimits limits = ResultLimits.of();
 
         final QueryMetricsResponse toVerify =
-            new QueryMetricsResponse(queryId, range, result, errors, trace, limits);
+            new QueryMetricsResponse(queryId, range, result, errors, trace, limits,
+                Optional.empty());
 
         assertSerialization("QueryMetricsResponse.json", toVerify);
     }

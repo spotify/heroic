@@ -25,5 +25,6 @@
       "tagCounts": {}
     }
   ],
+  "preAggregationSampleSize":null,
   "errors": []
 }
