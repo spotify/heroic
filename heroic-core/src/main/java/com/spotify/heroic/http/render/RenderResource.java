@@ -39,6 +39,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.util.Map;
 
 @Path("render")
@@ -137,13 +138,19 @@ public class RenderResource {
 
         final QueryResult result = this.query.useGroup(backendGroup).query(q).get();
 
-        final JFreeChart chart =
+        final BufferedImage image =
             HeatmapUtil.createChart(result.getGroups(), title, highlight, threshold, height);
-
-        final BufferedImage image = chart.createBufferedImage(width, height);
+        System.out.print("image");
+        //final BufferedImage image = chart.createBufferedImage(width, height);
 
         final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         ImageIO.write(image, "png", buffer);
+
+        File outputfile = new File("saved.png");
+        ImageIO.write(image, "png",outputfile );
+        //System.out.print(image);
+        //System.out.print(buffer);
+        //System.out.print(buffer.toByteArray());
 
         return Response.ok(buffer.toByteArray()).build();
     }
