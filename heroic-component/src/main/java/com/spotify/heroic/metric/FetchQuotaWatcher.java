@@ -43,6 +43,13 @@ public interface FetchQuotaWatcher {
     int getReadDataQuota();
 
     /**
+     * Indicates that backend did access {@code n} more rows
+     *
+     * @param n The number of rows accessed by the backend.
+     */
+    void accessedRows(long n);
+
+    /**
      * Special quota watcher indicating no quota should be applied.
      */
     FetchQuotaWatcher NO_QUOTA = new FetchQuotaWatcher() {
@@ -58,6 +65,10 @@ public interface FetchQuotaWatcher {
         @Override
         public int getReadDataQuota() {
             return Integer.MAX_VALUE;
+        }
+
+        @Override
+        public void accessedRows(final long n) {
         }
     };
 }
