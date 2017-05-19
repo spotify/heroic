@@ -12,7 +12,7 @@ Strongly define how time buckets are aligned, specifically with an half-open int
 The output buckets of sampling aggregations must fall within the captured interval of the same bucket in the next sampling aggregation.
 This avoids samples 'travelling' when chaining multiple sampling aggregations, so that `a | b` is equivalent to `a | a | b`. A concrete example is that `spread | sum` must result in the same buckets as just `sum` to allow for correctly functioning global aggregations.
 
-Current fetches for `BigtableBackend` have one edge case for every period interval where data is invisible (see: https://github.com/udoprog/heroic/blob/fake-bigtable-backend/heroic-test-it/src/main/java/com/spotify/heroic/test/AbstractMetricBackendIT.java#L129).
+Current fetches for `BigtableBackend` have one edge case for every period interval where data is invisible (see: [AbstractMetricBackendIT.java](https://github.com/spotify/heroic/blob/master/heroic-test-it/src/main/java/com/spotify/heroic/test/AbstractMetricBackendIT.java#L193)).
 An interval definition should be picked which makes this easier to avoid.
 
 ## Suggestion
