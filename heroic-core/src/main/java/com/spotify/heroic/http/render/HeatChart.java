@@ -149,7 +149,7 @@ public class HeatChart {
     public static final double SCALE_EXPONENTIAL = 3;
 
     // x, y, z data values.
-    private double[][] zValues;
+    private Double[][] zValues;
     private Object[] xValues;
     private Object[] yValues;
 
@@ -226,7 +226,7 @@ public class HeatChart {
      * @param zValues the z-values, where each element is a row of z-values
      * in the resultant heat chart.
      */
-    public HeatChart(double[][] zValues) {
+    public HeatChart(Double[][] zValues) {
         this(zValues, min(zValues), max(zValues));
     }
 
@@ -242,7 +242,7 @@ public class HeatChart {
      * @param high the maximum possible value, which may or may not appear in
      * the z-values.
      */
-    public HeatChart(double[][] zValues, double low, double high) {
+    public HeatChart(Double[][] zValues, double low, double high) {
         this.zValues = zValues;
         this.lowValue = low;
         this.highValue = high;
@@ -315,7 +315,7 @@ public class HeatChart {
      * @return an array of the z-values in current use, that is, those values
      * which will define the colour of each cell in the resultant heat map.
      */
-    public double[][] getZValues() {
+    public Double[][] getZValues() {
         return zValues;
     }
 
@@ -327,7 +327,7 @@ public class HeatChart {
      * @param zValues the array to replace the current array with. The number
      * of elements in each inner array must be identical.
      */
-    public void setZValues(double[][] zValues) {
+    public void setZValues(Double[][] zValues) {
         setZValues(zValues, min(zValues), max(zValues));
     }
 
@@ -386,7 +386,7 @@ public class HeatChart {
      * @param high the maximum possible value, which may or may not appear in
      * the z-values.
      */
-    public void setZValues(double[][] zValues, double low, double high) {
+    public void setZValues(Double[][] zValues, double low, double high) {
         this.zValues = zValues;
         this.lowValue = low;
         this.highValue = high;
@@ -1302,7 +1302,7 @@ public class HeatChart {
      * @return A newly generated chart <code>Image</code>. The returned image
      * is a <code>BufferedImage</code>.
      */
-    public Image getChartImage(boolean alpha) {
+    public BufferedImage getChartImage(boolean alpha) {
         // Calculate all unknown dimensions.
         measureComponents();
         updateCoordinates();
@@ -1498,7 +1498,7 @@ public class HeatChart {
      * Creates the actual heatmap element as an image, that can then be drawn
      * onto a chart.
      */
-    private void drawHeatMap(Graphics2D chartGraphics, double[][] data) {
+    private void drawHeatMap(Graphics2D chartGraphics, Double[][] data) {
         // Calculate the available size for the heatmap.
         int noYCells = data.length;
         int noXCells = data[0].length;
@@ -1689,7 +1689,7 @@ public class HeatChart {
      * Determines what colour a heat map cell should be based upon the cell
      * values.
      */
-    private Color getCellColour(double data, double min, double max) {
+    private Color getCellColour(Double data, double min, double max) {
         double range = max - min;
         double position = data - min;
 
@@ -1750,7 +1750,7 @@ public class HeatChart {
      *
      * @return the largest value in the array.
      */
-    public static double max(double[][] values) {
+    public static double max(Double[][] values) {
         double max = 0;
         for (int i=0; i<values.length; i++) {
             for (int j=0; j<values[i].length; j++) {
@@ -1765,7 +1765,7 @@ public class HeatChart {
      *
      * @return the smallest value in the array.
      */
-    public static double min(double[][] values) {
+    public static double min(Double[][] values) {
         double min = Double.MAX_VALUE;
         for (int i=0; i<values.length; i++) {
             for (int j=0; j<values[i].length; j++) {

@@ -24,7 +24,10 @@ package com.spotify.heroic.http.render;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.Query;
 import com.spotify.heroic.QueryManager;
+import com.spotify.heroic.http.query.QueryHeatmap;
+import com.spotify.heroic.http.query.QueryHeatmapResponse;
 import com.spotify.heroic.metric.QueryResult;
+import eu.toolchain.async.AsyncFuture;
 import org.jfree.chart.JFreeChart;
 
 import javax.imageio.ImageIO;
@@ -32,15 +35,20 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.ws.rs.BadRequestException;
 import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.container.AsyncResponse;
+import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 @Path("render")
 public class RenderResource {
@@ -137,9 +145,9 @@ public class RenderResource {
         final Query q = query.newQueryFromString(queryString).build();
 
         final QueryResult result = this.query.useGroup(backendGroup).query(q).get();
-
+        HeatmapUtil HU = new HeatmapUtil();
         final BufferedImage image =
-            HeatmapUtil.createChart(result.getGroups(), title, highlight, threshold, height);
+            HU.createChart(result.getGroups(), title, highlight, threshold, height);
         System.out.print("image");
         //final BufferedImage image = chart.createBufferedImage(width, height);
 
@@ -154,4 +162,55 @@ public class RenderResource {
 
         return Response.ok(buffer.toByteArray()).build();
     }
+
+
+    @SuppressWarnings("unchecked")
+    @POST
+    @Path("heatmap")
+    @Produces("image/png")
+    public Response heatmapPost(
+
+        @QueryParam("backend") String backendGroup,
+        QueryHeatmap query
+
+    ) throws Exception {
+
+        int width = DEFAULT_WIDTH;
+
+
+
+        int height = DEFAULT_HEIGHT;
+
+
+        final Map<String, String> highlight;
+
+        Double threshold = 0d;
+        highlight = null;
+
+        final Query q = query.toQueryBuilder(this.query::newQueryFromString).build();
+        //final Query q = query.newQueryFromString(queryString).build();
+        //final QueryManager.Group g = this.query.useOptionalGroup(Optional.ofNullable(group));
+        final QueryResult result = this.query.useGroup(backendGroup).query(q).get();
+
+        //final AsyncFuture<QueryResult> callback = g.query(q);
+
+        //bindHeatmapResponse(response, callback);
+        HeatmapUtil HU = new HeatmapUtil();
+        final BufferedImage image =
+            HU.createChart(result.getGroups(), "test", highlight, threshold, height);
+        System.out.print("image");
+        //final BufferedImage image = chart.createBufferedImage(width, height);
+
+        final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        ImageIO.write(image, "png", buffer);
+
+        File outputfile = new File("saved.png");
+        ImageIO.write(image, "png",outputfile );
+        //System.out.print(image);
+        //System.out.print(buffer);
+        //System.out.print(buffer.toByteArray());
+
+        return Response.ok(buffer.toByteArray()).build();
+    }
+
 }
