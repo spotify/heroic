@@ -68,6 +68,10 @@ public class TracingClusterNode implements ClusterNode {
         return new Group(delegateNode.useOptionalGroup(group));
     }
 
+    public String toString() {
+        return delegateNode.toString();
+    }
+
     @RequiredArgsConstructor
     public class Group implements ClusterNode.Group {
         private final ClusterNode.Group delegateGroup;
