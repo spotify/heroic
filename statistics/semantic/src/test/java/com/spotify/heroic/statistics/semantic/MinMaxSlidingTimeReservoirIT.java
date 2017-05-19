@@ -56,7 +56,7 @@ public class MinMaxSlidingTimeReservoirIT {
             };
 
             final MinMaxSlidingTimeReservoir reservoir =
-                new MinMaxSlidingTimeReservoir(clock, SIZE, STEP, delegate);
+                new MinMaxSlidingTimeReservoir(clock, SIZE, STEP, TimeUnit.NANOSECONDS, delegate);
 
             final LongAccumulator min = new LongAccumulator(Math::min, Long.MAX_VALUE);
             final LongAccumulator max = new LongAccumulator(Math::max, Long.MIN_VALUE);

@@ -28,7 +28,8 @@ public class MinMaxSlidingTimeReservoirTest {
     @Before
     public void setup() {
         delegate = mock(Reservoir.class);
-        reservoir = spy(new MinMaxSlidingTimeReservoir(clock, SIZE, STEP, delegate));
+        reservoir =
+            spy(new MinMaxSlidingTimeReservoir(clock, SIZE, STEP, TimeUnit.NANOSECONDS, delegate));
         doReturn(DELEGATE_SNAPSHOT).when(delegate).getSnapshot();
     }
 
