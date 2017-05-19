@@ -42,7 +42,6 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 class LimitedCellsRequestEmitter {
-
     private final BiFunction<ReadRowsRequest, CellConsumer, ListenableFuture<?>> requestIssuer;
     private final AsyncFramework async;
 

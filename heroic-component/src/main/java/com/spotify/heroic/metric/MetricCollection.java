@@ -28,13 +28,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.common.Series;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -160,28 +158,6 @@ public abstract class MetricCollection {
         final Function<List<? extends Metric>, MetricCollection> adapter =
             checkNotNull(adapters.get(key), "adapter does not exist for type");
         return adapter.apply(metrics);
-    }
-
-    public static MetricCollection mergeSorted(
-        final List<MetricCollection> values
-    ) {
-        if (values.isEmpty()) {
-            return empty();
-        }
-
-        MetricType type = values.iterator().next().getType();
-        values.stream().forEach(mc -> {
-            if (mc.getType() != type) {
-                throw new RuntimeException("Can't mix metric types when merging");
-            }
-        });
-
-        // Flatten
-        final List<Metric> data =
-            values.stream().flatMap(mc -> mc.getData().stream()).collect(Collectors.toList());
-        // Sort
-        Collections.sort(data, Metric.comparator);
-        return build(type, data);
     }
 
     public static MetricCollection mergeSorted(

@@ -233,8 +233,29 @@ public abstract class AbstractMetricBackendIT {
             })
             .get();
 
-        MetricCollection readResult = MetricCollection.mergeSorted(new ArrayList<>(readData));
+        MetricCollection readResult = metricsMergeSorted(new ArrayList<>(readData));
+
         assertEquals(expected, readResult);
+    }
+
+    private MetricCollection metricsMergeSorted(final List<MetricCollection> values) {
+        if (values.isEmpty()) {
+            return MetricCollection.empty();
+        }
+
+        MetricType type = values.iterator().next().getType();
+        values.stream().forEach(mc -> {
+            if (mc.getType() != type) {
+                throw new RuntimeException("Can't mix metric types when merging");
+            }
+        });
+
+        // Flatten
+        final List<Metric> data =
+            values.stream().flatMap(mc -> mc.getData().stream()).collect(Collectors.toList());
+        // Sort
+        Collections.sort(data, Metric.comparator);
+        return MetricCollection.build(type, data);
     }
 
     private TestCase newCase() {

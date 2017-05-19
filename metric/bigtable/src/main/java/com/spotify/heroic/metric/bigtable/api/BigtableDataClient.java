@@ -33,7 +33,6 @@ import java.util.Optional;
 import java.util.function.Function;
 
 public interface BigtableDataClient {
-
     interface CellConsumer {
         <T> void consume(
             List<? extends T> data, Function<T, ByteString> qualifier, Function<T, ByteString> value

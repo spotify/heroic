@@ -48,7 +48,6 @@ import lombok.ToString;
 @RequiredArgsConstructor
 @ToString
 public class BigtableDataClientImpl implements BigtableDataClient {
-
     private final AsyncFramework async;
     private final com.google.cloud.bigtable.grpc.BigtableSession session;
     private final BigtableMutator mutator;
@@ -100,7 +99,6 @@ public class BigtableDataClientImpl implements BigtableDataClient {
     ) {
         return Futures.transform(session.getDataClient().readFlatRowsAsync(request),
             new Function<List<FlatRow>, Object>() {
-
                 @Override
                 public Object apply(final List<FlatRow> flatRows) {
                     flatRows
