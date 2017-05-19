@@ -243,10 +243,10 @@ public class CoreQueryManager implements QueryManager {
                     shardWatch.end()));
             }
 
-            final BucketStrategy bucketStrategy =
-                features.withFeature(Feature.END_BUCKET, () -> BucketStrategy.END, () -> {
-                    throw new IllegalArgumentException(Feature.END_BUCKET + ": must be set");
-                });
+            final BucketStrategy bucketStrategy = options
+                .getBucketStrategy()
+                .orElseGet(() -> features.withFeature(Feature.END_BUCKET, () -> BucketStrategy.END,
+                    () -> BucketStrategy.START));
 
             final AggregationCombiner combiner;
 
