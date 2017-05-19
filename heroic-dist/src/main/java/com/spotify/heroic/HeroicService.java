@@ -225,7 +225,7 @@ public class HeroicService {
         if (params.help) {
             parser.printUsage(System.out);
             System.out.println();
-            HeroicModules.printAllUsage(System.out, "-p");
+            HeroicModules.printAllUsage(System.out, "-P");
             return null;
         }
 
