@@ -192,7 +192,9 @@ public class QueryHeatmapResponse {
                     }
 
                 }
+                //Double F = Double.parseDouble(f);
                 g.writeFieldName(f);
+                //g.writeString(f);
                 g.writeStartObject();
                 if (collection.getType() == MetricType.POINT) {
                     final List<Point> points= collection.getDataAs(Point.class);
