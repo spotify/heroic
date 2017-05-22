@@ -10,7 +10,7 @@
   <groupId>com.spotify.heroic.repackaged</groupId>
   <artifactId>bigtable-client-core</artifactId>
   <packaging>jar</packaging>
-  <version>0.9.6.2</version>
+  <version>0.9.4</version>
 
   <name>Heroic: Re-Packaging of Bigtable Client Utilities</name>
 
