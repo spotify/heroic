@@ -46,7 +46,6 @@ import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
 import eu.toolchain.serializer.Serializer;
 import java.util.Optional;
-import java.util.concurrent.ExecutorService;
 import javax.inject.Named;
 import lombok.Data;
 
@@ -128,8 +127,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         @Provides
         @BigtableScope
         public Managed<BigtableConnection> connection(
-            final AsyncFramework async, final ExecutorService executorService,
-            final Lazy<FakeBigtableConnection> fakeBigtableConnection
+            final AsyncFramework async, final Lazy<FakeBigtableConnection> fakeBigtableConnection
         ) {
             if (fake) {
                 return async.managed(new ManagedSetup<BigtableConnection>() {
@@ -151,8 +149,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
                 public AsyncFuture<BigtableConnection> construct() throws Exception {
                     return async.call(
                         new BigtableConnectionBuilder(project, instance, credentials, async,
-                            executorService, disableBulkMutations, flushIntervalSeconds,
-                            batchSize));
+                            disableBulkMutations, flushIntervalSeconds, batchSize));
                 }
 
                 @Override
@@ -183,7 +180,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         @Provides
         @BigtableScope
         public Serializer<RowKey> rowKeySerializer() {
-           return new MetricsRowKeySerializer();
+            return new MetricsRowKeySerializer();
         }
 
         @Provides
@@ -255,7 +252,6 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
             this.disableBulkMutations = of(disableBulkMutations);
             return this;
         }
-
 
         public Builder flushIntervalSeconds(int flushIntervalSeconds) {
             this.flushIntervalSeconds = of(flushIntervalSeconds);
