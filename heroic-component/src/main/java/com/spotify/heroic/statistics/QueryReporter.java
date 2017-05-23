@@ -36,6 +36,9 @@ public interface QueryReporter {
      */
     void reportSmallQueryLatency(long duration);
 
+    void reportLatencyVsSize(long durationNs, long preAggregationSampleSize);
+
     void reportClusterNodeRpcError();
+
     void reportClusterNodeRpcCancellation();
 }

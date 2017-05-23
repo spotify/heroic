@@ -21,8 +21,8 @@
 
 package com.spotify.heroic.statistics.noop;
 
-import com.spotify.heroic.statistics.QueryReporter;
 import com.spotify.heroic.statistics.FutureReporter;
+import com.spotify.heroic.statistics.QueryReporter;
 
 public class NoopQueryReporter implements QueryReporter {
     private static final NoopQueryReporter INSTANCE = new NoopQueryReporter();
@@ -38,6 +38,10 @@ public class NoopQueryReporter implements QueryReporter {
 
     @Override
     public void reportSmallQueryLatency(final long duration) {
+    }
+
+    @Override
+    public void reportLatencyVsSize(final long durationNs, final long preAggregationSampleSize) {
     }
 
     @Override

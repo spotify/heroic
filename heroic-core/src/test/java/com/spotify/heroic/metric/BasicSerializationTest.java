@@ -8,6 +8,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Histogram;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.test.FakeModuleLoader;
@@ -58,7 +59,7 @@ public class BasicSerializationTest {
         final List<RequestError> errors = new ArrayList<>();
         final FullQuery expected =
             new FullQuery(QueryTrace.of(QueryTrace.identifier("test"), 0L), errors, groups,
-                Statistics.empty(), ResultLimits.of());
+                Statistics.empty(), ResultLimits.of(), Optional.empty());
 
         assertSerialization("FullQuery.json", expected, FullQuery.class);
     }

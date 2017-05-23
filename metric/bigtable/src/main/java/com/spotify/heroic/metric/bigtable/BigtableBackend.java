@@ -472,7 +472,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             fetches.add(readRows.directTransform(result -> {
                 for (final FlatRow row : result) {
                     watcher.readData(row.getCells().size());
-                    List<Metric> metrics = Lists.transform(row.getCells(), transform);
+                    final List<Metric> metrics = Lists.transform(row.getCells(), transform);
                     metricsConsumer.accept(MetricCollection.build(type, metrics));
                 }
                 return FetchData.result(fs.end());

@@ -23,6 +23,7 @@ package com.spotify.heroic.statistics.semantic;
 
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Histogram;
+import com.google.common.base.Stopwatch;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.Groups;
@@ -43,6 +44,7 @@ import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 import eu.toolchain.async.AsyncFuture;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAccumulator;
 import java.util.function.Consumer;
@@ -75,6 +77,8 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
     private final Histogram queryRowsAccessed;
     /* Maximum amount of data points in memory at any time for a query */
     private final Histogram queryMaxLiveSamples;
+    private final Histogram queryReadRate;
+    private final Histogram queryRowDensity;
 
     public SemanticMetricBackendReporter(SemanticMetricRegistry registry) {
         final MetricId base = MetricId.build().tagged("component", COMPONENT);
@@ -108,6 +112,10 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
             base.tagged("what", "query-metrics-rows-accessed", "unit", Units.COUNT));
         queryMaxLiveSamples = registry.histogram(
             base.tagged("what", "query-metrics-max-live-samples", "unit", Units.COUNT));
+        queryReadRate =
+            registry.histogram(base.tagged("what", "query-metrics-read-rate", "unit", Units.COUNT));
+        queryRowDensity = registry.histogram(
+            base.tagged("what", "query-metrics-row-density", "unit", Units.COUNT));
     }
 
     @Override
@@ -122,6 +130,7 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
             private final AtomicLong dataInMemory = new AtomicLong(0L);
             private final LongAccumulator rowsAccessed = new LongAccumulator((x, y) -> x + y, 0L);
             private final LongAccumulator maxDataInMemory = new LongAccumulator(Long::max, 0L);
+            private final Stopwatch queryWatch = Stopwatch.createStarted();
 
             @Override
             public void reportRowsAccessed(final long n) {
@@ -129,10 +138,16 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
             }
 
             @Override
+            public void reportRowDensity(final long msBetweenSamples) {
+                queryRowDensity.update(msBetweenSamples);
+            }
+
+            @Override
             public void reportDataHasBeenRead(final long n) {
                 dataRead.accumulate(n);
 
-                maxDataInMemory.accumulate(dataInMemory.addAndGet(n));
+                final long currDataInMemory = dataInMemory.addAndGet(n);
+                maxDataInMemory.accumulate(currDataInMemory);
 
                 sampleSizeLive.inc(n);
                 sampleSizeAccumulated.inc(n);
@@ -149,13 +164,21 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
             public void reportOperationEnded() {
                 // Decrement any remaining live memory
                 sampleSizeLive.dec(dataInMemory.get());
+
+                final long finalDataRead = dataRead.get();
                 /* The accumulated count has previously been incremented with all of the data read,
                  * so decrease the full amount now */
-                sampleSizeAccumulated.dec(dataRead.get());
+                sampleSizeAccumulated.dec(finalDataRead);
 
-                querySamplesRead.update(dataRead.get());
+                querySamplesRead.update(finalDataRead);
                 queryRowsAccessed.update(rowsAccessed.get());
                 queryMaxLiveSamples.update(maxDataInMemory.get());
+
+                final long durationNs = queryWatch.elapsed(TimeUnit.NANOSECONDS);
+                if (durationNs != 0) {
+                    // Amount of data read per second
+                    queryReadRate.update((1_000_000_000 * finalDataRead) / durationNs);
+                }
             }
         };
     }

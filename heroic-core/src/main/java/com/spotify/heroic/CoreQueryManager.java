@@ -297,8 +297,10 @@ public class CoreQueryManager implements QueryManager {
             if (sampleSize > smallQueryThreshold) {
                 return;
             }
-            final long duration = fullQueryWatch.elapsed(TimeUnit.MILLISECONDS);
-            reporter.reportSmallQueryLatency(duration);
+            final long durationNs = fullQueryWatch.elapsed(TimeUnit.NANOSECONDS);
+            reporter.reportLatencyVsSize(durationNs, result.getPreAggregationSampleSize());
+            final long durationMs = TimeUnit.NANOSECONDS.toMillis(durationNs);
+            reporter.reportSmallQueryLatency(durationMs);
         }
 
         @Override
