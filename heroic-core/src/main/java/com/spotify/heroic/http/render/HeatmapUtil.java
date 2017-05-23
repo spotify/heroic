@@ -50,6 +50,8 @@ import org.jzy3d.plot3d.builder.concrete.OrthonormalGrid;
 import org.jzy3d.plot3d.primitives.Shape;
 import org.jzy3d.plot3d.rendering.canvas.Quality;
 
+import static javax.imageio.ImageIO.*;
+
 public class HeatmapUtil {
     //extends AbstractAnalysis
 
@@ -65,7 +67,7 @@ public class HeatmapUtil {
         final List<ShardedResultGroup> groups, final String title, Map<String, String> highlight,
         Double threshold, int height
     ) {
-        List<Double> arval  = new ArrayList();
+        //List<Double> arval  = new ArrayList();
         TwoDimentionalArrayList<Double> listzValues = new TwoDimentionalArrayList();
         List<Double> listxValues = new ArrayList();
         TreeMap<Double, TreeMap<Double, Double>> zzz = new TreeMap<Double, TreeMap<Double, Double>>();
@@ -162,7 +164,7 @@ public class HeatmapUtil {
                             // Do what you want to do with val
                             //System.out.println(t);
                             zzz.put(t, val);
-                            arval.add(v);
+                            //arval.add(v);
 
                             //System.out.println(zzz);
                         }
@@ -201,13 +203,13 @@ public class HeatmapUtil {
        // double[][] z =  ArrayUtils.toPrimitive(d);
 
 
-        double[] flat = ArrayUtil.flattenDoubleArray(zValues);
+        //double[] flat = ArrayUtil.flattenDoubleArray(zValues);
         int[] shape = {zzz.size(),(zzz.get(lasttime)).size()};	//Array shape here
 
 
 
 
-        INDArray myArr = Nd4j.create(flat,shape,'c');
+        //INDArray myArr = Nd4j.create(flat,shape,'c');
 
         //int min = Collections.min(listzValues);
         //int max = Collections.max(listzValues);
@@ -229,6 +231,7 @@ public class HeatmapUtil {
         //map.saveToFile(new File("java-heat-chart.png"));
         //Double maxx = Collections.max(zzz);
         double range = maxz.doubleValue() - minz.doubleValue();
+        /**
         Collection<TreeMap<Double,Double>> values =(Collection<TreeMap<Double,Double>>) zzz.values();
         TreeMap<Double,Double>[] targetArray =(TreeMap<Double, Double>[]) values.toArray();
         for(TreeMap<Double,Double> tm: targetArray){
@@ -236,22 +239,27 @@ public class HeatmapUtil {
 
 
         }
+         */
         Set set = zzz.entrySet();
         Iterator i = set.iterator();
-        //BufferedImage img = new BufferedImage(zzz.size(), size, BufferedImage.TYPE_INT_ARGB);
-        /**
+        BufferedImage img = new BufferedImage(zzz.size(), size, BufferedImage.TYPE_INT_ARGB);
+        byte[] data;
+        int h=0;
+        int n=0;
         while(i.hasNext()) {
          Map.Entry<Double,TreeMap> me = (Map.Entry) i.next();
-
+         TreeMap tmv = (TreeMap)   me.getValue();
+         Double[] la =(Double[]) tmv.values().toArray();
+         System.out.println(la);
          Set jset = (me.getValue()).entrySet();
          Iterator j = jset.iterator();
          //System.out.print(me.getKey() + ": ");
          Gradient G = new Gradient();
          Color[] colors= G.GRADIENT_BLUE_TO_RED;
          //System.out.println(me.getValue());
-         int h=0;
-         int n=0;
 
+
+        /**
          while(j.hasNext()) {
              Map.Entry<Double,Double> jme = (Map.Entry)j.next();
              //System.out.print(jme.getKey() + ": ");
@@ -278,13 +286,13 @@ public class HeatmapUtil {
 
                 n=n+1;
             }
+            */
             h=h+1;
 
         }
-         */
-        byte[] data;
-        ByteArrayInputStream stream = new ByteArrayInputStream(data);
-        BufferedImage img = ImageIO.read(stream);
+        //ByteArrayInputStream stream = new ByteArrayInputStream(data);
+        //img = read(stream);
+
 
         //System.out.println(minz);
         //System.out.println(maxz);
