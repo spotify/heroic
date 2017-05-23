@@ -44,6 +44,7 @@ import com.spotify.metrics.core.SemanticMetricRegistry;
 import eu.toolchain.async.AsyncFuture;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAccumulator;
 import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
@@ -62,21 +63,18 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
     private final FutureReporter findSeries;
     private final FutureReporter queryMetrics;
 
-    /*
-     * Incremented on readData - i.e. when we get data from backend
-     * As soon as a Slice is released, this is decremented
-     */
+    /* Total amount of data points in memory at any given time, across all queries */
     private final Counter sampleSizeLive;
 
-    /*
-     * Incremented on readData - i.e. when we get data from backend
-     * When a request finishes (Slice & aggregation done), this is decremented
-     */
+    /* Total amount of data points in memory + data points that has earlier been read in all ongoing
+     * queries. This gives an upper bound, of sorts, on amount of active data points we have. */
     private final Counter sampleSizeAccumulated;
 
     /* Measuring on a data-node level, can be used for measuring load on metric backend */
     private final Histogram querySamplesRead;
     private final Histogram queryRowsAccessed;
+    /* Maximum amount of data points in memory at any time for a query */
+    private final Histogram queryMaxLiveSamples;
 
     public SemanticMetricBackendReporter(SemanticMetricRegistry registry) {
         final MetricId base = MetricId.build().tagged("component", COMPONENT);
@@ -108,6 +106,8 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
             base.tagged("what", "query-metrics-samples-read", "unit", Units.COUNT));
         queryRowsAccessed = registry.histogram(
             base.tagged("what", "query-metrics-rows-accessed", "unit", Units.COUNT));
+        queryMaxLiveSamples = registry.histogram(
+            base.tagged("what", "query-metrics-max-live-samples", "unit", Units.COUNT));
     }
 
     @Override
@@ -118,19 +118,21 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
     @Override
     public DataInMemoryReporter newDataInMemoryReporter() {
         return new DataInMemoryReporter() {
-            private final AtomicLong dataRead = new AtomicLong(0);
-            private final AtomicLong dataInMemory = new AtomicLong(0);
-            private final AtomicLong rowsAccessed = new AtomicLong(0);
+            private final LongAccumulator dataRead = new LongAccumulator((x, y) -> x + y, 0L);
+            private final AtomicLong dataInMemory = new AtomicLong(0L);
+            private final LongAccumulator rowsAccessed = new LongAccumulator((x, y) -> x + y, 0L);
+            private final LongAccumulator maxDataInMemory = new LongAccumulator(Long::max, 0L);
 
             @Override
             public void reportRowsAccessed(final long n) {
-                rowsAccessed.addAndGet(n);
+                rowsAccessed.accumulate(n);
             }
 
             @Override
             public void reportDataHasBeenRead(final long n) {
-                dataRead.addAndGet(n);
-                dataInMemory.addAndGet(n);
+                dataRead.accumulate(n);
+
+                maxDataInMemory.accumulate(dataInMemory.addAndGet(n));
 
                 sampleSizeLive.inc(n);
                 sampleSizeAccumulated.inc(n);
@@ -153,6 +155,7 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
 
                 querySamplesRead.update(dataRead.get());
                 queryRowsAccessed.update(rowsAccessed.get());
+                queryMaxLiveSamples.update(maxDataInMemory.get());
             }
         };
     }
