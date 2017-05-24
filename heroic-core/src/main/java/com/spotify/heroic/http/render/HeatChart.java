@@ -1,17 +1,11 @@
-package com.spotify.heroic.http.render;
-
-/**
- * Created by lucile on 18/05/17.
- */
-
-/*
+/*  
  *  Copyright 2010 Tom Castle (www.tc33.org)
  *  Licensed under GNU Lesser General Public License
- *
+ * 
  *  This file is part of JHeatChart - the heat maps charting api for Java.
  *
  *  JHeatChart is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Lesser General Public License as published
+ *  it under the terms of the GNU Lesser General Public License as published 
  *  by the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
@@ -19,27 +13,27 @@ package com.spotify.heroic.http.render;
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *
+ * 
  *  You should have received a copy of the GNU Lesser General Public License
  *  along with JHeatChart.  If not, see <http://www.gnu.org/licenses/>.
  */
+package com.spotify.heroic.http.render;
 
 
+import java.awt.*;
+import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
+import java.io.*;
+import java.util.Iterator;
 
-    import java.awt.*;
-    import java.awt.geom.AffineTransform;
-    import java.awt.image.BufferedImage;
-    import java.io.*;
-    import java.util.Iterator;
-
-    import javax.imageio.*;
-    import javax.imageio.stream.FileImageOutputStream;
+import javax.imageio.*;
+import javax.imageio.stream.FileImageOutputStream;
 
 /**
- * The <code>HeatChart</code> class describes a chart which can display
+ * The <code>HeatChart</code> class describes a chart which can display 
  * 3-dimensions of values - x,y and z, where x and y are the usual 2-dimensional
- * axis and z is portrayed by colour intensity. Heat charts are sometimes known
- * as heat maps.
+ * axis and z is portrayed by colour intensity. Heat charts are sometimes known 
+ * as heat maps. 
  *
  * <p>
  * Use of this chart would typically involve 3 steps:
@@ -52,14 +46,14 @@ package com.spotify.heroic.http.render;
  * <h3>Instantiation</h3>
  * <p>
  * Construction of a new <code>HeatChart</code> instance is through its one
- * constructor which takes a 2-dimensional array of <tt>doubles</tt> which
- * should contain the z-values for the chart. Consider this array to be
+ * constructor which takes a 2-dimensional array of <tt>doubles</tt> which 
+ * should contain the z-values for the chart. Consider this array to be 
  * the grid of values which will instead be represented as colours in the chart.
  *
  * <p>
- * Setting of the x-values and y-values which are displayed along the
- * appropriate axis is optional, and by default will simply display the values
- * 0 to n-1, where n is the number of rows or columns. Otherwise, the x/y axis
+ * Setting of the x-values and y-values which are displayed along the 
+ * appropriate axis is optional, and by default will simply display the values 
+ * 0 to n-1, where n is the number of rows or columns. Otherwise, the x/y axis 
  * values can be set with the <code>setXValues</code> and <code>setYValues
  * </code> methods. Both methods are overridden with two forms:
  *
@@ -67,18 +61,18 @@ package com.spotify.heroic.http.render;
  *
  * <p>
  * The simplist way to set the axis values is to use the methods which take an
- * array of Object[]. This array must have the same length as the number of
- * columns for setXValues and same as the number of rows for setYValues. The
+ * array of Object[]. This array must have the same length as the number of 
+ * columns for setXValues and same as the number of rows for setYValues. The 
  * string representation of the objects will then be used as the axis values.
  *
  * <h4>Offset and Interval</h4>
  *
  * <p>
- * This is convenient way of defining numerical values along the axis. One of
- * the two methods takes an interval and an offset for either the
- * x or y axis. These parameters supply the necessary information to describe
- * the values based upon the z-value indexes. The quantity of x-values and
- * y-values is already known from the lengths of the z-values array dimensions.
+ * This is convenient way of defining numerical values along the axis. One of 
+ * the two methods takes an interval and an offset for either the 
+ * x or y axis. These parameters supply the necessary information to describe 
+ * the values based upon the z-value indexes. The quantity of x-values and 
+ * y-values is already known from the lengths of the z-values array dimensions. 
  * Then the offset parameters indicate what the first value will be, with the
  * intervals providing the increment from one column or row to the next.
  *
@@ -100,35 +94,35 @@ package com.spotify.heroic.http.render;
  * chart.setYValues(yOffset, yInterval);
  * </pre></blockquote>
  *
- * <p>In this example, the z-values range from 0.7 to 1.6. The x-values range
- * from the xOffset value 1.0 to 4.0, which is calculated as the number of x-values
- * multiplied by the xInterval, shifted by the xOffset of 1.0. The y-values are
- * calculated in the same way to give a range of values from 0.0 to 6.0.
+ * <p>In this example, the z-values range from 0.7 to 1.6. The x-values range 
+ * from the xOffset value 1.0 to 4.0, which is calculated as the number of x-values 
+ * multiplied by the xInterval, shifted by the xOffset of 1.0. The y-values are 
+ * calculated in the same way to give a range of values from 0.0 to 6.0. 
  *
  * <h3>Configuration</h3>
  * <p>
- * This step is optional. By default the heat chart will be generated without a
- * title or labels on the axis, and the colouring of the heat map will be in
+ * This step is optional. By default the heat chart will be generated without a 
+ * title or labels on the axis, and the colouring of the heat map will be in 
  * grayscale. A large range of configuration options are available to customise
  * the chart. All customisations are available through simple accessor methods.
  * See the javadoc of each of the methods for more information.
  *
  * <h3>Output</h3>
  * <p>
- * The generated heat chart can be obtained in two forms, using the following
+ * The generated heat chart can be obtained in two forms, using the following 
  * methods:
  * <ul>
- * <li><strong>getChartImage()</strong> - The chart will be returned as a
- * <code>BufferedImage</code> object that can be used in any number of ways,
- * most notably it can be inserted into a Swing component, for use in a GUI
+ * <li><strong>getChartImage()</strong> - The chart will be returned as a 
+ * <code>BufferedImage</code> object that can be used in any number of ways, 
+ * most notably it can be inserted into a Swing component, for use in a GUI 
  * application.</li>
- * <li><strong>saveToFile(File)</strong> - The chart will be saved to the file
- * system at the file location specified as a parameter. The image format that
+ * <li><strong>saveToFile(File)</strong> - The chart will be saved to the file 
+ * system at the file location specified as a parameter. The image format that  
  * the image will be saved in is derived from the extension of the file name.</li>
  * </ul>
  *
- * <strong>Note:</strong> The chart image will not actually be created until
- * either saveToFile(File) or getChartImage() are called, and will be
+ * <strong>Note:</strong> The chart image will not actually be created until 
+ * either saveToFile(File) or getChartImage() are called, and will be 
  * regenerated on each successive call.
  */
 public class HeatChart {
@@ -149,7 +143,7 @@ public class HeatChart {
     public static final double SCALE_EXPONENTIAL = 3;
 
     // x, y, z data values.
-    private Double[][] zValues;
+    private double[][] zValues;
     private Object[] xValues;
     private Object[] yValues;
 
@@ -226,7 +220,7 @@ public class HeatChart {
      * @param zValues the z-values, where each element is a row of z-values
      * in the resultant heat chart.
      */
-    public HeatChart(Double[][] zValues) {
+    public HeatChart(double[][] zValues) {
         this(zValues, min(zValues), max(zValues));
     }
 
@@ -242,7 +236,7 @@ public class HeatChart {
      * @param high the maximum possible value, which may or may not appear in
      * the z-values.
      */
-    public HeatChart(Double[][] zValues, double low, double high) {
+    public HeatChart(double[][] zValues, double low, double high) {
         this.zValues = zValues;
         this.lowValue = low;
         this.highValue = high;
@@ -315,7 +309,7 @@ public class HeatChart {
      * @return an array of the z-values in current use, that is, those values
      * which will define the colour of each cell in the resultant heat map.
      */
-    public Double[][] getZValues() {
+    public double[][] getZValues() {
         return zValues;
     }
 
@@ -327,7 +321,7 @@ public class HeatChart {
      * @param zValues the array to replace the current array with. The number
      * of elements in each inner array must be identical.
      */
-    public void setZValues(Double[][] zValues) {
+    public void setZValues(double[][] zValues) {
         setZValues(zValues, min(zValues), max(zValues));
     }
 
@@ -386,7 +380,7 @@ public class HeatChart {
      * @param high the maximum possible value, which may or may not appear in
      * the z-values.
      */
-    public void setZValues(Double[][] zValues, double low, double high) {
+    public void setZValues(double[][] zValues, double low, double high) {
         this.zValues = zValues;
         this.lowValue = low;
         this.highValue = high;
@@ -1302,7 +1296,7 @@ public class HeatChart {
      * @return A newly generated chart <code>Image</code>. The returned image
      * is a <code>BufferedImage</code>.
      */
-    public BufferedImage getChartImage(boolean alpha) {
+    public Image getChartImage(boolean alpha) {
         // Calculate all unknown dimensions.
         measureComponents();
         updateCoordinates();
@@ -1498,7 +1492,7 @@ public class HeatChart {
      * Creates the actual heatmap element as an image, that can then be drawn
      * onto a chart.
      */
-    private void drawHeatMap(Graphics2D chartGraphics, Double[][] data) {
+    private void drawHeatMap(Graphics2D chartGraphics, double[][] data) {
         // Calculate the available size for the heatmap.
         int noYCells = data.length;
         int noXCells = data[0].length;
@@ -1689,7 +1683,7 @@ public class HeatChart {
      * Determines what colour a heat map cell should be based upon the cell
      * values.
      */
-    private Color getCellColour(Double data, double min, double max) {
+    private Color getCellColour(double data, double min, double max) {
         double range = max - min;
         double position = data - min;
 
@@ -1750,7 +1744,7 @@ public class HeatChart {
      *
      * @return the largest value in the array.
      */
-    public static double max(Double[][] values) {
+    public static double max(double[][] values) {
         double max = 0;
         for (int i=0; i<values.length; i++) {
             for (int j=0; j<values[i].length; j++) {
@@ -1765,7 +1759,7 @@ public class HeatChart {
      *
      * @return the smallest value in the array.
      */
-    public static double min(Double[][] values) {
+    public static double min(double[][] values) {
         double min = Double.MAX_VALUE;
         for (int i=0; i<values.length; i++) {
             for (int j=0; j<values[i].length; j++) {
