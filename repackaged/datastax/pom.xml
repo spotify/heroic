@@ -1,0 +1,62 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <properties>
+    <datastax.version>3.2.0</datastax.version>
+  </properties>
+
+  <groupId>com.spotify.heroic.repackaged</groupId>
+  <artifactId>datastax-driver-core</artifactId>
+  <packaging>jar</packaging>
+  <version>3.2.0</version>
+
+  <name>Heroic: Re-Packaging of Datastax Driver</name>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.datastax.cassandra</groupId>
+      <artifactId>cassandra-driver-core</artifactId>
+      <version>${datastax.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>2.4.3</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <promoteTransitiveDependencies>true</promoteTransitiveDependencies>
+              <createDependencyReducedPom>true</createDependencyReducedPom>
+              <!-- excluded dependencies will be kept as a promoted dependency -->
+              <artifactSet>
+                <excludes>
+                </excludes>
+              </artifactSet>
+              <relocations>
+                <relocation>
+                  <pattern>io.netty</pattern>
+                  <!-- The datastax driver specifically tries to load io.netty.x.y with fall back to com.datastax.shaded.netty.x.y -->
+                  <shadedPattern>com.datastax.shaded.netty</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>com.codahale.metrics</pattern>
+                  <shadedPattern>com.spotify.heroic.datastax.metrics</shadedPattern>
+                </relocation>
+              </relocations>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
+

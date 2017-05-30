@@ -56,7 +56,6 @@
     <hk2.version>2.3.0</hk2.version>
     <jetty.version>9.3.7.v20160115</jetty.version>
     <lucene.version>4.10.4</lucene.version>
-    <datastax.version>3.0.2</datastax.version>
     <semantic-metrics.version>0.2.3</semantic-metrics.version>
     <netty.version>4.1.8.Final</netty.version>
     <tiny-async.version>1.11.0</tiny-async.version>
@@ -248,6 +247,7 @@
 
       <modules>
         <module>repackaged/bigtable</module>
+        <module>repackaged/datastax</module>
       </modules>
     </profile>
   </profiles>
@@ -475,20 +475,6 @@
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-lang3</artifactId>
         <version>3.3.2</version>
-      </dependency>
-
-      <dependency>
-        <groupId>com.datastax.cassandra</groupId>
-        <artifactId>cassandra-driver-core</artifactId>
-        <classifier>shaded</classifier>
-        <version>${datastax.version}</version>
-
-        <exclusions>
-          <exclusion>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-handler</artifactId>
-          </exclusion>
-        </exclusions>
       </dependency>
 
       <!-- useful collections and utilities -->
