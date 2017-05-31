@@ -109,18 +109,24 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
         sampleSizeAccumulated =
             registry.counter(base.tagged("what", "sample-size-accumulated", "unit", Units.SAMPLE));
 
-        querySamplesRead = registry.histogram(
-            base.tagged("what", "query-metrics-samples-read", "unit", Units.COUNT));
-        queryRowsAccessed = registry.histogram(
-            base.tagged("what", "query-metrics-rows-accessed", "unit", Units.COUNT));
-        queryMaxLiveSamples = registry.histogram(
-            base.tagged("what", "query-metrics-max-live-samples", "unit", Units.COUNT));
+        querySamplesRead = registry.getOrAdd(
+            base.tagged("what", "query-metrics-samples-read", "unit", Units.COUNT),
+            HistogramBuilder.HISTOGRAM);
+        queryRowsAccessed = registry.getOrAdd(
+            base.tagged("what", "query-metrics-rows-accessed", "unit", Units.COUNT),
+            HistogramBuilder.HISTOGRAM);
+        queryMaxLiveSamples = registry.getOrAdd(
+            base.tagged("what", "query-metrics-max-live-samples", "unit", Units.COUNT),
+            HistogramBuilder.HISTOGRAM);
         queryReadRate =
-            registry.histogram(base.tagged("what", "query-metrics-read-rate", "unit", Units.COUNT));
-        queryRowMsBetweenSamples = registry.histogram(
-            base.tagged("what", "query-metrics-row-metric-distance", "unit", Units.MILLISECOND));
-        queryRowDensity = registry.histogram(
-            base.tagged("what", "query-metrics-row-density", "unit", Units.COUNT));
+            registry.getOrAdd(base.tagged("what", "query-metrics-read-rate", "unit", Units.COUNT),
+                HistogramBuilder.HISTOGRAM);
+        queryRowMsBetweenSamples = registry.getOrAdd(
+            base.tagged("what", "query-metrics-row-metric-distance", "unit", Units.MILLISECOND),
+            HistogramBuilder.HISTOGRAM);
+        queryRowDensity =
+            registry.getOrAdd(base.tagged("what", "query-metrics-row-density", "unit", Units.COUNT),
+                HistogramBuilder.HISTOGRAM);
     }
 
     @Override
