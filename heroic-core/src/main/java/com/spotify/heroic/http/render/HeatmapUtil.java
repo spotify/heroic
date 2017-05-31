@@ -157,6 +157,7 @@ public final class HeatmapUtil {
         //System.out.println(height);
         double[][] jj = new double[height][width];
         byte[] bb = new byte[height*width*4];
+        int[] ii = new int[height*width];
         //System.out.println(bb);
         //Iterator itr = c.iterator();
         int i=0;
@@ -175,8 +176,12 @@ public final class HeatmapUtil {
                 //jj[j][i]=e.getValue().doubleValue();
                 //
                 double dd = e.getValue().doubleValue();
-                int norm = (int)((dd -min)*255*3 / range);
+                int norm = (int)(((dd -min) / range));
+                Color colorOfYourDataPoint = Color(norm*255, norm*255, norm*255);
+                ii[i*height+j]=norm;
                 //System.out.print("norm : "+ norm);
+                //System.out.print("i : "+ i);
+                //System.out.print("j : "+ j);
                 //int bits = Float.floatToIntBits(myFloat);
                 //byte bits = (((byte) norm));
 
@@ -201,24 +206,24 @@ public final class HeatmapUtil {
                 j++;
                 System.out.println(bytes.toString());
                 */
-                byte[] result = new byte[4];
+                //byte[] result = new byte[4];
                 //System.out.print("bits : ");
                 //System.out.println( bits);
-                result[0] = (byte) ((norm & 0xFF000000) >> 24);
-                bb[i*height+j]=result[0];
+                //result[0] = (byte) ((norm & 0xFF000000) >> 24);
+                //bb[i*height+j]=result[0];
                 //System.out.println(bb[i*height+j] );
-                j++;
+                //j++;
 
-                result[1] = (byte) ((norm & 0x00FF0000) >> 16);
-                bb[i*height+j]=result[1];
+                //result[1] = (byte) ((norm & 0x00FF0000) >> 16);
+                //bb[i*height+j]=result[1];
                 //System.out.println(bb[i*height+j] );
-                j++;
-                result[2] = (byte) ((norm & 0x0000FF00) >> 8);
-                bb[i*height+j]=result[2];
+                //j++;
+                //result[2] = (byte) ((norm & 0x0000FF00) >> 8);
+                //bb[i*height+j]=result[2];
                 //System.out.println(bb[i*height+j] );
-                j++;
-                result[3] = (byte) ((norm & 0x000000FF) >> 0);
-                bb[i*height+j]=result[3];
+                //j++;
+                //result[3] = (byte) ((norm & 0x000000FF) >> 0);
+                //bb[i*height+j]=result[3];
                 //System.out.println(bb[i*height+j] );
                 j++;
 
@@ -274,15 +279,15 @@ public final class HeatmapUtil {
         //bGr.dispose();
         System.out.print("BufferedImage : ");
 
-        BufferedImage bI = new BufferedImage(width,height,BufferedImage.TYPE_4BYTE_ABGR);
-        System.out.println(bI);
+        //BufferedImage bI = new BufferedImage(width,height,BufferedImage.TYPE_4BYTE_ABGR);
+        //System.out.println(bI);
         // Return the buffered image
         //return bimage;
         //byte[] b = new byte[height*width*4];
-        ByteArrayInputStream bais = new ByteArrayInputStream(bb);
+        //ByteArrayInputStream bais = new ByteArrayInputStream(bb);
         //bais.read(b);
-        System.out.print("bais : ");
-        System.out.println(bais.available());
+        //System.out.print("bais : ");
+        //System.out.println(bais.available());
         /**
         try {
             bI = ImageIO.read(bais);
@@ -293,17 +298,19 @@ public final class HeatmapUtil {
         }
         */
         System.out.print("after : ");
-        byte[] pixels = bb;
-        BufferedImage convertedGrayscale =  new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
+        int[] pixels = ii;
+        BufferedImage convertedGrayscale =  new BufferedImage(width, height, BufferedImage.TYPE_INT_BGR);
         convertedGrayscale.getRaster().setDataElements(0, 0, width, height, pixels);
-
-
+        System.out.print(convertedGrayscale);
+        /**
         try {
-            ImageIO.write(convertedGrayscale, "jpg", new File("converted-grayscale-002.jpg"));
+            ImageIO.write(convertedGrayscale, "png", new File("converted-grayscale-002.png"));
         }
         catch (IOException e) {
             System.err.println("IOException: " + e);
         }
+         */
+
         //write(bI, "jpg", new File("new-darksouls.jpg"));
         return convertedGrayscale;
 
