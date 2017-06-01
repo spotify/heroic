@@ -95,8 +95,8 @@ whether the data points should be upsampled or downsampled.
 }
 ```
 
-Notice that the configuration parameter is called `missing` to make it explicit To make it
-explicitly clear that upsampling deals with missing data points.
+Notice that the configuration parameter is called `missing` to make it explicitly clear that 
+upsampling deals with missing data points.
 
 
 ### Simplifying the aggregation engine
