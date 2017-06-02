@@ -115,6 +115,7 @@ public class GrpcRpcProtocol implements RpcProtocol {
                     .usePlaintext(true)
                     .executor(workerGroup)
                     .eventLoopGroup(workerGroup)
+                    .maxInboundMessageSize(maxFrameSize)
                     .build();
 
                 return async.resolved(channel);
