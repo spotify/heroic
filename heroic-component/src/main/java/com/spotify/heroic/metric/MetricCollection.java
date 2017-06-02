@@ -30,6 +30,7 @@ import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.common.Series;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import lombok.AccessLevel;
@@ -101,6 +102,17 @@ public abstract class MetricCollection {
 
     public boolean isEmpty() {
         return data.isEmpty();
+    }
+
+    public Optional<Long> getAverageDistanceBetweenMetrics() {
+        if (data.size() <= 1) {
+            return Optional.empty();
+        }
+
+        final long timeDiff = data.get(data.size() - 1).getTimestamp() - data.get(0).getTimestamp();
+        final long spans = data.size() - 1;
+
+        return Optional.of(timeDiff / spans);
     }
 
     private static final MetricCollection empty = new EmptyMetricCollection();

@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.metric;
 
+import com.google.common.collect.ConcurrentHashMultiset;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -37,6 +38,7 @@ import com.spotify.heroic.common.Feature;
 import com.spotify.heroic.common.Features;
 import com.spotify.heroic.common.GroupSet;
 import com.spotify.heroic.common.Groups;
+import com.spotify.heroic.common.Histogram;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.QuotaViolationException;
 import com.spotify.heroic.common.SelectedGroup;
@@ -54,7 +56,6 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.StreamCollector;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -65,7 +66,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.inject.Inject;
 import javax.inject.Named;
-
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -204,13 +204,12 @@ public class LocalMetricManager implements MetricManager {
 
                 if (result.isLimited()) {
                     if (failOnLimits) {
-                        final List<RequestError> errors = ImmutableList.of(QueryError.fromMessage(
+                        final RequestError error = QueryError.fromMessage(
                             "The number of series requested is more than the allowed limit of " +
-                                seriesLimit));
+                                seriesLimit);
 
-                        return async.resolved(
-                            new FullQuery(namedWatch.end(), errors, ImmutableList.of(),
-                                Statistics.empty(), ResultLimits.of(ResultLimit.SERIES)));
+                        return async.resolved(FullQuery.limitsError(namedWatch.end(), error,
+                            ResultLimits.of(ResultLimit.SERIES)));
                     }
 
                     limits = ResultLimits.of(ResultLimit.SERIES);
@@ -227,11 +226,11 @@ public class LocalMetricManager implements MetricManager {
                 try {
                     session = aggregation.session(range, quotaWatcher, bucketStrategy);
                 } catch (QuotaViolationException e) {
-                    return async.resolved(new FullQuery(namedWatch.end(), ImmutableList.of(
+                    return async.resolved(FullQuery.limitsError(namedWatch.end(),
                         QueryError.fromMessage(String.format(
                             "aggregation needs to retain more data then what is allowed: %d",
-                            aggregationLimit.asLong().get()))), ImmutableList.of(),
-                        Statistics.empty(), ResultLimits.of(ResultLimit.AGGREGATION)));
+                            aggregationLimit.asLong().get())),
+                        ResultLimits.of(ResultLimit.AGGREGATION)));
                 }
 
                 /* setup collector */
@@ -474,14 +473,21 @@ public class LocalMetricManager implements MetricManager {
         final OptionalLimit groupLimit;
         final boolean failOnLimits;
 
+        private final ConcurrentHashMultiset<Long> rowDensityData = ConcurrentHashMultiset.create();
+
         @Override
         public void resolved(final FetchData.Result result) throws Exception {
             requestErrors.addAll(result.getErrors());
         }
 
-        void acceptMetricsCollection(final Series series, MetricCollection g) {
+        void acceptMetricsCollection(final Series series, final MetricCollection g) {
             g.updateAggregation(session, series.getTags(), ImmutableSet.of(series));
             dataInMemoryReporter.reportDataNoLongerNeeded(g.size());
+
+            g.getAverageDistanceBetweenMetrics().ifPresent(msBetweenSamples -> {
+                dataInMemoryReporter.reportRowDensity(msBetweenSamples);
+                rowDensityData.add(msBetweenSamples);
+            });
         }
 
         @Override
@@ -516,11 +522,12 @@ public class LocalMetricManager implements MetricManager {
             }
 
             if (watcher.isReadQuotaViolated() || watcher.isRetainQuotaViolated()) {
+                final Optional<Histogram> dataDensity = Optional.of(getRowDensityHistogram());
                 errorsBuilder.add(QueryError.fromMessage(
                     checkIssues(failed, cancelled).orElse("Query exceeded quota")));
 
                 return new FullQuery(trace, errorsBuilder.build(), ImmutableList.of(),
-                    Statistics.empty(), new ResultLimits(limitsBuilder.build()));
+                    Statistics.empty(), new ResultLimits(limitsBuilder.build()), dataDensity);
             }
 
             checkIssues(failed, cancelled).map(RuntimeException::new).ifPresent(e -> {
@@ -533,6 +540,8 @@ public class LocalMetricManager implements MetricManager {
 
             final AggregationResult result = session.result();
 
+            final Optional<Histogram> dataDensity = Optional.of(getRowDensityHistogram());
+
             final List<ResultGroup> groups = new ArrayList<>();
 
             for (final AggregationOutput group : result.getResult()) {
@@ -543,7 +552,8 @@ public class LocalMetricManager implements MetricManager {
                                 groupLimit));
                         return new FullQuery(trace, errorsBuilder.build(), ImmutableList.of(),
                             Statistics.empty(),
-                            new ResultLimits(limitsBuilder.add(ResultLimit.GROUP).build()));
+                            new ResultLimits(limitsBuilder.add(ResultLimit.GROUP).build()),
+                            dataDensity);
                     }
 
                     limitsBuilder.add(ResultLimit.GROUP);
@@ -555,7 +565,7 @@ public class LocalMetricManager implements MetricManager {
             }
 
             return new FullQuery(trace, errorsBuilder.build(), groups, result.getStatistics(),
-                new ResultLimits(limitsBuilder.build()));
+                new ResultLimits(limitsBuilder.build()), dataDensity);
         }
 
         private Optional<String> checkIssues(final int failed, final int cancelled) {
@@ -565,6 +575,18 @@ public class LocalMetricManager implements MetricManager {
             }
 
             return Optional.empty();
+        }
+
+        public Histogram getRowDensityHistogram() {
+            /* The data is gathered in an efficient ConcurrentHashMultiset, to allow for multiple
+             * threads writing with minimum blocking. Reading the data only happens at the end of
+             * the watched operation, so here we build the histogram.
+             */
+            final Histogram.Builder builder = Histogram.builder();
+            for (final Long value : rowDensityData.elementSet()) {
+                builder.add(value);
+            }
+            return builder.build();
         }
     }
 

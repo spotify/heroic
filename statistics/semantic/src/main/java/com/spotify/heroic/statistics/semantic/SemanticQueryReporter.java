@@ -37,6 +37,7 @@ public class SemanticQueryReporter implements QueryReporter {
 
     private final FutureReporter query;
     private final Histogram smallQueryLatency;
+    private final Histogram queryReadRate;
     private final Meter rpcError;
     private final Meter rpcCancellation;
 
@@ -47,6 +48,9 @@ public class SemanticQueryReporter implements QueryReporter {
             new SemanticFutureReporter(registry, base.tagged("what", "query", "unit", Units.QUERY));
         smallQueryLatency = registry.histogram(
             base.tagged("what", "small-query-latency", "unit", Units.MILLISECOND));
+        queryReadRate =
+            registry.histogram(base.tagged("what", "query-read-rate", "unit", Units.COUNT));
+
         rpcError = registry.meter(base.tagged("what", "cluster-rpc-error", "unit", Units.FAILURE));
         rpcCancellation =
             registry.meter(base.tagged("what", "cluster-rpc-cancellation", "unit", Units.CANCEL));
@@ -60,6 +64,16 @@ public class SemanticQueryReporter implements QueryReporter {
     @Override
     public void reportSmallQueryLatency(final long duration) {
         smallQueryLatency.update(duration);
+    }
+
+    @Override
+    public void reportLatencyVsSize(
+        final long durationNs, final long preAggregationSampleSize
+    ) {
+        if (durationNs != 0) {
+            // Amount of data read per second
+            queryReadRate.update((1_000_000_000 * preAggregationSampleSize) / durationNs);
+        }
     }
 
     @Override
