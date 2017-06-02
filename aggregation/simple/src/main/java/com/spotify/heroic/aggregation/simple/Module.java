@@ -77,6 +77,8 @@ public class Module implements HeroicModule {
 
             c.register(Sum.NAME, Sum.class, SumInstance.class, samplingBuilder(Sum::new));
 
+            c.register(Sum2.NAME, Sum2.class, Sum2Instance.class, samplingBuilder(Sum2::new));
+
             c.register(Average.NAME, Average.class, AverageInstance.class,
                 samplingBuilder(Average::new));
 
