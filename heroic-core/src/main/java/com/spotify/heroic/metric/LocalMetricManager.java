@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.metric;
 
+import com.google.common.collect.ConcurrentHashMultiset;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -37,12 +38,12 @@ import com.spotify.heroic.common.Feature;
 import com.spotify.heroic.common.Features;
 import com.spotify.heroic.common.GroupSet;
 import com.spotify.heroic.common.Groups;
+import com.spotify.heroic.common.Histogram;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.QuotaViolationException;
 import com.spotify.heroic.common.SelectedGroup;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
-import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
@@ -155,55 +156,60 @@ public class LocalMetricManager implements MetricManager {
             return backends.isEmpty();
         }
 
-        @Override
-        public AsyncFuture<FullQuery> query(final FullQuery.Request request) {
-            final QueryTrace.NamedWatch w = QueryTrace.watch(QUERY);
+        private class Transform implements LazyTransform<FindSeries, FullQuery> {
+            private final AggregationInstance aggregation;
+            private final boolean failOnLimits;
+            private final OptionalLimit seriesLimit;
+            private final OptionalLimit groupLimit;
+            private final QueryTrace.NamedWatch namedWatch;
+            private final QuotaWatcher quotaWatcher;
+            private final BucketStrategy bucketStrategy;
+            private final DateRange range;
+            private final QueryOptions options;
+            private final DataInMemoryReporter dataInMemoryReporter;
+            private final MetricType source;
+            private final boolean slicedFetch;
 
-            final Filter filter = request.getFilter();
-            final MetricType source = request.getSource();
-            final QueryOptions options = request.getOptions();
-            final AggregationInstance aggregation = request.getAggregation();
-            final DateRange range = request.getRange();
-            final QueryContext queryContext = request.getContext();
-            final Features features = request.getFeatures();
+            private Transform(
+                final FullQuery.Request request, final boolean failOnLimits,
+                final OptionalLimit seriesLimit, final OptionalLimit groupLimit,
+                final QuotaWatcher quotaWatcher, final DataInMemoryReporter dataInMemoryReporter
+            ) {
+                this.aggregation = request.getAggregation();
+                this.range = request.getRange();
+                this.options = request.getOptions();
+                this.source = request.getSource();
 
-            queryLogger.logIncomingRequestAtNode(queryContext, request);
+                this.failOnLimits = failOnLimits;
+                this.seriesLimit = seriesLimit;
+                this.groupLimit = groupLimit;
 
-            final boolean slicedFetch = features.hasFeature(Feature.SLICED_DATA_FETCH);
+                this.namedWatch = QueryTrace.watch(QUERY);
+                this.quotaWatcher = quotaWatcher;
 
-            final BucketStrategy bucketStrategy =
-                features.withFeature(Feature.END_BUCKET, () -> BucketStrategy.END, () -> {
-                    throw new IllegalArgumentException(Feature.END_BUCKET + ": must be set");
-                });
+                this.dataInMemoryReporter = dataInMemoryReporter;
 
-            final QuotaWatcher watcher = new QuotaWatcher(
-                options.getDataLimit().orElse(dataLimit).asLong().orElse(Long.MAX_VALUE), options
-                .getAggregationLimit()
-                .orElse(aggregationLimit)
-                .asLong()
-                .orElse(Long.MAX_VALUE), reporter.newDataInMemoryReporter());
+                final Features features = request.getFeatures();
+                this.slicedFetch = features.hasFeature(Feature.SLICED_DATA_FETCH);
+                this.bucketStrategy = options
+                    .getBucketStrategy()
+                    .orElseGet(
+                        () -> features.withFeature(Feature.END_BUCKET, () -> BucketStrategy.END,
+                            () -> BucketStrategy.START));
+            }
 
-            final DataInMemoryReporter dataInMemoryReporter = reporter.newDataInMemoryReporter();
-
-            final OptionalLimit seriesLimit =
-                options.getSeriesLimit().orElse(LocalMetricManager.this.seriesLimit);
-
-            final boolean failOnLimits =
-                options.getFailOnLimits().orElse(LocalMetricManager.this.failOnLimits);
-
-            // Transform that takes the result from ES metadata lookup to fetch from backend
-            final LazyTransform<FindSeries, FullQuery> transform = (final FindSeries result) -> {
+            @Override
+            public AsyncFuture<FullQuery> transform(final FindSeries result) throws Exception {
                 final ResultLimits limits;
 
                 if (result.isLimited()) {
                     if (failOnLimits) {
-                        final List<RequestError> errors = ImmutableList.of(QueryError.fromMessage(
+                        final RequestError error = QueryError.fromMessage(
                             "The number of series requested is more than the allowed limit of " +
-                                seriesLimit));
+                                seriesLimit);
 
-                        return async.resolved(
-                            new FullQuery(w.end(), errors, ImmutableList.of(), Statistics.empty(),
-                                ResultLimits.of(ResultLimit.SERIES)));
+                        return async.resolved(FullQuery.limitsError(namedWatch.end(), error,
+                            ResultLimits.of(ResultLimit.SERIES)));
                     }
 
                     limits = ResultLimits.of(ResultLimit.SERIES);
@@ -213,18 +219,18 @@ public class LocalMetricManager implements MetricManager {
 
                 /* if empty, there are not time series on this shard */
                 if (result.isEmpty()) {
-                    return async.resolved(FullQuery.empty(w.end(), limits));
+                    return async.resolved(FullQuery.empty(namedWatch.end(), limits));
                 }
 
                 final AggregationSession session;
                 try {
-                    session = aggregation.session(range, watcher, bucketStrategy);
+                    session = aggregation.session(range, quotaWatcher, bucketStrategy);
                 } catch (QuotaViolationException e) {
-                    return async.resolved(new FullQuery(w.end(), ImmutableList.of(
+                    return async.resolved(FullQuery.limitsError(namedWatch.end(),
                         QueryError.fromMessage(String.format(
                             "aggregation needs to retain more data then what is allowed: %d",
-                            aggregationLimit.asLong().get()))), ImmutableList.of(),
-                        Statistics.empty(), ResultLimits.of(ResultLimit.AGGREGATION)));
+                            aggregationLimit.asLong().get())),
+                        ResultLimits.of(ResultLimit.AGGREGATION)));
                 }
 
                 /* setup collector */
@@ -233,62 +239,94 @@ public class LocalMetricManager implements MetricManager {
 
                 if (options.tracing().isEnabled(Tracing.DETAILED)) {
                     // tracing enabled, keeps track of each individual FetchData trace.
-                    collector =
-                        new ResultCollector(watcher, dataInMemoryReporter, aggregation, session,
-                            limits, options.getGroupLimit().orElse(groupLimit), failOnLimits) {
-                            final ConcurrentLinkedQueue<QueryTrace> traces =
-                                new ConcurrentLinkedQueue<>();
+                    collector = new ResultCollector(quotaWatcher, dataInMemoryReporter, aggregation,
+                        session, limits, groupLimit, failOnLimits) {
+                        final ConcurrentLinkedQueue<QueryTrace> traces =
+                            new ConcurrentLinkedQueue<>();
 
-                            @Override
-                            public void resolved(final FetchData.Result result) throws Exception {
-                                traces.add(result.getTrace());
-                                super.resolved(result);
-                            }
+                        @Override
+                        public void resolved(final FetchData.Result result) throws Exception {
+                            traces.add(result.getTrace());
+                            super.resolved(result);
+                        }
 
-                            @Override
-                            public QueryTrace buildTrace() {
-                                return w.end(ImmutableList.copyOf(traces));
-                            }
-                        };
+                        @Override
+                        public QueryTrace buildTrace() {
+                            return namedWatch.end(ImmutableList.copyOf(traces));
+                        }
+                    };
                 } else {
                     // very limited tracing, does not collected each individual FetchData trace.
-                    collector =
-                        new ResultCollector(watcher, dataInMemoryReporter, aggregation, session,
-                            limits, options.getGroupLimit().orElse(groupLimit), failOnLimits) {
-                            @Override
-                            public QueryTrace buildTrace() {
-                                return w.end();
-                            }
-                        };
+                    collector = new ResultCollector(quotaWatcher, dataInMemoryReporter, aggregation,
+                        session, limits, groupLimit, failOnLimits) {
+                        @Override
+                        public QueryTrace buildTrace() {
+                            return namedWatch.end();
+                        }
+                    };
                 }
 
                 final List<Callable<AsyncFuture<FetchData.Result>>> fetches = new ArrayList<>();
 
                 /* setup fetches */
-                accept(b -> {
-                    for (final Series s : result.getSeries()) {
+                accept(metricBackend -> {
+                    for (final Series series : result.getSeries()) {
                         if (slicedFetch) {
-                            fetches.add(
-                                () -> b.fetch(new FetchData.Request(source, s, range, options),
-                                    watcher, mc -> collector.acceptMetricsCollection(s, mc)));
+                            fetches.add(() -> metricBackend.fetch(
+                                new FetchData.Request(source, series, range, options), quotaWatcher,
+                                mc -> collector.acceptMetricsCollection(series, mc)));
                         } else {
-                            fetches.add(() -> b
-                                .fetch(new FetchData.Request(source, s, range, options), watcher)
-                                .directTransform(d -> {
-                                    d.getGroups().forEach(group -> {
-                                        collector.acceptMetricsCollection(s, group);
+                            fetches.add(() -> metricBackend
+                                .fetch(new FetchData.Request(source, series, range, options),
+                                    quotaWatcher)
+                                .directTransform(fetchData -> {
+                                    fetchData.getGroups().forEach(group -> {
+                                        collector.acceptMetricsCollection(series, group);
                                     });
-                                    return d.getResult();
+                                    return fetchData.getResult();
                                 }));
                         }
                     }
                 });
 
                 return async.eventuallyCollect(fetches, collector, fetchParallelism);
-            };
+            }
+        }
+
+        @Override
+        public AsyncFuture<FullQuery> query(final FullQuery.Request request) {
+
+            final QueryOptions options = request.getOptions();
+            final QueryContext queryContext = request.getContext();
+
+            queryLogger.logIncomingRequestAtNode(queryContext, request);
+
+            final DataInMemoryReporter dataInMemoryReporter = reporter.newDataInMemoryReporter();
+
+            final QuotaWatcher quotaWatcher = new QuotaWatcher(
+                options.getDataLimit().orElse(dataLimit).asLong().orElse(Long.MAX_VALUE), options
+                .getAggregationLimit()
+                .orElse(aggregationLimit)
+                .asLong()
+                .orElse(Long.MAX_VALUE), dataInMemoryReporter);
+
+            final OptionalLimit seriesLimit =
+                options.getSeriesLimit().orElse(LocalMetricManager.this.seriesLimit);
+
+            final boolean failOnLimits =
+                options.getFailOnLimits().orElse(LocalMetricManager.this.failOnLimits);
+
+            final OptionalLimit groupLimit =
+                options.getGroupLimit().orElse(LocalMetricManager.this.groupLimit);
+
+            // Transform that takes the result from ES metadata lookup to fetch from backend
+            final LazyTransform<FindSeries, FullQuery> transform =
+                new Transform(request, failOnLimits, seriesLimit, groupLimit, quotaWatcher,
+                    dataInMemoryReporter);
 
             return metadata
-                .findSeries(new FindSeries.Request(filter, range, seriesLimit))
+                .findSeries(
+                    new FindSeries.Request(request.getFilter(), request.getRange(), seriesLimit))
                 .onDone(reporter.reportFindSeries())
                 .lazyTransform(transform)
                 .directTransform(fullQuery -> {
@@ -435,14 +473,21 @@ public class LocalMetricManager implements MetricManager {
         final OptionalLimit groupLimit;
         final boolean failOnLimits;
 
+        private final ConcurrentHashMultiset<Long> rowDensityData = ConcurrentHashMultiset.create();
+
         @Override
         public void resolved(final FetchData.Result result) throws Exception {
             requestErrors.addAll(result.getErrors());
         }
 
-        void acceptMetricsCollection(final Series series, MetricCollection g) {
+        void acceptMetricsCollection(final Series series, final MetricCollection g) {
             g.updateAggregation(session, series.getTags(), ImmutableSet.of(series));
             dataInMemoryReporter.reportDataNoLongerNeeded(g.size());
+
+            g.getAverageDistanceBetweenMetrics().ifPresent(msBetweenSamples -> {
+                dataInMemoryReporter.reportRowDensity(msBetweenSamples);
+                rowDensityData.add(msBetweenSamples);
+            });
         }
 
         @Override
@@ -477,11 +522,12 @@ public class LocalMetricManager implements MetricManager {
             }
 
             if (watcher.isReadQuotaViolated() || watcher.isRetainQuotaViolated()) {
+                final Optional<Histogram> dataDensity = Optional.of(getRowDensityHistogram());
                 errorsBuilder.add(QueryError.fromMessage(
                     checkIssues(failed, cancelled).orElse("Query exceeded quota")));
 
                 return new FullQuery(trace, errorsBuilder.build(), ImmutableList.of(),
-                    Statistics.empty(), new ResultLimits(limitsBuilder.build()));
+                    Statistics.empty(), new ResultLimits(limitsBuilder.build()), dataDensity);
             }
 
             checkIssues(failed, cancelled).map(RuntimeException::new).ifPresent(e -> {
@@ -494,6 +540,8 @@ public class LocalMetricManager implements MetricManager {
 
             final AggregationResult result = session.result();
 
+            final Optional<Histogram> dataDensity = Optional.of(getRowDensityHistogram());
+
             final List<ResultGroup> groups = new ArrayList<>();
 
             for (final AggregationOutput group : result.getResult()) {
@@ -504,7 +552,8 @@ public class LocalMetricManager implements MetricManager {
                                 groupLimit));
                         return new FullQuery(trace, errorsBuilder.build(), ImmutableList.of(),
                             Statistics.empty(),
-                            new ResultLimits(limitsBuilder.add(ResultLimit.GROUP).build()));
+                            new ResultLimits(limitsBuilder.add(ResultLimit.GROUP).build()),
+                            dataDensity);
                     }
 
                     limitsBuilder.add(ResultLimit.GROUP);
@@ -516,7 +565,7 @@ public class LocalMetricManager implements MetricManager {
             }
 
             return new FullQuery(trace, errorsBuilder.build(), groups, result.getStatistics(),
-                new ResultLimits(limitsBuilder.build()));
+                new ResultLimits(limitsBuilder.build()), dataDensity);
         }
 
         private Optional<String> checkIssues(final int failed, final int cancelled) {
@@ -526,6 +575,18 @@ public class LocalMetricManager implements MetricManager {
             }
 
             return Optional.empty();
+        }
+
+        public Histogram getRowDensityHistogram() {
+            /* The data is gathered in an efficient ConcurrentHashMultiset, to allow for multiple
+             * threads writing with minimum blocking. Reading the data only happens at the end of
+             * the watched operation, so here we build the histogram.
+             */
+            final Histogram.Builder builder = Histogram.builder();
+            for (final Long value : rowDensityData.elementSet()) {
+                builder.add(value);
+            }
+            return builder.build();
         }
     }
 
@@ -565,6 +626,11 @@ public class LocalMetricManager implements MetricManager {
         @Override
         public int getReadDataQuota() {
             return getLeft(dataLimit, read.get());
+        }
+
+        @Override
+        public void accessedRows(final long n) {
+            dataInMemoryReporter.reportRowsAccessed(n);
         }
 
         @Override

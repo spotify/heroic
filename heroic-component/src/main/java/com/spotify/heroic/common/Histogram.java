@@ -45,6 +45,10 @@ public class Histogram {
         return new Builder();
     }
 
+    public static Histogram empty() {
+        return builder().build();
+    }
+
     public static class Builder {
         private final TreeMultiset<Long> samples = TreeMultiset.create(Long::compareTo);
 

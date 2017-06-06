@@ -43,6 +43,7 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.Slf4jRequestLog;
 import org.eclipse.jetty.server.handler.HandlerCollection;
+import org.eclipse.jetty.server.handler.gzip.GzipHandler;
 import org.eclipse.jetty.server.handler.RequestLogHandler;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -195,6 +196,12 @@ public class HttpServer implements LifeCycles {
         final ServletContextHandler context =
             new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
         context.setContextPath("/");
+
+        GzipHandler gzip = new GzipHandler();
+        gzip.setIncludedMethods("POST");
+        gzip.setMinGzipSize(860);
+        gzip.setIncludedMimeTypes("application/json");
+        context.setGzipHandler(gzip);
 
         context.addServlet(jerseyServlet, "/*");
         context.addFilter(new FilterHolder(new ShutdownFilter(stopping, mapper)), "/*", null);

@@ -22,13 +22,12 @@
 package com.spotify.heroic.cluster;
 
 import com.spotify.heroic.lifecycle.LifeCycle;
-
 import javax.inject.Named;
 
 public interface ClusterComponent {
     ClusterManager clusterManager();
 
-    NodeMetadata nodeMetadata();
+    NodeMetadataProvider metadataProvider();
 
     @Named("local")
     ClusterNode localClusterNode();

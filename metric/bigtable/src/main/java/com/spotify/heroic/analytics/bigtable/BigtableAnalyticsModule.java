@@ -40,15 +40,12 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
+import java.util.Optional;
+import java.util.concurrent.Callable;
+import javax.inject.Named;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
-
-import javax.inject.Named;
-import java.util.Optional;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-
 
 @ToString
 @RequiredArgsConstructor
@@ -85,16 +82,14 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
 
     @Provides
     @BigtableScope
-    public Managed<BigtableConnection> connection(
-        final AsyncFramework async, final ExecutorService executorService
-    ) {
+    public Managed<BigtableConnection> connection(final AsyncFramework async) {
         return async.managed(new ManagedSetup<BigtableConnection>() {
             @Override
             public AsyncFuture<BigtableConnection> construct() throws Exception {
                 return async.call(
                     new BigtableConnectionBuilder(project, cluster, credentials, async,
-                        executorService, DEFAULT_DISABLE_BULK_MUTATIONS,
-                        DEFAULT_FLUSH_INTERVAL_SECONDS, Optional.empty()));
+                        DEFAULT_DISABLE_BULK_MUTATIONS, DEFAULT_FLUSH_INTERVAL_SECONDS,
+                        Optional.empty()));
             }
 
             @Override

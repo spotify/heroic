@@ -28,12 +28,14 @@ import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.cluster.ClusterShard;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Features;
+import com.spotify.heroic.common.Histogram;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.querylogging.QueryContext;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
 import java.util.List;
+import java.util.Optional;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
@@ -45,15 +47,23 @@ public final class FullQuery {
     private final List<ResultGroup> groups;
     private final Statistics statistics;
     private final ResultLimits limits;
+    private final Optional<Histogram> dataDensity;
 
     public static FullQuery error(final QueryTrace trace, final RequestError error) {
         return new FullQuery(trace, ImmutableList.of(error), ImmutableList.of(), Statistics.empty(),
-            ResultLimits.of());
+            ResultLimits.of(), Optional.empty());
+    }
+
+    public static FullQuery limitsError(
+        final QueryTrace trace, final RequestError error, final ResultLimits limits
+    ) {
+        return new FullQuery(trace, ImmutableList.of(error), ImmutableList.of(), Statistics.empty(),
+            limits, Optional.empty());
     }
 
     public static FullQuery empty(final QueryTrace trace, final ResultLimits limits) {
         return new FullQuery(trace, ImmutableList.of(), ImmutableList.of(), Statistics.empty(),
-            limits);
+            limits, Optional.empty());
     }
 
     public static Collector<FullQuery, FullQuery> collect(final QueryTrace.Identifier what) {
@@ -75,7 +85,7 @@ public final class FullQuery {
             }
 
             return new FullQuery(w.end(traces.build()), errors.build(), groups.build(), statistics,
-                new ResultLimits(limits.build()));
+                new ResultLimits(limits.build()), Optional.empty());
         };
     }
 
@@ -83,20 +93,22 @@ public final class FullQuery {
         final QueryTrace.NamedWatch watch, final ClusterShard c
     ) {
         return e -> new FullQuery(watch.end(), ImmutableList.of(ShardError.fromThrowable(c, e)),
-            ImmutableList.of(), Statistics.empty(), ResultLimits.of());
+            ImmutableList.of(), Statistics.empty(), ResultLimits.of(), Optional.empty());
     }
 
     public static Transform<FullQuery, FullQuery> trace(final QueryTrace.Identifier what) {
         final QueryTrace.NamedWatch w = QueryTrace.watch(what);
-        return r -> new FullQuery(w.end(r.trace), r.errors, r.groups, r.statistics, r.limits);
+        return r -> new FullQuery(w.end(r.trace), r.errors, r.groups, r.statistics, r.limits,
+            r.dataDensity);
     }
 
     public FullQuery withTrace(QueryTrace newTrace) {
-        return new FullQuery(newTrace, errors, groups, statistics, limits);
+        return new FullQuery(newTrace, errors, groups, statistics, limits, dataDensity);
     }
 
     public Summary summarize() {
-        return new Summary(trace, errors, ResultGroup.summarize(groups), statistics, limits);
+        return new Summary(trace, errors, ResultGroup.summarize(groups), statistics, limits,
+            dataDensity.orElse(Histogram.empty()));
     }
 
     // Only include data suitable to log to query log
@@ -107,6 +119,7 @@ public final class FullQuery {
         private final ResultGroup.MultiSummary groups;
         private final Statistics statistics;
         private final ResultLimits limits;
+        private final Histogram dataDensity;
     }
 
     @Data

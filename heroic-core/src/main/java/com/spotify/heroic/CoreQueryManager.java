@@ -243,10 +243,10 @@ public class CoreQueryManager implements QueryManager {
                     shardWatch.end()));
             }
 
-            final BucketStrategy bucketStrategy =
-                features.withFeature(Feature.END_BUCKET, () -> BucketStrategy.END, () -> {
-                    throw new IllegalArgumentException(Feature.END_BUCKET + ": must be set");
-                });
+            final BucketStrategy bucketStrategy = options
+                .getBucketStrategy()
+                .orElseGet(() -> features.withFeature(Feature.END_BUCKET, () -> BucketStrategy.END,
+                    () -> BucketStrategy.START));
 
             final AggregationCombiner combiner;
 
@@ -297,8 +297,10 @@ public class CoreQueryManager implements QueryManager {
             if (sampleSize > smallQueryThreshold) {
                 return;
             }
-            final long duration = fullQueryWatch.elapsed(TimeUnit.MILLISECONDS);
-            reporter.reportSmallQueryLatency(duration);
+            final long durationNs = fullQueryWatch.elapsed(TimeUnit.NANOSECONDS);
+            reporter.reportLatencyVsSize(durationNs, result.getPreAggregationSampleSize());
+            final long durationMs = TimeUnit.NANOSECONDS.toMillis(durationNs);
+            reporter.reportSmallQueryLatency(durationMs);
         }
 
         @Override

@@ -19,26 +19,14 @@
  * under the License.
  */
 
-package com.spotify.heroic.statistics;
+package com.spotify.heroic.cluster;
 
-public interface QueryReporter {
+public interface NodeMetadataFactory {
     /**
-     * Report on a full query, on an API node level
-     */
-    FutureReporter.Context reportQuery();
-
-    /**
-     * Report latency of a full query, including gathering data from shards and doing aggregation,
-     * but only for queries that are deemed "small".
-     * The threshold for what is deemed "small" may be configurable and may change.
+     * Get provider from this factory.
      *
-     * @param duration Duration of query, in ms
+     * @param localMetadata default node metadata
+     * @return a new provider
      */
-    void reportSmallQueryLatency(long duration);
-
-    void reportLatencyVsSize(long durationNs, long preAggregationSampleSize);
-
-    void reportClusterNodeRpcError();
-
-    void reportClusterNodeRpcCancellation();
+    NodeMetadataProvider buildProvider(final NodeMetadata localMetadata);
 }

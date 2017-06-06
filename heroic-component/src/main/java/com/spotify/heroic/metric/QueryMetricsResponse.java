@@ -32,10 +32,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.UUID;
-
 import lombok.Data;
 import lombok.NonNull;
 
@@ -63,6 +63,9 @@ public class QueryMetricsResponse {
     @NonNull
     private final ResultLimits limits;
 
+    @NonNull
+    private final Optional<Long> preAggregationSampleSize;
+
     public static class Serializer extends JsonSerializer<QueryMetricsResponse> {
         @Override
         public void serialize(
@@ -83,6 +86,8 @@ public class QueryMetricsResponse {
 
             g.writeFieldName("result");
             serializeResult(g, common, result);
+
+            g.writeObjectField("preAggregationSampleSize", response.getPreAggregationSampleSize());
 
             g.writeFieldName("errors");
             serializeErrors(g, response.getErrors());
@@ -241,7 +246,7 @@ public class QueryMetricsResponse {
 
     public Summary summarize() {
         return new Summary(range, ShardedResultGroup.summarize(result), statistics, errors, trace,
-            limits);
+            limits, preAggregationSampleSize);
     }
 
     // Only include data suitable to log to query log
@@ -253,5 +258,6 @@ public class QueryMetricsResponse {
         private final List<RequestError> errors;
         private final QueryTrace trace;
         private final ResultLimits limits;
+        private final Optional<Long> preAggregationSampleSize;
     }
 }

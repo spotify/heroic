@@ -8,6 +8,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Histogram;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.test.FakeModuleLoader;
@@ -16,6 +17,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.Test;
@@ -57,7 +59,7 @@ public class BasicSerializationTest {
         final List<RequestError> errors = new ArrayList<>();
         final FullQuery expected =
             new FullQuery(QueryTrace.of(QueryTrace.identifier("test"), 0L), errors, groups,
-                Statistics.empty(), ResultLimits.of());
+                Statistics.empty(), ResultLimits.of(), Optional.empty());
 
         assertSerialization("FullQuery.json", expected, FullQuery.class);
     }
@@ -77,7 +79,8 @@ public class BasicSerializationTest {
         final ResultLimits limits = ResultLimits.of();
 
         final QueryMetricsResponse toVerify =
-            new QueryMetricsResponse(queryId, range, result, errors, trace, limits);
+            new QueryMetricsResponse(queryId, range, result, errors, trace, limits,
+                Optional.empty());
 
         assertSerialization("QueryMetricsResponse.json", toVerify);
     }

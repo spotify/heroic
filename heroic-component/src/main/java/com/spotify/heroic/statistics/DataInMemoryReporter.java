@@ -27,6 +27,20 @@ package com.spotify.heroic.statistics;
  */
 public interface DataInMemoryReporter {
     /**
+     * report that rows in metric backend has been accessed
+     *
+     * @param n amount of rows
+     */
+    void reportRowsAccessed(long n);
+
+    /**
+     * report the density of a row that was read from the metric backend
+     *
+     * @param msBetweenSamples density, number of samples per hour
+     */
+    void reportRowDensity(long msBetweenSamples);
+
+    /**
      * report that data has been read into memory
      *
      * @param n amount of data

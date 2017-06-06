@@ -16,6 +16,10 @@
 
   <name>Heroic: Datastax Backend</name>
 
+  <properties>
+    <datastax.version>3.2.0</datastax.version>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.projectlombok</groupId>
@@ -29,9 +33,9 @@
     </dependency>
 
     <dependency>
-      <groupId>com.datastax.cassandra</groupId>
-      <artifactId>cassandra-driver-core</artifactId>
-      <classifier>shaded</classifier>
+      <groupId>com.spotify.heroic.repackaged</groupId>
+      <artifactId>datastax-driver-core</artifactId>
+      <version>${datastax.version}</version>
     </dependency>
 
     <dependency>
@@ -62,4 +66,6 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
+
 </project>

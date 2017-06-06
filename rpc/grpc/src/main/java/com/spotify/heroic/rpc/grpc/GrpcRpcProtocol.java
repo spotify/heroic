@@ -115,6 +115,7 @@ public class GrpcRpcProtocol implements RpcProtocol {
                     .usePlaintext(true)
                     .executor(workerGroup)
                     .eventLoopGroup(workerGroup)
+                    .maxInboundMessageSize(maxFrameSize)
                     .build();
 
                 return async.resolved(channel);
@@ -202,6 +203,13 @@ public class GrpcRpcProtocol implements RpcProtocol {
             @Override
             public ClusterNode node() {
                 return GrpcRpcClusterNode.this;
+            }
+
+            @Override
+            public AsyncFuture<Void> ping() {
+                return client
+                    .request(PING, CallOptions.DEFAULT.withDeadlineAfter(5, TimeUnit.SECONDS))
+                    .directTransform(v -> null);
             }
 
             @Override
@@ -334,6 +342,12 @@ public class GrpcRpcProtocol implements RpcProtocol {
     public static final GrpcDescriptor<GrpcRpcEmptyBody, NodeMetadata> METADATA =
         descriptor("metadata", new TypeReference<GrpcRpcEmptyBody>() {
         }, new TypeReference<NodeMetadata>() {
+        });
+
+    public static final GrpcDescriptor<GrpcRpcEmptyBody, GrpcRpcEmptyBody>
+        PING =
+        descriptor("ping", new TypeReference<GrpcRpcEmptyBody>() {
+        }, new TypeReference<GrpcRpcEmptyBody>() {
         });
 
     public static final GrpcDescriptor<GroupedQuery<FullQuery.Request>, FullQuery>
