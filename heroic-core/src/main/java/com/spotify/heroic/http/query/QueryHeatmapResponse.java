@@ -168,7 +168,7 @@ public class QueryHeatmapResponse {
                 }
                 for (final Map.Entry<String, SortedSet<String>> pair : series.getTags().entrySet()) {
 
-                    System.out.println(pair);
+                    //System.out.println(pair);
                     final SortedSet<String> values = pair.getValue();
 
                     if (values.size() != 1) {
@@ -178,18 +178,12 @@ public class QueryHeatmapResponse {
 
                     //g.writeStringField(pair.getKey(), values.iterator().next());
                     String K = pair.getKey();
-                    if (k.equals("orfees") && K.equals("f")){
+                    if ((k.equals("orfees") && K.equals("f"))||(k.equals("nrh") && K.equals("coor"))||(k.equals("nsa") && K.equals("f"))){
                         //System.out.println("condition ok ");
                         //g.writeString( values.iterator().next());
                         f = values.iterator().next();
                     }
 
-
-                    if (k.equals("nrh") && K.equals("coor")){
-                        //System.out.println("condition ok ");
-                        //g.writeString( values.iterator().next());
-                        f = values.iterator().next();
-                    }
 
                 }
                 //Double F = Double.parseDouble(f);

@@ -67,7 +67,7 @@ public final class HeatmapUtil {
         double min,max;
         min =  0d;
         max = 0d;
-        System.out.print("get 1: ");
+        System.out.println("get 1: ");
         for (final ShardedResultGroup resultGroup : groups) {
 
             final MetricCollection group = (MetricCollection) resultGroup.getMetrics();
@@ -103,7 +103,7 @@ public final class HeatmapUtil {
                     }
                     K = pair.getKey();
 
-                    if (k.equals("orfees") && K.equals("f")) {
+                    if ((k.equals("orfees") && K.equals("f")) || (k.equals("nrh") && K.equals("coor"))) {
 
                         String text = values.iterator().next();
                         F = (Double) (Double.parseDouble(text));
@@ -129,11 +129,13 @@ public final class HeatmapUtil {
                                 TreeMap<Long, Double> zt = (TreeMap<Long, Double>) zvt.get(F);
                                 zt.put(t, v);
                                 zv = zt;
+                                height = zv.size();
                             }catch (Exception e){
                                 //System.out.print("new");
                                 zv = (TreeMap<Long, Double>) new TreeMap();
                                 zv.put(t, v);
                             }
+
                             //System.out.print(zv);
 
                             zvt.put(F, zv);
@@ -148,21 +150,24 @@ public final class HeatmapUtil {
             //System.out.print(group.size());
         }
         int width = zvt.size();
-        //System.out.print(zvt );
+
+        System.out.println(width );
+        System.out.println( height);
+
         //System.out.print(zvt.values());
         //System.out.print(zvt.toString());
         //System.out.print(zvt.values().toArray());
         //Collection c = zvt.values();
         //System.out.println(width);
         //System.out.println(height);
-        double[][] jj = new double[height][width];
-        byte[] bb = new byte[height*width*4];
+        //double[][] jj = new double[height][width];
+        //byte[] bb = new byte[height*width*4];
         int[] ii = new int[height*width];
         //System.out.println(bb);
         //Iterator itr = c.iterator();
         int i=0;
         Double range = max - min;
-        System.out.print("get : ");
+        System.out.print("draw ");
         for (Map.Entry<Double,TreeMap<Long,Double>> entry : zvt.entrySet()) {
             //System.out.print("i : ");
             //System.out.println(i);
@@ -176,9 +181,19 @@ public final class HeatmapUtil {
                 //jj[j][i]=e.getValue().doubleValue();
                 //
                 double dd = e.getValue().doubleValue();
-                int norm = (int)(((dd -min) / range));
-                Color colorOfYourDataPoint = Color(norm*255, norm*255, norm*255);
-                ii[i*height+j]=norm;
+                Double norm = (((dd -min) / range));
+                int index = (int) Math.round(norm*499);
+                Gradient G = new Gradient();
+
+                //Color[] C = G.GRADIENT_BLACK_TO_WHITE;
+                Color[] C =G.createGradient(Color.WHITE, Color.BLACK, 500);
+                //int r = (int) Math.round(norm*255);
+                //Color colorOfYourDataPoint = new Color(r, r, r);
+                //ii[i*height+j]=colorOfYourDataPoint.getRGB() ;
+                System.out.println("norm : "+ i*height+j);
+                int c = C[index].getRGB();
+                ii[i*height+j]=c;
+
                 //System.out.print("norm : "+ norm);
                 //System.out.print("i : "+ i);
                 //System.out.print("j : "+ j);
@@ -254,10 +269,7 @@ public final class HeatmapUtil {
 
         // final DateAxis rangeAxis = (DateAxis) plot.getRangeAxis();
         // rangeAxis.setStandardTickUnits(DateAxis.createStandardDateTickUnits());
-        double[][] datas = new double[][]{{3,2,3,4,5,6},
-                                 {2,3,4,5,6,7},
-                                 {3,4,5,6,7,6},
-                                 {4,5,6,7,6,5}};
+
 
         // Step 1: Create our heat map chart using our data.
         //HeatChart map = new HeatChart(jj);
@@ -277,7 +289,7 @@ public final class HeatmapUtil {
         //Graphics2D bGr = bimage.createGraphics();
         //bGr.drawImage(img, 0, 0, null);
         //bGr.dispose();
-        System.out.print("BufferedImage : ");
+
 
         //BufferedImage bI = new BufferedImage(width,height,BufferedImage.TYPE_4BYTE_ABGR);
         //System.out.println(bI);
@@ -297,11 +309,11 @@ public final class HeatmapUtil {
             //throw new RuntimeException(e);
         }
         */
-        System.out.print("after : ");
+        System.out.println("before ");
         int[] pixels = ii;
         BufferedImage convertedGrayscale =  new BufferedImage(width, height, BufferedImage.TYPE_INT_BGR);
         convertedGrayscale.getRaster().setDataElements(0, 0, width, height, pixels);
-        System.out.print(convertedGrayscale);
+        System.out.println("end ");
         /**
         try {
             ImageIO.write(convertedGrayscale, "png", new File("converted-grayscale-002.png"));
