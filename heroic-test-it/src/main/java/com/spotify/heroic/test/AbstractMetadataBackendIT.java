@@ -21,6 +21,18 @@
 
 package com.spotify.heroic.test;
 
+import static com.spotify.heroic.filter.Filter.and;
+import static com.spotify.heroic.filter.Filter.hasTag;
+import static com.spotify.heroic.filter.Filter.matchKey;
+import static com.spotify.heroic.filter.Filter.matchTag;
+import static com.spotify.heroic.filter.Filter.not;
+import static com.spotify.heroic.filter.Filter.or;
+import static com.spotify.heroic.filter.Filter.startsWith;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -49,27 +61,14 @@ import com.spotify.heroic.metadata.WriteMetadata;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.RetryPolicy;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.runners.MockitoJUnitRunner;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-
-import static com.spotify.heroic.filter.Filter.and;
-import static com.spotify.heroic.filter.Filter.hasTag;
-import static com.spotify.heroic.filter.Filter.matchKey;
-import static com.spotify.heroic.filter.Filter.matchTag;
-import static com.spotify.heroic.filter.Filter.not;
-import static com.spotify.heroic.filter.Filter.or;
-import static com.spotify.heroic.filter.Filter.startsWith;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
 
 @RunWith(MockitoJUnitRunner.class)
 public abstract class AbstractMetadataBackendIT {
@@ -84,6 +83,7 @@ public abstract class AbstractMetadataBackendIT {
     private HeroicCoreInstance core;
     private MetadataBackend backend;
 
+    protected boolean deleteSupport = true;
     protected boolean findTagsSupport = true;
     protected boolean orFilterSupport = true;
 
@@ -213,6 +213,8 @@ public abstract class AbstractMetadataBackendIT {
 
     @Test
     public void deleteSeriesTest() throws Exception {
+        assumeTrue(deleteSupport);
+
         {
             final DeleteSeries.Request request =
                 new DeleteSeries.Request(not(matchKey(s2.getKey())), range, OptionalLimit.empty());
@@ -220,14 +222,16 @@ public abstract class AbstractMetadataBackendIT {
             backend.deleteSeries(request).get();
         }
 
-        {
+        /* deletes are eventually consistent, wait until they are no longer present
+         * but only for a limited period of time */
+        retrySome(() -> {
             final FindSeries.Request f =
                 new FindSeries.Request(TrueFilter.get(), range, OptionalLimit.empty());
 
             final FindSeries result = backend.findSeries(f).get();
 
             assertEquals(ImmutableSet.of(s2), result.getSeries());
-        }
+        });
     }
 
     @Test
@@ -252,6 +256,33 @@ public abstract class AbstractMetadataBackendIT {
         assertEquals(ImmutableSet.of(s1.hash(), s2.hash(), s3.hash()), findIds(hasTag("role")));
     }
 
+    /**
+     * Retry action for a given period of time.
+     *
+     * @param action Action to retry if failing
+     */
+    private void retrySome(final ThrowingRunnable action) throws Exception {
+        AssertionError error = null;
+
+        for (int i = 0; i < 10; i++) {
+            try {
+                action.run();
+            } catch (final AssertionError e) {
+                if (error != null) {
+                    e.addSuppressed(error);
+                }
+
+                error = e;
+                Thread.sleep(100L);
+                continue;
+            }
+
+            return;
+        }
+
+        throw error;
+    }
+
     private Set<String> findIds(final Filter filter) throws Exception {
         return backend
             .findSeriesIds(new FindSeriesIds.Request(filter, range, OptionalLimit.empty()))
@@ -265,9 +296,7 @@ public abstract class AbstractMetadataBackendIT {
         final FindSeries.Request f =
             new FindSeries.Request(new MatchKeyFilter(s.getKey()), range, OptionalLimit.empty());
 
-        return metadata
-            .write(new WriteMetadata.Request(s, range))
-            .lazyTransform(v -> async
+        return metadata.write(new WriteMetadata.Request(s, range)).lazyTransform(ignore -> async
                 .retryUntilResolved(() -> metadata.findSeries(f).directTransform(result -> {
                     if (!result.getSeries().contains(s)) {
                         throw new RuntimeException("Expected to find the written series");
@@ -276,5 +305,10 @@ public abstract class AbstractMetadataBackendIT {
                     return null;
                 }), RetryPolicy.timed(10000, RetryPolicy.exponential(100, 200)))
                 .directTransform(r -> null));
+    }
+
+    @FunctionalInterface
+    interface ThrowingRunnable {
+        void run() throws Exception;
     }
 }
