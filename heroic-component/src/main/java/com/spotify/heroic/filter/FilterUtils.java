@@ -46,9 +46,9 @@ public class FilterUtils {
         final Iterator<T> left = a.iterator();
         final Iterator<T> right = b.iterator();
 
-        if (left.hasNext()) {
+        while (left.hasNext()) {
             if (!right.hasNext()) {
-                return -1;
+                return 1;
             }
 
             final T l = left.next();
@@ -62,7 +62,7 @@ public class FilterUtils {
         }
 
         if (right.hasNext()) {
-            return 1;
+            return -1;
         }
 
         return 0;
