@@ -562,12 +562,14 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
             @Override
             public QueryBuilder visitRegex(final RegexFilter regex) {
+
                 return regexpFilter(TAGS,
                     regex.getTag() + TAG_DELIMITER + regex.getValue());
             }
 
             @Override
             public QueryBuilder visitHasTag(final HasTagFilter hasTag) {
+
                 return termFilter(TAG_KEYS, hasTag.getTag());
 
             }

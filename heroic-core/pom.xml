@@ -12,7 +12,18 @@
   <packaging>jar</packaging>
 
   <name>Heroic: Core Project</name>
-
+  <repositories>
+  <repository>
+     <id>jzy3d-snapshots</id>
+     <name>Jzy3d Snapshots</name>
+     <url>http://maven.jzy3d.org/snapshots</url>
+  </repository>
+  <repository>
+     <id>jzy3d-releases</id>
+     <name>Jzy3d Snapshots</name>
+     <url>http://maven.jzy3d.org/releases</url>
+  </repository>
+</repositories>
   <dependencies>
     <dependency>
       <groupId>com.spotify.heroic</groupId>
@@ -125,5 +136,19 @@
       <artifactId>heroic-test</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.nd4j</groupId>
+      <artifactId>nd4j-native</artifactId>
+      <version>0.8.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jzy3d</groupId>
+      <artifactId>jzy3d-api</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+
   </dependencies>
+
+
+
 </project>
