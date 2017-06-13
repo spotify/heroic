@@ -35,7 +35,10 @@ public class MetadataBackendV1IT extends AbstractElasticsearchMetadataBackendIT 
     protected void setupConditions() {
         super.setupConditions();
 
-        // TODO: find out and fix the issue
-        orFilterSupport = false;
+        // TODO: deprecate V1 completely instead of fixing this?
+        deleteSupport = false;
+
+        // TODO: support findTags?
+        findTagsSupport = false;
     }
 }
