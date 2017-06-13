@@ -24,12 +24,11 @@ package com.spotify.heroic.cluster.discovery.simple;
 import com.spotify.heroic.cluster.ClusterDiscovery;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.ToString;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.net.URI;
 import java.util.List;
+import javax.inject.Inject;
+import javax.inject.Named;
+import lombok.ToString;
 
 @ToString
 public class StaticListDiscovery implements ClusterDiscovery {
@@ -37,7 +36,9 @@ public class StaticListDiscovery implements ClusterDiscovery {
     private final List<URI> nodes;
 
     @Inject
-    public StaticListDiscovery(AsyncFramework async, @Named("nodes") List<URI> nodes) {
+    public StaticListDiscovery(
+        AsyncFramework async, @Named("nodes") List<URI> nodes
+    ) {
         this.async = async;
         this.nodes = nodes;
     }

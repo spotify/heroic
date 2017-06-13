@@ -40,23 +40,24 @@ import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
+import com.spotify.heroic.time.Clock;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.Getter;
-import lombok.ToString;
-import org.kohsuke.args4j.Option;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import javax.inject.Inject;
+import javax.inject.Named;
+import lombok.Getter;
+import lombok.ToString;
+import org.kohsuke.args4j.Option;
 
 @TaskUsage("Load generated metrics into backends")
 @TaskName("load-generated")
 public class LoadGenerated implements ShellTask {
+    private final Clock clock;
     private final AsyncFramework async;
     private final IngestionManager ingestion;
     private final GeneratorManager generator;
@@ -65,9 +66,10 @@ public class LoadGenerated implements ShellTask {
 
     @Inject
     public LoadGenerated(
-        AsyncFramework async, IngestionManager ingestion, GeneratorManager generator,
+        Clock clock, AsyncFramework async, IngestionManager ingestion, GeneratorManager generator,
         MetadataGenerator metadataGenerator, @Named("application/json") ObjectMapper mapper
     ) {
+        this.clock = clock;
         this.async = async;
         this.ingestion = ingestion;
         this.generator = generator;
@@ -95,7 +97,7 @@ public class LoadGenerated implements ShellTask {
         for (final Generator generator : generators) {
             final IngestionGroup group = ingestion.useOptionalGroup(params.group);
 
-            final long now = System.currentTimeMillis();
+            final long now = clock.currentTimeMillis();
             final long start = now - params.duration.toMilliseconds();
 
             final DateRange range = new DateRange(Math.max(start, 0), now);

@@ -22,7 +22,6 @@
 package com.spotify.heroic.cluster;
 
 import eu.toolchain.async.AsyncFuture;
-
 import java.net.URI;
 import java.util.List;
 

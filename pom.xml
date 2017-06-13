@@ -12,10 +12,12 @@
 
   <modules>
     <module>heroic-component</module>
+    <module>heroic-component-test</module>
     <module>heroic-elasticsearch-utils</module>
     <module>heroic-elasticsearch-test</module>
+    <module>heroic-loading</module>
     <module>heroic-core</module>
-    <module>heroic-test-base</module>
+    <module>heroic-test</module>
     <module>heroic-test-it</module>
     <module>heroic-shell</module>
     <module>heroic-parser</module>
@@ -53,15 +55,16 @@
     <jackson.version>2.7.4</jackson.version>
     <hk2.version>2.3.0</hk2.version>
     <jetty.version>9.3.7.v20160115</jetty.version>
-    <lucene.version>4.10.4</lucene.version>
-    <datastax.version>3.0.2</datastax.version>
+    <lucene.version>5.5.0</lucene.version>
     <semantic-metrics.version>0.2.3</semantic-metrics.version>
-    <netty.version>4.1.0.CR3</netty.version>
-    <tiny-async.version>1.8.0</tiny-async.version>
+    <netty.version>4.1.8.Final</netty.version>
+    <tiny-async.version>1.11.0</tiny-async.version>
     <tiny-serializer.version>1.4.5</tiny-serializer.version>
     <antlr.version>4.5</antlr.version>
-    <log4j.version>2.2</log4j.version>
-    <elasticsearch.version>2.4.5</elasticsearch.version>
+
+    <log4j.version>2.6.2</log4j.version>
+    <elasticsearch.version>5.3.2</elasticsearch.version>
+
     <joda-time.version>2.8.2</joda-time.version>
     <lombok.version>1.16.6</lombok.version>
     <findbugs.version>3.0.1</findbugs.version>
@@ -246,6 +249,7 @@
 
       <modules>
         <module>repackaged/bigtable</module>
+        <module>repackaged/datastax</module>
       </modules>
     </profile>
   </profiles>
@@ -274,6 +278,11 @@
       </dependency>
       <dependency>
         <groupId>com.spotify.heroic</groupId>
+        <artifactId>heroic-loading</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.spotify.heroic</groupId>
         <artifactId>heroic-parser</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -296,6 +305,16 @@
       <dependency>
         <groupId>com.spotify.heroic</groupId>
         <artifactId>heroic-test-base</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.spotify.heroic</groupId>
+        <artifactId>heroic-component-test</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.spotify.heroic</groupId>
+        <artifactId>heroic-test</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
@@ -458,20 +477,6 @@
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-lang3</artifactId>
         <version>3.3.2</version>
-      </dependency>
-
-      <dependency>
-        <groupId>com.datastax.cassandra</groupId>
-        <artifactId>cassandra-driver-core</artifactId>
-        <classifier>shaded</classifier>
-        <version>${datastax.version}</version>
-
-        <exclusions>
-          <exclusion>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-handler</artifactId>
-          </exclusion>
-        </exclusions>
       </dependency>
 
       <!-- useful collections and utilities -->
@@ -644,20 +649,9 @@
       <!-- used by com.spotify.heroic.metadata.elasticsearch
            TODO: break out -->
       <dependency>
-        <groupId>org.elasticsearch</groupId>
-        <artifactId>elasticsearch</artifactId>
+        <groupId>org.elasticsearch.client</groupId>
+        <artifactId>transport</artifactId>
         <version>${elasticsearch.version}</version>
-      </dependency>
-      <!--  used by com.spotify.heroic.metadata.lucene -->
-      <dependency>
-        <groupId>org.apache.lucene</groupId>
-        <artifactId>lucene-core</artifactId>
-        <version>${lucene.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.lucene</groupId>
-        <artifactId>lucene-codecs</artifactId>
-        <version>${lucene.version}</version>
       </dependency>
       <!-- graphing -->
       <dependency>
@@ -679,6 +673,11 @@
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>jul-to-slf4j</artifactId>
+        <version>${slf4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>jcl-over-slf4j</artifactId>
         <version>${slf4j.version}</version>
       </dependency>
       <dependency>
@@ -808,34 +807,6 @@
                   </filter>
                 </filters>
                 <transformers>
-                  <!-- required for lucene -->
-                  <transformer
-                      implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-                    <resource>META-INF/services/org.apache.lucene.codecs.Codec</resource>
-                  </transformer>
-                  <transformer
-                      implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-                    <resource>META-INF/services/org.apache.lucene.codecs.DocValuesFormat</resource>
-                  </transformer>
-                  <transformer
-                      implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-                    <resource>META-INF/services/org.apache.lucene.codecs.PostingsFormat</resource>
-                  </transformer>
-                  <transformer
-                      implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-                    <resource>META-INF/services/org.apache.lucene.analysis.util.CharFilterFactory
-                    </resource>
-                  </transformer>
-                  <transformer
-                      implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-                    <resource>META-INF/services/org.apache.lucene.analysis.util.TokenFilterFactory
-                    </resource>
-                  </transformer>
-                  <transformer
-                      implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-                    <resource>META-INF/services/org.apache.lucene.analysis.util.TokenizerFactory
-                    </resource>
-                  </transformer>
                 </transformers>
               </configuration>
             </execution>

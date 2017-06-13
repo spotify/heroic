@@ -41,17 +41,17 @@ import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.WriteMetric;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.Data;
-import lombok.ToString;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+import java.util.function.Consumer;
+import javax.inject.Inject;
+import javax.inject.Named;
+import lombok.Data;
+import lombok.ToString;
 
 /**
  * MetricBackend for Heroic cassandra datastore.
@@ -119,8 +119,20 @@ public class MemoryBackend extends AbstractMetricBackend {
     public AsyncFuture<FetchData> fetch(FetchData.Request request, FetchQuotaWatcher watcher) {
         final QueryTrace.NamedWatch w = QueryTrace.watch(FETCH);
         final MemoryKey key = new MemoryKey(request.getType(), request.getSeries());
-        final List<MetricCollection> groups = doFetch(key, request.getRange(), watcher);
-        return async.resolved(FetchData.of(w.end(), ImmutableList.of(), groups));
+        final MetricCollection metrics = doFetch(key, request.getRange(), watcher);
+        return async.resolved(FetchData.of(w.end(), ImmutableList.of(), ImmutableList.of(metrics)));
+    }
+
+    @Override
+    public AsyncFuture<FetchData.Result> fetch(
+        FetchData.Request request, FetchQuotaWatcher watcher,
+        Consumer<MetricCollection> metricsConsumer
+    ) {
+        final QueryTrace.NamedWatch w = QueryTrace.watch(FETCH);
+        final MemoryKey key = new MemoryKey(request.getType(), request.getSeries());
+        final MetricCollection metrics = doFetch(key, request.getRange(), watcher);
+        metricsConsumer.accept(metrics);
+        return async.resolved(FetchData.result(w.end()));
     }
 
     @Override
@@ -158,20 +170,21 @@ public class MemoryBackend extends AbstractMetricBackend {
         }
     }
 
-    private List<MetricCollection> doFetch(
+    private MetricCollection doFetch(
         final MemoryKey key, final DateRange range, final FetchQuotaWatcher watcher
     ) {
         final NavigableMap<Long, Metric> tree = storage.get(key);
 
         if (tree == null) {
-            return ImmutableList.of(MetricCollection.build(key.getSource(), ImmutableList.of()));
+            return MetricCollection.build(key.getSource(), ImmutableList.of());
         }
 
         synchronized (tree) {
-            final Iterable<Metric> metrics = tree.subMap(range.getStart(), range.getEnd()).values();
+            final Iterable<Metric> metrics =
+                tree.subMap(range.getStart(), false, range.getEnd(), true).values();
             final List<Metric> data = ImmutableList.copyOf(metrics);
             watcher.readData(data.size());
-            return ImmutableList.of(MetricCollection.build(key.getSource(), data));
+            return MetricCollection.build(key.getSource(), data);
         }
     }
 

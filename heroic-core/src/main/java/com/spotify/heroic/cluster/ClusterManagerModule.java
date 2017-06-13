@@ -21,6 +21,10 @@
 
 package com.spotify.heroic.cluster;
 
+import static com.spotify.heroic.common.Optionals.pickOptional;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
@@ -32,15 +36,11 @@ import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
 import com.spotify.heroic.metadata.MetadataComponent;
 import com.spotify.heroic.metric.MetricComponent;
+import com.spotify.heroic.statistics.HeroicReporter;
+import com.spotify.heroic.statistics.QueryReporter;
 import com.spotify.heroic.suggest.SuggestComponent;
 import dagger.Module;
 import dagger.Provides;
-import lombok.AccessLevel;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.apache.commons.lang3.tuple.Pair;
-
-import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -48,10 +48,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-
-import static com.spotify.heroic.common.Optionals.pickOptional;
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
+import javax.inject.Named;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.apache.commons.lang3.tuple.Pair;
 
 /**
  * @author udoprog
@@ -67,6 +69,7 @@ public class ClusterManagerModule {
     private final ClusterDiscoveryModule discovery;
     private final List<RpcProtocolModule> protocols;
     private final Set<Map<String, String>> topology;
+    private final Optional<NodeMetadataFactory> metadataFactory;
 
     @Provides
     @ClusterScope
@@ -79,6 +82,14 @@ public class ClusterManagerModule {
     @ClusterScope
     public NodeMetadata localMetadata(final ServiceInfo service) {
         return new NodeMetadata(0, id, tags, service);
+    }
+
+    @Provides
+    @ClusterScope
+    public NodeMetadataProvider metadataProvider(final NodeMetadata localMetadata) {
+        return metadataFactory
+            .map(fn -> fn.buildProvider(localMetadata))
+            .orElseGet(() -> NodeMetadataProvider.staticProvider(localMetadata));
     }
 
     @Provides
@@ -97,10 +108,17 @@ public class ClusterManagerModule {
 
     @Provides
     @ClusterScope
+    public QueryReporter queryReporter(HeroicReporter heroicReporter) {
+        return heroicReporter.newQueryReporter();
+    }
+
+    @Provides
+    @ClusterScope
     public List<Pair<String, RpcProtocolComponent>> protocolComponents(
-        final NodeMetadata nodeMetadata, @Named("local") final ClusterNode localClusterNode,
-        final PrimaryComponent primary, final MetricComponent metric,
-        final MetadataComponent metadata, final SuggestComponent suggest
+        final NodeMetadataProvider metadataProvider,
+        @Named("local") final ClusterNode localClusterNode, final PrimaryComponent primary,
+        final MetricComponent metric, final MetadataComponent metadata,
+        final SuggestComponent suggest
     ) {
         final ImmutableList.Builder<Pair<String, RpcProtocolComponent>> protocolComponents =
             ImmutableList.builder();
@@ -114,8 +132,8 @@ public class ClusterManagerModule {
             .suggestComponent(suggest)
             .provided(new RpcProtocolModule.Provided() {
                 @Override
-                public NodeMetadata metadata() {
-                    return nodeMetadata;
+                public NodeMetadataProvider metadataProvider() {
+                    return metadataProvider;
                 }
 
                 @Override
@@ -163,6 +181,7 @@ public class ClusterManagerModule {
         return new Builder();
     }
 
+    @AllArgsConstructor(access = AccessLevel.PRIVATE)
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
     public static class Builder {
         private Optional<UUID> id = empty();
@@ -171,6 +190,7 @@ public class ClusterManagerModule {
         private Optional<ClusterDiscoveryModule> discovery = empty();
         private Optional<List<RpcProtocolModule>> protocols = empty();
         private Optional<Set<Map<String, String>>> topology = empty();
+        private Optional<NodeMetadataFactory> metadataFactory = empty();
 
         @JsonCreator
         public Builder(
@@ -219,6 +239,19 @@ public class ClusterManagerModule {
             return this;
         }
 
+        /**
+         * Set the metadata factory.
+         *
+         * Only used for testing purposes.
+         *
+         * @param metadataFactory factory to use
+         * @return this builder
+         */
+        public Builder metadataFactory(NodeMetadataFactory metadataFactory) {
+            this.metadataFactory = of(metadataFactory);
+            return this;
+        }
+
         public Builder merge(Builder o) {
             // @formatter:off
             return new Builder(
@@ -227,7 +260,8 @@ public class ClusterManagerModule {
                 pickOptional(useLocal, o.useLocal),
                 pickOptional(discovery, o.discovery),
                 pickOptional(protocols, o.protocols),
-                pickOptional(topology, o.topology)
+                pickOptional(topology, o.topology),
+                pickOptional(metadataFactory, o.metadataFactory)
             );
             // @formatter:on
         }
@@ -240,7 +274,8 @@ public class ClusterManagerModule {
                 useLocal.orElse(DEFAULT_USE_LOCAL),
                 discovery.orElseGet(ClusterDiscoveryModule::nullModule),
                 protocols.orElseGet(ImmutableList::of),
-                topology.orElseGet(ImmutableSet::of)
+                topology.orElseGet(ImmutableSet::of),
+                metadataFactory
             );
             // @formatter:on
         }

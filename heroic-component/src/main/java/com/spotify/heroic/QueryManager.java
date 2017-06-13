@@ -31,6 +31,7 @@ import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.WriteMetadata;
 import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.WriteMetric;
+import com.spotify.heroic.querylogging.QueryContext;
 import com.spotify.heroic.suggest.KeySuggest;
 import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
@@ -44,7 +45,7 @@ public interface QueryManager extends UsableGroupManager<QueryManager.Group> {
     QueryBuilder newQueryFromString(String query);
 
     interface Group {
-        AsyncFuture<QueryResult> query(Query query);
+        AsyncFuture<QueryResult> query(Query query, QueryContext queryContext);
 
         AsyncFuture<FindTags> findTags(final FindTags.Request request);
 

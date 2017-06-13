@@ -3,6 +3,7 @@ package com.spotify.heroic.filter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.HeroicMappers;
 import com.spotify.heroic.grammar.QueryParser;
+import com.spotify.heroic.test.FakeModuleLoader;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -26,12 +27,7 @@ public class FilterSerializerTest {
     @Mock
     private QueryParser parser;
 
-    private ObjectMapper m;
-
-    @Before
-    public void setup() {
-        m = HeroicMappers.json(parser);
-    }
+    private ObjectMapper m = FakeModuleLoader.builder().build().json();;
 
     @Test
     public void serializeTest() throws IOException {

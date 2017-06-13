@@ -23,7 +23,6 @@ package com.spotify.heroic.aggregation;
 
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.DateRange;
-
 import java.util.Set;
 
 /**
@@ -39,10 +38,11 @@ public interface AggregationInstance {
     String SAMPLE_SIZE = "Aggregation.sampleSize";
 
     /**
-     * Estimate number of points this aggregation will produce.
+     * Estimate number of metrics a session must retain for the given range
      *
      * @param range Range to perform aggregation over.
-     * @return Number of datapoints required for aggregation, or {@code -1} if not known.
+     * @return Estimated number of metrics that must be retained for the aggregation,
+     * or {@code -1} if not known.
      */
     long estimate(DateRange range);
 
@@ -58,7 +58,16 @@ public interface AggregationInstance {
     /**
      * Traverse the possible aggregations and build the necessary graph out of them.
      */
-    AggregationSession session(DateRange range);
+    default AggregationSession session(DateRange range) {
+        return session(range, RetainQuotaWatcher.NO_QUOTA, BucketStrategy.START);
+    }
+
+    /**
+     * Traverse the possible aggregations and build the necessary graph out of them.
+     */
+    AggregationSession session(
+        DateRange range, RetainQuotaWatcher quotaWatcher, BucketStrategy bucketStrategy
+    );
 
     /**
      * Get the distributed aggregation that is relevant for this aggregation.

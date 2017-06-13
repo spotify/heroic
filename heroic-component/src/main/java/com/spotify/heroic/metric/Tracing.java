@@ -23,6 +23,7 @@ package com.spotify.heroic.metric;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Stopwatch;
 
 /**
@@ -30,105 +31,87 @@ import com.google.common.base.Stopwatch;
  * <p>
  * Is serialized as JSON true when enabled or false when disabled.
  */
-public interface Tracing {
-    Tracing ENABLED = new TracingEnabled();
-    Tracing DISABLED = new TracingDisabled();
+public enum Tracing {
+    NONE, DEFAULT, DETAILED;
+
+    /**
+     * Test if tracing is enabled at a DEFAULT level.
+     *
+     * @return {@code true} if tracing is enabled
+     */
+    public boolean isEnabled() {
+        return isEnabled(DEFAULT);
+    }
 
     /**
      * Check if tracing is enabled or not.
      *
-     * @return {@code true} if tracing is enabled, {@code false} otherwise
+     * @return {@code true} if tracing is enabled
+     */
+    public boolean isEnabled(final Tracing query) {
+        return query.ordinal() <= this.ordinal();
+    }
+
+    /**
+     * Create a new watch for the DEFAULT tracing level.
+     *
+     * @param what what to watch
+     * @return a {@link com.spotify.heroic.metric.QueryTrace.NamedWatch}
+     */
+    public QueryTrace.NamedWatch watch(final QueryTrace.Identifier what) {
+        return watch(what, DEFAULT);
+    }
+
+    /**
+     * Create a new watch.
+     *
+     * @return a {@link com.spotify.heroic.metric.QueryTrace.NamedWatch}
+     */
+    public QueryTrace.NamedWatch watch(final QueryTrace.Identifier what, final Tracing query) {
+        if (isEnabled(query)) {
+            return new QueryTrace.ActiveNamedWatch(what, Stopwatch.createStarted());
+        }
+
+        return QueryTrace.PASSIVE_NAMED_WATCH;
+    }
+
+    /**
+     * Create tracing from a json node.
+     *
+     * @param node node to create from
+     * @return tracing corresponding to the node
+     */
+    @JsonCreator
+    static Tracing fromJson(JsonNode node) {
+        switch (node.getNodeType()) {
+            case STRING:
+                return Tracing.valueOf(node.asText().toUpperCase());
+            case BOOLEAN:
+                return fromBoolean(node.asBoolean());
+            default:
+                throw new IllegalArgumentException(
+                    "expected string or boolean, got: " + node.getNodeType());
+        }
+    }
+
+    /**
+     * Convert to json.
+     *
+     * @return json representation (that will be serialized)
      */
     @JsonValue
-    boolean isEnabled();
+    String toJson() {
+        return toString().toLowerCase();
+    }
 
     /**
      * Convert a boolean to a tracing instance.
      *
      * @param value Boolean that will be converted
-     * @return {@link #enabled()} when value is {@code true}, {@link #disabled()} when value is
-     * {@code false}
+     * @return {@code ENABLED} when value is {@code true}, {@code NONE} when value is {@code
+     * false}
      */
-    @JsonCreator
-    static Tracing fromBoolean(final boolean value) {
-        return value ? enabled() : disabled();
-    }
-
-    /**
-     * Get an enabled tracing.
-     *
-     * @return an enabled tracing
-     */
-    static Tracing enabled() {
-        return ENABLED;
-    }
-
-    /**
-     * Get a disabled tracing.
-     *
-     * @return a disabled tracing
-     */
-    static Tracing disabled() {
-        return DISABLED;
-    }
-
-    /**
-     * Create a new watch.
-     *
-     * @return a {@link com.spotify.heroic.metric.QueryTrace.Watch}
-     */
-    QueryTrace.Watch watch();
-
-    /**
-     * Create a new watch.
-     *
-     * @return a {@link com.spotify.heroic.metric.QueryTrace.Watch}
-     */
-    QueryTrace.NamedWatch watch(final QueryTrace.Identifier what);
-
-    /**
-     * Type that implements behaviour when tracing is enabled.
-     */
-    class TracingEnabled implements Tracing {
-        private TracingEnabled() {
-        }
-
-        @Override
-        public boolean isEnabled() {
-            return true;
-        }
-
-        @Override
-        public QueryTrace.Watch watch() {
-            return new QueryTrace.ActiveWatch(Stopwatch.createStarted());
-        }
-
-        @Override
-        public QueryTrace.NamedWatch watch(final QueryTrace.Identifier what) {
-            return new QueryTrace.ActiveNamedWatch(what, Stopwatch.createStarted());
-        }
-    }
-
-    /**
-     * Type that implements behaviour when tracing is disabled.
-     */
-    class TracingDisabled implements Tracing {
-        private TracingDisabled() {
-        }
-
-        @Override
-        public boolean isEnabled() {
-            return false;
-        }
-
-        @Override
-        public QueryTrace.Watch watch() {
-            return QueryTrace.PASSIVE_WATCH;
-        }
-
-        @Override
-        public QueryTrace.NamedWatch watch(final QueryTrace.Identifier what) {
-            return QueryTrace.PASSIVE_NAMED_WATCH;
-        }
+    public static Tracing fromBoolean(final boolean value) {
+        return value ? DEFAULT : NONE;
     }
 }

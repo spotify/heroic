@@ -1,0 +1,38 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.spotify.heroic</groupId>
+    <artifactId>heroic-parent</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>heroic-test</artifactId>
+  <packaging>jar</packaging>
+
+  <name>Heroic: Test Utilities Base Project</name>
+
+  <description>
+    A set of useful testing utilities for Heroic.
+  </description>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.spotify.heroic</groupId>
+      <artifactId>heroic-component-test</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.spotify.heroic</groupId>
+      <artifactId>heroic-loading</artifactId>
+    </dependency>
+  </dependencies>
+</project>

@@ -7,7 +7,7 @@ import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.Empty;
 import com.spotify.heroic.aggregation.Group;
 import com.spotify.heroic.common.TypeNameMixin;
-import com.spotify.heroic.http.query.QueryMetrics;
+import com.spotify.heroic.metric.QueryMetrics;
 import org.junit.Before;
 import org.junit.Test;
 

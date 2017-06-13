@@ -56,6 +56,11 @@ public interface ClusterNode extends UsableGroupManager<ClusterNode.Group> {
     interface Group {
         ClusterNode node();
 
+        /**
+         * Perform a simple ping to check that the remote end responds.
+         */
+        AsyncFuture<Void> ping();
+
         AsyncFuture<FullQuery> query(FullQuery.Request request);
 
         AsyncFuture<FindTags> findTags(FindTags.Request request);

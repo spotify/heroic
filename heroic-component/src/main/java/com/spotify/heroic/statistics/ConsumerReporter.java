@@ -28,5 +28,19 @@ public interface ConsumerReporter {
 
     void reportConsumerSchemaError();
 
+    void reportConsumerThreadsWanted(final long count);
+
+    void reportConsumerThreadsIncrement();
+
+    void reportConsumerThreadsDecrement();
+
     void reportMessageDrift(final long ms);
+
+    FutureReporter.Context reportConsumption();
+
+    HeroicTimer.Context reportConsumerCommitOperation();
+
+    HeroicTimer.Context reportConsumerCommitPhase1();
+
+    HeroicTimer.Context reportConsumerCommitPhase2();
 }

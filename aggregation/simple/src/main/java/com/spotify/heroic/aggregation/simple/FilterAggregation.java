@@ -26,7 +26,9 @@ import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.AggregationOutput;
 import com.spotify.heroic.aggregation.AggregationResult;
 import com.spotify.heroic.aggregation.AggregationSession;
+import com.spotify.heroic.aggregation.BucketStrategy;
 import com.spotify.heroic.aggregation.EmptyInstance;
+import com.spotify.heroic.aggregation.RetainQuotaWatcher;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.Event;
@@ -34,23 +36,25 @@ import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
-import lombok.Data;
-import lombok.NonNull;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import lombok.Data;
+import lombok.NonNull;
 
 @Data
 public abstract class FilterAggregation implements AggregationInstance {
+
+    private static final EmptyInstance INNER = EmptyInstance.INSTANCE;
+
     @NonNull
     @JsonIgnore
     private final FilterStrategy filterStrategy;
 
     @Override
     public long estimate(DateRange range) {
-        return -1;
+        return INNER.estimate(range);
     }
 
     @Override
@@ -60,12 +64,12 @@ public abstract class FilterAggregation implements AggregationInstance {
 
     @Override
     public AggregationInstance distributed() {
-        return EmptyInstance.INSTANCE;
+        return INNER;
     }
 
     @Override
     public AggregationInstance reducer() {
-        return EmptyInstance.INSTANCE;
+        return INNER;
     }
 
     /**
@@ -78,8 +82,10 @@ public abstract class FilterAggregation implements AggregationInstance {
     }
 
     @Override
-    public AggregationSession session(DateRange range) {
-        return new Session(filterStrategy, EmptyInstance.INSTANCE.session(range));
+    public AggregationSession session(
+        DateRange range, RetainQuotaWatcher quotaWatcher, BucketStrategy bucketStrategy
+    ) {
+        return new Session(filterStrategy, INNER.session(range, quotaWatcher, bucketStrategy));
     }
 
     private class Session implements AggregationSession {

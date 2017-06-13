@@ -22,6 +22,8 @@
 package com.spotify.heroic.statistics.noop;
 
 import com.spotify.heroic.statistics.ConsumerReporter;
+import com.spotify.heroic.statistics.FutureReporter;
+import com.spotify.heroic.statistics.HeroicTimer;
 
 public class NoopConsumerReporter implements ConsumerReporter {
     private NoopConsumerReporter() {
@@ -40,12 +42,57 @@ public class NoopConsumerReporter implements ConsumerReporter {
     }
 
     @Override
+    public void reportConsumerThreadsWanted(final long count) {
+    }
+
+    @Override
+    public void reportConsumerThreadsIncrement() {
+    }
+
+    @Override
+    public void reportConsumerThreadsDecrement() {
+    }
+
+    @Override
     public void reportMessageDrift(final long ms) {
+    }
+
+    @Override
+    public FutureReporter.Context reportConsumption() {
+        return NoopFutureReporterContext.get();
+    }
+
+    @Override
+    public HeroicTimer.Context reportConsumerCommitOperation() {
+        return new NoopTimerContext();
+    }
+
+    @Override
+    public HeroicTimer.Context reportConsumerCommitPhase1() {
+        return new NoopTimerContext();
+    }
+
+    @Override
+    public HeroicTimer.Context reportConsumerCommitPhase2() {
+        return new NoopTimerContext();
     }
 
     private static final NoopConsumerReporter instance = new NoopConsumerReporter();
 
     public static NoopConsumerReporter get() {
         return instance;
+    }
+
+    public class NoopTimerContext implements HeroicTimer.Context {
+
+        @Override
+        public long stop() {
+            return 0;
+        }
+
+        @Override
+        public void finished() throws Exception {
+            stop();
+        }
     }
 }

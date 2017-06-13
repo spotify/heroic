@@ -21,6 +21,10 @@
 
 package com.spotify.heroic.suggest.elasticsearch;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -49,21 +53,16 @@ import dagger.Lazy;
 import dagger.Module;
 import dagger.Provides;
 import eu.toolchain.async.Managed;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.tuple.Pair;
-
-import javax.inject.Named;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
-
-import static com.google.common.base.Preconditions.checkNotNull;
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
+import javax.inject.Named;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.tuple.Pair;
 
 @Data
 @ModuleId("elasticsearch")
@@ -71,6 +70,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
     public static final String ELASTICSEARCH_CONFIGURE_PARAM = "elasticsearch.configure";
 
     private static final double DEFAULT_WRITES_PER_SECOND = 3000d;
+    private static final long DEFAULT_RATE_LIMIT_SLOW_START_SECONDS = 0L;
     private static final long DEFAULT_WRITES_CACHE_DURATION_MINUTES = 240L;
     public static final String DEFAULT_GROUP = "elasticsearch";
     public static final String DEFAULT_TEMPLATE_NAME = "heroic-suggest";
@@ -81,6 +81,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
     private final Groups groups;
     private final ConnectionModule connection;
     private final double writesPerSecond;
+    private final Long rateLimitSlowStartSeconds;
     private final long writeCacheDurationMinutes;
     private final String templateName;
     private final String backendType;
@@ -106,6 +107,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
         @JsonProperty("id") Optional<String> id, @JsonProperty("groups") Optional<Groups> groups,
         @JsonProperty("connection") Optional<ConnectionModule> connection,
         @JsonProperty("writesPerSecond") Optional<Double> writesPerSecond,
+        @JsonProperty("rateLimitSlowStartSeconds") Optional<Long> rateLimitSlowStartSeconds,
         @JsonProperty("writeCacheDurationMinutes") Optional<Long> writeCacheDurationMinutes,
         @JsonProperty("templateName") Optional<String> templateName,
         @JsonProperty("backendType") Optional<String> backendType,
@@ -115,6 +117,8 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
         this.groups = groups.orElseGet(Groups::empty).or(DEFAULT_GROUP);
         this.connection = connection.orElseGet(ConnectionModule::buildDefault);
         this.writesPerSecond = writesPerSecond.orElse(DEFAULT_WRITES_PER_SECOND);
+        this.rateLimitSlowStartSeconds =
+            rateLimitSlowStartSeconds.orElse(DEFAULT_RATE_LIMIT_SLOW_START_SECONDS);
         this.writeCacheDurationMinutes =
             writeCacheDurationMinutes.orElse(DEFAULT_WRITES_CACHE_DURATION_MINUTES);
         this.templateName = templateName.orElse(DEFAULT_TEMPLATE_NAME);
@@ -197,7 +201,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
             }
 
             return new DefaultRateLimitedCache<>(cache.asMap(),
-                RateLimiter.create(writesPerSecond));
+                RateLimiter.create(writesPerSecond, rateLimitSlowStartSeconds, TimeUnit.SECONDS));
         }
 
         @Provides
@@ -229,6 +233,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
         private Optional<Groups> groups = empty();
         private Optional<ConnectionModule> connection = empty();
         private Optional<Double> writesPerSecond = empty();
+        private Optional<Long> rateLimitSlowStartSeconds = empty();
         private Optional<Long> writeCacheDurationMinutes = empty();
         private Optional<String> templateName = empty();
         private Optional<String> backendType = empty();
@@ -258,6 +263,12 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
             return this;
         }
 
+        public Builder rateLimitSlowStartSeconds(final long rateLimitSlowStartSeconds) {
+            checkNotNull(rateLimitSlowStartSeconds, "rateLimitSlowStartSeconds");
+            this.rateLimitSlowStartSeconds = of(rateLimitSlowStartSeconds);
+            return this;
+        }
+
         public Builder writeCacheDurationMinutes(long writeCacheDurationMinutes) {
             checkNotNull(writeCacheDurationMinutes, "writeCacheDurationMinutes");
             this.writeCacheDurationMinutes = of(writeCacheDurationMinutes);
@@ -283,7 +294,8 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
 
         public ElasticsearchSuggestModule build() {
             return new ElasticsearchSuggestModule(id, groups, connection, writesPerSecond,
-                writeCacheDurationMinutes, templateName, backendType, configure);
+                rateLimitSlowStartSeconds, writeCacheDurationMinutes, templateName, backendType,
+                configure);
         }
     }
 }

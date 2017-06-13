@@ -194,11 +194,33 @@ If you encounter problems, you can troubleshoot the build with `DH_VERBOSE`:
 $ env DH_VERBOSE=1 dpkg-buildpackage -uc -us
 ```
 
-## Hacking
+## Contributing
+
+Fork the code at https://github.com/spotify/heroic
+
+Make sure you format the code using the provided formatter in [idea](idea). Even if you disagree
+with the way it is formatted, consistency is more important.
+For special cases, see [Bypassing Validation](#bypassing-validation).
+
+If possible, limit your changes to one module per commit.
+If you add new, or modify existing classes. Keep that change to a single commit while maintaing
+backwards compatible behaviour. Deprecate any old APIs as appropriate with `@Deprecated` and
+add documentation for how to use the new API.
+
+The first line of the commit should be formatted with `[module1,module2] my message`.
+
+`module1` and `module2` are paths to the modules affected with any `heroic-` prefix stripped.
+So if your change affects `heroic-core` and `metric/bigtable`, the message should say
+`[core,metric/bigtable] did x to y`.
+
+If more than _3 modules_ are affected by a commit, use `[all]`.
+For other cases, adapt to the format of existing commit messages.
+
+Before setting up a pull request, run the comprehensive test suite as specified in
+[Testing](#testing).
 
 * [A Guide to Dagger 2](docs/guide-to-dagger2.md)
 * [Using IDEA](idea/README.md)
-* [Using Eclipse](eclipse/README.md)
 
 #### Module Orientation
 

@@ -39,6 +39,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.LongSupplier;
 import java.util.stream.Stream;
 
 @EqualsAndHashCode
@@ -60,8 +61,18 @@ class ValueOptionalLimit implements OptionalLimit {
     }
 
     @Override
-    public boolean isGreaterOrEqual(final int size) {
+    public boolean isGreater(final LongSupplier size) {
+        return isGreater(size.getAsLong());
+    }
+
+    @Override
+    public boolean isGreaterOrEqual(final long size) {
         return size >= limit;
+    }
+
+    @Override
+    public boolean isGreaterOrEqual(final LongSupplier size) {
+        return isGreaterOrEqual(size.getAsLong());
     }
 
     @Override

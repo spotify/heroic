@@ -21,8 +21,10 @@
 
 package com.spotify.heroic.rpc.grpc;
 
+import static io.grpc.stub.ServerCalls.asyncUnaryCall;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.spotify.heroic.cluster.NodeMetadata;
+import com.spotify.heroic.cluster.NodeMetadataProvider;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.metadata.MetadataBackend;
@@ -45,26 +47,26 @@ import io.grpc.internal.ServerImpl;
 import io.grpc.netty.NettyServerBuilder;
 import io.netty.channel.Channel;
 import io.netty.channel.nio.NioEventLoopGroup;
-import lombok.extern.slf4j.Slf4j;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
-
-import static io.grpc.stub.ServerCalls.asyncUnaryCall;
+import javax.inject.Inject;
+import javax.inject.Named;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class GrpcRpcProtocolServer implements LifeCycles {
+    public static final GrpcRpcEmptyBody EMPTY = new GrpcRpcEmptyBody();
+
     private final AsyncFramework async;
     private final MetricManager metrics;
     private final MetadataManager metadata;
     private final SuggestManager suggest;
-    private final NodeMetadata localMetadata;
+    private final NodeMetadataProvider metadataProvider;
     private final ObjectMapper mapper;
     private final ResolvableFuture<InetSocketAddress> bindFuture;
     private final InetSocketAddress address;
@@ -78,7 +80,7 @@ public class GrpcRpcProtocolServer implements LifeCycles {
     @Inject
     public GrpcRpcProtocolServer(
         AsyncFramework async, MetricManager metrics, MetadataManager metadata,
-        SuggestManager suggest, NodeMetadata localMetadata,
+        SuggestManager suggest, NodeMetadataProvider metadataProvider,
         @Named("application/json+internal") ObjectMapper mapper,
         @Named("bindFuture") ResolvableFuture<InetSocketAddress> bindFuture,
         @Named("grpcBindAddress") InetSocketAddress address,
@@ -89,7 +91,7 @@ public class GrpcRpcProtocolServer implements LifeCycles {
         this.metrics = metrics;
         this.metadata = metadata;
         this.suggest = suggest;
-        this.localMetadata = localMetadata;
+        this.metadataProvider = metadataProvider;
         this.mapper = mapper;
         this.bindFuture = bindFuture;
         this.address = address;
@@ -102,7 +104,11 @@ public class GrpcRpcProtocolServer implements LifeCycles {
     private GrpcRpcContainer setupContainer() {
         final GrpcRpcContainer container = new GrpcRpcContainer();
 
-        container.register(GrpcRpcProtocol.METADATA, empty -> async.resolved(localMetadata));
+        container.register(GrpcRpcProtocol.METADATA, empty -> {
+            return async.resolved(metadataProvider.getMetadata());
+        });
+
+        container.register(GrpcRpcProtocol.PING, empty -> async.resolved(EMPTY));
 
         container.register(GrpcRpcProtocol.METRICS_FULL_QUERY,
             g -> g.apply(metrics, MetricBackendGroup::query));
@@ -213,13 +219,17 @@ public class GrpcRpcProtocolServer implements LifeCycles {
         final GrpcEndpointHandle<Object, Object> spec
     ) {
         return asyncUnaryCall((request, observer) -> {
+            final UUID id = UUID.randomUUID();
+
+            log.trace("{}: Received request: {}", id, request);
+
             final AsyncFuture<Object> future;
 
             try {
                 final Object obj = mapper.readValue(request, spec.queryType());
                 future = spec.handle(obj);
             } catch (final Exception e) {
-                log.error("Failed to handle request (sent {})", Status.INTERNAL, e);
+                log.error("{}: Failed to handle request (sent {})", id, Status.INTERNAL, e);
                 observer.onError(new StatusException(Status.INTERNAL));
                 return;
             }
@@ -227,6 +237,7 @@ public class GrpcRpcProtocolServer implements LifeCycles {
             future.onDone(new FutureDone<Object>() {
                 @Override
                 public void failed(final Throwable cause) throws Exception {
+                    log.error("{}: Request failed", id, cause);
                     observer.onError(cause);
                 }
 

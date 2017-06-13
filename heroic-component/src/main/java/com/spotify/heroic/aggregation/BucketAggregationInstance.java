@@ -28,27 +28,24 @@ import com.google.common.collect.Iterables;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
-import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
-import lombok.AccessLevel;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.LongAdder;
+import lombok.AccessLevel;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 
 /**
  * A base aggregation that collects data in 'buckets', one for each sampled data point.
@@ -64,7 +61,6 @@ import java.util.concurrent.atomic.LongAdder;
 @EqualsAndHashCode(of = {"size", "extent"})
 public abstract class BucketAggregationInstance<B extends Bucket> implements AggregationInstance {
     public static final Map<String, String> EMPTY_KEY = ImmutableMap.of();
-    public static final long MAX_BUCKET_COUNT = 100000L;
 
     private static final Map<String, String> EMPTY = ImmutableMap.of();
 
@@ -82,12 +78,12 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
     protected final MetricType out;
 
     @Data
-    private final class Session implements AggregationSession {
+    final class Session implements AggregationSession {
         private final ConcurrentLinkedQueue<Set<Series>> series = new ConcurrentLinkedQueue<>();
         private final LongAdder sampleSize = new LongAdder();
 
+        private final BucketStrategy.Mapping mapping;
         private final List<B> buckets;
-        private final long offset;
 
         @Override
         public void updatePoints(
@@ -143,48 +139,16 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
                     continue;
                 }
 
-                final Iterator<B> buckets = matching(m);
+                final BucketStrategy.StartEnd startEnd = mapping.map(m.getTimestamp());
 
-                while (buckets.hasNext()) {
-                    consumer.apply(buckets.next(), m);
+                for (int i = startEnd.getStart(); i < startEnd.getEnd(); i++) {
+                    consumer.apply(buckets.get(i), m);
                 }
 
                 sampleSize += 1;
             }
 
             this.sampleSize.add(sampleSize);
-        }
-
-        private Iterator<B> matching(final Metric m) {
-            final long ts = m.getTimestamp() - offset - 1;
-            final long te = ts + extent;
-
-            if (te < 0) {
-                return Collections.emptyIterator();
-            }
-
-            // iterator that iterates from the largest to the smallest matching bucket for _this_
-            // metric.
-            return new Iterator<B>() {
-                long current = te;
-
-                @Override
-                public boolean hasNext() {
-                    while ((current / size) >= buckets.size()) {
-                        current -= size;
-                    }
-
-                    final long m = current % size;
-                    return (current >= 0 && current > ts) && (m >= 0 && m < extent);
-                }
-
-                @Override
-                public B next() {
-                    final int index = (int) (current / size);
-                    current -= size;
-                    return buckets.get(index);
-                }
-            };
         }
 
         @Override
@@ -222,9 +186,13 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
     }
 
     @Override
-    public AggregationSession session(DateRange range) {
-        final List<B> buckets = buildBuckets(range, size);
-        return new Session(buckets, range.start());
+    public Session session(
+        DateRange range, RetainQuotaWatcher quotaWatcher, BucketStrategy bucketStrategy
+    ) {
+        final BucketStrategy.Mapping mapping = bucketStrategy.setup(range, size, extent);
+        final List<B> buckets = buildBuckets(mapping);
+        quotaWatcher.retainData(buckets.size());
+        return new Session(mapping, buckets);
     }
 
     @Override
@@ -242,18 +210,11 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
         return String.format("%s(size=%d, extent=%d)", getClass().getSimpleName(), size, extent);
     }
 
-    private List<B> buildBuckets(final DateRange range, long size) {
-        final long start = range.start();
-        final long count = (range.diff() + size) / size;
+    private List<B> buildBuckets(final BucketStrategy.Mapping mapping) {
+        final List<B> buckets = new ArrayList<>(mapping.buckets());
 
-        if (count < 1 || count > MAX_BUCKET_COUNT) {
-            throw new IllegalArgumentException(String.format("range %s, size %d", range, size));
-        }
-
-        final List<B> buckets = new ArrayList<>((int) count);
-
-        for (int i = 0; i < count; i++) {
-            buckets.add(buildBucket(start + size * i));
+        for (int i = 0; i < mapping.buckets(); i++) {
+            buckets.add(buildBucket(mapping.start() + size * i));
         }
 
         return buckets;

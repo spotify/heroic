@@ -21,11 +21,17 @@
 
 package com.spotify.heroic.suggest.elasticsearch;
 
+import static com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestUtils.loadJsonResource;
+import static com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestUtils.variables;
+import static org.elasticsearch.index.query.QueryBuilders.boolQuery;
+import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
+import static org.elasticsearch.index.query.QueryBuilders.prefixQuery;
+import static org.elasticsearch.index.query.QueryBuilders.termQuery;
+
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.HashCode;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.OptionalLimit;
@@ -61,38 +67,9 @@ import com.spotify.heroic.suggest.WriteSuggest;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
-import lombok.ToString;
-import org.apache.commons.lang3.tuple.Pair;
-import org.elasticsearch.action.index.IndexRequest.OpType;
-import org.elasticsearch.action.search.SearchRequestBuilder;
-import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.action.search.SearchType;
-import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentFactory;
-import org.elasticsearch.index.query.BoolFilterBuilder;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.FilterBuilder;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.search.SearchHit;
-import org.elasticsearch.search.SearchHits;
-import org.elasticsearch.search.aggregations.AggregationBuilders;
-import org.elasticsearch.search.aggregations.Aggregations;
-import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
-import org.elasticsearch.search.aggregations.bucket.terms.StringTerms;
-import org.elasticsearch.search.aggregations.bucket.terms.Terms;
-import org.elasticsearch.search.aggregations.bucket.terms.Terms.Bucket;
-import org.elasticsearch.search.aggregations.bucket.terms.Terms.Order;
-import org.elasticsearch.search.aggregations.bucket.terms.TermsBuilder;
-import org.elasticsearch.search.aggregations.metrics.cardinality.Cardinality;
-import org.elasticsearch.search.aggregations.metrics.cardinality.CardinalityBuilder;
-import org.elasticsearch.search.aggregations.metrics.tophits.TopHits;
-import org.elasticsearch.search.aggregations.metrics.tophits.TopHitsBuilder;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -106,20 +83,32 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
-import static com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestUtils.loadJsonResource;
-import static com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestUtils.variables;
-import static org.elasticsearch.index.query.FilterBuilders.andFilter;
-import static org.elasticsearch.index.query.FilterBuilders.boolFilter;
-import static org.elasticsearch.index.query.FilterBuilders.matchAllFilter;
-import static org.elasticsearch.index.query.FilterBuilders.notFilter;
-import static org.elasticsearch.index.query.FilterBuilders.orFilter;
-import static org.elasticsearch.index.query.FilterBuilders.prefixFilter;
-import static org.elasticsearch.index.query.FilterBuilders.termFilter;
-import static org.elasticsearch.index.query.QueryBuilders.boolQuery;
-import static org.elasticsearch.index.query.QueryBuilders.filteredQuery;
-import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
-import static org.elasticsearch.index.query.QueryBuilders.termQuery;
+import javax.inject.Inject;
+import javax.inject.Named;
+import lombok.ToString;
+import org.apache.commons.lang3.tuple.Pair;
+import org.elasticsearch.action.DocWriteRequest;
+import org.elasticsearch.action.search.SearchRequestBuilder;
+import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.Aggregations;
+import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
+import org.elasticsearch.search.aggregations.bucket.terms.StringTerms;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms.Bucket;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms.Order;
+import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
+import org.elasticsearch.search.aggregations.metrics.cardinality.Cardinality;
+import org.elasticsearch.search.aggregations.metrics.cardinality.CardinalityAggregationBuilder;
+import org.elasticsearch.search.aggregations.metrics.tophits.TopHits;
+import org.elasticsearch.search.aggregations.metrics.tophits.TopHitsAggregationBuilder;
 
 @ElasticsearchScope
 @ToString(of = {"connection"})
@@ -204,37 +193,34 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     @Override
     public AsyncFuture<TagValuesSuggest> tagValuesSuggest(final TagValuesSuggest.Request request) {
         return connection.doto((final Connection c) -> {
-            final BoolFilterBuilder bool = boolFilter();
+            final BoolQueryBuilder bool = boolQuery();
 
             if (!(request.getFilter() instanceof TrueFilter)) {
                 bool.must(filter(request.getFilter()));
             }
 
             for (final String e : request.getExclude()) {
-                bool.mustNot(termFilter(TAG_SKEY_RAW, e));
+                bool.mustNot(termQuery(TAG_SKEY_RAW, e));
             }
 
-            final QueryBuilder query =
-                bool.hasClauses() ? filteredQuery(matchAllQuery(), bool) : matchAllQuery();
+            final QueryBuilder query = bool.hasClauses() ? bool : matchAllQuery();
 
-            final SearchRequestBuilder builder = c
-                .search(request.getRange(), TAG_TYPE)
-                .setSearchType(SearchType.COUNT)
-                .setQuery(query)
-                .setTimeout(TIMEOUT);
+            final SearchRequestBuilder builder =
+                c.search(TAG_TYPE).setSize(0).setQuery(query).setTimeout(TIMEOUT);
 
             final OptionalLimit limit = request.getLimit();
             final OptionalLimit groupLimit = request.getGroupLimit();
 
             {
-                final TermsBuilder terms = AggregationBuilders.terms("keys").field(TAG_SKEY_RAW);
+                final TermsAggregationBuilder terms =
+                    AggregationBuilders.terms("keys").field(TAG_SKEY_RAW);
 
                 limit.asInteger().ifPresent(l -> terms.size(l + 1));
 
                 builder.addAggregation(terms);
                 // make value bucket one entry larger than necessary to figure out when limiting
                 // is applied.
-                final TermsBuilder cardinality =
+                final TermsAggregationBuilder cardinality =
                     AggregationBuilders.terms("values").field(TAG_SVAL_RAW);
 
                 groupLimit.asInteger().ifPresent(l -> cardinality.size(l + 1));
@@ -243,6 +229,10 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
             return bind(builder.execute()).directTransform((SearchResponse response) -> {
                 final List<TagValuesSuggest.Suggestion> suggestions = new ArrayList<>();
+
+                if (response.getAggregations() == null) {
+                    return TagValuesSuggest.of(Collections.emptyList(), Boolean.FALSE);
+                }
 
                 final Terms terms = response.getAggregations().get("keys");
 
@@ -256,14 +246,14 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                     final SortedSet<String> result = new TreeSet<>();
 
                     for (final Terms.Bucket valueBucket : valueBuckets) {
-                        result.add(valueBucket.getKey());
+                        result.add(valueBucket.getKeyAsString());
                     }
 
                     final SortedSet<String> values = groupLimit.limitSortedSet(result);
                     final boolean limited = groupLimit.isGreater(valueBuckets.size());
 
                     suggestions.add(
-                        new TagValuesSuggest.Suggestion(bucket.getKey(), values, limited));
+                        new TagValuesSuggest.Suggestion(bucket.getKeyAsString(), values, limited));
                 }
 
                 return TagValuesSuggest.of(ImmutableList.copyOf(suggestions),
@@ -288,18 +278,15 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
             QueryBuilder query = bool.hasClauses() ? bool : matchAllQuery();
 
             if (!(request.getFilter() instanceof TrueFilter)) {
-                query = filteredQuery(query, filter(request.getFilter()));
+                query = new BoolQueryBuilder().must(query).filter(filter(request.getFilter()));
             }
 
-            final SearchRequestBuilder builder = c
-                .search(request.getRange(), TAG_TYPE)
-                .setSearchType(SearchType.COUNT)
-                .setQuery(query);
+            final SearchRequestBuilder builder = c.search(TAG_TYPE).setSize(0).setQuery(query);
 
             final OptionalLimit limit = request.getLimit();
 
             {
-                final TermsBuilder terms =
+                final TermsAggregationBuilder terms =
                     AggregationBuilders.terms("values").field(TAG_SVAL_RAW).order(Order.term(true));
 
                 limit.asInteger().ifPresent(l -> terms.size(l + 1));
@@ -309,12 +296,16 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
             return bind(builder.execute()).directTransform((SearchResponse response) -> {
                 final ImmutableList.Builder<String> suggestions = ImmutableList.builder();
 
+                if (response.getAggregations() == null) {
+                    return TagValueSuggest.of(Collections.emptyList(), Boolean.FALSE);
+                }
+
                 final Terms terms = response.getAggregations().get("values");
 
                 final List<Bucket> buckets = terms.getBuckets();
 
                 for (final Terms.Bucket bucket : limit.limitList(buckets)) {
-                    suggestions.add(bucket.getKey());
+                    suggestions.add(bucket.getKeyAsString());
                 }
 
                 return TagValueSuggest.of(suggestions.build(), limit.isGreater(buckets.size()));
@@ -325,28 +316,26 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     @Override
     public AsyncFuture<TagKeyCount> tagKeyCount(final TagKeyCount.Request request) {
         return connection.doto((final Connection c) -> {
-            final QueryBuilder root = filteredQuery(matchAllQuery(), filter(request.getFilter()));
+            final QueryBuilder root = new BoolQueryBuilder().must(filter(request.getFilter()));
 
-            final SearchRequestBuilder builder = c
-                .search(request.getRange(), TAG_TYPE)
-                .setSearchType(SearchType.COUNT)
-                .setQuery(root);
+            final SearchRequestBuilder builder = c.search(TAG_TYPE).setSize(0).setQuery(root);
 
             final OptionalLimit limit = request.getLimit();
             final OptionalLimit exactLimit = request.getExactLimit();
 
             {
-                final TermsBuilder keys = AggregationBuilders.terms("keys").field(TAG_SKEY_RAW);
+                final TermsAggregationBuilder keys =
+                    AggregationBuilders.terms("keys").field(TAG_SKEY_RAW);
                 limit.asInteger().ifPresent(l -> keys.size(l + 1));
                 builder.addAggregation(keys);
 
-                final CardinalityBuilder cardinality =
+                final CardinalityAggregationBuilder cardinality =
                     AggregationBuilders.cardinality("cardinality").field(TAG_SVAL_RAW);
 
                 keys.subAggregation(cardinality);
 
                 exactLimit.asInteger().ifPresent(size -> {
-                    final TermsBuilder values =
+                    final TermsAggregationBuilder values =
                         AggregationBuilders.terms("values").field(TAG_SVAL_RAW).size(size + 1);
 
                     keys.subAggregation(values);
@@ -355,6 +344,10 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
             return bind(builder.execute()).directTransform((SearchResponse response) -> {
                 final Set<TagKeyCount.Suggestion> suggestions = new LinkedHashSet<>();
+
+                if (response.getAggregations() == null) {
+                    return TagKeyCount.of(Collections.emptyList(), Boolean.FALSE);
+                }
 
                 final Terms keys = response.getAggregations().get("keys");
 
@@ -371,7 +364,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                             .of(values
                                 .getBuckets()
                                 .stream()
-                                .map(MultiBucketsAggregation.Bucket::getKey)
+                                .map(MultiBucketsAggregation.Bucket::getKeyAsString)
                                 .collect(Collectors.toSet()))
                             .filter(sets -> !exactLimit.isGreater(sets.size()));
                     } else {
@@ -379,7 +372,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                     }
 
                     suggestions.add(
-                        new TagKeyCount.Suggestion(bucket.getKey(), cardinality.getValue(),
+                        new TagKeyCount.Suggestion(bucket.getKeyAsString(), cardinality.getValue(),
                             exactValues));
                 }
 
@@ -421,23 +414,20 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
             QueryBuilder query = bool.hasClauses() ? bool : matchAllQuery();
 
             if (!(request.getFilter() instanceof TrueFilter)) {
-                query = filteredQuery(query, filter(request.getFilter()));
+                query = new BoolQueryBuilder().must(query).filter(filter(request.getFilter()));
             }
 
-            final SearchRequestBuilder builder = c
-                .search(request.getRange(), TAG_TYPE)
-                .setSearchType(SearchType.COUNT)
-                .setQuery(query)
-                .setTimeout(TIMEOUT);
+            final SearchRequestBuilder builder =
+                c.search(TAG_TYPE).setSize(0).setQuery(query).setTimeout(TIMEOUT);
 
             // aggregation
             {
-                final TopHitsBuilder hits = AggregationBuilders
+                final TopHitsAggregationBuilder hits = AggregationBuilders
                     .topHits("hits")
-                    .setSize(1)
-                    .setFetchSource(TAG_SUGGEST_SOURCES, new String[0]);
+                    .size(1)
+                    .fetchSource(TAG_SUGGEST_SOURCES, new String[0]);
 
-                final TermsBuilder terms =
+                final TermsAggregationBuilder terms =
                     AggregationBuilders.terms("terms").field(TAG_KV).subAggregation(hits);
 
                 request.getLimit().asInteger().ifPresent(terms::size);
@@ -492,22 +482,19 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
             QueryBuilder query = bool.hasClauses() ? bool : matchAllQuery();
 
             if (!(request.getFilter() instanceof TrueFilter)) {
-                query = filteredQuery(query, filter(request.getFilter()));
+                query = new BoolQueryBuilder().must(query).filter(filter(request.getFilter()));
             }
 
-            final SearchRequestBuilder builder = c
-                .search(request.getRange(), SERIES_TYPE)
-                .setSearchType(SearchType.COUNT)
-                .setQuery(query);
+            final SearchRequestBuilder builder = c.search(SERIES_TYPE).setSize(0).setQuery(query);
 
             // aggregation
             {
-                final TopHitsBuilder hits = AggregationBuilders
+                final TopHitsAggregationBuilder hits = AggregationBuilders
                     .topHits("hits")
-                    .setSize(1)
-                    .setFetchSource(KEY_SUGGEST_SOURCES, new String[0]);
+                    .size(1)
+                    .fetchSource(KEY_SUGGEST_SOURCES, new String[0]);
 
-                final TermsBuilder keys =
+                final TermsAggregationBuilder keys =
                     AggregationBuilders.terms("keys").field(KEY).subAggregation(hits);
 
                 request.getLimit().asInteger().ifPresent(keys::size);
@@ -517,12 +504,17 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
             return bind(builder.execute()).directTransform((SearchResponse response) -> {
                 final Set<KeySuggest.Suggestion> suggestions = new LinkedHashSet<>();
 
+                if (response.getAggregations() == null) {
+                    return KeySuggest.of(Collections.emptyList());
+                }
+
                 final StringTerms terms = response.getAggregations().get("keys");
 
                 for (final Terms.Bucket bucket : terms.getBuckets()) {
                     final TopHits topHits = bucket.getAggregations().get("hits");
                     final SearchHits hits = topHits.getHits();
-                    suggestions.add(new KeySuggest.Suggestion(hits.getMaxScore(), bucket.getKey()));
+                    suggestions.add(
+                        new KeySuggest.Suggestion(hits.getMaxScore(), bucket.getKeyAsString()));
                 }
 
                 return KeySuggest.of(ImmutableList.copyOf(suggestions));
@@ -534,12 +526,11 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     public AsyncFuture<WriteSuggest> write(final WriteSuggest.Request request) {
         return connection.doto((final Connection c) -> {
             final Series s = request.getSeries();
-            final DateRange range = request.getRange();
 
             final String[] indices;
 
             try {
-                indices = c.writeIndices(range);
+                indices = c.writeIndices();
             } catch (NoIndexSelectedException e) {
                 return async.failed(e);
             }
@@ -567,7 +558,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                     .index(index, SERIES_TYPE)
                     .setId(seriesId)
                     .setSource(series)
-                    .setOpType(OpType.CREATE)
+                    .setOpType(DocWriteRequest.OpType.CREATE)
                     .execute()).directTransform(response -> timer.end()));
 
                 for (final Map.Entry<String, String> e : s.getTags().entrySet()) {
@@ -584,7 +575,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                         .index(index, TAG_TYPE)
                         .setId(suggestId)
                         .setSource(suggest)
-                        .setOpType(OpType.CREATE)
+                        .setOpType(DocWriteRequest.OpType.CREATE)
                         .execute()).directTransform(response -> timer.end()));
                 }
             }
@@ -669,72 +660,73 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
         b.field(TAG_KV, e.getKey() + TAG_DELIMITER + e.getValue());
     }
 
-    private static final Filter.Visitor<FilterBuilder> FILTER_CONVERTER =
-        new Filter.Visitor<FilterBuilder>() {
+    private static final Filter.Visitor<QueryBuilder> FILTER_CONVERTER =
+        new Filter.Visitor<QueryBuilder>() {
             @Override
-            public FilterBuilder visitTrue(final TrueFilter t) {
-                return matchAllFilter();
+            public QueryBuilder visitTrue(final TrueFilter t) {
+                return matchAllQuery();
             }
 
             @Override
-            public FilterBuilder visitFalse(final FalseFilter f) {
-                return notFilter(matchAllFilter());
+            public QueryBuilder visitFalse(final FalseFilter f) {
+                return new BoolQueryBuilder().mustNot(matchAllQuery());
             }
 
             @Override
-            public FilterBuilder visitAnd(final AndFilter and) {
-                final List<FilterBuilder> filters = new ArrayList<>(and.terms().size());
+            public QueryBuilder visitAnd(final AndFilter and) {
+                BoolQueryBuilder boolBuilder = new BoolQueryBuilder();
 
                 for (final Filter stmt : and.terms()) {
-                    filters.add(filter(stmt));
+                    boolBuilder.must(filter(stmt));
                 }
 
-                return andFilter(filters.toArray(new FilterBuilder[0]));
+                return boolBuilder;
             }
 
             @Override
-            public FilterBuilder visitOr(final OrFilter or) {
-                final List<FilterBuilder> filters = new ArrayList<>(or.terms().size());
+            public QueryBuilder visitOr(final OrFilter or) {
+                BoolQueryBuilder boolBuilder = new BoolQueryBuilder();
 
                 for (final Filter stmt : or.terms()) {
-                    filters.add(filter(stmt));
+                    boolBuilder.should(filter(stmt));
                 }
 
-                return orFilter(filters.toArray(new FilterBuilder[0]));
+                boolBuilder.minimumShouldMatch(1);
+                return boolBuilder;
             }
 
             @Override
-            public FilterBuilder visitNot(final NotFilter not) {
-                return notFilter(filter(not.getFilter()));
+            public QueryBuilder visitNot(final NotFilter not) {
+                return new BoolQueryBuilder().mustNot(filter(not.getFilter()));
             }
 
             @Override
-            public FilterBuilder visitMatchTag(final MatchTagFilter matchTag) {
-                return termFilter(TAGS, matchTag.getTag() + '\0' + matchTag.getValue());
+            public QueryBuilder visitMatchTag(final MatchTagFilter matchTag) {
+                return termQuery(TAGS, matchTag.getTag() + '\0' + matchTag.getValue());
             }
 
             @Override
-            public FilterBuilder visitStartsWith(final StartsWithFilter startsWith) {
-                return prefixFilter(TAGS, startsWith.getTag() + '\0' + startsWith.getValue());
+            public QueryBuilder visitStartsWith(final StartsWithFilter startsWith) {
+                return prefixQuery(TAGS, startsWith.getTag() + '\0' + startsWith.getValue());
             }
 
             @Override
-            public FilterBuilder visitHasTag(final HasTagFilter hasTag) {
-                return termFilter(TAG_KEYS, hasTag.getTag());
+            public QueryBuilder visitHasTag(final HasTagFilter hasTag) {
+                return termQuery(TAG_KEYS, hasTag.getTag());
             }
 
             @Override
-            public FilterBuilder visitMatchKey(final MatchKeyFilter matchKey) {
-                return termFilter(KEY, matchKey.getValue());
+            public QueryBuilder visitMatchKey(final MatchKeyFilter matchKey) {
+                return termQuery(KEY, matchKey.getValue());
             }
 
             @Override
-            public FilterBuilder defaultAction(Filter filter) {
+            public QueryBuilder defaultAction(Filter filter) {
                 throw new IllegalArgumentException("Unsupported filter: " + filter);
             }
         };
 
-    public static FilterBuilder filter(final Filter filter) {
+    public static QueryBuilder filter(final Filter filter) {
         return filter.visit(FILTER_CONVERTER);
     }
 

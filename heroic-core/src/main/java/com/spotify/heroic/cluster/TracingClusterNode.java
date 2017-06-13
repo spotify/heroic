@@ -68,6 +68,10 @@ public class TracingClusterNode implements ClusterNode {
         return new Group(delegateNode.useOptionalGroup(group));
     }
 
+    public String toString() {
+        return delegateNode.toString();
+    }
+
     @RequiredArgsConstructor
     public class Group implements ClusterNode.Group {
         private final ClusterNode.Group delegateGroup;
@@ -75,6 +79,11 @@ public class TracingClusterNode implements ClusterNode {
         @Override
         public ClusterNode node() {
             return delegateGroup.node();
+        }
+
+        @Override
+        public AsyncFuture<Void> ping() {
+            return delegateGroup.ping();
         }
 
         @Override
@@ -140,6 +149,10 @@ public class TracingClusterNode implements ClusterNode {
         @Override
         public AsyncFuture<WriteMetric> writeMetric(final WriteMetric.Request request) {
             return delegateGroup.writeMetric(request);
+        }
+
+        public String toString() {
+            return queryIdentifier.toString();
         }
     }
 }

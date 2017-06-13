@@ -29,16 +29,13 @@ import com.google.common.collect.Iterators;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
-import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricGroup;
+import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
-import lombok.Data;
-import lombok.ToString;
-
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +44,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
+import lombok.Data;
+import lombok.ToString;
 
 @Data
 public class EmptyInstance implements AggregationInstance {
@@ -55,12 +54,14 @@ public class EmptyInstance implements AggregationInstance {
 
     @Override
     public long estimate(DateRange range) {
-        return 0;
+        return -1;
     }
 
     @Override
-    public AggregationSession session(final DateRange range) {
-        return new CollectorSession();
+    public AggregationSession session(
+        final DateRange range, final RetainQuotaWatcher watcher, final BucketStrategy bucketStrategy
+    ) {
+        return new CollectorSession(watcher);
     }
 
     @Override
@@ -82,11 +83,13 @@ public class EmptyInstance implements AggregationInstance {
         private final ConcurrentMap<Map<String, String>, SubSession> sessions =
             new ConcurrentHashMap<>();
         private final Object lock = new Object();
+        private final RetainQuotaWatcher quotaWatcher;
 
         @Override
         public void updatePoints(
             Map<String, String> key, Set<Series> s, List<Point> values
         ) {
+            quotaWatcher.retainData(values.size());
             session(key).points.update(s, values);
         }
 
@@ -94,6 +97,7 @@ public class EmptyInstance implements AggregationInstance {
         public void updateEvents(
             Map<String, String> key, Set<Series> s, List<Event> values
         ) {
+            quotaWatcher.retainData(values.size());
             session(key).events.update(s, values);
         }
 
@@ -101,6 +105,7 @@ public class EmptyInstance implements AggregationInstance {
         public void updateSpreads(
             Map<String, String> key, Set<Series> s, List<Spread> values
         ) {
+            quotaWatcher.retainData(values.size());
             session(key).spreads.update(s, values);
         }
 
@@ -108,6 +113,7 @@ public class EmptyInstance implements AggregationInstance {
         public void updateGroup(
             Map<String, String> key, Set<Series> s, List<MetricGroup> values
         ) {
+            quotaWatcher.retainData(values.size());
             session(key).groups.update(s, values);
         }
 
@@ -115,6 +121,7 @@ public class EmptyInstance implements AggregationInstance {
         public void updatePayload(
             final Map<String, String> key, final Set<Series> s, final List<Payload> values
         ) {
+            quotaWatcher.retainData(values.size());
             session(key).cardinality.update(s, values);
         }
 

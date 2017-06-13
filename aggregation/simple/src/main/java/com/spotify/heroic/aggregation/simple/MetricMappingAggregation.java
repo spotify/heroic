@@ -21,32 +21,34 @@
 
 package com.spotify.heroic.aggregation.simple;
 
+import static java.util.stream.Collectors.toList;
+
 import com.spotify.heroic.aggregation.AggregationInstance;
+import com.spotify.heroic.aggregation.AggregationOutput;
 import com.spotify.heroic.aggregation.AggregationResult;
 import com.spotify.heroic.aggregation.AggregationSession;
+import com.spotify.heroic.aggregation.BucketStrategy;
 import com.spotify.heroic.aggregation.EmptyInstance;
-import com.spotify.heroic.aggregation.AggregationOutput;
+import com.spotify.heroic.aggregation.RetainQuotaWatcher;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
-import lombok.Data;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import static java.util.stream.Collectors.toList;
+import lombok.Data;
 
 @Data
 public abstract class MetricMappingAggregation implements AggregationInstance {
+    private static final EmptyInstance INNER = EmptyInstance.INSTANCE;
     private final MetricMappingStrategy metricMappingStrategy;
 
     @Override
     public long estimate(DateRange range) {
-        return -1;
+        return INNER.estimate(range);
     }
 
     @Override
@@ -55,13 +57,15 @@ public abstract class MetricMappingAggregation implements AggregationInstance {
     }
 
     @Override
-    public AggregationSession session(DateRange range) {
-        return new Session(EmptyInstance.INSTANCE.session(range));
+    public AggregationSession session(
+        DateRange range, RetainQuotaWatcher quotaWatcher, BucketStrategy bucketStrategy
+    ) {
+        return new Session(INNER.session(range, quotaWatcher, bucketStrategy));
     }
 
     @Override
     public AggregationInstance distributed() {
-        return EmptyInstance.INSTANCE;
+        return INNER;
     }
 
     class Session implements AggregationSession {

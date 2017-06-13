@@ -21,21 +21,21 @@
 
 package com.spotify.heroic.metric;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.common.Series;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * A collection of metrics.
@@ -102,6 +102,17 @@ public abstract class MetricCollection {
 
     public boolean isEmpty() {
         return data.isEmpty();
+    }
+
+    public Optional<Long> getAverageDistanceBetweenMetrics() {
+        if (data.size() <= 1) {
+            return Optional.empty();
+        }
+
+        final long timeDiff = data.get(data.size() - 1).getTimestamp() - data.get(0).getTimestamp();
+        final long spans = data.size() - 1;
+
+        return Optional.of(timeDiff / spans);
     }
 
     private static final MetricCollection empty = new EmptyMetricCollection();

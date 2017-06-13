@@ -21,8 +21,28 @@
 
 package com.spotify.heroic.metric;
 
+/**
+ * Designates a single limit that was violated for a given query.
+ */
 public enum ResultLimit {
+    /**
+     * The number of time series required were higher than the specified limit.
+     */
     SERIES,
+
+    /**
+     * The number of result groups required were larger than the allowed limit.
+     */
     GROUP,
-    QUOTA
+
+    /**
+     * The amount of data that needed to be fetched from the backend were larger than the allowed
+     * limit.
+     */
+    QUOTA,
+
+    /**
+     * The number of samples retained in Aggregations was higher than the allowed quota.
+     */
+    AGGREGATION
 }

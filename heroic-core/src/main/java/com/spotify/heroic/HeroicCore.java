@@ -35,6 +35,7 @@ import com.spotify.heroic.cluster.CoreClusterComponent;
 import com.spotify.heroic.cluster.DaggerCoreClusterComponent;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.Optionals;
+import com.spotify.heroic.common.TypeNameMixin;
 import com.spotify.heroic.consumer.ConsumersComponent;
 import com.spotify.heroic.consumer.CoreConsumersModule;
 import com.spotify.heroic.consumer.DaggerCoreConsumersComponent;
@@ -59,6 +60,7 @@ import com.spotify.heroic.http.HttpServer;
 import com.spotify.heroic.http.HttpServerComponent;
 import com.spotify.heroic.http.HttpServerModule;
 import com.spotify.heroic.ingestion.IngestionComponent;
+import com.spotify.heroic.jetty.JettyConnectionFactory;
 import com.spotify.heroic.lifecycle.CoreLifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleHook;
@@ -67,6 +69,7 @@ import com.spotify.heroic.metadata.CoreMetadataComponent;
 import com.spotify.heroic.metadata.DaggerCoreMetadataComponent;
 import com.spotify.heroic.metric.CoreMetricComponent;
 import com.spotify.heroic.metric.DaggerCoreMetricComponent;
+import com.spotify.heroic.querylogging.QueryLoggingComponent;
 import com.spotify.heroic.shell.DaggerShellServerComponent;
 import com.spotify.heroic.shell.ShellServerComponent;
 import com.spotify.heroic.shell.ShellServerModule;
@@ -90,6 +93,7 @@ import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -122,10 +126,6 @@ public class HeroicCore implements HeroicConfiguration {
     static final boolean DEFAULT_ONESHOT = false;
     static final boolean DEFAULT_DISABLE_BACKENDS = false;
     static final boolean DEFAULT_SETUP_SHELL_SERVER = true;
-
-    public static final String APPLICATION_JSON_INTERNAL = "application/json+internal";
-    public static final String APPLICATION_JSON = "application/json";
-    public static final String APPLICATION_HEROIC_CONFIG = "application/heroic-config";
 
     static final UncaughtExceptionHandler uncaughtExceptionHandler = (Thread t, Throwable e) -> {
         try {
@@ -212,8 +212,6 @@ public class HeroicCore implements HeroicConfiguration {
      * <p>
      * <p>
      * Start all the external modules. {@link #startLifeCycles}
-     *
-     * @throws Exception
      */
     public HeroicCoreInstance newInstance() throws Exception {
         final CoreLoadingComponent loading = loadingInjector();
@@ -254,7 +252,6 @@ public class HeroicCore implements HeroicConfiguration {
      *
      * @param early Injector to inject boostrappers using.
      * @param bootstrappers Bootstraps to run.
-     * @throws Exception
      */
     static void runBootstrappers(
         final CoreEarlyComponent early, final List<HeroicBootstrap> bootstrappers
@@ -308,7 +305,6 @@ public class HeroicCore implements HeroicConfiguration {
      * Setup a fixed thread pool executor that correctly handles unhandled exceptions.
      *
      * @param threads Number of threads to configure.
-     * @return
      */
     private ExecutorService setupExecutor(final int threads) {
         return new ThreadPoolExecutor(threads, threads, 0L, TimeUnit.MILLISECONDS,
@@ -360,11 +356,9 @@ public class HeroicCore implements HeroicConfiguration {
         final CoreEarlyComponent early, final HeroicConfig config, final HeroicCoreInstance instance
     ) {
         log.info("Building Primary Injector");
-
         final List<LifeCycle> life = new ArrayList<>();
 
         final StatisticsComponent statistics = config.getStatistics().module(early);
-
         life.add(statistics.life());
 
         final HeroicReporter reporter = statistics.reporter();
@@ -376,8 +370,9 @@ public class HeroicCore implements HeroicConfiguration {
             .primaryModule(new PrimaryModule(instance, config.getFeatures(), reporter))
             .build();
 
-        final Optional<HttpServer> server;
+        final QueryLoggingComponent queryLogging = config.getQueryLogging().component(primary);
 
+        final Optional<HttpServer> server;
         if (setupService) {
             final InetSocketAddress bindAddress = setupBindAddress(config);
 
@@ -424,6 +419,7 @@ public class HeroicCore implements HeroicConfiguration {
             .metadataComponent(metadata)
             .analyticsComponent(analytics)
             .metricManagerModule(config.getMetric())
+            .queryLoggingComponent(queryLogging)
             .build();
 
         life.add(metric.metricLife());
@@ -476,10 +472,12 @@ public class HeroicCore implements HeroicConfiguration {
 
         final QueryComponent query = DaggerCoreQueryComponent
             .builder()
-            .queryModule(new QueryModule(config.getMetric().getGroupLimit()))
+            .queryModule(new QueryModule(config.getMetric().getGroupLimit(),
+                config.getMetric().getSmallQueryThreshold()))
             .corePrimaryComponent(primary)
             .clusterComponent(cluster)
             .cacheComponent(cache)
+            .queryLoggingComponent(queryLogging)
             .build();
         life.add(query.queryLife());
 
@@ -500,6 +498,7 @@ public class HeroicCore implements HeroicConfiguration {
             .metadataComponent(metadata)
             .suggestComponent(suggest)
             .queryComponent(query)
+            .queryLoggingComponent(queryLogging)
             .ingestionComponent(ingestion)
             .clusterComponent(cluster)
             .generatorComponent(generator)
@@ -613,7 +612,10 @@ public class HeroicCore implements HeroicConfiguration {
             builder = builder.merge(fragment);
         }
 
-        final ObjectMapper mapper = loading.configMapper();
+        final ObjectMapper mapper = loading.configMapper().copy();
+
+        // TODO: figure out where to put this
+        mapper.addMixIn(JettyConnectionFactory.Builder.class, TypeNameMixin.class);
 
         if (configPath.isPresent()) {
             builder = HeroicConfig
@@ -933,36 +935,39 @@ public class HeroicCore implements HeroicConfiguration {
                 return null;
             });
 
-            this.stopped = async.collect(ImmutableList.of(started, stop)).directTransform(n -> {
-                final CoreComponent core = coreInjector.get();
-                assert core != null;
+            this.stopped = async.collect(ImmutableList.of(started, stop)).lazyTransform(n -> {
+                return async.call(() -> {
+                    final CoreComponent core = coreInjector.get();
+                    assert core != null;
 
-                final CoreLifeCycleRegistry coreRegistry =
-                    (CoreLifeCycleRegistry) core.lifeCycleRegistry();
+                    final CoreLifeCycleRegistry coreRegistry =
+                        (CoreLifeCycleRegistry) core.lifeCycleRegistry();
 
-                core.stopSignal().run();
+                    core.stopSignal().run();
 
-                log.info("Shutting down Heroic");
+                    log.info("Shutting down Heroic");
 
-                try {
-                    stopLifeCycles(coreRegistry, core, config);
-                } catch (Exception e) {
-                    log.error("Failed to stop all lifecycles, continuing anyway...", e);
-                }
+                    try {
+                        stopLifeCycles(coreRegistry, core, config);
+                    } catch (Exception e) {
+                        log.error("Failed to stop all lifecycles, continuing anyway...", e);
+                    }
 
-                log.info("Stopping internal life cycle");
+                    log.info("Stopping internal life cycle");
 
-                final CoreLifeCycleRegistry internalRegistry =
-                    (CoreLifeCycleRegistry) core.internalLifeCycleRegistry();
+                    final CoreLifeCycleRegistry internalRegistry =
+                        (CoreLifeCycleRegistry) core.internalLifeCycleRegistry();
 
-                try {
-                    stopLifeCycles(internalRegistry, core, config);
-                } catch (Exception e) {
-                    log.error("Failed to stop all internal lifecycles, continuing anyway...", e);
-                }
+                    try {
+                        stopLifeCycles(internalRegistry, core, config);
+                    } catch (Exception e) {
+                        log.error("Failed to stop all internal lifecycles, continuing anyway...",
+                            e);
+                    }
 
-                log.info("Done shutting down, bye bye!");
-                return null;
+                    log.info("Done shutting down, bye bye!");
+                    return null;
+                }, Executors.newSingleThreadExecutor());
             });
         }
 

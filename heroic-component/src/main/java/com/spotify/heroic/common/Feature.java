@@ -33,6 +33,13 @@ import com.fasterxml.jackson.annotation.JsonValue;
  */
 public enum Feature {
     /**
+     * Enable feature to only perform aggregations that can be performed with limited resources.
+     * <p>
+     * Aggregations are commonly performed per-shard, and the result concatenated. This enabled
+     * experimental support for distributed aggregations which behave transparently across shards.
+     */
+    DETERMINISTIC_AGGREGATIONS("com.spotify.heroic.deterministic_aggregations"),
+    /**
      * Enable feature to perform distributed aggregations.
      * <p>
      * Aggregations are commonly performed per-shard, and the result concatenated. This enabled
@@ -46,7 +53,21 @@ public enum Feature {
      * This will assert that there are data outside of the range queried for, which is a useful
      * feature when using a dashboarding system.
      */
-    SHIFT_RANGE("com.spotify.heroic.shift_range");
+    SHIFT_RANGE("com.spotify.heroic.shift_range"),
+
+    /**
+     * Enable feature to cause data to be fetched in slices.
+     * <p>
+     * This will cause data to be fetched and consumed by the aggregation framework in
+     * pieces avoiding having to load all data into memory before starting to consume it.
+     */
+    SLICED_DATA_FETCH("com.spotify.heroic.sliced_data_fetch"),
+
+    /**
+     * Use the legacy bucket strategy by default where the resulting value is at the end of the
+     * timestamp of the bucket.
+     */
+    END_BUCKET("com.spotify.heroic.end_bucket_stategy");
 
     private final String id;
 

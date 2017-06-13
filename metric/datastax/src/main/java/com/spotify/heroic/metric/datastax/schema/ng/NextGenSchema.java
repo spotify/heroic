@@ -53,7 +53,7 @@ public class NextGenSchema extends AbstractCassandraSchema implements Schema {
                     "VALUES (?, ?, ?)";
     private static final String FETCH_METRICS_CQL =
             "SELECT data_timestamp_offset, data_value FROM {{keyspace}}.metrics WHERE metric_key " +
-                    "= ? and data_timestamp_offset >= ? and data_timestamp_offset <= ? LIMIT ?";
+                    "= ? and data_timestamp_offset > ? and data_timestamp_offset <= ? LIMIT ?";
     private static final String DELETE_METRICS_CQL =
             "DELETE FROM {{keyspace}}.metrics WHERE metric_key = ?";
     private static final String COUNT_METRICS_CQL =

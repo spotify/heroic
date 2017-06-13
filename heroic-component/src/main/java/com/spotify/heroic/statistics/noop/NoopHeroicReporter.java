@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.statistics.noop;
 
+import com.spotify.heroic.statistics.QueryReporter;
 import com.spotify.heroic.statistics.AnalyticsReporter;
 import com.spotify.heroic.statistics.ConsumerReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
@@ -61,6 +62,11 @@ public class NoopHeroicReporter implements HeroicReporter {
     @Override
     public MetricBackendReporter newMetricBackend() {
         return NoopMetricBackendReporter.get();
+    }
+
+    @Override
+    public QueryReporter newQueryReporter() {
+        return NoopQueryReporter.get();
     }
 
     @Override

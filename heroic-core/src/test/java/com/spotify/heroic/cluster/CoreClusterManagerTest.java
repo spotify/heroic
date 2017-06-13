@@ -1,23 +1,25 @@
 package com.spotify.heroic.cluster;
 
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
+import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.HeroicConfiguration;
 import com.spotify.heroic.HeroicContext;
 import com.spotify.heroic.scheduler.Scheduler;
+import com.spotify.heroic.statistics.QueryReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
-
-import java.util.Map;
-
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
 
 @RunWith(MockitoJUnitRunner.class)
 public class CoreClusterManagerTest {
@@ -48,6 +50,9 @@ public class CoreClusterManagerTest {
     @Mock
     HeroicContext context;
 
+    @Mock
+    private QueryReporter reporter;
+
     private CoreClusterManager manager;
 
     @Before
@@ -55,7 +60,7 @@ public class CoreClusterManagerTest {
         final boolean useLocal = true;
 
         manager = spy(new CoreClusterManager(async, discovery, localMetadata, protocols, scheduler,
-            useLocal, options, local, context));
+            useLocal, options, local, context, ImmutableSet.of(), reporter));
     }
 
     @Test
@@ -63,5 +68,7 @@ public class CoreClusterManagerTest {
         doReturn(voidFuture).when(manager).refreshDiscovery(any(String.class));
         assertEquals(voidFuture, manager.refresh());
         verify(manager).refreshDiscovery(any(String.class));
+        verify(reporter, times(0)).reportClusterNodeRpcError();
+        verify(reporter, times(0)).reportClusterNodeRpcCancellation();
     }
 }

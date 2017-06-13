@@ -21,15 +21,19 @@
 
 package com.spotify.heroic;
 
+import com.spotify.heroic.aggregation.BucketStrategy;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.metric.QueryTrace;
-import lombok.Data;
-
+import com.spotify.heroic.metric.Tracing;
 import java.util.Optional;
+import lombok.Data;
 
 @Data
 public class QueryOptions {
-    public static final boolean DEFAULT_TRACING = false;
+    /**
+     * Strategy for how to create buckets when performing a sampling aggregation.
+     */
+    private final Optional<BucketStrategy> bucketStrategy;
 
     /**
      * Indicates if tracing is enabled.
@@ -39,7 +43,7 @@ public class QueryOptions {
      *
      * @return {@code true} if tracing is enabled.
      */
-    private final Optional<Boolean> tracing;
+    private final Optional<Tracing> tracing;
 
     /**
      * The number of entries to fetch for every batch.
@@ -50,6 +54,11 @@ public class QueryOptions {
      * Limit the number of returned groups.
      */
     private final OptionalLimit dataLimit;
+
+    /**
+     * Limit the number of points retained by the aggregation.
+     */
+    private final OptionalLimit aggregationLimit;
 
     /**
      * Limit the number of returned groups.
@@ -66,17 +75,14 @@ public class QueryOptions {
      */
     private final Optional<Boolean> failOnLimits;
 
-    public boolean isTracing() {
-        return tracing.orElse(DEFAULT_TRACING);
-    }
-
-    public Optional<Integer> getFetchSize() {
-        return fetchSize;
+    public Tracing tracing() {
+        return tracing.orElse(Tracing.DEFAULT);
     }
 
     public static QueryOptions defaults() {
-        return new QueryOptions(Optional.empty(), Optional.empty(), OptionalLimit.empty(),
-            OptionalLimit.empty(), OptionalLimit.empty(), Optional.empty());
+        return new QueryOptions(Optional.empty(), Optional.empty(), Optional.empty(),
+            OptionalLimit.empty(), OptionalLimit.empty(), OptionalLimit.empty(),
+            OptionalLimit.empty(), Optional.empty());
     }
 
     public static Builder builder() {
@@ -84,14 +90,21 @@ public class QueryOptions {
     }
 
     public static class Builder {
-        private Optional<Boolean> tracing = Optional.empty();
+        private Optional<BucketStrategy> bucketStrategy = Optional.empty();
+        private Optional<Tracing> tracing = Optional.empty();
         private Optional<Integer> fetchSize = Optional.empty();
         private OptionalLimit dataLimit = OptionalLimit.empty();
+        private OptionalLimit aggregationLimit = OptionalLimit.empty();
         private OptionalLimit groupLimit = OptionalLimit.empty();
         private OptionalLimit seriesLimit = OptionalLimit.empty();
         private Optional<Boolean> failOnLimits = Optional.empty();
 
-        public Builder tracing(boolean tracing) {
+        public Builder bucketStrategy(BucketStrategy bucketStrategy) {
+            this.bucketStrategy = Optional.of(bucketStrategy);
+            return this;
+        }
+
+        public Builder tracing(Tracing tracing) {
             this.tracing = Optional.of(tracing);
             return this;
         }
@@ -103,6 +116,11 @@ public class QueryOptions {
 
         public Builder dataLimit(long dataLimit) {
             this.dataLimit = OptionalLimit.of(dataLimit);
+            return this;
+        }
+
+        public Builder aggregationLimit(long aggregationLimit) {
+            this.aggregationLimit = OptionalLimit.of(aggregationLimit);
             return this;
         }
 
@@ -122,8 +140,8 @@ public class QueryOptions {
         }
 
         public QueryOptions build() {
-            return new QueryOptions(tracing, fetchSize, dataLimit, groupLimit, seriesLimit,
-                failOnLimits);
+            return new QueryOptions(bucketStrategy, tracing, fetchSize, dataLimit, aggregationLimit,
+                groupLimit, seriesLimit, failOnLimits);
         }
     }
 }

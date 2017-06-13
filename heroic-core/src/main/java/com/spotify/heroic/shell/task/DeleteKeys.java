@@ -28,6 +28,7 @@ import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
+import com.spotify.heroic.metric.Tracing;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
@@ -45,8 +46,6 @@ import lombok.ToString;
 import org.apache.commons.lang3.tuple.Pair;
 import org.kohsuke.args4j.Option;
 
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -55,6 +54,8 @@ import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import javax.inject.Inject;
+import javax.inject.Named;
 
 @TaskUsage("Delete all data for a set of keys")
 @TaskName("delete-keys")
@@ -83,7 +84,8 @@ public class DeleteKeys implements ShellTask {
 
         final MetricBackendGroup group = metrics.useOptionalGroup(params.group);
 
-        final QueryOptions options = QueryOptions.builder().tracing(params.tracing).build();
+        final QueryOptions options =
+            QueryOptions.builder().tracing(Tracing.fromBoolean(params.tracing)).build();
 
         Stream<BackendKey> keys = Stream.empty();
 

@@ -27,9 +27,11 @@ import com.spotify.heroic.common.Collected;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Initializing;
 import com.spotify.heroic.common.Statistics;
+
 import eu.toolchain.async.AsyncFuture;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 public interface MetricBackend extends Initializing, Grouped, Collected {
     Statistics getStatistics();
@@ -59,7 +61,21 @@ public interface MetricBackend extends Initializing, Grouped, Collected {
      * @param watcher The watcher implementation to use when fetching metrics.
      * @return A future containing the fetched data wrapped in a {@link FetchData} structure.
      */
+    @Deprecated
     AsyncFuture<FetchData> fetch(FetchData.Request request, FetchQuotaWatcher watcher);
+
+    /**
+     * Query for data points that is part of the specified list of rows and range.
+     *
+     * @param request Fetch request to use.
+     * @param watcher The watcher implementation to use when fetching metrics.
+     * @param metricsConsumer The consumer that receives the fetched data
+     * @return A future containing the fetch result.
+     */
+    AsyncFuture<FetchData.Result> fetch(
+        FetchData.Request request, FetchQuotaWatcher watcher,
+        Consumer<MetricCollection> metricsConsumer
+    );
 
     /**
      * List all series directly from the database.

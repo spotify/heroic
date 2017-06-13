@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.statistics.semantic;
 
+import com.spotify.heroic.statistics.QueryReporter;
 import com.spotify.heroic.statistics.AnalyticsReporter;
 import com.spotify.heroic.statistics.ClusteredManager;
 import com.spotify.heroic.statistics.ConsumerReporter;
@@ -72,6 +73,11 @@ public class SemanticHeroicReporter implements HeroicReporter {
     @Override
     public MetricBackendReporter newMetricBackend() {
         return new SemanticMetricBackendReporter(registry);
+    }
+
+    @Override
+    public QueryReporter newQueryReporter() {
+        return new SemanticQueryReporter(registry);
     }
 
     @Override

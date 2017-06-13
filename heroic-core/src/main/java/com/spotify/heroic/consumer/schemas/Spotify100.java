@@ -43,15 +43,16 @@ import com.spotify.heroic.ingestion.IngestionGroup;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.statistics.ConsumerReporter;
+import com.spotify.heroic.time.Clock;
 import dagger.Component;
-import lombok.Data;
-import lombok.ToString;
-
-import javax.inject.Inject;
+import eu.toolchain.async.AsyncFuture;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.inject.Inject;
+import lombok.Data;
+import lombok.ToString;
 
 @ToString
 public class Spotify100 implements ConsumerSchema {
@@ -121,17 +122,19 @@ public class Spotify100 implements ConsumerSchema {
 
     @SchemaScope
     public static class Consumer implements ConsumerSchema.Consumer {
+        private final Clock clock;
         private final IngestionGroup ingestion;
         private final ConsumerReporter reporter;
 
         @Inject
-        public Consumer(IngestionGroup ingestion, ConsumerReporter reporter) {
+        public Consumer(Clock clock, IngestionGroup ingestion, ConsumerReporter reporter) {
+            this.clock = clock;
             this.ingestion = ingestion;
             this.reporter = reporter;
         }
 
         @Override
-        public void consume(final byte[] message) throws ConsumerSchemaException {
+        public AsyncFuture<Void> consume(final byte[] message) throws ConsumerSchemaException {
             final JsonMetric metric;
 
             try {
@@ -168,8 +171,13 @@ public class Spotify100 implements ConsumerSchema {
             final Point p = new Point(metric.getTime(), metric.getValue());
             final List<Point> points = ImmutableList.of(p);
 
-            reporter.reportMessageDrift(System.currentTimeMillis() - p.getTimestamp());
-            ingestion.write(new Ingestion.Request(series, MetricCollection.points(points)));
+            reporter.reportMessageDrift(clock.currentTimeMillis() - p.getTimestamp());
+            AsyncFuture<Ingestion> ingestionFuture =
+                ingestion.write(new Ingestion.Request(series, MetricCollection.points(points)));
+
+            // Return Void future, to not leak unnecessary information from the backend but just
+            // allow monitoring of when the consumption is done.
+            return ingestionFuture.directTransform(future -> (Void) null);
         }
     }
 

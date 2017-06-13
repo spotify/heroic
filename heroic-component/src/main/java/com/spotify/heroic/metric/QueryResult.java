@@ -27,10 +27,10 @@ import com.spotify.heroic.aggregation.AggregationCombiner;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.OptionalLimit;
 import eu.toolchain.async.Collector;
-import lombok.Data;
-
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import lombok.Data;
 
 @Data
 public class QueryResult {
@@ -58,6 +58,8 @@ public class QueryResult {
 
     private final ResultLimits limits;
 
+    private final long preAggregationSampleSize;
+
     /**
      * Collect result parts into a complete result.
      *
@@ -75,11 +77,13 @@ public class QueryResult {
             final List<RequestError> errors = new ArrayList<>();
             final ImmutableList.Builder<QueryTrace> queryTraces = ImmutableList.builder();
             final ImmutableSet.Builder<ResultLimit> limits = ImmutableSet.builder();
+            long preAggregationSampleSize = 0;
 
             for (final QueryResultPart part : parts) {
                 errors.addAll(part.getErrors());
                 queryTraces.add(part.getQueryTrace());
                 limits.addAll(part.getLimits().getLimits());
+                preAggregationSampleSize += part.getPreAggregationSampleSize();
 
                 if (part.isEmpty()) {
                     continue;
@@ -96,7 +100,13 @@ public class QueryResult {
             }
 
             return new QueryResult(range, groupLimit.limitList(groups), errors, trace,
-                new ResultLimits(limits.build()));
+                new ResultLimits(limits.build()), preAggregationSampleSize);
         };
+    }
+
+    public static QueryResult error(DateRange range, String errorMessage, QueryTrace trace) {
+        return new QueryResult(range, Collections.emptyList(),
+            Collections.singletonList(QueryError.fromMessage(errorMessage)), trace,
+            ResultLimits.of(), 0);
     }
 }

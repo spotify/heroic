@@ -23,11 +23,10 @@ package com.spotify.heroic.metric.bigtable.api;
 
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class Mutations {

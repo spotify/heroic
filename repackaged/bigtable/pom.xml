@@ -3,14 +3,14 @@
   <modelVersion>4.0.0</modelVersion>
 
   <properties>
-    <bigtable.version>0.9.4</bigtable.version>
-    <tcnative.classifier>linux-x86_64</tcnative.classifier>
+    <bigtable.version>0.9.6.2</bigtable.version>
+    <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
   </properties>
 
   <groupId>com.spotify.heroic.repackaged</groupId>
   <artifactId>bigtable-client-core</artifactId>
   <packaging>jar</packaging>
-  <version>0.9.4</version>
+  <version>0.9.6.2</version>
 
   <name>Heroic: Re-Packaging of Bigtable Client Utilities</name>
 
@@ -94,5 +94,14 @@
         </executions>
       </plugin>
     </plugins>
+
+    <extensions>
+      <!-- provides os.detected.classifier -->
+      <extension>
+        <groupId>kr.motd.maven</groupId>
+        <artifactId>os-maven-plugin</artifactId>
+        <version>1.5.0.Final</version>
+      </extension>
+    </extensions>
   </build>
 </project>

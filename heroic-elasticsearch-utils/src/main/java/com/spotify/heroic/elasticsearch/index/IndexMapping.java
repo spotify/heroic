@@ -23,30 +23,35 @@ package com.spotify.heroic.elasticsearch.index;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.spotify.heroic.common.DateRange;
-import org.elasticsearch.action.count.CountRequestBuilder;
-import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
+import java.util.List;
+import org.elasticsearch.action.delete.DeleteRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.client.Client;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 @JsonSubTypes({
-    @JsonSubTypes.Type(value = RotatingIndexMapping.class,
-        name = "rotating"), @JsonSubTypes.Type(value = SingleIndexMapping.class, name = "single")
+    @JsonSubTypes.Type(value = RotatingIndexMapping.class, name = "rotating"),
+    @JsonSubTypes.Type(value = SingleIndexMapping.class, name = "single")
 })
 public interface IndexMapping {
     String template();
 
-    String[] readIndices(DateRange range) throws NoIndexSelectedException;
+    String[] readIndices() throws NoIndexSelectedException;
 
-    String[] writeIndices(DateRange range) throws NoIndexSelectedException;
+    String[] writeIndices() throws NoIndexSelectedException;
 
-    SearchRequestBuilder search(Client client, DateRange range, String type)
-        throws NoIndexSelectedException;
+    SearchRequestBuilder search(Client client, String type) throws NoIndexSelectedException;
 
-    DeleteByQueryRequestBuilder deleteByQuery(Client client, DateRange range, String type)
-        throws NoIndexSelectedException;
+    SearchRequestBuilder count(Client client, String type) throws NoIndexSelectedException;
 
-    CountRequestBuilder count(Client client, DateRange range, String type)
+    /**
+     * Create a delete request using the given client.
+     *
+     * @param client Client to create request with
+     * @param type Type of document to delete
+     * @param id Id of document to delete
+     * @return a new delete request
+     */
+    List<DeleteRequestBuilder> delete(Client client, String type, String id)
         throws NoIndexSelectedException;
 }

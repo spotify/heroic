@@ -29,11 +29,4 @@ public interface MetricBackendGroup extends MetricBackend {
      */
     AsyncFuture<FullQuery> query(FullQuery.Request request);
 
-    /**
-     * Fetch metrics with a default (no-op) quota watcher. This method allows for the fetching of an
-     * indefinite amount of metrics.
-     *
-     * @see MetricBackend#fetch
-     */
-    AsyncFuture<FetchData> fetch(FetchData.Request request);
 }

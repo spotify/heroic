@@ -21,12 +21,14 @@
 
 package com.spotify.heroic;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableSortedSet;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationCombiner;
 import com.spotify.heroic.aggregation.AggregationContext;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.aggregation.AggregationInstance;
+import com.spotify.heroic.aggregation.BucketStrategy;
 import com.spotify.heroic.aggregation.DistributedAggregationCombiner;
 import com.spotify.heroic.aggregation.Empty;
 import com.spotify.heroic.cache.QueryCache;
@@ -60,57 +62,75 @@ import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.QueryResultPart;
 import com.spotify.heroic.metric.QueryTrace;
+import com.spotify.heroic.metric.Tracing;
 import com.spotify.heroic.metric.WriteMetric;
+import com.spotify.heroic.querylogging.QueryContext;
+import com.spotify.heroic.querylogging.QueryLogger;
+import com.spotify.heroic.querylogging.QueryLoggerFactory;
+import com.spotify.heroic.statistics.QueryReporter;
 import com.spotify.heroic.suggest.KeySuggest;
 import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
+import com.spotify.heroic.time.Clock;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Collector;
+import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.Transform;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.SortedSet;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 import java.util.function.Function;
+import javax.inject.Inject;
+import javax.inject.Named;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class CoreQueryManager implements QueryManager {
     public static final long SHIFT_TOLERANCE = TimeUnit.MILLISECONDS.convert(10, TimeUnit.SECONDS);
-    public static final QueryTrace.Identifier QUERY_NODE =
-        QueryTrace.identifier(CoreQueryManager.class, "query_node");
+    public static final QueryTrace.Identifier QUERY_SHARD =
+        QueryTrace.identifier(CoreQueryManager.class, "query_shard");
     public static final QueryTrace.Identifier QUERY =
         QueryTrace.identifier(CoreQueryManager.class, "query");
 
     private final Features features;
     private final AsyncFramework async;
+    private final Clock clock;
     private final ClusterManager cluster;
     private final QueryParser parser;
     private final QueryCache queryCache;
     private final AggregationFactory aggregations;
     private final OptionalLimit groupLimit;
+    private final QueryReporter reporter;
+    private final QueryLogger queryLogger;
+
+    private final long smallQueryThreshold;
 
     @Inject
     public CoreQueryManager(
-        @Named("features") final Features features, final AsyncFramework async,
+        @Named("features") final Features features, final AsyncFramework async, final Clock clock,
         final ClusterManager cluster, final QueryParser parser, final QueryCache queryCache,
-        final AggregationFactory aggregations, @Named("groupLimit") final OptionalLimit groupLimit
+        final AggregationFactory aggregations, @Named("groupLimit") final OptionalLimit groupLimit,
+        @Named("smallQueryThreshold") final long smallQueryThreshold, final QueryReporter reporter,
+        final QueryLoggerFactory queryLoggerFactory
     ) {
         this.features = features;
         this.async = async;
+        this.clock = clock;
         this.cluster = cluster;
         this.parser = parser;
         this.queryCache = queryCache;
         this.aggregations = aggregations;
         this.groupLimit = groupLimit;
+        this.reporter = reporter;
+        this.smallQueryThreshold = smallQueryThreshold;
+        this.queryLogger = queryLoggerFactory.create("CoreQueryManager");
     }
 
     @Override
@@ -122,7 +142,7 @@ public class CoreQueryManager implements QueryManager {
     public QueryBuilder newQueryFromString(final String queryString) {
         final List<Expression> expressions = parser.parse(queryString);
 
-        final Expression.Scope scope = new DefaultScope(System.currentTimeMillis());
+        final Expression.Scope scope = new DefaultScope(clock.currentTimeMillis());
 
         if (expressions.size() != 1) {
             throw new IllegalArgumentException("Expected exactly one expression");
@@ -175,16 +195,23 @@ public class CoreQueryManager implements QueryManager {
         private final List<ClusterShard> shards;
 
         @Override
-        public AsyncFuture<QueryResult> query(Query q) {
+        public AsyncFuture<QueryResult> query(final Query q, final QueryContext queryContext) {
+            final QueryOptions options = q.getOptions().orElseGet(QueryOptions::defaults);
+            final Tracing tracing = options.tracing();
+
+            final QueryTrace.NamedWatch shardWatch = tracing.watch(QUERY_SHARD);
+            final Stopwatch fullQueryWatch = Stopwatch.createStarted();
+            final long now = clock.currentTimeMillis();
+            final FutureDone onDoneQueryReporter = reporter.reportQuery();
+
+            queryLogger.logQuery(queryContext, q);
+
             final List<AsyncFuture<QueryResultPart>> futures = new ArrayList<>();
 
             final MetricType source = q.getSource().orElse(MetricType.POINT);
 
-            final QueryOptions options = q.getOptions().orElseGet(QueryOptions::defaults);
             final Aggregation aggregation = q.getAggregation().orElse(Empty.INSTANCE);
             final DateRange rawRange = buildRange(q);
-
-            final long now = System.currentTimeMillis();
 
             final Filter filter = q.getFilter().orElseGet(TrueFilter::get);
 
@@ -194,8 +221,8 @@ public class CoreQueryManager implements QueryManager {
 
             final AggregationInstance aggregationInstance;
 
-            final Features features = CoreQueryManager.this.features
-                .applySet(q.getFeatures().orElseGet(FeatureSet::empty));
+            final Features features = CoreQueryManager.this.features.applySet(
+                q.getFeatures().orElseGet(FeatureSet::empty));
 
             boolean isDistributed = features.hasFeature(Feature.DISTRIBUTED_AGGREGATIONS);
 
@@ -209,22 +236,43 @@ public class CoreQueryManager implements QueryManager {
                 () -> buildShiftedRange(rawRange, aggregationInstance.cadence(), now),
                 () -> rawRange);
 
+            if (features.hasFeature(Feature.DETERMINISTIC_AGGREGATIONS) &&
+                aggregationInstance.estimate(range) < 0) {
+                return async.resolved(QueryResult.error(range,
+                    "Aggregation can not be evaluated with deterministic resources",
+                    shardWatch.end()));
+            }
+
+            final BucketStrategy bucketStrategy = options
+                .getBucketStrategy()
+                .orElseGet(() -> features.withFeature(Feature.END_BUCKET, () -> BucketStrategy.END,
+                    () -> BucketStrategy.START));
+
             final AggregationCombiner combiner;
 
             if (isDistributed) {
-                combiner = new DistributedAggregationCombiner(root.reducer(), range);
+                combiner = DistributedAggregationCombiner.create(root, range, bucketStrategy);
             } else {
                 combiner = AggregationCombiner.DEFAULT;
             }
 
             final FullQuery.Request request =
-                new FullQuery.Request(source, filter, range, aggregationInstance, options);
+                new FullQuery.Request(source, filter, range, aggregationInstance, options,
+                    queryContext, features);
+
+            queryLogger.logOutgoingRequestToShards(queryContext, request);
 
             return queryCache.load(request, () -> {
                 for (final ClusterShard shard : shards) {
+                    final QueryTrace.NamedWatch shardLocalWatch =
+                        shardWatch.extendIdentifier(shard.getShard().toString());
                     final AsyncFuture<QueryResultPart> queryPart = shard
-                        .apply(g -> g.query(request))
-                        .catchFailed(FullQuery.shardError(QUERY_NODE, shard))
+                        .apply(g -> g.query(request), getStoreTracesTransform(shardLocalWatch))
+                        .catchFailed(FullQuery.shardError(shardLocalWatch, shard))
+                        .directTransform(fullQuery -> {
+                            queryLogger.logIncomingResponseFromShard(queryContext, fullQuery);
+                            return fullQuery;
+                        })
                         .directTransform(QueryResultPart.fromResultGroup(shard));
 
                     futures.add(queryPart);
@@ -232,9 +280,27 @@ public class CoreQueryManager implements QueryManager {
 
                 final OptionalLimit limit = options.getGroupLimit().orElse(groupLimit);
 
-                return async.collect(futures,
-                    QueryResult.collectParts(QUERY, range, combiner, limit));
+                return async
+                    .collect(futures, QueryResult.collectParts(QUERY, range, combiner, limit))
+                    .directTransform(result -> {
+                        reportCompletedQuery(result, fullQueryWatch);
+                        return result;
+                    })
+                    .onDone(onDoneQueryReporter);
             });
+        }
+
+        private void reportCompletedQuery(
+            final QueryResult result, final Stopwatch fullQueryWatch
+        ) {
+            final long sampleSize = result.getPreAggregationSampleSize();
+            if (sampleSize > smallQueryThreshold) {
+                return;
+            }
+            final long durationNs = fullQueryWatch.elapsed(TimeUnit.NANOSECONDS);
+            reporter.reportLatencyVsSize(durationNs, result.getPreAggregationSampleSize());
+            final long durationMs = TimeUnit.NANOSECONDS.toMillis(durationNs);
+            reporter.reportSmallQueryLatency(durationMs);
         }
 
         @Override
@@ -320,20 +386,41 @@ public class CoreQueryManager implements QueryManager {
             final List<AsyncFuture<T>> futures = new ArrayList<>(shards.size());
 
             for (final ClusterShard shard : shards) {
-                futures.add(shard.apply(function::apply).catchFailed(catcher.apply(shard)));
+                futures.add(shard
+                    .apply(function::apply, CoreQueryManager::retryTraceHandlerNoop)
+                    .catchFailed(catcher.apply(shard)));
             }
 
             return async.collect(futures, collector);
         }
 
         private DateRange buildRange(Query q) {
-            final long now = System.currentTimeMillis();
+            final long now = clock.currentTimeMillis();
 
             return q
                 .getRange()
                 .map(r -> r.buildDateRange(now))
                 .orElseThrow(() -> new IllegalArgumentException("Range must be present"));
         }
+
+        private BiFunction<FullQuery, List<QueryTrace>, FullQuery> getStoreTracesTransform(
+            QueryTrace.NamedWatch shardLocalWatch
+        ) {
+            return (fullQuery, queryTraces) -> {
+                /* We want to store the current QT + queryTraces list of QT's.
+                 * Create new QT with queryTraces + current QT as a children */
+                final List<QueryTrace> traces = new ArrayList<>();
+                traces.addAll(queryTraces);
+                traces.add(fullQuery.getTrace());
+                final QueryTrace newTrace = shardLocalWatch.end(traces);
+                return fullQuery.withTrace(newTrace);
+            };
+        }
+    }
+
+    private static <T> T retryTraceHandlerNoop(T result, List<QueryTrace> traces) {
+        // Ignore QueryTrace list
+        return result;
     }
 
     private static final SortedSet<Long> INTERVAL_FACTORS =

@@ -21,6 +21,10 @@
 
 package com.spotify.heroic.metadata.elasticsearch;
 
+import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
+import static org.elasticsearch.index.query.QueryBuilders.prefixQuery;
+import static org.elasticsearch.index.query.QueryBuilders.termQuery;
+
 import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.HashCode;
 import com.spotify.heroic.async.AsyncObservable;
@@ -58,30 +62,49 @@ import com.spotify.heroic.metadata.FindSeriesStream;
 import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.WriteMetadata;
+import com.spotify.heroic.metric.QueryError;
+import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
+import eu.toolchain.async.StreamCollector;
 import eu.toolchain.async.Transform;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import javax.inject.Inject;
+import javax.inject.Named;
 import lombok.ToString;
 import org.apache.commons.lang3.tuple.Pair;
-import org.elasticsearch.action.count.CountRequestBuilder;
-import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
-import org.elasticsearch.action.index.IndexRequest.OpType;
+import org.elasticsearch.action.ActionRequestBuilder;
+import org.elasticsearch.action.DocWriteRequest.OpType;
+import org.elasticsearch.action.ListenableActionFuture;
+import org.elasticsearch.action.delete.DeleteRequestBuilder;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
-import org.elasticsearch.index.query.FilterBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -105,6 +128,7 @@ import static org.elasticsearch.index.query.FilterBuilders.prefixFilter;
 import static org.elasticsearch.index.query.FilterBuilders.regexpFilter;
 import static org.elasticsearch.index.query.FilterBuilders.termFilter;
 
+
 @ElasticsearchScope
 @ToString(of = {"connection"})
 public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
@@ -127,12 +151,13 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     private final Managed<Connection> connection;
     private final RateLimitedCache<Pair<String, HashCode>> writeCache;
     private final boolean configure;
+    private final int deleteParallelism;
 
     @Inject
     public MetadataBackendKV(
         Groups groups, MetadataBackendReporter reporter, AsyncFramework async,
         Managed<Connection> connection, RateLimitedCache<Pair<String, HashCode>> writeCache,
-        @Named("configure") boolean configure
+        @Named("configure") boolean configure, @Named("deleteParallelism") int deleteParallelism
     ) {
         super(async, TYPE_METADATA);
         this.groups = groups;
@@ -141,6 +166,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         this.connection = connection;
         this.writeCache = writeCache;
         this.configure = configure;
+        this.deleteParallelism = deleteParallelism;
     }
 
     @Override
@@ -173,13 +199,12 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     public AsyncFuture<WriteMetadata> write(final WriteMetadata.Request request) {
         return doto(c -> {
             final Series series = request.getSeries();
-            final DateRange range = request.getRange();
             final String id = series.hash();
 
             final String[] indices;
 
             try {
-                indices = c.writeIndices(range);
+                indices = c.writeIndices();
             } catch (NoIndexSelectedException e) {
                 return async.failed(e);
             }
@@ -225,23 +250,28 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                 return async.resolved(CountSeries.of());
             }
 
-            final FilterBuilder f = filter(filter.getFilter());
+            final QueryBuilder f = filter(filter.getFilter());
 
-            final CountRequestBuilder builder = c.count(filter.getRange(), TYPE_METADATA);
+            final SearchRequestBuilder builder = c.count(TYPE_METADATA);
             limit.asInteger().ifPresent(builder::setTerminateAfter);
 
-            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+            builder.setQuery(new BoolQueryBuilder().must(f));
+            builder.setSize(0);
 
             return bind(builder.execute()).directTransform(
-                response -> CountSeries.of(response.getCount(), false));
+                response -> CountSeries.of(response.getHits().getTotalHits(), false));
         });
     }
 
     @Override
-    public AsyncFuture<FindSeries> findSeries(final FindSeries.Request request) {
-        return entries(request.getFilter(), request.getLimit(), request.getRange(), this::toSeries,
-            l -> FindSeries.of(l.getSet(), l.isLimited()), builder -> {
-            });
+    public AsyncFuture<FindSeries> findSeries(final FindSeries.Request filter) {
+        return doto(c -> {
+            final OptionalLimit limit = filter.getLimit();
+            final QueryBuilder f = filter(filter.getFilter());
+            return entries(filter.getFilter(), filter.getLimit(), filter.getRange(), this::toSeries,
+                l -> FindSeries.of(l.getSet(), l.isLimited()), builder -> {
+                });
+        });
     }
 
     @Override
@@ -271,31 +301,41 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
     @Override
     public AsyncFuture<DeleteSeries> deleteSeries(final DeleteSeries.Request request) {
-        return doto(c -> {
-            final FilterBuilder f = filter(request.getFilter());
+        final DateRange range = request.getRange();
 
-            final DeleteByQueryRequestBuilder builder =
-                c.deleteByQuery(request.getRange(), TYPE_METADATA);
+        final FindSeriesIds.Request findIds =
+            new FindSeriesIds.Request(request.getFilter(), range, request.getLimit());
 
-            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+        return doto(c -> findSeriesIds(findIds).lazyTransform(ids -> {
+            final List<Callable<AsyncFuture<Void>>> deletes = new ArrayList<>();
 
-            return bind(builder.execute()).directTransform(response -> DeleteSeries.of());
-        });
+            for (final String id : ids.getIds()) {
+                deletes.add(() -> {
+                    final List<DeleteRequestBuilder> requests = c.delete(TYPE_METADATA, id);
+
+                    return async.collectAndDiscard(requests
+                        .stream()
+                        .map(ActionRequestBuilder::execute)
+                        .map(this::bind)
+                        .collect(Collectors.toList()));
+                });
+            }
+
+            return async.eventuallyCollect(deletes, newDeleteCollector(), deleteParallelism);
+        }));
     }
 
     @Override
     public AsyncFuture<FindKeys> findKeys(final FindKeys.Request request) {
         return doto(c -> {
-            final FilterBuilder f = filter(request.getFilter());
+            final QueryBuilder f = filter(request.getFilter());
 
-            final SearchRequestBuilder builder =
-                c.search(request.getRange(), TYPE_METADATA).setSearchType("count");
+            final SearchRequestBuilder builder = c.search(TYPE_METADATA);
 
-            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+            builder.setQuery(new BoolQueryBuilder().must(f));
 
             {
-                final AggregationBuilder<?> terms =
-                    AggregationBuilders.terms("terms").field(KEY).size(0);
+                final AggregationBuilder terms = AggregationBuilders.terms("terms").field(KEY);
                 builder.addAggregation(terms);
             }
 
@@ -308,7 +348,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                 int duplicates = 0;
 
                 for (final Terms.Bucket bucket : terms.getBuckets()) {
-                    if (keys.add(bucket.getKey())) {
+                    if (keys.add(bucket.getKeyAsString())) {
                         duplicates += 1;
                     }
                 }
@@ -337,21 +377,56 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         final Function<SearchHit, T> converter, final Transform<LimitedSet<T>, O> collector,
         final Consumer<SearchRequestBuilder> modifier
     ) {
-        final FilterBuilder f = filter(filter);
+        final QueryBuilder f = filter(filter);
 
         return doto(c -> {
-            final SearchRequestBuilder builder = c
-                .search(range, TYPE_METADATA)
-                .setScroll(SCROLL_TIME)
-                .setSearchType(SearchType.SCAN);
+            final SearchRequestBuilder builder = c.search(TYPE_METADATA).setScroll(SCROLL_TIME);
 
             builder.setSize(limit.asMaxInteger(SCROLL_SIZE));
-            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+            builder.setQuery(new BoolQueryBuilder().must(f));
 
             modifier.accept(builder);
 
-            return scrollEntries(c, builder, limit, converter).directTransform(collector);
+            AsyncFuture<LimitedSet<T>> scroll = scrollEntries(c, builder, limit, converter);
+            return scroll.directTransform(collector);
         });
+    }
+
+    /**
+     * Collect the result of a list of operations and convert into a
+     * {@link com.spotify.heroic.metadata.DeleteSeries}.
+     *
+     * @return a {@link eu.toolchain.async.StreamCollector}
+     */
+    private StreamCollector<Void, DeleteSeries> newDeleteCollector() {
+        return new StreamCollector<Void, DeleteSeries>() {
+            final ConcurrentLinkedQueue<Throwable> errors = new ConcurrentLinkedQueue<>();
+
+            @Override
+            public void resolved(final Void result) throws Exception {
+            }
+
+            @Override
+            public void failed(final Throwable cause) throws Exception {
+                errors.add(cause);
+            }
+
+            @Override
+            public void cancelled() throws Exception {
+            }
+
+            @Override
+            public DeleteSeries end(
+                final int resolved, final int failed, final int cancelled
+            ) throws Exception {
+                final List<RequestError> errors = this.errors
+                    .stream()
+                    .map(QueryError::fromThrowable)
+                    .collect(Collectors.toList());
+
+                return new DeleteSeries(errors, resolved, failed + cancelled);
+            }
+        };
     }
 
     private <T, O> AsyncObservable<O> entriesStream(
@@ -359,34 +434,28 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         final Function<SearchHit, T> converter, final Function<Set<T>, O> collector,
         final Consumer<SearchRequestBuilder> modifier
     ) {
-        final FilterBuilder filter = filter(f);
+        final QueryBuilder filter = filter(f);
 
         return observer -> connection.doto(c -> {
-            final SearchRequestBuilder builder = c
-                .search(range, TYPE_METADATA)
-                .setScroll(SCROLL_TIME)
-                .setSearchType(SearchType.SCAN);
+            final SearchRequestBuilder builder = c.search(TYPE_METADATA).setScroll(SCROLL_TIME);
 
             builder.setSize(limit.asMaxInteger(SCROLL_SIZE));
-            builder.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), filter));
+            builder.setQuery(new BoolQueryBuilder().must(filter));
 
             modifier.accept(builder);
 
-            return bind(builder.execute()).lazyTransform((initial) -> {
-                if (initial.getScrollId() == null) {
-                    return async.resolved();
-                }
+            final ScrollTransformStream<T> scrollTransform =
+                new ScrollTransformStream<>(limit, set -> observer.observe(collector.apply(set)),
+                    converter, scrollId -> {
+                    // Function<> that returns a Supplier
+                    return () -> {
+                        final ListenableActionFuture<SearchResponse> execute =
+                            c.prepareSearchScroll(scrollId).setScroll(SCROLL_TIME).execute();
+                        return bind(execute);
+                    };
+                });
 
-                final String scrollId = initial.getScrollId();
-
-                final Supplier<AsyncFuture<SearchResponse>> scroller =
-                    () -> bind(c.prepareSearchScroll(scrollId).setScroll(SCROLL_TIME).execute());
-
-                return scroller
-                    .get()
-                    .lazyTransform(new ScrollTransformStream<>(limit, scroller,
-                        set -> observer.observe(collector.apply(set)), converter));
-            });
+            return bind(builder.execute()).lazyTransform(scrollTransform);
         }).onDone(observer.onDone());
     }
 
@@ -444,67 +513,79 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         b.endArray();
     }
 
-    private static final Filter.Visitor<FilterBuilder> FILTER_CONVERTER =
-        new Filter.Visitor<FilterBuilder>() {
+    private static final Filter.Visitor<QueryBuilder> FILTER_CONVERTER =
+        new Filter.Visitor<QueryBuilder>() {
             @Override
-            public FilterBuilder visitTrue(final TrueFilter t) {
-                return matchAllFilter();
+            public QueryBuilder visitTrue(final TrueFilter t) {
+                return matchAllQuery();
             }
 
             @Override
-            public FilterBuilder visitFalse(final FalseFilter f) {
-                return notFilter(matchAllFilter());
+            public QueryBuilder visitFalse(final FalseFilter f) {
+                return new BoolQueryBuilder().mustNot(matchAllQuery());
             }
 
             @Override
-            public FilterBuilder visitAnd(final AndFilter and) {
-                return andFilter(convertTerms(and.terms()));
+            public QueryBuilder visitAnd(final AndFilter and) {
+                BoolQueryBuilder boolQuery = new BoolQueryBuilder();
+                for (QueryBuilder qb : convertTerms(and.terms())) {
+                    boolQuery.must(qb);
+                }
+                return boolQuery;
             }
 
             @Override
-            public FilterBuilder visitOr(final OrFilter or) {
-                return orFilter(convertTerms(or.terms()));
+            public QueryBuilder visitOr(final OrFilter or) {
+                BoolQueryBuilder boolQuery = new BoolQueryBuilder();
+                for (QueryBuilder qb : convertTerms(or.terms())) {
+                    boolQuery.should(qb);
+                }
+                boolQuery.minimumShouldMatch(1);
+                return boolQuery;
             }
 
             @Override
-            public FilterBuilder visitNot(final NotFilter not) {
-                return notFilter(not.getFilter().visit(this));
+            public QueryBuilder visitNot(final NotFilter not) {
+                return new BoolQueryBuilder().mustNot(not.getFilter().visit(this));
             }
 
             @Override
-            public FilterBuilder visitMatchTag(final MatchTagFilter matchTag) {
-                return termFilter(TAGS, matchTag.getTag() + TAG_DELIMITER + matchTag.getValue());
+            public QueryBuilder visitMatchTag(final MatchTagFilter matchTag) {
+                return termQuery(TAGS, matchTag.getTag() + TAG_DELIMITER + matchTag.getValue());
             }
 
             @Override
-            public FilterBuilder visitStartsWith(final StartsWithFilter startsWith) {
-                return prefixFilter(TAGS,
+            public QueryBuilder visitStartsWith(final StartsWithFilter startsWith) {
+                return prefixQuery(TAGS,
                     startsWith.getTag() + TAG_DELIMITER + startsWith.getValue());
             }
 
             @Override
-            public FilterBuilder visitRegex(final RegexFilter regex) {
+            public QueryBuilder visitRegex(final RegexFilter regex) {
+
                 return regexpFilter(TAGS,
                     regex.getTag() + TAG_DELIMITER + regex.getValue());
             }
 
             @Override
-            public FilterBuilder visitHasTag(final HasTagFilter hasTag) {
+            public QueryBuilder visitHasTag(final HasTagFilter hasTag) {
+
                 return termFilter(TAG_KEYS, hasTag.getTag());
+
             }
 
             @Override
-            public FilterBuilder visitMatchKey(final MatchKeyFilter matchKey) {
-                return termFilter(KEY, matchKey.getValue());
+            public QueryBuilder visitMatchKey(final MatchKeyFilter matchKey) {
+                return termQuery(KEY, matchKey.getValue());
             }
 
             @Override
-            public FilterBuilder defaultAction(final Filter filter) {
+            public QueryBuilder defaultAction(final Filter filter) {
                 throw new IllegalArgumentException("Unsupported filter statement: " + filter);
             }
 
-            private FilterBuilder[] convertTerms(final List<Filter> terms) {
-                final FilterBuilder[] filters = new FilterBuilder[terms.size()];
+            private QueryBuilder[] convertTerms(final List<Filter> terms) {
+                final QueryBuilder[] filters = new QueryBuilder[terms.size()];
                 int i = 0;
 
                 for (final Filter stmt : terms) {
@@ -516,7 +597,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         };
 
     @Override
-    protected FilterBuilder filter(final Filter filter) {
+    protected QueryBuilder filter(final Filter filter) {
         return filter.visit(FILTER_CONVERTER);
     }
 

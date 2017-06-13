@@ -29,6 +29,7 @@ import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.utils.Bytes;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.async.AsyncObserver;
@@ -48,6 +49,7 @@ import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.QueryError;
 import com.spotify.heroic.metric.QueryTrace;
+import com.spotify.heroic.metric.Tracing;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.datastax.schema.Schema;
 import com.spotify.heroic.metric.datastax.schema.Schema.PreparedFetch;
@@ -61,13 +63,6 @@ import eu.toolchain.async.Managed;
 import eu.toolchain.async.ResolvableFuture;
 import eu.toolchain.async.StreamCollector;
 import eu.toolchain.async.Transform;
-import lombok.AccessLevel;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
-
-import javax.inject.Inject;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
@@ -83,6 +78,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import javax.inject.Inject;
+import lombok.AccessLevel;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * MetricBackend for Heroic cassandra datastore.
@@ -148,10 +149,46 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
                 c.schema.ranges(request.getSeries(), request.getRange());
 
             if (request.getType() == MetricType.POINT) {
-                return fetchDataPoints(w, limit, request.getOptions(), prepared, c);
+                final List<AsyncFuture<FetchData>> fetches =
+                    fetchDataPoints(w, limit, request.getOptions(), prepared, c);
+                return async.collect(fetches, FetchData.collect(FETCH));
             }
 
             return async.resolved(FetchData.error(w.end(FETCH),
+                QueryError.fromMessage("unsupported source: " + request.getType())));
+        });
+    }
+
+    @Override
+    public AsyncFuture<FetchData.Result> fetch(
+        final FetchData.Request request, final FetchQuotaWatcher watcher,
+        final Consumer<MetricCollection> metricsConsumer
+    ) {
+        if (!watcher.mayReadData()) {
+            throw new IllegalArgumentException("query violated data limit");
+        }
+
+        final int limit = watcher.getReadDataQuota();
+
+        return connection.doto(c -> {
+            final QueryTrace.Watch w = QueryTrace.watch();
+
+            final List<PreparedFetch> prepared =
+                c.schema.ranges(request.getSeries(), request.getRange());
+
+            if (request.getType() == MetricType.POINT) {
+                final List<AsyncFuture<FetchData>> fetches =
+                    fetchDataPoints(w, limit, request.getOptions(), prepared, c);
+
+                final List<AsyncFuture<FetchData.Result>> results =
+                    Lists.transform(fetches, fetch -> fetch.directTransform(fetchData -> {
+                        fetchData.getGroups().forEach(metricsConsumer::accept);
+                        return fetchData.getResult();
+                    }));
+                return async.collect(results, FetchData.collectResult(FETCH));
+            }
+
+            return async.resolved(FetchData.errorResult(w.end(FETCH),
                 QueryError.fromMessage("unsupported source: " + request.getType())));
         });
     }
@@ -191,7 +228,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
             prepareCachedStatement(c, select).directTransform(stmt -> {
                 BoundStatement bound = stmt.bind(select.getBindings().toArray());
 
-                if (options.isTracing()) {
+                if (options.tracing().isEnabled(Tracing.DETAILED)) {
                     bound.enableTracing();
                 }
 
@@ -479,7 +516,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
             .directTransform(t -> QueryTrace.of(what, elapsed, ImmutableList.copyOf(t)));
     }
 
-    private AsyncFuture<FetchData> fetchDataPoints(
+    private List<AsyncFuture<FetchData>> fetchDataPoints(
         final QueryTrace.Watch w, final int limit, final QueryOptions options,
         final List<PreparedFetch> prepared, final Connection c
     ) throws Exception {
@@ -490,7 +527,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
 
             final Statement stmt;
 
-            if (options.isTracing()) {
+            if (options.tracing().isEnabled(Tracing.DETAILED)) {
                 stmt = p.fetch(limit).enableTracing();
                 traceBuilder =
                     result -> buildTrace(c, FETCH_SEGMENT.extend(p.toString()), w.elapsed(),
@@ -515,7 +552,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
             fetches.add(future);
         }
 
-        return async.collect(fetches, FetchData.collect(FETCH));
+        return fetches;
     }
 
     @RequiredArgsConstructor

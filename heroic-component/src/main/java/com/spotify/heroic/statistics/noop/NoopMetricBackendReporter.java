@@ -30,6 +30,14 @@ public class NoopMetricBackendReporter implements MetricBackendReporter {
 
     public static final DataInMemoryReporter DATA_IN_MEMORY_REPORTER = new DataInMemoryReporter() {
         @Override
+        public void reportRowsAccessed(final long n) {
+        }
+
+        @Override
+        public void reportRowDensity(final long msBetweenSamples) {
+        }
+
+        @Override
         public void reportDataHasBeenRead(final long n) {
 
         }

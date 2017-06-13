@@ -21,29 +21,28 @@
 
 package com.spotify.heroic.aggregation;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
-import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.MetricGroup;
+import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
-import static com.google.common.base.Preconditions.checkNotNull;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
 @Data
 @EqualsAndHashCode(of = {"of", "each"})
@@ -72,8 +71,10 @@ public abstract class GroupingAggregation implements AggregationInstance {
     );
 
     @Override
-    public AggregationSession session(DateRange range) {
-        return new GroupSession(range);
+    public AggregationSession session(
+        DateRange range, RetainQuotaWatcher quotaWatcher, BucketStrategy bucketStrategy
+    ) {
+        return new GroupSession(range, quotaWatcher, bucketStrategy);
     }
 
     public Set<String> requiredTags() {
@@ -82,7 +83,7 @@ public abstract class GroupingAggregation implements AggregationInstance {
 
     @Override
     public long estimate(DateRange range) {
-        return each.estimate(range);
+        return -1;
     }
 
     @Override
@@ -113,6 +114,8 @@ public abstract class GroupingAggregation implements AggregationInstance {
         private final Object lock = new Object();
 
         private final DateRange range;
+        private final RetainQuotaWatcher quotaWatcher;
+        private final BucketStrategy bucketStrategy;
 
         @Override
         public void updatePoints(
@@ -168,7 +171,8 @@ public abstract class GroupingAggregation implements AggregationInstance {
                     return checkSession;
                 }
 
-                final AggregationSession newSession = each.session(range);
+                final AggregationSession newSession =
+                    each.session(range, quotaWatcher, bucketStrategy);
                 sessions.put(key, newSession);
                 return newSession;
             }

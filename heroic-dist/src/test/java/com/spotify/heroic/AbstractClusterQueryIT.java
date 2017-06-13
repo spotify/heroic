@@ -4,6 +4,7 @@ import static com.spotify.heroic.test.Data.points;
 import static com.spotify.heroic.test.Matchers.containsChild;
 import static com.spotify.heroic.test.Matchers.hasIdentifier;
 import static com.spotify.heroic.test.Matchers.identifierContains;
+import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
@@ -11,6 +12,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -22,6 +27,7 @@ import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.ingestion.Ingestion;
 import com.spotify.heroic.ingestion.IngestionComponent;
 import com.spotify.heroic.ingestion.IngestionManager;
+import com.spotify.heroic.metric.FullQuery;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.QueryError;
@@ -30,6 +36,8 @@ import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.metric.ResultLimit;
 import com.spotify.heroic.metric.ResultLimits;
 import com.spotify.heroic.metric.ShardedResultGroup;
+import com.spotify.heroic.querylogging.QueryContext;
+import com.spotify.heroic.querylogging.QueryLogger;
 import eu.toolchain.async.AsyncFuture;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,6 +46,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -46,7 +55,12 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     private final Series s2 = Series.of("key1", ImmutableMap.of("shared", "a", "diff", "b"));
     private final Series s3 = Series.of("key1", ImmutableMap.of("shared", "a", "diff", "c"));
 
+    /* the number of queries run */
+    private int queryCount = 0;
+
     private QueryManager query;
+
+    private QueryContext queryContext;
 
     protected boolean cardinalitySupport = true;
 
@@ -57,7 +71,37 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     public final void setupAbstract() {
         setupSupport();
 
+        queryContext = QueryContext.empty();
+
         query = instances.get(0).inject(CoreComponent::queryManager);
+    }
+
+    @After
+    public final void verifyLoggers() {
+        final QueryLogger coreQueryManagerLogger = getQueryLogger("CoreQueryManager").orElseThrow(
+            () -> new AssertionError("Should have logger for CoreQueryManager"));
+
+        final QueryLogger localMetricManagerLogger =
+            getQueryLogger("LocalMetricManager").orElseThrow(
+                () -> new AssertionError("Should have logger for LocalMetricManager"));
+
+        /* number of expected log-calls is related to the number of queries performed during the
+         * test */
+        final int apiNodeCount = queryCount;
+        final int dataNodeCount = queryCount * 2;
+
+        verify(coreQueryManagerLogger, times(apiNodeCount)).logQuery(any(QueryContext.class),
+            any(Query.class));
+        verify(coreQueryManagerLogger, times(apiNodeCount)).logOutgoingRequestToShards(
+            any(QueryContext.class), any(FullQuery.Request.class));
+        verify(localMetricManagerLogger, times(dataNodeCount)).logIncomingRequestAtNode(
+            any(QueryContext.class), any(FullQuery.Request.class));
+        verify(localMetricManagerLogger, times(dataNodeCount)).logOutgoingResponseAtNode(
+            any(QueryContext.class), any(FullQuery.class));
+        verify(coreQueryManagerLogger, times(dataNodeCount)).logIncomingResponseFromShard(
+            any(QueryContext.class), any(FullQuery.class));
+
+        verifyNoMoreInteractions(coreQueryManagerLogger, localMetricManagerLogger);
     }
 
     @Override
@@ -94,13 +138,15 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
 
     public QueryResult query(final QueryBuilder builder, final Consumer<QueryBuilder> modifier)
         throws Exception {
+        queryCount += 1;
+
         builder
             .features(Optional.of(FeatureSet.of(Feature.DISTRIBUTED_AGGREGATIONS)))
             .source(Optional.of(MetricType.POINT))
-            .rangeIfAbsent(Optional.of(new QueryDateRange.Absolute(10, 40)));
+            .rangeIfAbsent(Optional.of(new QueryDateRange.Absolute(0, 40)));
 
         modifier.accept(builder);
-        return query.useDefaultGroup().query(builder.build()).get();
+        return query.useDefaultGroup().query(builder.build(), queryContext).get();
     }
 
     @Test
@@ -131,11 +177,18 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
 
         // Verify that the top level QueryTrace is for CoreQueryManager
         assertThat(result.getTrace(), hasIdentifier(equalTo(CoreQueryManager.QUERY)));
-        /* Verify that the first level of QueryTrace children contains at least one entry for the
+        // Verify that second level is of type QUERY_SHARD
+        assertThat(result.getTrace(), containsChild(
+            hasIdentifier(identifierContains(CoreQueryManager.QUERY_SHARD.toString()))));
+
+        /* Verify that the third level (under QUERY_SHARD) contains at least one entry for the
          * local node and at least one for the remote node */
-        assertThat(result.getTrace(), containsChild(hasIdentifier(identifierContains("[local]"))));
-        assertThat(result.getTrace(),
-            containsChild(hasIdentifier(not(identifierContains("[local]")))));
+        assertThat(result.getTrace(), containsChild(
+            allOf(hasIdentifier(identifierContains(CoreQueryManager.QUERY_SHARD.toString())),
+                containsChild(hasIdentifier(identifierContains("[local]"))))));
+        assertThat(result.getTrace(), containsChild(
+            allOf(hasIdentifier(identifierContains(CoreQueryManager.QUERY_SHARD.toString())),
+                containsChild(hasIdentifier(not(identifierContains("[local]")))))));
     }
 
     @Test
@@ -256,6 +309,24 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         }
 
         assertEquals(ResultLimits.of(ResultLimit.QUOTA), result.getLimits());
+    }
+
+    @Test
+    public void aggregationLimit() throws Exception {
+        final QueryResult result = query("sum(10ms) by *", builder -> {
+            builder.options(Optional.of(QueryOptions.builder().aggregationLimit(1L).build()));
+        });
+
+        // quota limits are always errors
+        assertEquals(2, result.getErrors().size());
+
+        for (final RequestError e : result.getErrors()) {
+            assertTrue((e instanceof QueryError));
+            final QueryError q = (QueryError) e;
+            assertThat(q.getError(), containsString("Some fetches failed (1) or were cancelled (0)"));
+        }
+
+        assertEquals(ResultLimits.of(ResultLimit.AGGREGATION), result.getLimits());
     }
 
     @Test
