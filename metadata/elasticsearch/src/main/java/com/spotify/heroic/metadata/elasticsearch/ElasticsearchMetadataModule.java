@@ -68,6 +68,7 @@ import org.apache.commons.lang3.tuple.Pair;
 @Data
 @ModuleId("elasticsearch")
 public final class ElasticsearchMetadataModule implements MetadataModule, DynamicModuleId {
+    private static final int DEFAULT_DELETE_PARALLELISM = 20;
     private static final double DEFAULT_WRITES_PER_SECOND = 3000d;
     private static final long DEFAULT_RATE_LIMIT_SLOW_START_SECONDS = 0L;
     private static final long DEFAULT_WRITE_CACHE_DURATION_MINUTES = 240L;
@@ -81,6 +82,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
     private final Double writesPerSecond;
     private final Long rateLimitSlowStartSeconds;
     private final Long writeCacheDurationMinutes;
+    private final int deleteParallelism;
     private final boolean configure;
 
     private static Supplier<BackendType> defaultSetup = MetadataBackendKV::backendType;
@@ -106,6 +108,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
         @JsonProperty("writesPerSecond") Optional<Double> writesPerSecond,
         @JsonProperty("rateLimitSlowStartSeconds") Optional<Long> rateLimitSlowStartSeconds,
         @JsonProperty("writeCacheDurationMinutes") Optional<Long> writeCacheDurationMinutes,
+        @JsonProperty("deleteParallelism") Optional<Integer> deleteParallelism,
         @JsonProperty("templateName") Optional<String> templateName,
         @JsonProperty("backendType") Optional<String> backendType,
         @JsonProperty("configure") Optional<Boolean> configure
@@ -118,6 +121,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
             rateLimitSlowStartSeconds.orElse(DEFAULT_RATE_LIMIT_SLOW_START_SECONDS);
         this.writeCacheDurationMinutes =
             writeCacheDurationMinutes.orElse(DEFAULT_WRITE_CACHE_DURATION_MINUTES);
+        this.deleteParallelism = deleteParallelism.orElse(DEFAULT_DELETE_PARALLELISM);
         this.templateName = templateName.orElse(DEFAULT_TEMPLATE_NAME);
         this.backendTypeBuilder =
             backendType.flatMap(bt -> ofNullable(backendTypes.get(bt))).orElse(defaultSetup);
@@ -188,6 +192,13 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
 
         @Provides
         @ElasticsearchScope
+        @Named("deleteParallelism")
+        public int deleteParallelism() {
+            return deleteParallelism;
+        }
+
+        @Provides
+        @ElasticsearchScope
         public RateLimitedCache<Pair<String, HashCode>> writeCache() {
             final Cache<Pair<String, HashCode>, Boolean> cache = CacheBuilder
                 .newBuilder()
@@ -237,6 +248,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
         private Optional<Double> writesPerSecond = empty();
         private Optional<Long> rateLimitSlowStartSeconds = empty();
         private Optional<Long> writeCacheDurationMinutes = empty();
+        private Optional<Integer> deleteParallelism = empty();
         private Optional<String> templateName = empty();
         private Optional<String> backendType = empty();
         private Optional<Boolean> configure = empty();
@@ -272,8 +284,12 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
         }
 
         public Builder writeCacheDurationMinutes(final long writeCacheDurationMinutes) {
-            checkNotNull(writeCacheDurationMinutes, "writeCacheDurationMinutes");
             this.writeCacheDurationMinutes = of(writeCacheDurationMinutes);
+            return this;
+        }
+
+        public Builder deleteParallelism(final int deleteParallelism) {
+            this.deleteParallelism = of(deleteParallelism);
             return this;
         }
 
@@ -296,8 +312,8 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
 
         public ElasticsearchMetadataModule build() {
             return new ElasticsearchMetadataModule(id, groups, connection, writesPerSecond,
-                rateLimitSlowStartSeconds, writeCacheDurationMinutes, templateName, backendType,
-                configure);
+                rateLimitSlowStartSeconds, writeCacheDurationMinutes, deleteParallelism,
+                templateName, backendType, configure);
         }
     }
 }

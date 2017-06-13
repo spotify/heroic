@@ -26,6 +26,10 @@ import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -33,18 +37,11 @@ import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateRequestBuilder;
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateResponse;
-import org.elasticsearch.action.count.CountRequestBuilder;
-import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
+import org.elasticsearch.action.delete.DeleteRequestBuilder;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchScrollRequestBuilder;
-import org.elasticsearch.client.Client;
 import org.elasticsearch.client.IndicesAdminClient;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Callable;
 
 /**
  * Common connection abstraction between Node and TransportClient.
@@ -55,7 +52,7 @@ import java.util.concurrent.Callable;
 public class Connection {
     private final AsyncFramework async;
     private final IndexMapping index;
-    private final Client client;
+    private final ClientSetup.ClientWrapper client;
 
     private final String templateName;
     private final BackendType type;
@@ -64,7 +61,7 @@ public class Connection {
         final List<AsyncFuture<Void>> futures = new ArrayList<>();
 
         futures.add(async.call((Callable<Void>) () -> {
-            client.close();
+            client.getShutdown().run();
             return null;
         }));
 
@@ -72,7 +69,7 @@ public class Connection {
     }
 
     public AsyncFuture<Void> configure() {
-        final IndicesAdminClient indices = client.admin().indices();
+        final IndicesAdminClient indices = client.getClient().admin().indices();
 
         log.info("[{}] updating template for {}", templateName, index.template());
 
@@ -101,7 +98,7 @@ public class Connection {
             }
 
             @Override
-            public void onFailure(Throwable e) {
+            public void onFailure(Exception e) {
                 future.fail(e);
             }
         });
@@ -118,25 +115,24 @@ public class Connection {
         return index.writeIndices();
     }
 
-    public SearchRequestBuilder search(String type)
-        throws NoIndexSelectedException {
-        return index.search(client, type);
+    public SearchRequestBuilder search(String type) throws NoIndexSelectedException {
+        return index.search(client.getClient(), type);
     }
 
-    public CountRequestBuilder count(String type) throws NoIndexSelectedException {
-        return index.count(client, type);
-    }
-
-    public DeleteByQueryRequestBuilder deleteByQuery(String type)
-        throws NoIndexSelectedException {
-        return index.deleteByQuery(client, type);
+    public SearchRequestBuilder count(String type) throws NoIndexSelectedException {
+        return index.count(client.getClient(), type);
     }
 
     public IndexRequestBuilder index(String index, String type) {
-        return client.prepareIndex(index, type);
+        return client.getClient().prepareIndex(index, type);
     }
 
     public SearchScrollRequestBuilder prepareSearchScroll(String scrollId) {
-        return client.prepareSearchScroll(scrollId);
+        return client.getClient().prepareSearchScroll(scrollId);
+    }
+
+    public List<DeleteRequestBuilder> delete(String type, String id)
+        throws NoIndexSelectedException {
+        return index.delete(client.getClient(), type, id);
     }
 }

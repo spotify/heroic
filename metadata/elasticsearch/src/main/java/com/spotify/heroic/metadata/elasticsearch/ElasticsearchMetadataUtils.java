@@ -22,11 +22,11 @@
 package com.spotify.heroic.metadata.elasticsearch;
 
 import com.google.common.collect.ImmutableMap;
-import org.elasticsearch.common.xcontent.json.JsonXContent;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
+import org.elasticsearch.common.xcontent.NamedXContentRegistry;
+import org.elasticsearch.common.xcontent.json.JsonXContent;
 
 public class ElasticsearchMetadataUtils {
     public static Map<String, Object> loadJsonResource(String path) {
@@ -40,7 +40,7 @@ public class ElasticsearchMetadataUtils {
                 return ImmutableMap.of();
             }
 
-            return JsonXContent.jsonXContent.createParser(input).map();
+            return JsonXContent.jsonXContent.createParser(NamedXContentRegistry.EMPTY, input).map();
         } catch (final IOException e) {
             throw new RuntimeException("Failed to load resource: " + path, e);
         }
