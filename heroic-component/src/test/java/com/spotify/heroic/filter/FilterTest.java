@@ -159,4 +159,19 @@ public class FilterTest {
         assertEquals(new OrFilter(ImmutableList.of(f1, f2)), or(f1, f2));
         assertEquals(new NotFilter(f1), not(f1));
     }
+
+    @Test
+    public void testAndFilterCompareLists() {
+        AndFilter andFilterA = and( matchTag(tag, value), startsWith(tag, value), a, b, c);
+        assertEquals(0, andFilterA.compareTo(andFilterA));
+
+        AndFilter andFilterB = and(matchTag(tag, value), startsWith(tag, value), a, b);
+        assertEquals(1, andFilterA.compareTo(andFilterB));
+        assertEquals(-1, andFilterB.compareTo(andFilterA));
+
+        AndFilter andFilterC = and(matchTag(tag, value), startsWith(tag, value), a, a);
+        assertEquals(1, andFilterB.compareTo(andFilterC));
+
+    }
+
 }
