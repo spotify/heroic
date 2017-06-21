@@ -36,9 +36,9 @@ public interface DataInMemoryReporter {
     /**
      * report the density of a row that was read from the metric backend
      *
-     * @param msBetweenSamples density, number of samples per hour
+     * @param samplesPerSecond density, average number of samples per second
      */
-    void reportRowDensity(long msBetweenSamples);
+    void reportRowDensity(double samplesPerSecond);
 
     /**
      * report that data has been read into memory

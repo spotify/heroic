@@ -78,6 +78,9 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
     /* Maximum amount of data points in memory at any time for a query */
     private final Histogram queryMaxLiveSamples;
     private final Histogram queryReadRate;
+    // Average milliseconds between samples
+    private final Histogram queryRowMsBetweenSamples;
+    // Average samples per mega-seconds :)
     private final Histogram queryRowDensity;
 
     public SemanticMetricBackendReporter(SemanticMetricRegistry registry) {
@@ -114,6 +117,8 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
             base.tagged("what", "query-metrics-max-live-samples", "unit", Units.COUNT));
         queryReadRate =
             registry.histogram(base.tagged("what", "query-metrics-read-rate", "unit", Units.COUNT));
+        queryRowMsBetweenSamples = registry.histogram(
+            base.tagged("what", "query-metrics-row-metric-distance", "unit", Units.MILLISECOND));
         queryRowDensity = registry.histogram(
             base.tagged("what", "query-metrics-row-density", "unit", Units.COUNT));
     }
@@ -138,8 +143,9 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
             }
 
             @Override
-            public void reportRowDensity(final long msBetweenSamples) {
-                queryRowDensity.update(msBetweenSamples);
+            public void reportRowDensity(final double samplesPerSecond) {
+                queryRowDensity.update((long) (samplesPerSecond * 1e6));
+                queryRowMsBetweenSamples.update((long) (1000.0 / samplesPerSecond));
             }
 
             @Override
