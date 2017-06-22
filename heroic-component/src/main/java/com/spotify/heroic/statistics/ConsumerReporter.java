@@ -26,6 +26,8 @@ public interface ConsumerReporter {
 
     void reportMessageError();
 
+    void reportMessageRetry();
+
     void reportConsumerSchemaError();
 
     void reportConsumerThreadsWanted(final long count);

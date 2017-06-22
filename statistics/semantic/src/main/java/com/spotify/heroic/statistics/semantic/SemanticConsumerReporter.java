@@ -41,6 +41,7 @@ public class SemanticConsumerReporter implements ConsumerReporter {
 
     private final Meter messageIn;
     private final Meter messageError;
+    private final Meter messageRetry;
     private final Meter consumerSchemaError;
     private final SemanticRatioGauge consumerThreadsLiveRatio;
     private final Histogram messageSize;
@@ -58,6 +59,7 @@ public class SemanticConsumerReporter implements ConsumerReporter {
 
         messageIn = registry.meter(base.tagged("what", "message-in", "unit", Units.MESSAGE));
         messageError = registry.meter(base.tagged("what", "message-error", "unit", Units.FAILURE));
+        messageRetry = registry.meter(base.tagged("what", "message-retry", "unit", Units.COUNT));
         consumerSchemaError =
             registry.meter(base.tagged("what", "consumer-schema-error", "unit", Units.FAILURE));
         consumerThreadsLiveRatio = new SemanticRatioGauge();
@@ -90,6 +92,11 @@ public class SemanticConsumerReporter implements ConsumerReporter {
     @Override
     public void reportMessageError() {
         messageError.mark();
+    }
+
+    @Override
+    public void reportMessageRetry() {
+        messageRetry.mark();
     }
 
     @Override
