@@ -34,7 +34,8 @@ public class NoopMetricBackendReporter implements MetricBackendReporter {
         }
 
         @Override
-        public void reportRowDensity(final long msBetweenSamples) {
+        public void reportRowDensity(final double samplesPerSecond) {
+
         }
 
         @Override

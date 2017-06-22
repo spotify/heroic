@@ -485,8 +485,9 @@ public class LocalMetricManager implements MetricManager {
             dataInMemoryReporter.reportDataNoLongerNeeded(g.size());
 
             g.getAverageDistanceBetweenMetrics().ifPresent(msBetweenSamples -> {
-                dataInMemoryReporter.reportRowDensity(msBetweenSamples);
-                rowDensityData.add(msBetweenSamples);
+                final double metricsPerSecond = 1000.0 / msBetweenSamples;
+                dataInMemoryReporter.reportRowDensity(metricsPerSecond);
+                rowDensityData.add((long) (metricsPerSecond));
             });
         }
 
