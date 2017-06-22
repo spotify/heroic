@@ -21,22 +21,21 @@
 
 package com.spotify.heroic.elasticsearch.index;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.spotify.heroic.common.Duration;
-import lombok.ToString;
-import org.elasticsearch.action.count.CountRequestBuilder;
-import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
-import org.elasticsearch.action.search.SearchRequestBuilder;
-import org.elasticsearch.action.support.IndicesOptions;
-import org.elasticsearch.client.Client;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
-import static com.google.common.base.Preconditions.checkNotNull;
+import lombok.ToString;
+import org.elasticsearch.action.delete.DeleteRequestBuilder;
+import org.elasticsearch.action.search.SearchRequestBuilder;
+import org.elasticsearch.action.support.IndicesOptions;
+import org.elasticsearch.client.Client;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
 
 @ToString
 public class RotatingIndexMapping implements IndexMapping {
@@ -132,16 +131,6 @@ public class RotatingIndexMapping implements IndexMapping {
     }
 
     @Override
-    public DeleteByQueryRequestBuilder deleteByQuery(
-        final Client client, final String type
-    ) throws NoIndexSelectedException {
-        return client
-            .prepareDeleteByQuery(readIndices())
-            .setIndicesOptions(options())
-            .setTypes(type);
-    }
-
-    @Override
     public SearchRequestBuilder search(
         final Client client, final String type
     ) throws NoIndexSelectedException {
@@ -149,9 +138,26 @@ public class RotatingIndexMapping implements IndexMapping {
     }
 
     @Override
-    public CountRequestBuilder count(final Client client, final String type)
+    public SearchRequestBuilder count(final Client client, final String type)
         throws NoIndexSelectedException {
-        return client.prepareCount(readIndices()).setIndicesOptions(options()).setTypes(type);
+        return client
+            .prepareSearch(readIndices())
+            .setIndicesOptions(options())
+            .setTypes(type)
+            .setSource(new SearchSourceBuilder().size(0));
+    }
+
+    @Override
+    public List<DeleteRequestBuilder> delete(
+        final Client client, final String type, final String id
+    ) throws NoIndexSelectedException {
+        final List<DeleteRequestBuilder> requests = new ArrayList<>();
+
+        for (final String index : readIndices()) {
+            requests.add(client.prepareDelete(index, type, id));
+        }
+
+        return requests;
     }
 
     private IndicesOptions options() {
