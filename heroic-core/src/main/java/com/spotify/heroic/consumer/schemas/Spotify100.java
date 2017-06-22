@@ -159,6 +159,11 @@ public class Spotify100 implements ConsumerSchema {
                     "'" + TIME + "' field must be defined: " + message);
             }
 
+            if (metric.getTime() <= 0) {
+                throw new ConsumerSchemaValidationException(
+                    "'" + TIME + "' field must be a positive number: " + message);
+            }
+
             if (metric.getKey() == null) {
                 throw new ConsumerSchemaValidationException(
                     "'" + KEY + "' field must be defined: " + message);
