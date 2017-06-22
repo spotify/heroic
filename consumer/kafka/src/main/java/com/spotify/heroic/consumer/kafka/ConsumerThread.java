@@ -217,6 +217,7 @@ public final class ConsumerThread extends Thread {
             if (retry) {
                 handleRetry(sleep);
                 sleep = Math.min(sleep * 2, RETRY_MAX_SLEEP);
+                reporter.reportMessageRetry();
                 continue;
             }
 
