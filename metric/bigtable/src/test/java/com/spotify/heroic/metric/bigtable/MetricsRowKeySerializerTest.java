@@ -1,6 +1,5 @@
 package com.spotify.heroic.metric.bigtable;
 
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.common.Series;
 import eu.toolchain.serializer.BytesSerialWriter;
@@ -8,6 +7,7 @@ import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.Serializer;
 import eu.toolchain.serializer.SerializerFramework;
 import eu.toolchain.serializer.TinySerializer;
+import java.nio.charset.StandardCharsets;
 import junit.framework.TestCase;
 import org.junit.Assert;
 
@@ -32,12 +32,12 @@ public class MetricsRowKeySerializerTest extends TestCase {
         serializer.serialize(serializedBytes, rowKey);
 
         Assert.assertArrayEquals(
-            EXPECTED_SERIALIZATION.getBytes(Charsets.UTF_8), serializedBytes.toByteArray());
+            EXPECTED_SERIALIZATION.getBytes(StandardCharsets.UTF_8), serializedBytes.toByteArray());
     }
 
     public void testDeserializationIsBackwardsCompatible() throws Exception {
         final SerialReader serialReader =
-            serializerFramework.readByteArray(EXPECTED_SERIALIZATION.getBytes(Charsets.UTF_8));
+            serializerFramework.readByteArray(EXPECTED_SERIALIZATION.getBytes(StandardCharsets.UTF_8));
 
         final RowKey rowKey = serializer.deserialize(serialReader);
 
