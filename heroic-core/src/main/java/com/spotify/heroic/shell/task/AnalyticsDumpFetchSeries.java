@@ -25,6 +25,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.analytics.MetricAnalytics;
 import com.spotify.heroic.async.AsyncObserver;
+import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
@@ -79,14 +80,13 @@ public class AnalyticsDumpFetchSeries implements ShellTask {
             try {
                 io
                     .out()
-                    .println(mapper.writeValueAsString(
-                        new AnalyticsHits(series.getSeries().getHashCode().toString(),
-                            series.getHits())));
+                    .println(mapper.writeValueAsString(new AnalyticsHits(series.getSeries(),
+                        series.getSeries().getHashCode().toString(), series.getHits())));
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }
 
-            io.out().flush();
+            //io.out().flush();
             return async.resolved();
         }));
 
@@ -102,6 +102,7 @@ public class AnalyticsDumpFetchSeries implements ShellTask {
 
     @Data
     public static class AnalyticsHits {
+        private final Series series;
         private final String id;
         private final long hits;
     }
