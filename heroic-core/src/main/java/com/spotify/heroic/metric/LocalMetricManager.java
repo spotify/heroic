@@ -62,6 +62,7 @@ import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.inject.Inject;
@@ -462,6 +463,8 @@ public class LocalMetricManager implements MetricManager {
     @RequiredArgsConstructor
     private abstract static class ResultCollector
         implements StreamCollector<FetchData.Result, FullQuery> {
+        private static final String ROWS_ACCESSED = "rowsAccessed";
+
         final ConcurrentLinkedQueue<Throwable> errors = new ConcurrentLinkedQueue<>();
         final ConcurrentLinkedQueue<RequestError> requestErrors = new ConcurrentLinkedQueue<>();
 
@@ -543,6 +546,9 @@ public class LocalMetricManager implements MetricManager {
 
             final Optional<Histogram> dataDensity = Optional.of(getRowDensityHistogram());
 
+            final Statistics baseStatistics =
+                Statistics.of(ROWS_ACCESSED, watcher.getRowsAccessed());
+
             final List<ResultGroup> groups = new ArrayList<>();
 
             for (final AggregationOutput group : result.getResult()) {
@@ -552,7 +558,7 @@ public class LocalMetricManager implements MetricManager {
                             "The number of result groups is more than the allowed limit of " +
                                 groupLimit));
                         return new FullQuery(trace, errorsBuilder.build(), ImmutableList.of(),
-                            Statistics.empty(),
+                            baseStatistics,
                             new ResultLimits(limitsBuilder.add(ResultLimit.GROUP).build()),
                             dataDensity);
                     }
@@ -565,7 +571,8 @@ public class LocalMetricManager implements MetricManager {
                     aggregation.cadence()));
             }
 
-            return new FullQuery(trace, errorsBuilder.build(), groups, result.getStatistics(),
+            return new FullQuery(trace, errorsBuilder.build(), groups,
+                baseStatistics.merge(result.getStatistics()),
                 new ResultLimits(limitsBuilder.build()), dataDensity);
         }
 
@@ -600,6 +607,8 @@ public class LocalMetricManager implements MetricManager {
         private final AtomicLong read = new AtomicLong();
         private final AtomicLong retained = new AtomicLong();
 
+        private final LongAdder rowsAccessed = new LongAdder();
+
         @Override
         public void readData(long n) {
             read.addAndGet(n);
@@ -632,6 +641,11 @@ public class LocalMetricManager implements MetricManager {
         @Override
         public void accessedRows(final long n) {
             dataInMemoryReporter.reportRowsAccessed(n);
+            rowsAccessed.add(n);
+        }
+
+        public long getRowsAccessed() {
+            return rowsAccessed.longValue();
         }
 
         @Override
