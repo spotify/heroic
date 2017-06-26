@@ -440,9 +440,10 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             }));
         }
 
-        return async
-            .collect(fetches, FetchData.collect(FETCH))
-            .onResolved(ignore -> watcher.accessedRows(prepared.size()));
+        return async.collect(fetches, FetchData.collect(FETCH)).directTransform(result -> {
+            watcher.accessedRows(prepared.size());
+            return result;
+        });
     }
 
     private AsyncFuture<FetchData.Result> fetchBatch(
@@ -478,9 +479,10 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                 return FetchData.result(fs.end());
             }));
         }
-        return async
-            .collect(fetches, FetchData.collectResult(FETCH))
-            .onResolved(ignore -> watcher.accessedRows(prepared.size()));
+        return async.collect(fetches, FetchData.collectResult(FETCH)).directTransform(result -> {
+            watcher.accessedRows(prepared.size());
+            return result;
+        });
     }
 
     <T> ByteString serialize(T rowKey, Serializer<T> serializer) throws IOException {
