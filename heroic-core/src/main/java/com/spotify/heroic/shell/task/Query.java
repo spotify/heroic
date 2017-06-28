@@ -44,6 +44,7 @@ import com.spotify.heroic.shell.TaskUsage;
 import dagger.Component;
 import eu.toolchain.async.AsyncFuture;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -95,9 +96,16 @@ public class Query implements ShellTask {
 
         QueryBuilder queryBuilder =
             query.newQueryFromString(queryString).options(options).rangeIfAbsent(range);
+
+        FeatureSet features = FeatureSet.empty();
+
         if (params.slicedDataFetch) {
-            queryBuilder.features(Optional.of(FeatureSet.of(Feature.SLICED_DATA_FETCH)));
+            features = features.combine(FeatureSet.of(Feature.SLICED_DATA_FETCH));
         }
+
+        features = features.combine(FeatureSet.create(new HashSet<>(params.features)));
+        queryBuilder.features(Optional.of(features));
+
         return query
             .useGroup(params.group)
             .query(queryBuilder.build(), queryContext)
@@ -139,9 +147,12 @@ public class Query implements ShellTask {
         @Option(name = "--tracing", usage = "Enable extensive tracing")
         private boolean tracing = false;
 
+        @Option(name = "--feature",
+            usage = "Feature to enable (or disable with \"-com.spotify.heroic.feature_name\")")
+        private List<String> features = new ArrayList<>();
+
         @Option(name = "--sliced-data-fetch", usage = "Enable sliced data fetch")
         private boolean slicedDataFetch = false;
-
 
         @Option(name = "--data-limit", usage = "Enable data limiting")
         private Optional<Long> dataLimit = Optional.empty();

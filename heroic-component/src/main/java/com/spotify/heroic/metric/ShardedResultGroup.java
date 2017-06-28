@@ -23,6 +23,7 @@ package com.spotify.heroic.metric;
 
 import static com.google.common.hash.Hashing.murmur3_32;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.hash.HashFunction;
@@ -49,6 +50,7 @@ public final class ShardedResultGroup {
     private final MetricCollection metrics;
     private final long cadence;
 
+    @JsonIgnore
     public boolean isEmpty() {
         return metrics.isEmpty();
     }

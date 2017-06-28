@@ -70,6 +70,7 @@
     <slf4j.version>1.7.21</slf4j.version>
     <junit.version>4.12</junit.version>
     <hamcrest.version>2.0.0.0</hamcrest.version>
+    <folsom.version>0.7.3</folsom.version>
   </properties>
 
   <profiles>
@@ -248,6 +249,7 @@
       <modules>
         <module>repackaged/bigtable</module>
         <module>repackaged/datastax</module>
+        <module>repackaged/folsom</module>
       </modules>
     </profile>
   </profiles>
@@ -717,6 +719,13 @@
         <groupId>org.antlr</groupId>
         <artifactId>antlr4-runtime</artifactId>
         <version>${antlr.version}</version>
+      </dependency>
+
+      <!-- repackaged memcached client -->
+      <dependency>
+        <groupId>com.spotify.heroic.repackaged</groupId>
+        <artifactId>folsom</artifactId>
+        <version>${folsom.version}</version>
       </dependency>
 
       <dependency>
