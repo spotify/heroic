@@ -275,7 +275,11 @@ public class CoreQueryManager implements QueryManager {
                         })
                         .directTransform(QueryResultPart.fromResultGroup(shard));
 
-                    futures.add(queryPart);
+                    if (!shard.isDarkload()) {
+                        // Stash the future to be able to gather result from all shards.
+                        // Except if this shard is a darkload shard, then we will just fire & forget
+                        futures.add(queryPart);
+                    }
                 }
 
                 final OptionalLimit limit = options.getGroupLimit().orElse(groupLimit);
