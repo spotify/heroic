@@ -33,6 +33,7 @@ import com.spotify.folsom.MemcacheClientBuilder;
 import com.spotify.heroic.cache.CacheComponent;
 import com.spotify.heroic.cache.CacheModule;
 import com.spotify.heroic.cache.CacheScope;
+import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
@@ -51,16 +52,15 @@ import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.inject.Named;
 import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
 @Module
+@RequiredArgsConstructor
 public class MemcachedCacheModule implements CacheModule {
     public static final String DEFAULT_ADDRESS = "localhost:11211";
 
     private final List<String> addresses;
-
-    public MemcachedCacheModule(final List<String> addresses) {
-        this.addresses = addresses;
-    }
+    private final Optional<Duration> maxTtl;
 
     @Override
     public CacheComponent module(PrimaryComponent primary) {
@@ -140,6 +140,13 @@ public class MemcachedCacheModule implements CacheModule {
         };
     }
 
+    @Provides
+    @Named("maxTtl")
+    @CacheScope
+    public Optional<Duration> maxTtl() {
+        return maxTtl;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -147,6 +154,7 @@ public class MemcachedCacheModule implements CacheModule {
     @NoArgsConstructor
     public static class Builder implements CacheModule.Builder {
         private Optional<List<String>> addresses = Optional.empty();
+        private Optional<Duration> maxTtl = Optional.empty();
 
         @JsonCreator
         public Builder(@JsonProperty("addresses") final Optional<List<String>> addresses) {
@@ -158,11 +166,16 @@ public class MemcachedCacheModule implements CacheModule {
             return this;
         }
 
+        public Builder maxTtl(final Duration maxTtl) {
+            this.maxTtl = Optional.of(maxTtl);
+            return this;
+        }
+
         @Override
         public CacheModule build() {
             final List<String> addresses =
                 this.addresses.orElseGet(() -> Collections.singletonList(DEFAULT_ADDRESS));
-            return new MemcachedCacheModule(addresses);
+            return new MemcachedCacheModule(addresses, maxTtl);
         }
     }
 }

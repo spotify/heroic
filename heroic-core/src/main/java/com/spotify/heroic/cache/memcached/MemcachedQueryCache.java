@@ -36,6 +36,7 @@ import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.cache.CacheScope;
 import com.spotify.heroic.cache.QueryCache;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.Feature;
 import com.spotify.heroic.common.Features;
 import com.spotify.heroic.filter.Filter;
@@ -53,6 +54,7 @@ import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ResolvableFuture;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
@@ -73,17 +75,20 @@ public class MemcachedQueryCache implements QueryCache {
     private final ObjectMapper mapper;
     private final AsyncFramework async;
     private final Clock clock;
+    private final Optional<Integer> maxTtlSeconds;
 
     @Inject
     public MemcachedQueryCache(
         final Managed<MemcacheClient<byte[]>> client,
         @Named(HeroicMappers.APPLICATION_JSON_INTERNAL) final ObjectMapper mapper,
-        final AsyncFramework async, final Clock clock
+        final AsyncFramework async, final Clock clock,
+        @Named("maxTtl") final Optional<Duration> maxTtl
     ) {
         this.client = client;
         this.mapper = mapper;
         this.async = async;
         this.clock = clock;
+        this.maxTtlSeconds = maxTtl.map(d -> (int) d.convert(TimeUnit.SECONDS));
     }
 
     @Override
@@ -224,7 +229,9 @@ public class MemcachedQueryCache implements QueryCache {
     private int calculateTtl(final long cadence) {
         final long timeInCadence = clock.currentTimeMillis() % cadence;
         final long timeUntilExpiry = cadence - timeInCadence;
-        return (int) TimeUnit.SECONDS.convert(timeUntilExpiry, TimeUnit.MILLISECONDS);
+        final int candidate =
+            (int) TimeUnit.SECONDS.convert(timeUntilExpiry, TimeUnit.MILLISECONDS);
+        return maxTtlSeconds.map(max -> Math.min(max, candidate)).orElse(candidate);
     }
 
     private String buildCacheKey(final FullQuery.Request request) {
