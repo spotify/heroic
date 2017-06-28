@@ -81,7 +81,7 @@ public class ClusterManagerModule {
     @Provides
     @ClusterScope
     public NodeMetadata localMetadata(final ServiceInfo service) {
-        return new NodeMetadata(0, id, tags, service);
+        return new NodeMetadata(0, id, tags, service, false);
     }
 
     @Provides

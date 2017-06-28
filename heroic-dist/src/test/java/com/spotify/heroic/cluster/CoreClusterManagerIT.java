@@ -212,7 +212,7 @@ public class CoreClusterManagerIT extends AbstractLocalClusterIT {
 
                 if (id.isPresent()) {
                     node = new NodeMetadata(node.getVersion(), id.get(), node.getTags(),
-                        node.getService());
+                        node.getService(), false);
                 }
 
                 return node;
