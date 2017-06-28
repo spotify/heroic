@@ -280,9 +280,8 @@ public class CoreQueryManager implements QueryManager {
 
                 final OptionalLimit limit = options.getGroupLimit().orElse(groupLimit);
 
-                final AsyncFuture<QueryResult> collect =
-                    async.collect(futures, QueryResult.collectParts(QUERY, range, combiner, limit));
-                return collect;
+                return async.collect(futures,
+                    QueryResult.collectParts(QUERY, range, combiner, limit));
             });
 
             return query.directTransform(result -> {

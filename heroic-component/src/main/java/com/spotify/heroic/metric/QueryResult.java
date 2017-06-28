@@ -61,6 +61,11 @@ public class QueryResult {
     private final long preAggregationSampleSize;
 
     /**
+     * Indicates if the result was from a cached source or not.
+     */
+    private final boolean cached;
+
+    /**
      * Collect result parts into a complete result.
      *
      * @param range The range which the result represents.
@@ -100,13 +105,13 @@ public class QueryResult {
             }
 
             return new QueryResult(range, groupLimit.limitList(groups), errors, trace,
-                new ResultLimits(limits.build()), preAggregationSampleSize);
+                new ResultLimits(limits.build()), preAggregationSampleSize, false);
         };
     }
 
     public static QueryResult error(DateRange range, String errorMessage, QueryTrace trace) {
         return new QueryResult(range, Collections.emptyList(),
             Collections.singletonList(QueryError.fromMessage(errorMessage)), trace,
-            ResultLimits.of(), 0);
+            ResultLimits.of(), 0, false);
     }
 }

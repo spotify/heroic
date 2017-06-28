@@ -8,7 +8,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.Histogram;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.test.FakeModuleLoader;
@@ -80,7 +79,7 @@ public class BasicSerializationTest {
 
         final QueryMetricsResponse toVerify =
             new QueryMetricsResponse(queryId, range, result, errors, trace, limits,
-                Optional.empty());
+                Optional.empty(), false);
 
         assertSerialization("QueryMetricsResponse.json", toVerify);
     }

@@ -157,7 +157,7 @@ public class QueryResource {
                     final QueryMetricsResponse qmr =
                         new QueryMetricsResponse(queryContext.getQueryId(), r.getRange(),
                             r.getGroups(), r.getErrors(), r.getTrace(), r.getLimits(),
-                            Optional.of(r.getPreAggregationSampleSize()));
+                            Optional.of(r.getPreAggregationSampleSize()), r.isCached());
 
                     queryLogger.logFinalResponse(queryContext, qmr);
 
@@ -182,7 +182,7 @@ public class QueryResource {
             QueryMetricsResponse qmr =
                 new QueryMetricsResponse(queryContext.getQueryId(), r.getRange(), r.getGroups(),
                     r.getErrors(), r.getTrace(), r.getLimits(),
-                    Optional.of(r.getPreAggregationSampleSize()));
+                    Optional.of(r.getPreAggregationSampleSize()), r.isCached());
             queryLogger.logFinalResponse(queryContext, qmr);
             return qmr;
         });

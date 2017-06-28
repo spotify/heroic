@@ -53,7 +53,6 @@ import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ResolvableFuture;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
@@ -72,7 +71,6 @@ public class MemcachedQueryCache implements QueryCache {
 
     private final Managed<MemcacheClient<byte[]>> client;
     private final ObjectMapper mapper;
-    private final ExecutorService executor;
     private final AsyncFramework async;
     private final Clock clock;
 
@@ -80,11 +78,10 @@ public class MemcachedQueryCache implements QueryCache {
     public MemcachedQueryCache(
         final Managed<MemcacheClient<byte[]>> client,
         @Named(HeroicMappers.APPLICATION_JSON_INTERNAL) final ObjectMapper mapper,
-        final ExecutorService executor, final AsyncFramework async, final Clock clock
+        final AsyncFramework async, final Clock clock
     ) {
         this.client = client;
         this.mapper = mapper;
-        this.executor = executor;
         this.async = async;
         this.clock = clock;
     }
@@ -142,7 +139,7 @@ public class MemcachedQueryCache implements QueryCache {
                     final QueryResult queryResult =
                         new QueryResult(cachedResult.getRange(), cachedResult.getGroups(),
                             ImmutableList.of(), watch.end(), cachedResult.getLimits(),
-                            cachedResult.getPreAggregationSampleSize());
+                            cachedResult.getPreAggregationSampleSize(), true);
 
                     future.resolve(queryResult);
                 }
