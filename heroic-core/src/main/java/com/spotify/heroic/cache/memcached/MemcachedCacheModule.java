@@ -21,34 +21,161 @@
 
 package com.spotify.heroic.cache.memcached;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.net.HostAndPort;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.spotify.folsom.BinaryMemcacheClient;
+import com.spotify.folsom.ConnectFuture;
+import com.spotify.folsom.MemcacheClient;
+import com.spotify.folsom.MemcacheClientBuilder;
 import com.spotify.heroic.cache.CacheComponent;
 import com.spotify.heroic.cache.CacheModule;
 import com.spotify.heroic.cache.CacheScope;
-import com.spotify.heroic.cache.memory.MemoryQueryCache;
+import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.dagger.PrimaryComponent;
+import com.spotify.heroic.lifecycle.LifeCycle;
+import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import dagger.Component;
+import dagger.Module;
+import dagger.Provides;
+import eu.toolchain.async.AsyncFramework;
+import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.Managed;
+import eu.toolchain.async.ManagedSetup;
+import eu.toolchain.async.ResolvableFuture;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import javax.annotation.Nullable;
+import javax.inject.Named;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
+@Module
+@RequiredArgsConstructor
 public class MemcachedCacheModule implements CacheModule {
+    public static final String DEFAULT_ADDRESS = "localhost:11211";
+
+    private final List<String> addresses;
+    private final Optional<Duration> maxTtl;
+
     @Override
     public CacheComponent module(PrimaryComponent primary) {
-        return DaggerMemcachedCacheModule_C.builder().primaryComponent(primary).build();
+        return DaggerMemcachedCacheModule_C
+            .builder()
+            .primaryComponent(primary)
+            .memcachedCacheModule(this)
+            .build();
     }
 
     @CacheScope
-    @Component(dependencies = PrimaryComponent.class)
+    @Component(modules = MemcachedCacheModule.class, dependencies = PrimaryComponent.class)
     interface C extends CacheComponent {
         @Override
-        MemoryQueryCache queryCache();
+        MemcachedQueryCache queryCache();
+
+        @Named("cache")
+        LifeCycle cacheLife();
+    }
+
+    @Provides
+    @CacheScope
+    public Managed<MemcacheClient<byte[]>> memcacheClient(final AsyncFramework async) {
+        return async.managed(new ManagedSetup<MemcacheClient<byte[]>>() {
+            @Override
+            public AsyncFuture<MemcacheClient<byte[]>> construct() throws Exception {
+                final List<HostAndPort> addresses = new ArrayList<>();
+
+                for (final String address : MemcachedCacheModule.this.addresses) {
+                    addresses.add(HostAndPort.fromString(address));
+                }
+
+                final BinaryMemcacheClient<byte[]> client = MemcacheClientBuilder
+                    .newByteArrayClient()
+                    .withAddresses(addresses)
+                    .connectBinary();
+
+                final ResolvableFuture<MemcacheClient<byte[]>> future = async.future();
+
+                Futures.addCallback(ConnectFuture.connectFuture(client),
+                    new FutureCallback<Void>() {
+                        @Override
+                        public void onSuccess(@Nullable final Void result) {
+                            future.resolve(client);
+                        }
+
+                        @Override
+                        public void onFailure(final Throwable cause) {
+                            future.fail(cause);
+                        }
+                    });
+
+                return future;
+            }
+
+            @Override
+            public AsyncFuture<Void> destruct(
+                final MemcacheClient<byte[]> value
+            ) throws Exception {
+                return async.call(() -> {
+                    value.shutdown();
+                    return null;
+                });
+            }
+        });
+    }
+
+    @Provides
+    @Named("cache")
+    @CacheScope
+    public LifeCycle life(
+        final LifeCycleRegistry registry, final Managed<MemcacheClient<byte[]>> client
+    ) {
+        return () -> {
+            registry.start(client::start);
+            registry.stop(client::stop);
+        };
+    }
+
+    @Provides
+    @Named("maxTtl")
+    @CacheScope
+    public Optional<Duration> maxTtl() {
+        return maxTtl;
     }
 
     public static Builder builder() {
         return new Builder();
     }
 
+    @NoArgsConstructor
     public static class Builder implements CacheModule.Builder {
+        private Optional<List<String>> addresses = Optional.empty();
+        private Optional<Duration> maxTtl = Optional.empty();
+
+        @JsonCreator
+        public Builder(@JsonProperty("addresses") final Optional<List<String>> addresses) {
+            this.addresses = addresses;
+        }
+
+        public Builder addresses(final List<String> addresses) {
+            this.addresses = Optional.of(addresses);
+            return this;
+        }
+
+        public Builder maxTtl(final Duration maxTtl) {
+            this.maxTtl = Optional.of(maxTtl);
+            return this;
+        }
+
         @Override
         public CacheModule build() {
-            return new MemcachedCacheModule();
+            final List<String> addresses =
+                this.addresses.orElseGet(() -> Collections.singletonList(DEFAULT_ADDRESS));
+            return new MemcachedCacheModule(addresses, maxTtl);
         }
     }
 }

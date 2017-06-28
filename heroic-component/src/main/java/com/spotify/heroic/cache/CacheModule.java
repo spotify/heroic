@@ -24,7 +24,7 @@ package com.spotify.heroic.cache;
 import com.spotify.heroic.dagger.PrimaryComponent;
 
 public interface CacheModule {
-    public CacheComponent module(PrimaryComponent primary);
+    CacheComponent module(PrimaryComponent primary);
 
     interface Builder {
         CacheModule build();

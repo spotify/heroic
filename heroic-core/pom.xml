@@ -119,6 +119,11 @@
       <version>0.5.1</version>
     </dependency>
 
+    <dependency>
+      <groupId>com.spotify.heroic.repackaged</groupId>
+      <artifactId>folsom</artifactId>
+    </dependency>
+
     <!-- used for testing -->
     <dependency>
       <groupId>com.spotify.heroic</groupId>

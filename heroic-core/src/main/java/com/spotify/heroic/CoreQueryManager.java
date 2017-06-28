@@ -262,7 +262,7 @@ public class CoreQueryManager implements QueryManager {
 
             queryLogger.logOutgoingRequestToShards(queryContext, request);
 
-            return queryCache.load(request, () -> {
+            final AsyncFuture<QueryResult> query = queryCache.load(request, () -> {
                 for (final ClusterShard shard : shards) {
                     final QueryTrace.NamedWatch shardLocalWatch =
                         shardWatch.extendIdentifier(shard.getShard().toString());
@@ -280,14 +280,14 @@ public class CoreQueryManager implements QueryManager {
 
                 final OptionalLimit limit = options.getGroupLimit().orElse(groupLimit);
 
-                return async
-                    .collect(futures, QueryResult.collectParts(QUERY, range, combiner, limit))
-                    .directTransform(result -> {
-                        reportCompletedQuery(result, fullQueryWatch);
-                        return result;
-                    })
-                    .onDone(onDoneQueryReporter);
+                return async.collect(futures,
+                    QueryResult.collectParts(QUERY, range, combiner, limit));
             });
+
+            return query.directTransform(result -> {
+                reportCompletedQuery(result, fullQueryWatch);
+                return result;
+            }).onDone(onDoneQueryReporter);
         }
 
         private void reportCompletedQuery(

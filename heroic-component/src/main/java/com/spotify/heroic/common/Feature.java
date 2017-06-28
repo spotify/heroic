@@ -67,7 +67,12 @@ public enum Feature {
      * Use the legacy bucket strategy by default where the resulting value is at the end of the
      * timestamp of the bucket.
      */
-    END_BUCKET("com.spotify.heroic.end_bucket_stategy");
+    END_BUCKET("com.spotify.heroic.end_bucket_stategy"),
+
+    /**
+     * Permit caching of the query results.
+     */
+    CACHE_QUERY("com.spotify.heroic.cache_query");
 
     private final String id;
 
