@@ -79,7 +79,7 @@ public class BasicSerializationTest {
 
         final QueryMetricsResponse toVerify =
             new QueryMetricsResponse(queryId, range, result, errors, trace, limits,
-                Optional.empty(), false);
+                Optional.empty(), Optional.empty());
 
         assertSerialization("QueryMetricsResponse.json", toVerify);
     }

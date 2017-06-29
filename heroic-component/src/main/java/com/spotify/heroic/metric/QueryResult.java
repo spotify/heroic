@@ -30,6 +30,7 @@ import eu.toolchain.async.Collector;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import lombok.Data;
 
 @Data
@@ -61,9 +62,19 @@ public class QueryResult {
     private final long preAggregationSampleSize;
 
     /**
-     * Indicates if the result was from a cached source or not.
+     * Extra information about caching.
      */
-    private final boolean cached;
+    private final Optional<CacheInfo> cache;
+
+    /**
+     * Add cache info to the result.
+     * @param cache cache info to add.
+     * @return an copied instanceof query result with cache info added
+     */
+    public QueryResult withCache(final CacheInfo cache) {
+        return new QueryResult(range, groups, errors, trace, limits, preAggregationSampleSize,
+            Optional.of(cache));
+    }
 
     /**
      * Collect result parts into a complete result.
@@ -105,13 +116,13 @@ public class QueryResult {
             }
 
             return new QueryResult(range, groupLimit.limitList(groups), errors, trace,
-                new ResultLimits(limits.build()), preAggregationSampleSize, false);
+                new ResultLimits(limits.build()), preAggregationSampleSize, Optional.empty());
         };
     }
 
     public static QueryResult error(DateRange range, String errorMessage, QueryTrace trace) {
         return new QueryResult(range, Collections.emptyList(),
             Collections.singletonList(QueryError.fromMessage(errorMessage)), trace,
-            ResultLimits.of(), 0, false);
+            ResultLimits.of(), 0, Optional.empty());
     }
 }

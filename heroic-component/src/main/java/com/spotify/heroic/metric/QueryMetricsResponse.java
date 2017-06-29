@@ -67,7 +67,7 @@ public class QueryMetricsResponse {
     private final Optional<Long> preAggregationSampleSize;
 
     @NonNull
-    private final boolean cached;
+    private final Optional<CacheInfo> cache;
 
     public static class Serializer extends JsonSerializer<QueryMetricsResponse> {
         @Override
@@ -83,7 +83,9 @@ public class QueryMetricsResponse {
             g.writeObjectField("range", response.getRange());
             g.writeObjectField("trace", response.getTrace());
             g.writeObjectField("limits", response.getLimits());
-            g.writeBooleanField("cached", response.isCached());
+            g.writeBooleanField("cached",
+                response.getCache().map(CacheInfo::isCached).orElse(false));
+            g.writeObjectField("cache", response.getCache());
 
             g.writeFieldName("commonTags");
             serializeCommonTags(g, common);
@@ -250,7 +252,7 @@ public class QueryMetricsResponse {
 
     public Summary summarize() {
         return new Summary(range, ShardedResultGroup.summarize(result), statistics, errors, trace,
-            limits, preAggregationSampleSize, cached);
+            limits, preAggregationSampleSize, cache);
     }
 
     // Only include data suitable to log to query log
@@ -263,6 +265,6 @@ public class QueryMetricsResponse {
         private final QueryTrace trace;
         private final ResultLimits limits;
         private final Optional<Long> preAggregationSampleSize;
-        private final boolean cached;
+        private final Optional<CacheInfo> cache;
     }
 }
