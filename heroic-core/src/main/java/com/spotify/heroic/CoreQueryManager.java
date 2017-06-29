@@ -38,9 +38,9 @@ import com.spotify.heroic.cluster.ClusterShard;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.Feature;
-import com.spotify.heroic.common.FeatureSet;
 import com.spotify.heroic.common.Features;
 import com.spotify.heroic.common.OptionalLimit;
+import com.spotify.heroic.conditionalfeatures.ConditionalFeatures;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.grammar.DefaultScope;
@@ -109,6 +109,7 @@ public class CoreQueryManager implements QueryManager {
     private final OptionalLimit groupLimit;
     private final QueryReporter reporter;
     private final QueryLogger queryLogger;
+    private final Optional<ConditionalFeatures> conditionalFeatures;
 
     private final long smallQueryThreshold;
 
@@ -118,6 +119,7 @@ public class CoreQueryManager implements QueryManager {
         final ClusterManager cluster, final QueryParser parser, final QueryCache queryCache,
         final AggregationFactory aggregations, @Named("groupLimit") final OptionalLimit groupLimit,
         @Named("smallQueryThreshold") final long smallQueryThreshold, final QueryReporter reporter,
+        final Optional<ConditionalFeatures> conditionalFeatures,
         final QueryLoggerFactory queryLoggerFactory
     ) {
         this.features = features;
@@ -130,6 +132,7 @@ public class CoreQueryManager implements QueryManager {
         this.groupLimit = groupLimit;
         this.reporter = reporter;
         this.smallQueryThreshold = smallQueryThreshold;
+        this.conditionalFeatures = conditionalFeatures;
         this.queryLogger = queryLoggerFactory.create("CoreQueryManager");
     }
 
@@ -221,8 +224,7 @@ public class CoreQueryManager implements QueryManager {
 
             final AggregationInstance aggregationInstance;
 
-            final Features features = CoreQueryManager.this.features.applySet(
-                q.getFeatures().orElseGet(FeatureSet::empty));
+            final Features features = requestFeatures(q, queryContext);
 
             boolean isDistributed = features.hasFeature(Feature.DISTRIBUTED_AGGREGATIONS);
 
@@ -420,6 +422,14 @@ public class CoreQueryManager implements QueryManager {
                 return fullQuery.withTrace(newTrace);
             };
         }
+    }
+
+    private Features requestFeatures(final Query q, final QueryContext context) {
+        // apply conditional features to defaults, if present.
+        final Features configured =
+            conditionalFeatures.map(c -> features.applySet(c.match(context))).orElse(features);
+        // apply rules from query last, to give them precedence.
+        return q.getFeatures().map(configured::applySet).orElse(configured);
     }
 
     private static <T> T retryTraceHandlerNoop(T result, List<QueryTrace> traces) {
