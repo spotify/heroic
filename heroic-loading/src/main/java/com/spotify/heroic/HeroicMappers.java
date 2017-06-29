@@ -39,6 +39,8 @@ import com.spotify.heroic.common.DurationSerialization;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.GroupsSerialization;
 import com.spotify.heroic.common.TypeNameMixin;
+import com.spotify.heroic.conditionalfeatures.ConditionalFeatures;
+import com.spotify.heroic.requestcondition.RequestCondition;
 import com.spotify.heroic.consumer.ConsumerModule;
 import com.spotify.heroic.filter.FilterRegistry;
 import com.spotify.heroic.generator.MetadataGenerator;
@@ -92,6 +94,8 @@ public final class HeroicMappers {
         m.addMixIn(StatisticsModule.class, TypeNameMixin.class);
         m.addMixIn(QueryLoggingModule.class, TypeNameMixin.class);
         m.addMixIn(CacheModule.Builder.class, TypeNameMixin.class);
+        m.addMixIn(RequestCondition.class, TypeNameMixin.class);
+        m.addMixIn(ConditionalFeatures.class, TypeNameMixin.class);
 
         m.registerModule(commonSerializers());
 
