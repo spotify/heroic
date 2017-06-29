@@ -45,6 +45,7 @@ import lombok.extern.slf4j.Slf4j;
 public class ClusterShard {
     private static final QueryTrace.Identifier RETRY_BACKOFF =
         new QueryTrace.Identifier("retry-backoff");
+    private static final String DARKLOAD = "darkload";
 
     private final AsyncFramework async;
 
@@ -113,6 +114,10 @@ public class ClusterShard {
             .map(Object::toString)
             .collect(Collectors.toList());
         return nodes;
+    }
+
+    public boolean isDarkload() {
+        return shard.containsKey(DARKLOAD);
     }
 
     private List<QueryTrace> queryTracesFromRetries(
