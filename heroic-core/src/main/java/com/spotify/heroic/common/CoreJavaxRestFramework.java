@@ -24,13 +24,11 @@ package com.spotify.heroic.common;
 import com.spotify.heroic.ws.InternalErrorMessage;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.FutureDone;
-import lombok.extern.slf4j.Slf4j;
-
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.CompletionCallback;
 import javax.ws.rs.container.ConnectionCallback;
-import javax.ws.rs.container.TimeoutHandler;
 import javax.ws.rs.core.Response;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public final class CoreJavaxRestFramework implements JavaxRestFramework {
@@ -86,38 +84,24 @@ public final class CoreJavaxRestFramework implements JavaxRestFramework {
     }
 
     void doBind(final AsyncResponse response, final AsyncFuture<?> callback) {
-        response.setTimeoutHandler(new TimeoutHandler() {
-            @Override
-            public void handleTimeout(AsyncResponse asyncResponse) {
-                log.warn("Client timed out");
-                callback.cancel();
-            }
+        response.setTimeoutHandler(asyncResponse -> {
+            log.debug("client timed out");
+            callback.cancel();
         });
 
-        response.register(new CompletionCallback() {
-            @Override
-            public void onComplete(Throwable throwable) {
-                log.warn("Client completed");
-                callback.cancel();
-            }
+        response.register((CompletionCallback) throwable -> {
+            log.debug("client completed");
+            callback.cancel();
         });
 
-        response.register(new ConnectionCallback() {
-            @Override
-            public void onDisconnect(AsyncResponse disconnected) {
-                log.warn("Client disconnected");
-                callback.cancel();
-            }
+        response.register((ConnectionCallback) disconnected -> {
+            log.debug("client disconnected");
+            callback.cancel();
         });
     }
 
     static final Resume<? extends Object, ? extends Object> PASSTHROUGH =
-        new Resume<Object, Object>() {
-            @Override
-            public Object resume(Object value) throws Exception {
-                return value;
-            }
-        };
+        (Resume<Object, Object>) value -> value;
 
     @Override
     @SuppressWarnings("unchecked")
