@@ -372,24 +372,7 @@ public class HeroicCore implements HeroicConfiguration {
 
         final QueryLoggingComponent queryLogging = config.getQueryLogging().component(primary);
 
-        final Optional<HttpServer> server;
-        if (setupService) {
-            final InetSocketAddress bindAddress = setupBindAddress(config);
-
-            final HttpServerComponent serverComponent = DaggerHttpServerComponent
-                .builder()
-                .primaryComponent(primary)
-                .httpServerModule(new HttpServerModule(bindAddress, config.isEnableCors(),
-                    config.getCorsAllowOrigin(), config.getConnectors()))
-                .build();
-
-            // Trigger life cycle registration
-            life.add(serverComponent.life());
-
-            server = Optional.of(serverComponent.server());
-        } else {
-            server = Optional.empty();
-        }
+        final Optional<HttpServer> server = setupServer(config, life, primary);
 
         final CacheComponent cache = config.getCache().module(primary);
         life.add(cache.cacheLife());
@@ -503,6 +486,28 @@ public class HeroicCore implements HeroicConfiguration {
             .clusterComponent(cluster)
             .generatorComponent(generator)
             .build();
+    }
+
+    private Optional<HttpServer> setupServer(
+        final HeroicConfig config, final List<LifeCycle> life, final CorePrimaryComponent primary
+    ) {
+        if (!setupService) {
+            return Optional.empty();
+        }
+
+        final InetSocketAddress bindAddress = setupBindAddress(config);
+
+        final HttpServerComponent serverComponent = DaggerHttpServerComponent
+            .builder()
+            .primaryComponent(primary)
+            .httpServerModule(new HttpServerModule(bindAddress, config.isEnableCors(),
+                config.getCorsAllowOrigin(), config.getConnectors()))
+            .build();
+
+        // Trigger life cycle registration
+        life.add(serverComponent.life());
+
+        return Optional.of(serverComponent.server());
     }
 
     private Optional<ShellServerModule> buildShellServer(final HeroicConfig config) {
