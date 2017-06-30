@@ -29,6 +29,7 @@ import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.spotify.folsom.MemcacheClient;
+import com.spotify.folsom.MemcacheStatus;
 import com.spotify.heroic.HeroicMappers;
 import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.cache.CacheScope;
@@ -49,10 +50,15 @@ import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ResolvableFuture;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -62,6 +68,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @CacheScope
 public class MemcachedQueryCache implements QueryCache {
+    private static final String PREFIX = "query.gz/";
+
     private static final QueryTrace.Identifier IDENTIFIER =
         QueryTrace.identifier(MemcachedQueryCache.class);
 
@@ -128,8 +136,9 @@ public class MemcachedQueryCache implements QueryCache {
 
                     final CachedResult cachedResult;
 
-                    try {
-                        cachedResult = mapper.readValue(result, CachedResult.class);
+                    try (final InputStream input = new GZIPInputStream(
+                        new ByteArrayInputStream(result))) {
+                        cachedResult = mapper.readValue(input, CachedResult.class);
                     } catch (final Exception e) {
                         log.error("{}: failed to deserialize value from cache", key, e);
                         // fallback to regular request
@@ -182,6 +191,8 @@ public class MemcachedQueryCache implements QueryCache {
                 // TODO: partial result caching for successful shards?
                 if (result.getErrors().isEmpty()) {
                     storeResult(key, ttl, result);
+                } else {
+                    log.warn("{}: not storing since response contains errors", key);
                 }
             }
 
@@ -201,6 +212,7 @@ public class MemcachedQueryCache implements QueryCache {
      */
     private void storeResult(final String key, final int ttl, final QueryResult queryResult) {
         if (ttl <= 0) {
+            log.warn("{}: not storing due to low ttl ({}s)", key, ttl);
             return;
         }
 
@@ -208,21 +220,41 @@ public class MemcachedQueryCache implements QueryCache {
             new CachedResult(queryResult.getRange(), queryResult.getGroups(),
                 queryResult.getPreAggregationSampleSize(), queryResult.getLimits());
 
-        final byte[] bytes;
+        final ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
 
-        try {
-            bytes = mapper.writeValueAsBytes(cachedResult);
+        try (final GZIPOutputStream out = new GZIPOutputStream(bytesOut)) {
+            mapper.writeValue(out, cachedResult);
         } catch (final Exception e) {
             log.error("failed to serialize cached results", e);
             return;
         }
 
+        final byte[] bytes = bytesOut.toByteArray();
+
         final Borrowed<MemcacheClient<byte[]>> borrowed = client.borrow();
 
-        if (borrowed.isValid()) {
-            log.debug("{}: storing with ttl ({}s)", key, ttl);
-            borrowed.get().set(key, bytes, ttl);
+        if (!borrowed.isValid()) {
+            log.warn("{}: client not available", key);
+            return;
         }
+
+        log.debug("{}: storing ({} bytes) with ttl ({}s)", key, bytes.length, ttl);
+
+        Futures.addCallback(borrowed.get().set(key, bytes, ttl),
+            new FutureCallback<MemcacheStatus>() {
+                @Override
+                public void onSuccess(@Nullable final MemcacheStatus result) {
+                    log.info("{}: stored ({} bytes) with ttl ({}s)", key, bytes.length, ttl);
+                    borrowed.release();
+                }
+
+                @Override
+                public void onFailure(final Throwable e) {
+                    log.error("{}: failed to store ({} bytes) with ttl ({}s)", key, bytes.length,
+                        ttl, e);
+                    borrowed.release();
+                }
+            });
     }
 
     private int calculateTtl(final long cadence) {
