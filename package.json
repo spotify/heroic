@@ -9,8 +9,8 @@
     "test": "./lingon.js build && ./node_modules/karma/bin/karma start test/karma.conf.js"
   },
   "devDependencies": {
-    "bower": "1.7.9",
-    "gulp-autoprefixer": "3.1.1",
+    "bower": "1.8.0",
+    "gulp-autoprefixer": "4.0.0",
     "gulp-ng-annotate": "^2.0.0",
     "lingon": "2.4.x",
     "lingon-ng-html2js": "^0.1.6"
