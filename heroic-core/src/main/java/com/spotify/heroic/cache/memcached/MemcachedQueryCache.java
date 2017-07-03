@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.cache.memcached;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.hash.HashFunction;
@@ -31,18 +30,14 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.spotify.folsom.MemcacheClient;
 import com.spotify.heroic.HeroicMappers;
-import com.spotify.heroic.QueryOptions;
-import com.spotify.heroic.aggregation.AggregationInstance;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.cache.CacheScope;
 import com.spotify.heroic.cache.QueryCache;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.Feature;
-import com.spotify.heroic.common.Features;
-import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.CacheInfo;
 import com.spotify.heroic.metric.FullQuery;
-import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.ResultLimits;
@@ -240,39 +235,8 @@ public class MemcachedQueryCache implements QueryCache {
 
     private String buildCacheKey(final FullQuery.Request request) {
         final Hasher hasher = HASH_FUNCTION.newHasher();
-
-        final CacheKey key =
-            new CacheKey(request.getSource(), request.getFilter(), request.getRange(),
-                request.getAggregation(), request.getOptions(), request.getFeatures());
-
-        final byte[] bytes;
-
-        try {
-            bytes = mapper.writeValueAsBytes(key);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-
-        hasher.putBytes(bytes);
-
-        return hasher.hash().toString();
-    }
-
-    /**
-     * Same as FullQuery.Request minus ClientContext since it doesn't determine structure of data.
-     * <p>
-     * TODO: needs to include shard topology since it's different for different topologies.
-     *
-     * @see com.spotify.heroic.metric.FullQuery.Request
-     */
-    @Data
-    public static class CacheKey {
-        private final MetricType source;
-        private final Filter filter;
-        private final DateRange range;
-        private final AggregationInstance aggregation;
-        private final QueryOptions options;
-        private final Features features;
+        request.hashTo(new ObjectHasher(hasher));
+        return PREFIX + hasher.hash().toString();
     }
 
     /**
