@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.filter;
 
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.Series;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -69,6 +70,11 @@ public class FalseFilter implements Filter {
     @Override
     public String toDSL() {
         return "false";
+    }
+
+    @Override
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(getClass());
     }
 
     public static FalseFilter get() {

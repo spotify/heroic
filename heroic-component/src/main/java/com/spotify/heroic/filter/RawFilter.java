@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.filter;
 
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.Series;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -70,5 +71,12 @@ public class RawFilter implements Filter {
     @Override
     public String toDSL() {
         throw new RuntimeException("raw filter cannot be converted to DSL");
+    }
+
+    @Override
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(getClass(), () -> {
+            hasher.putField("filter", filter, hasher.string());
+        });
     }
 }
