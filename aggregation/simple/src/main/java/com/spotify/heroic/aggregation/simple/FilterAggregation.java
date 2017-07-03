@@ -22,6 +22,7 @@
 package com.spotify.heroic.aggregation.simple;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.AggregationOutput;
 import com.spotify.heroic.aggregation.AggregationResult;
@@ -86,6 +87,16 @@ public abstract class FilterAggregation implements AggregationInstance {
         DateRange range, RetainQuotaWatcher quotaWatcher, BucketStrategy bucketStrategy
     ) {
         return new Session(filterStrategy, INNER.session(range, quotaWatcher, bucketStrategy));
+    }
+
+    protected abstract void filterHashTo(final ObjectHasher hasher);
+
+    @Override
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(getClass(), () -> {
+            hasher.putField("filterStrategy", filterStrategy, hasher.with(FilterStrategy::hashTo));
+            filterHashTo(hasher);
+        });
     }
 
     private class Session implements AggregationSession {

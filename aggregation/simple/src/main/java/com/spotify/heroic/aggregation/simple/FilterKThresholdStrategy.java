@@ -21,14 +21,14 @@
 
 package com.spotify.heroic.aggregation.simple;
 
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.Point;
-import lombok.Data;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import lombok.Data;
 
 @Data
 public class FilterKThresholdStrategy implements FilterStrategy {
@@ -44,6 +44,14 @@ public class FilterKThresholdStrategy implements FilterStrategy {
             .map(Extreme::getFilterableMetrics)
             .map(FilterableMetrics::getData)
             .collect(Collectors.toList());
+    }
+
+    @Override
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(getClass(), () -> {
+            hasher.putField("filterType", filterType, hasher.enumValue());
+            hasher.putField("k", k, hasher.doubleValue());
+        });
     }
 
     @Data
