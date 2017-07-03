@@ -41,6 +41,7 @@ import com.spotify.heroic.cache.noop.NoopCacheModule;
 import com.spotify.heroic.cluster.ClusterManagerModule;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.FeatureSet;
+import com.spotify.heroic.conditionalfeatures.ConditionalFeatures;
 import com.spotify.heroic.consumer.ConsumerModule;
 import com.spotify.heroic.generator.CoreGeneratorModule;
 import com.spotify.heroic.ingestion.IngestionModule;
@@ -114,6 +115,7 @@ public class HeroicConfig {
     private final CoreGeneratorModule generator;
     private final StatisticsModule statistics;
     private final QueryLoggingModule queryLogging;
+    private final Optional<ConditionalFeatures> conditionalFeature;
 
     private final String version;
     private final String service;
@@ -194,6 +196,7 @@ public class HeroicConfig {
         private Optional<CoreGeneratorModule.Builder> generator = empty();
         private Optional<StatisticsModule> statistics = empty();
         private Optional<QueryLoggingModule> queryLogging = empty();
+        private Optional<ConditionalFeatures> conditionalFeatures = empty();
 
         private Optional<String> version = empty();
         private Optional<String> service = empty();
@@ -289,6 +292,11 @@ public class HeroicConfig {
             return this;
         }
 
+        public Builder conditionalFeatures(ConditionalFeatures conditionalFeatures) {
+            this.conditionalFeatures = of(conditionalFeatures);
+            return this;
+        }
+
         public Builder merge(Builder o) {
             // @formatter:off
             return new Builder(
@@ -314,6 +322,7 @@ public class HeroicConfig {
                 mergeOptional(generator, o.generator, CoreGeneratorModule.Builder::merge),
                 pickOptional(statistics, o.statistics),
                 pickOptional(queryLogging, o.queryLogging),
+                pickOptional(conditionalFeatures, o.conditionalFeatures),
                 pickOptional(service, o.service),
                 pickOptional(version, o.version)
             );
@@ -354,6 +363,7 @@ public class HeroicConfig {
                 generator.orElseGet(CoreGeneratorModule::builder).build(),
                 statistics.orElseGet(NoopStatisticsModule::new),
                 queryLogging.orElseGet(NoopQueryLoggingModule::new),
+                conditionalFeatures,
                 version.orElse(defaultVersion),
                 service.orElse(DEFAULT_SERVICE)
             );

@@ -26,10 +26,12 @@ import com.spotify.heroic.HeroicContext;
 import com.spotify.heroic.HeroicCoreInstance;
 import com.spotify.heroic.ShellTasks;
 import com.spotify.heroic.common.Features;
+import com.spotify.heroic.conditionalfeatures.ConditionalFeatures;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
 import com.spotify.heroic.statistics.HeroicReporter;
 
+import java.util.Optional;
 import javax.inject.Named;
 
 public interface PrimaryComponent extends EarlyComponent {
@@ -53,4 +55,6 @@ public interface PrimaryComponent extends EarlyComponent {
     LifeCycleManager lifeCycleManager();
 
     HeroicContext context();
+
+    Optional<ConditionalFeatures> conditionalFeatures();
 }

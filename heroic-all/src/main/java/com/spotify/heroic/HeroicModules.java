@@ -46,6 +46,9 @@ import java.util.Map;
 public class HeroicModules {
     // @formatter:off
     public static final List<HeroicModule> ALL_MODULES = ImmutableList.of(
+        new com.spotify.heroic.conditionalfeatures.Module(),
+        new com.spotify.heroic.requestcondition.Module(),
+
         new com.spotify.heroic.metric.datastax.Module(),
         new com.spotify.heroic.metric.memory.Module(),
 

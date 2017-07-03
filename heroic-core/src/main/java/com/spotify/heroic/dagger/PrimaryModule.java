@@ -33,6 +33,7 @@ import com.spotify.heroic.ShellTasks;
 import com.spotify.heroic.aggregation.AggregationRegistry;
 import com.spotify.heroic.common.FeatureSet;
 import com.spotify.heroic.common.Features;
+import com.spotify.heroic.conditionalfeatures.ConditionalFeatures;
 import com.spotify.heroic.grammar.CoreQueryParser;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.lifecycle.CoreLifeCycleManager;
@@ -44,6 +45,7 @@ import com.spotify.heroic.statistics.HeroicReporter;
 import dagger.Module;
 import dagger.Provides;
 import eu.toolchain.async.AsyncFramework;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 
 import javax.inject.Named;
@@ -57,6 +59,7 @@ public class PrimaryModule {
     private final HeroicCoreInstance instance;
     private final FeatureSet features;
     private final HeroicReporter reporter;
+    private final Optional<ConditionalFeatures> conditionalFeatures;
 
     @Provides
     @PrimaryScope
@@ -132,6 +135,12 @@ public class PrimaryModule {
     @PrimaryScope
     HeroicContext context(CoreHeroicContext context) {
         return context;
+    }
+
+    @Provides
+    @PrimaryScope
+    Optional<ConditionalFeatures> conditionalFeatures() {
+        return conditionalFeatures;
     }
 
     private SortedMap<String, ShellTask> setupTasks(
