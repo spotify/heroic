@@ -24,11 +24,13 @@ package com.spotify.heroic.common;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.ImmutableSet;
-import lombok.Data;
-
-import java.util.HashSet;
+import com.google.common.collect.ImmutableSortedSet;
+import com.spotify.heroic.ObjectHasher;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.function.Supplier;
+import lombok.Data;
 
 /**
  * A container for a set of features that provides convenience methods for accessing them.
@@ -38,12 +40,10 @@ public class Features {
     /**
      * Default set of features.
      */
-    public static final Features DEFAULT = Features.create(ImmutableSet.<Feature>builder()
-        .add(Feature.SHIFT_RANGE)
-        .add(Feature.END_BUCKET)
-        .build());
+    public static final Features DEFAULT = Features.create(
+        ImmutableSet.<Feature>builder().add(Feature.SHIFT_RANGE).add(Feature.END_BUCKET).build());
 
-    private final Set<Feature> features;
+    private final SortedSet<Feature> features;
 
     public boolean hasFeature(final Feature feature) {
         return features.contains(feature);
@@ -56,7 +56,7 @@ public class Features {
      * @return A new Feature with the given set applied.
      */
     public Features applySet(final FeatureSet featureSet) {
-        final Set<Feature> features = new HashSet<>(this.features);
+        final SortedSet<Feature> features = new TreeSet<>(this.features);
         features.addAll(featureSet.getEnabled());
         features.removeAll(featureSet.getDisabled());
         return new Features(features);
@@ -64,7 +64,7 @@ public class Features {
 
     @JsonCreator
     public static Features create(final Set<Feature> features) {
-        return new Features(features);
+        return new Features(new TreeSet<>(features));
     }
 
     @JsonValue
@@ -93,10 +93,16 @@ public class Features {
      * @return A new feature set.
      */
     public static Features empty() {
-        return new Features(ImmutableSet.of());
+        return new Features(ImmutableSortedSet.of());
     }
 
     public static Features of(final Feature... features) {
-        return new Features(ImmutableSet.copyOf(features));
+        return new Features(ImmutableSortedSet.copyOf(features));
+    }
+
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(this.getClass(), () -> {
+            hasher.putField("features", features, hasher.sortedSet(hasher.enumValue()));
+        });
     }
 }
