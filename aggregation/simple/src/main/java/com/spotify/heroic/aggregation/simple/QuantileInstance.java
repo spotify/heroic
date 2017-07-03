@@ -22,15 +22,15 @@
 package com.spotify.heroic.aggregation.simple;
 
 import com.google.common.collect.ImmutableSet;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.aggregation.BucketAggregationInstance;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
+import java.beans.ConstructorProperties;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
-
-import java.beans.ConstructorProperties;
 
 @Data
 @ToString(callSuper = true)
@@ -62,5 +62,11 @@ public class QuantileInstance extends BucketAggregationInstance<QuantileBucket> 
         }
 
         return new Point(bucket.timestamp(), value);
+    }
+
+    @Override
+    protected void bucketHashTo(final ObjectHasher hasher) {
+        hasher.putField("q", q, hasher.doubleValue());
+        hasher.putField("error", error, hasher.doubleValue());
     }
 }

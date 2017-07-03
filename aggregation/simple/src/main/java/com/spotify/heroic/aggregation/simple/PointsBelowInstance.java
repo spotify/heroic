@@ -24,7 +24,6 @@ package com.spotify.heroic.aggregation.simple;
 import java.beans.ConstructorProperties;
 
 public class PointsBelowInstance extends MetricMappingAggregation {
-
     @ConstructorProperties({"threshold"})
     public PointsBelowInstance(double threshold) {
         super(new FilterPointsThresholdStrategy(FilterKThresholdType.BELOW, threshold));

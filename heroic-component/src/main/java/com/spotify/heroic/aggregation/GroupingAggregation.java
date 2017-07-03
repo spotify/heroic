@@ -25,6 +25,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
@@ -99,6 +100,13 @@ public abstract class GroupingAggregation implements AggregationInstance {
     @Override
     public AggregationInstance reducer() {
         return newInstance(of, each.reducer());
+    }
+
+    @Override
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(getClass(), () -> {
+            hasher.putField("of", of, hasher.optional(hasher.list(hasher.string())));
+        });
     }
 
     @Override

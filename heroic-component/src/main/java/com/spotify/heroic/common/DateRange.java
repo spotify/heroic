@@ -24,6 +24,7 @@ package com.spotify.heroic.common;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.time.Clock;
 import eu.toolchain.serializer.AutoSerialize;
 import lombok.Data;
@@ -176,5 +177,12 @@ public class DateRange implements Comparable<DateRange> {
 
     public static DateRange now(Clock clock) {
         return now(clock.currentTimeMillis());
+    }
+
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(getClass(), () -> {
+            hasher.putField("start", start, hasher.longValue());
+            hasher.putField("end", end, hasher.longValue());
+        });
     }
 }

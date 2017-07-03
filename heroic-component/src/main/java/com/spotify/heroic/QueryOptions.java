@@ -89,6 +89,19 @@ public class QueryOptions {
         return new Builder();
     }
 
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(getClass(), () -> {
+            hasher.putField("bucketStrategy", bucketStrategy,
+                hasher.optional(hasher.with(BucketStrategy::hashTo)));
+            hasher.putField("dataLimit", dataLimit, hasher.with(OptionalLimit::hashTo));
+            hasher.putField("aggregationLimit", aggregationLimit,
+                hasher.with(OptionalLimit::hashTo));
+            hasher.putField("groupLimit", groupLimit, hasher.with(OptionalLimit::hashTo));
+            hasher.putField("seriesLimit", seriesLimit, hasher.with(OptionalLimit::hashTo));
+            hasher.putField("failOnLimits", failOnLimits, hasher.optional(hasher.bool()));
+        });
+    }
+
     public static class Builder {
         private Optional<BucketStrategy> bucketStrategy = Optional.empty();
         private Optional<Tracing> tracing = Optional.empty();

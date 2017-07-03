@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.aggregation.simple;
 
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.AggregationOutput;
 import com.spotify.heroic.aggregation.AggregationResult;
@@ -68,6 +69,11 @@ public class DeltaInstance implements AggregationInstance {
     @Override
     public boolean distributable() {
         return false;
+    }
+
+    @Override
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(getClass());
     }
 
     public List<Point> computeDiff(List<Point> points) {

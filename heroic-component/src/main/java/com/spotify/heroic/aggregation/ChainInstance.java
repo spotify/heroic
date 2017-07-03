@@ -23,6 +23,7 @@ package com.spotify.heroic.aggregation;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
@@ -156,6 +157,13 @@ public class ChainInstance implements AggregationInstance {
     @Override
     public Set<String> requiredTags() {
         return chain.iterator().next().requiredTags();
+    }
+
+    @Override
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(getClass(), () -> {
+            hasher.putField("chain", chain, hasher.list(hasher.with(AggregationInstance::hashTo)));
+        });
     }
 
     private static final Joiner CHAIN_JOINER = Joiner.on(" -> ");

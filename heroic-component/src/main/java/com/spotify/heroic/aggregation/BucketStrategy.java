@@ -23,6 +23,7 @@ package com.spotify.heroic.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.DateRange;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +48,8 @@ public interface BucketStrategy {
         }
     }
 
+    void hashTo(ObjectHasher hasher);
+
     class Start implements BucketStrategy {
         @JsonValue
         public String value() {
@@ -65,6 +68,11 @@ public interface BucketStrategy {
             return new StartMapping(range.start(), start, size, extent, (int) count);
         }
 
+        @Override
+        public void hashTo(final ObjectHasher hasher) {
+            hasher.putObject(getClass());
+        }
+
         @RequiredArgsConstructor
         private static class StartMapping implements Mapping {
             private final long start;
@@ -76,7 +84,7 @@ public interface BucketStrategy {
             /**
              * Calculate the start and end index of the buckets that should be seeded for the given
              * timestamp.
-             *
+             * <p>
              * This guarantees that each timestamp ends up in the range [start, start + extent) for
              * any given bucket.
              *
@@ -124,6 +132,11 @@ public interface BucketStrategy {
             return new EndMapping(start, range.start(), size, extent, (int) count);
         }
 
+        @Override
+        public void hashTo(final ObjectHasher hasher) {
+            hasher.putObject(getClass());
+        }
+
         @RequiredArgsConstructor
         private static class EndMapping implements Mapping {
             private final long start;
@@ -135,7 +148,7 @@ public interface BucketStrategy {
             /**
              * Calculate the start and end index of the buckets that should be seeded for the given
              * timestamp.
-             *
+             * <p>
              * This guarantees that each timestamp ends up in the range (end - extent, end] for
              * any given bucket.
              *

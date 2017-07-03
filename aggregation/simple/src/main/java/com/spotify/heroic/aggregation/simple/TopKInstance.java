@@ -23,6 +23,7 @@ package com.spotify.heroic.aggregation.simple;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.spotify.heroic.ObjectHasher;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -35,5 +36,10 @@ public class TopKInstance extends FilterAggregation {
     public TopKInstance(@JsonProperty("k") final long k) {
         super(new FilterKAreaStrategy(FilterKAreaType.TOP, k));
         this.k = k;
+    }
+
+    @Override
+    protected void filterHashTo(final ObjectHasher hasher) {
+        hasher.putField("k", k, hasher.longValue());
     }
 }

@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
@@ -203,6 +204,18 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
     @Override
     public long cadence() {
         return size;
+    }
+
+    protected void bucketHashTo(final ObjectHasher hasher) {
+    }
+
+    @Override
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(getClass(), () -> {
+            hasher.putField("size", size, hasher.longValue());
+            hasher.putField("extent", extent, hasher.longValue());
+            bucketHashTo(hasher);
+        });
     }
 
     @Override

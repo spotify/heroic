@@ -21,10 +21,10 @@
 
 package com.spotify.heroic.aggregation.cardinality;
 
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.aggregation.BucketAggregationInstance;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Payload;
-
 import java.beans.ConstructorProperties;
 
 public class DistributedCardinalityInstance extends BucketAggregationInstance<CardinalityBucket> {
@@ -48,5 +48,10 @@ public class DistributedCardinalityInstance extends BucketAggregationInstance<Ca
     @Override
     protected Payload build(CardinalityBucket bucket) {
         return new Payload(bucket.timestamp(), bucket.state());
+    }
+
+    @Override
+    protected void bucketHashTo(final ObjectHasher hasher) {
+        hasher.putField("method", method, hasher.with(CardinalityMethod::hashTo));
     }
 }

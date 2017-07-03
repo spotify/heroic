@@ -22,6 +22,7 @@
 package com.spotify.heroic.aggregation;
 
 import com.google.common.collect.ImmutableSet;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.DateRange;
 import java.util.Set;
 
@@ -118,4 +119,9 @@ public interface AggregationInstance {
     default boolean distributable() {
         return true;
     }
+
+    /**
+     * Hash the aggregation to generate a key suitable for caching.
+     */
+    void hashTo(ObjectHasher hasher);
 }

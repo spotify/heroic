@@ -23,11 +23,8 @@ package com.spotify.heroic.filter;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.Series;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import org.apache.commons.lang3.StringUtils;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -35,6 +32,9 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Stream;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import org.apache.commons.lang3.StringUtils;
 
 @Data
 @EqualsAndHashCode(of = {"OPERATOR", "statements"}, doNotUseGetters = true)
@@ -168,5 +168,12 @@ public class OrFilter implements Filter {
     @Override
     public String toDSL() {
         return "(" + or.join(statements.stream().map(Filter::toDSL).iterator()) + ")";
+    }
+
+    @Override
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(this.getClass(), () -> {
+            hasher.putField("statements", statements, hasher.list(hasher.with(Filter::hashTo)));
+        });
     }
 }

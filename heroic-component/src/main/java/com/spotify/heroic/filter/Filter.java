@@ -22,6 +22,7 @@
 package com.spotify.heroic.filter;
 
 import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.Series;
 
 public interface Filter extends Comparable<Filter> {
@@ -72,6 +73,8 @@ public interface Filter extends Comparable<Filter> {
     static NotFilter not(Filter filter) {
         return new NotFilter(filter);
     }
+
+    void hashTo(ObjectHasher hasher);
 
     interface Visitor<T> {
         default T visitStartsWith(StartsWithFilter startsWith) {
