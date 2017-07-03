@@ -17,6 +17,7 @@ import com.spotify.heroic.querylogging.QueryLoggerFactory;
 import com.spotify.heroic.statistics.QueryReporter;
 import com.spotify.heroic.time.Clock;
 import eu.toolchain.async.AsyncFramework;
+import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -53,7 +54,7 @@ public class CoreQueryManagerTest {
 
         manager = new CoreQueryManager(Features.empty(), async, Clock.system(), cluster, parser,
             queryCache, aggregations, OptionalLimit.empty(), smallQueryThreshold, queryReporter,
-            queryLoggerFactory);
+            Optional.empty(), queryLoggerFactory);
     }
 
     @Test
