@@ -63,6 +63,7 @@ import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.WriteMetadata;
 import com.spotify.heroic.metric.QueryError;
 import com.spotify.heroic.metric.RequestError;
+import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -205,9 +206,11 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                     .setOpType(OpType.CREATE);
 
                 final RequestTimer<WriteMetadata> timer = WriteMetadata.timer();
+                final FutureReporter.Context writeContext = reporter.setupWriteReporter();
 
-                AsyncFuture<WriteMetadata> result =
-                    bind(builder.execute()).directTransform(response -> timer.end());
+                AsyncFuture<WriteMetadata> result = bind(builder.execute())
+                    .directTransform(response -> timer.end())
+                    .onDone(writeContext);
 
                 writes.add(result);
             }

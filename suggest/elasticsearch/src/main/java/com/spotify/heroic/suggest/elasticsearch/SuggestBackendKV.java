@@ -55,6 +55,7 @@ import com.spotify.heroic.filter.StartsWithFilter;
 import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
+import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.SuggestBackendReporter;
 import com.spotify.heroic.suggest.KeySuggest;
 import com.spotify.heroic.suggest.SuggestBackend;
@@ -570,13 +571,14 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                     suggest.endObject();
 
                     final String suggestId = seriesId + ":" + Integer.toHexString(e.hashCode());
+                    final FutureReporter.Context writeContext = reporter.setupWriteReporter();
 
                     writes.add(bind(c
                         .index(index, TAG_TYPE)
                         .setId(suggestId)
                         .setSource(suggest)
                         .setOpType(DocWriteRequest.OpType.CREATE)
-                        .execute()).directTransform(response -> timer.end()));
+                        .execute()).directTransform(response -> timer.end()).onDone(writeContext));
                 }
             }
 
