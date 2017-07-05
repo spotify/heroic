@@ -735,6 +735,13 @@
         <scope>compile</scope>
       </dependency>
 
+      <!-- Histogram for low rate metrics -->
+      <dependency>
+        <groupId>com.spotify.metrics</groupId>
+        <artifactId>histogram-with-ttl</artifactId>
+        <version>0.0.5</version>
+      </dependency>
+
       <!-- testing -->
       <dependency>
         <groupId>org.hamcrest</groupId>

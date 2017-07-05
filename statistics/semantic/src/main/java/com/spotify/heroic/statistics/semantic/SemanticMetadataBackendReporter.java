@@ -92,8 +92,9 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
         writesDroppedByRateLimit =
             registry.meter(base.tagged("what", "writes-dropped-by-rate-limit", "unit", Units.DROP));
 
-        writeBatchDuration = registry.histogram(
-            base.tagged("what", "write-bulk-duration", "unit", Units.MILLISECOND));
+        writeBatchDuration =
+            registry.getOrAdd(base.tagged("what", "write-bulk-duration", "unit", Units.MILLISECOND),
+                HistogramBuilder.HISTOGRAM);
     }
 
     @Override

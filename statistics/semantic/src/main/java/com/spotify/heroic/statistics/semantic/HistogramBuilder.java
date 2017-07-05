@@ -25,6 +25,7 @@ import com.codahale.metrics.Clock;
 import com.codahale.metrics.ExponentiallyDecayingReservoir;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Metric;
+import com.spotify.metrics.ReservoirWithTtl;
 import com.spotify.metrics.core.SemanticMetricBuilder;
 import java.util.concurrent.TimeUnit;
 
@@ -33,9 +34,13 @@ public class HistogramBuilder {
         new SemanticMetricBuilder<Histogram>() {
             public Histogram newMetric() {
                 return new Histogram(
-                    // A min/max value will stay around for 2 * 30 seconds
-                    new MinMaxSlidingTimeReservoir(Clock.defaultClock(), 2, 30, TimeUnit.SECONDS,
-                        new ExponentiallyDecayingReservoir()));
+                    // Ensure that a min/max value will stay around for x seconds
+                    new MinMaxSlidingTimeReservoir(Clock.defaultClock(), 4, 30, TimeUnit.SECONDS,
+                        /* When the metric rate is less than 10 metrics per second for 5 minutes,
+                         * ReservoirWithTtl will start returning the full set of metrics produced in
+                         * that time instead of the data in the ExponentiallyDecayingReservoir. */
+                        new ReservoirWithTtl(new ExponentiallyDecayingReservoir(),
+                            (int) TimeUnit.MINUTES.toSeconds(5), 10)));
             }
 
             public boolean isInstance(Metric metric) {
