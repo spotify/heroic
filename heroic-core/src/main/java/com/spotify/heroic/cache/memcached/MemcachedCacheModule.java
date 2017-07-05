@@ -157,8 +157,12 @@ public class MemcachedCacheModule implements CacheModule {
         private Optional<Duration> maxTtl = Optional.empty();
 
         @JsonCreator
-        public Builder(@JsonProperty("addresses") final Optional<List<String>> addresses) {
+        public Builder(
+            @JsonProperty("addresses") final Optional<List<String>> addresses,
+            @JsonProperty("maxTtl") Optional<Duration> maxTtl
+        ) {
             this.addresses = addresses;
+            this.maxTtl = maxTtl;
         }
 
         public Builder addresses(final List<String> addresses) {
