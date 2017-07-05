@@ -55,6 +55,7 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
     private final FutureReporter countSeries;
     private final FutureReporter deleteSeries;
     private final FutureReporter findKeys;
+    private final FutureReporter cachedWrite;
     private final FutureReporter write;
 
     private final Meter writeSuccess;
@@ -80,6 +81,8 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
             base.tagged("what", "delete-series", "unit", Units.QUERY));
         findKeys = new SemanticFutureReporter(registry,
             base.tagged("what", "find-keys", "unit", Units.QUERY));
+        cachedWrite = new SemanticFutureReporter(registry,
+            base.tagged("what", "cached-write", "unit", Units.WRITE));
         write =
             new SemanticFutureReporter(registry, base.tagged("what", "write", "unit", Units.WRITE));
         writeSuccess = registry.meter(base.tagged("what", "write-success", "unit", Units.WRITE));
@@ -98,6 +101,11 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
         final MetadataBackend backend
     ) {
         return new InstrumentedMetadataBackend(backend);
+    }
+
+    @Override
+    public FutureReporter.Context setupWriteReporter() {
+        return write.setup();
     }
 
     @Override
@@ -131,7 +139,7 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
 
         @Override
         public AsyncFuture<WriteMetadata> write(final WriteMetadata.Request request) {
-            return delegate.write(request).onDone(write.setup());
+            return delegate.write(request).onDone(cachedWrite.setup());
         }
 
         @Override

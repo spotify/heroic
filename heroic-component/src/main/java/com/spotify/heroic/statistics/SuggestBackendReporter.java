@@ -27,4 +27,6 @@ public interface SuggestBackendReporter {
     SuggestBackend decorate(SuggestBackend backend);
 
     void reportWriteDroppedByRateLimit();
+
+    FutureReporter.Context setupWriteReporter();
 }

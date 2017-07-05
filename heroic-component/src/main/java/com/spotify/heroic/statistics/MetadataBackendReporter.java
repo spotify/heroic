@@ -26,6 +26,8 @@ import com.spotify.heroic.metadata.MetadataBackend;
 public interface MetadataBackendReporter {
     void reportWriteDroppedByRateLimit();
 
+    FutureReporter.Context setupWriteReporter();
+
     /**
      * report number of successful operations in a batch
      *

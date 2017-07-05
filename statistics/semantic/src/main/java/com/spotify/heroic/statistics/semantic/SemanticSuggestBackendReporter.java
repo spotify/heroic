@@ -48,6 +48,7 @@ public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
     private final FutureReporter tagSuggest;
     private final FutureReporter keySuggest;
     private final FutureReporter tagValueSuggest;
+    private final FutureReporter cachedWrite;
     private final FutureReporter write;
 
     private final Meter writeDroppedByCacheHit;
@@ -65,6 +66,8 @@ public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
             base.tagged("what", "key-suggest", "unit", Units.QUERY));
         tagValueSuggest = new SemanticFutureReporter(registry,
             base.tagged("what", "tag-value-suggest", "unit", Units.QUERY));
+        cachedWrite = new SemanticFutureReporter(registry,
+            base.tagged("what", "cached-write", "unit", Units.WRITE));
         write =
             new SemanticFutureReporter(registry, base.tagged("what", "write", "unit", Units.WRITE));
 
@@ -82,6 +85,11 @@ public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
     @Override
     public void reportWriteDroppedByRateLimit() {
         writeDroppedByCacheHit.mark();
+    }
+
+    @Override
+    public FutureReporter.Context setupWriteReporter() {
+        return write.setup();
     }
 
     @RequiredArgsConstructor
@@ -122,7 +130,7 @@ public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
 
         @Override
         public AsyncFuture<WriteSuggest> write(final WriteSuggest.Request request) {
-            return delegate.write(request).onDone(write.setup());
+            return delegate.write(request).onDone(cachedWrite.setup());
         }
 
         @Override

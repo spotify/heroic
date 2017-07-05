@@ -22,6 +22,7 @@
 package com.spotify.heroic.statistics.noop;
 
 import com.spotify.heroic.metadata.MetadataBackend;
+import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
 
 public class NoopMetadataBackendReporter implements MetadataBackendReporter {
@@ -49,6 +50,11 @@ public class NoopMetadataBackendReporter implements MetadataBackendReporter {
 
     @Override
     public void reportWriteDroppedByRateLimit() {
+    }
+
+    @Override
+    public FutureReporter.Context setupWriteReporter() {
+        return NoopFutureReporterContext.get();
     }
 
     private static final NoopMetadataBackendReporter instance = new NoopMetadataBackendReporter();
