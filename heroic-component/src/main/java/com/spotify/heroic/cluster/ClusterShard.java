@@ -90,12 +90,16 @@ public class ClusterShard {
 
                 return result.getReturnValue().catchFailed(throwable -> {
                     reporter.reportClusterNodeRpcError();
+                    log.info(
+                        "Cluster RPC call failed for node " + result.getNode().toString() + ": " +
+                            throwable.getMessage());
                     /* Actually never return;s, instead throws a new exception with added info.
                      * The point is to get Node identifying information into the exception */
                     throw new RuntimeNodeException(result.getNode().toString(),
                         throwable.getMessage(), throwable);
                 }).catchCancelled(ignore -> {
                     reporter.reportClusterNodeRpcCancellation();
+                    log.info("Cluster RPC call cancelled for node " + result.getNode().toString());
                     /* In case of the future being cancelled, we should note it as a node exception
                      * and try with the next node in the shard.
                      * It seems like we can get cancellations when there are network issues. */
