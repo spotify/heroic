@@ -47,6 +47,10 @@ The following is en example of how this can be run:
 $ java -cp $PWD/heroic-dist/target/heroic-dist-0.0.1-SNAPSHOT-shaded.jar com.spotify.heroic.HeroicService <config>
 ```
 
+For help on how to write a configuration file, see the [Configuration Section][configuration] of the official documentation.
+
+[configuration]: http://spotify.github.io/heroic/#!/docs/config
+
 Heroic has been tested with the following services:
 
 * Cassandra (`2.1.x`, `3.5`) when using [metric/datastax](/metric/datastax).
