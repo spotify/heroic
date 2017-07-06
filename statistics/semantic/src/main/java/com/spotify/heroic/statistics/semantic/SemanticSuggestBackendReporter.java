@@ -48,10 +48,12 @@ public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
     private final FutureReporter tagSuggest;
     private final FutureReporter keySuggest;
     private final FutureReporter tagValueSuggest;
-    private final FutureReporter cachedWrite;
     private final FutureReporter write;
+    private final FutureReporter backendWrite;
 
-    private final Meter writeDroppedByCacheHit;
+    private final Meter writesDroppedByCacheHit;
+    private final Meter writesDroppedByRateLimit;
+    private final Meter writesDroppedByDuplicate;
 
     public SemanticSuggestBackendReporter(SemanticMetricRegistry registry) {
         final MetricId base = MetricId.build().tagged("component", COMPONENT);
@@ -66,13 +68,17 @@ public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
             base.tagged("what", "key-suggest", "unit", Units.QUERY));
         tagValueSuggest = new SemanticFutureReporter(registry,
             base.tagged("what", "tag-value-suggest", "unit", Units.QUERY));
-        cachedWrite = new SemanticFutureReporter(registry,
-            base.tagged("what", "cached-write", "unit", Units.WRITE));
         write =
             new SemanticFutureReporter(registry, base.tagged("what", "write", "unit", Units.WRITE));
+        backendWrite = new SemanticFutureReporter(registry,
+            base.tagged("what", "backend-write", "unit", Units.WRITE));
 
-        writeDroppedByCacheHit =
-            registry.meter(base.tagged("what", "write-dropped-by-cache-hit", "unit", Units.DROP));
+        writesDroppedByCacheHit =
+            registry.meter(base.tagged("what", "writes-dropped-by-cache-hit", "unit", Units.DROP));
+        writesDroppedByRateLimit =
+            registry.meter(base.tagged("what", "writes-dropped-by-rate-limit", "unit", Units.DROP));
+        writesDroppedByDuplicate =
+            registry.meter(base.tagged("what", "writes-dropped-by-duplicate", "unit", Units.DROP));
     }
 
     @Override
@@ -83,13 +89,23 @@ public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
     }
 
     @Override
+    public void reportWriteDroppedByCacheHit() {
+        writesDroppedByCacheHit.mark();
+    }
+
+    @Override
     public void reportWriteDroppedByRateLimit() {
-        writeDroppedByCacheHit.mark();
+        writesDroppedByRateLimit.mark();
+    }
+
+    @Override
+    public void reportWriteDroppedByDuplicate() {
+        writesDroppedByDuplicate.mark();
     }
 
     @Override
     public FutureReporter.Context setupWriteReporter() {
-        return write.setup();
+        return backendWrite.setup();
     }
 
     @RequiredArgsConstructor
@@ -130,7 +146,7 @@ public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
 
         @Override
         public AsyncFuture<WriteSuggest> write(final WriteSuggest.Request request) {
-            return delegate.write(request).onDone(cachedWrite.setup());
+            return delegate.write(request).onDone(write.setup());
         }
 
         @Override

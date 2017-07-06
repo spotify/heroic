@@ -24,9 +24,13 @@ package com.spotify.heroic.statistics;
 import com.spotify.heroic.metadata.MetadataBackend;
 
 public interface MetadataBackendReporter {
+    void reportWriteDroppedByCacheHit();
+
     void reportWriteDroppedByRateLimit();
 
-    FutureReporter.Context setupWriteReporter();
+    void reportWriteDroppedByDuplicate();
+
+    FutureReporter.Context setupBackendWriteReporter();
 
     /**
      * report number of successful operations in a batch

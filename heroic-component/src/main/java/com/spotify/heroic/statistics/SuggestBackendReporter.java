@@ -26,7 +26,11 @@ import com.spotify.heroic.suggest.SuggestBackend;
 public interface SuggestBackendReporter {
     SuggestBackend decorate(SuggestBackend backend);
 
+    void reportWriteDroppedByCacheHit();
+
     void reportWriteDroppedByRateLimit();
+
+    void reportWriteDroppedByDuplicate();
 
     FutureReporter.Context setupWriteReporter();
 }

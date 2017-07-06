@@ -87,6 +87,7 @@ import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Named;
 import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 import org.elasticsearch.action.ActionRequestBuilder;
 import org.elasticsearch.action.DocWriteRequest.OpType;
@@ -105,6 +106,7 @@ import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 
+@Slf4j
 @ElasticsearchScope
 @ToString(of = {"connection"})
 public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
@@ -188,8 +190,9 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
             final List<AsyncFuture<WriteMetadata>> writes = new ArrayList<>();
 
             for (final String index : indices) {
-                if (!writeCache.acquire(Pair.of(index, series.getHashCode()))) {
-                    reporter.reportWriteDroppedByRateLimit();
+                if (!writeCache.acquire(Pair.of(index, series.getHashCode()),
+                    reporter::reportWriteDroppedByCacheHit,
+                    reporter::reportWriteDroppedByRateLimit)) {
                     continue;
                 }
 
@@ -206,10 +209,12 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                     .setOpType(OpType.CREATE);
 
                 final RequestTimer<WriteMetadata> timer = WriteMetadata.timer();
-                final FutureReporter.Context writeContext = reporter.setupWriteReporter();
+                final FutureReporter.Context writeContext = reporter.setupBackendWriteReporter();
 
                 AsyncFuture<WriteMetadata> result = bind(builder.execute())
                     .directTransform(response -> timer.end())
+                    .catchFailed(handleVersionConflict(WriteMetadata::of,
+                        reporter::reportWriteDroppedByDuplicate))
                     .onDone(writeContext);
 
                 writes.add(result);

@@ -30,7 +30,7 @@ public class DisabledRateLimitedCache<K> implements RateLimitedCache<K> {
     private final ConcurrentMap<K, Boolean> cache;
 
     @Override
-    public boolean acquire(K key) {
+    public boolean acquire(K key, final Runnable cacheHit, final Runnable rateLimitHit) {
         return cache.putIfAbsent(key, true) == null;
     }
 

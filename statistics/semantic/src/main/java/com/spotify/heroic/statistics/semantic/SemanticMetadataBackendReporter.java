@@ -55,14 +55,16 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
     private final FutureReporter countSeries;
     private final FutureReporter deleteSeries;
     private final FutureReporter findKeys;
-    private final FutureReporter cachedWrite;
     private final FutureReporter write;
+    private final FutureReporter backendWrite;
 
     private final Meter writeSuccess;
     private final Meter writeFailure;
     private final Meter entries;
 
+    private final Meter writesDroppedByCacheHit;
     private final Meter writesDroppedByRateLimit;
+    private final Meter writesDroppedByDuplicate;
 
     private final Histogram writeBatchDuration;
 
@@ -81,16 +83,20 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
             base.tagged("what", "delete-series", "unit", Units.QUERY));
         findKeys = new SemanticFutureReporter(registry,
             base.tagged("what", "find-keys", "unit", Units.QUERY));
-        cachedWrite = new SemanticFutureReporter(registry,
-            base.tagged("what", "cached-write", "unit", Units.WRITE));
         write =
             new SemanticFutureReporter(registry, base.tagged("what", "write", "unit", Units.WRITE));
+        backendWrite = new SemanticFutureReporter(registry,
+            base.tagged("what", "backend-write", "unit", Units.WRITE));
         writeSuccess = registry.meter(base.tagged("what", "write-success", "unit", Units.WRITE));
         writeFailure = registry.meter(base.tagged("what", "write-failure", "unit", Units.FAILURE));
         entries = registry.meter(base.tagged("what", "entries", "unit", Units.QUERY));
 
+        writesDroppedByCacheHit =
+            registry.meter(base.tagged("what", "writes-dropped-by-cache-hit", "unit", Units.DROP));
         writesDroppedByRateLimit =
             registry.meter(base.tagged("what", "writes-dropped-by-rate-limit", "unit", Units.DROP));
+        writesDroppedByDuplicate =
+            registry.meter(base.tagged("what", "writes-dropped-by-duplicate", "unit", Units.DROP));
 
         writeBatchDuration = registry.histogram(
             base.tagged("what", "write-bulk-duration", "unit", Units.MILLISECOND));
@@ -104,13 +110,23 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
     }
 
     @Override
-    public FutureReporter.Context setupWriteReporter() {
-        return write.setup();
+    public FutureReporter.Context setupBackendWriteReporter() {
+        return backendWrite.setup();
+    }
+
+    @Override
+    public void reportWriteDroppedByCacheHit() {
+        writesDroppedByCacheHit.mark();
     }
 
     @Override
     public void reportWriteDroppedByRateLimit() {
         writesDroppedByRateLimit.mark();
+    }
+
+    @Override
+    public void reportWriteDroppedByDuplicate() {
+        writesDroppedByDuplicate.mark();
     }
 
     @Override
@@ -139,7 +155,7 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
 
         @Override
         public AsyncFuture<WriteMetadata> write(final WriteMetadata.Request request) {
-            return delegate.write(request).onDone(cachedWrite.setup());
+            return delegate.write(request).onDone(write.setup());
         }
 
         @Override
