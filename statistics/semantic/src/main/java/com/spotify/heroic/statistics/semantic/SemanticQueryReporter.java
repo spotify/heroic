@@ -46,10 +46,12 @@ public class SemanticQueryReporter implements QueryReporter {
 
         query =
             new SemanticFutureReporter(registry, base.tagged("what", "query", "unit", Units.QUERY));
-        smallQueryLatency = registry.histogram(
-            base.tagged("what", "small-query-latency", "unit", Units.MILLISECOND));
+        smallQueryLatency =
+            registry.getOrAdd(base.tagged("what", "small-query-latency", "unit", Units.MILLISECOND),
+                HistogramBuilder.HISTOGRAM);
         queryReadRate =
-            registry.histogram(base.tagged("what", "query-read-rate", "unit", Units.COUNT));
+            registry.getOrAdd(base.tagged("what", "query-read-rate", "unit", Units.COUNT),
+                HistogramBuilder.HISTOGRAM);
 
         rpcError = registry.meter(base.tagged("what", "cluster-rpc-error", "unit", Units.FAILURE));
         rpcCancellation =
