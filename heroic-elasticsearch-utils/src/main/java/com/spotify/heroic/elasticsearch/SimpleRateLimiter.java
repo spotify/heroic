@@ -21,39 +21,9 @@
 
 package com.spotify.heroic.elasticsearch;
 
-import java.util.concurrent.ConcurrentMap;
-import lombok.RequiredArgsConstructor;
-
-/**
- * A cache that does not allow to be called more than a specific rate.
- *
- * @author mehrdad
- */
-@RequiredArgsConstructor
-public class DefaultRateLimitedCache<K> implements RateLimitedCache<K> {
-    private final ConcurrentMap<K, Boolean> cache;
-    private final SimpleRateLimiter rateLimiter;
-
-    public boolean acquire(K key, final Runnable cacheHit, final Runnable rateLimitHit) {
-        if (cache.get(key) != null) {
-            cacheHit.run();
-            return false;
-        }
-
-        if (!rateLimiter.tryAcquire()) {
-            rateLimitHit.run();
-            return false;
-        }
-
-        if (cache.putIfAbsent(key, true) != null) {
-            cacheHit.run();
-            return false;
-        }
-
-        return true;
-    }
-
-    public int size() {
-        return cache.size();
-    }
+public interface SimpleRateLimiter {
+    /**
+     * Acquires a permit if it can be acquired immediately without delay.
+     */
+    boolean tryAcquire();
 }

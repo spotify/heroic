@@ -44,6 +44,8 @@ import com.spotify.heroic.elasticsearch.ConnectionModule;
 import com.spotify.heroic.elasticsearch.DefaultRateLimitedCache;
 import com.spotify.heroic.elasticsearch.DisabledRateLimitedCache;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
+import com.spotify.heroic.elasticsearch.SimpleRateLimiter;
+import com.spotify.heroic.elasticsearch.SlowStartRateLimiter;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
 import com.spotify.heroic.suggest.SuggestBackend;
@@ -71,6 +73,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
 
     private static final double DEFAULT_WRITES_PER_SECOND = 3000d;
     private static final long DEFAULT_RATE_LIMIT_SLOW_START_SECONDS = 0L;
+    private static final int DEFAULT_RATE_LIMIT_SLOW_START_MULTIPLIER = 4;
     private static final long DEFAULT_WRITES_CACHE_DURATION_MINUTES = 240L;
     public static final String DEFAULT_GROUP = "elasticsearch";
     public static final String DEFAULT_TEMPLATE_NAME = "heroic-suggest";
@@ -200,8 +203,22 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
                 return new DisabledRateLimitedCache<>(cache.asMap());
             }
 
-            return new DefaultRateLimitedCache<>(cache.asMap(),
-                RateLimiter.create(writesPerSecond, rateLimitSlowStartSeconds, TimeUnit.SECONDS));
+            SimpleRateLimiter rateLimiter;
+            if (rateLimitSlowStartSeconds <= 0) {
+                rateLimiter = new SimpleRateLimiter() {
+                    RateLimiter limiter = RateLimiter.create(writesPerSecond);
+                    @Override
+                    public boolean tryAcquire() {
+                        return limiter.tryAcquire();
+                    }
+                };
+            } else {
+                rateLimiter = new SlowStartRateLimiter(writesPerSecond,
+                    writesPerSecond / DEFAULT_RATE_LIMIT_SLOW_START_MULTIPLIER,
+                    rateLimitSlowStartSeconds, TimeUnit.SECONDS);
+            }
+
+            return new DefaultRateLimitedCache<>(cache.asMap(), rateLimiter);
         }
 
         @Provides
