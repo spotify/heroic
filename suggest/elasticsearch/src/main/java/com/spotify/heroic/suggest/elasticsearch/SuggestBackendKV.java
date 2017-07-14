@@ -87,6 +87,7 @@ import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Named;
 import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 import org.elasticsearch.action.DocWriteRequest;
 import org.elasticsearch.action.search.SearchRequestBuilder;
@@ -111,6 +112,7 @@ import org.elasticsearch.search.aggregations.metrics.cardinality.CardinalityAggr
 import org.elasticsearch.search.aggregations.metrics.tophits.TopHits;
 import org.elasticsearch.search.aggregations.metrics.tophits.TopHitsAggregationBuilder;
 
+@Slf4j
 @ElasticsearchScope
 @ToString(of = {"connection"})
 public class SuggestBackendKV extends AbstractElasticsearchBackend
@@ -542,8 +544,8 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
             for (final String index : indices) {
                 final Pair<String, HashCode> key = Pair.of(index, s.getHashCode());
 
-                if (!writeCache.acquire(key)) {
-                    reporter.reportWriteDroppedByRateLimit();
+                if (!writeCache.acquire(key, reporter::reportWriteDroppedByCacheHit,
+                    reporter::reportWriteDroppedByRateLimit)) {
                     continue;
                 }
 
@@ -578,7 +580,11 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                         .setId(suggestId)
                         .setSource(suggest)
                         .setOpType(DocWriteRequest.OpType.CREATE)
-                        .execute()).directTransform(response -> timer.end()).onDone(writeContext));
+                        .execute())
+                        .directTransform(response -> timer.end())
+                        .catchFailed(handleVersionConflict(WriteSuggest::of,
+                            reporter::reportWriteDroppedByDuplicate))
+                        .onDone(writeContext));
                 }
             }
 

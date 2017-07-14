@@ -30,7 +30,6 @@ import java.util.concurrent.ConcurrentMap;
  * A cache that does not allow to be called more than a specific rate.
  *
  * @param <K>
- * @param <V>
  * @author mehrdad
  */
 @RequiredArgsConstructor
@@ -38,16 +37,23 @@ public class DefaultRateLimitedCache<K> implements RateLimitedCache<K> {
     private final ConcurrentMap<K, Boolean> cache;
     private final RateLimiter rateLimiter;
 
-    public boolean acquire(K key) {
+    public boolean acquire(K key, final Runnable cacheHit, final Runnable rateLimitHit) {
         if (cache.get(key) != null) {
+            cacheHit.run();
             return false;
         }
 
         if (!rateLimiter.tryAcquire()) {
+            rateLimitHit.run();
             return false;
         }
 
-        return cache.putIfAbsent(key, true) == null;
+        if (cache.putIfAbsent(key, true) != null) {
+            cacheHit.run();
+            return false;
+        }
+
+        return true;
     }
 
     public int size() {

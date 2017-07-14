@@ -35,7 +35,15 @@ public class NoopSuggestBackendReporter implements SuggestBackendReporter {
     }
 
     @Override
+    public void reportWriteDroppedByCacheHit() {
+    }
+
+    @Override
     public void reportWriteDroppedByRateLimit() {
+    }
+
+    @Override
+    public void reportWriteDroppedByDuplicate() {
     }
 
     @Override

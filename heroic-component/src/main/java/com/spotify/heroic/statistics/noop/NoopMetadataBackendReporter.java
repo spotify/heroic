@@ -49,11 +49,19 @@ public class NoopMetadataBackendReporter implements MetadataBackendReporter {
     }
 
     @Override
+    public void reportWriteDroppedByCacheHit() {
+    }
+
+    @Override
     public void reportWriteDroppedByRateLimit() {
     }
 
     @Override
-    public FutureReporter.Context setupWriteReporter() {
+    public void reportWriteDroppedByDuplicate() {
+    }
+
+    @Override
+    public FutureReporter.Context setupBackendWriteReporter() {
         return NoopFutureReporterContext.get();
     }
 
