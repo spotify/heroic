@@ -170,7 +170,10 @@ public class Spotify100 implements ConsumerSchema {
             }
 
             final Map<String, String> tags = new HashMap<String, String>(metric.getAttributes());
-            tags.put(HOST, metric.getHost());
+
+            if (metric.getHost() != null) {
+                tags.put(HOST, metric.getHost());
+            }
 
             final Series series = Series.of(metric.getKey(), tags);
             final Point p = new Point(metric.getTime(), metric.getValue());
