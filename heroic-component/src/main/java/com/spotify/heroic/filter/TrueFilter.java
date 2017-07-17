@@ -73,7 +73,7 @@ public class TrueFilter implements Filter {
 
     @Override
     public String toDSL() {
-        return "false";
+        return "true";
     }
 
     @Override

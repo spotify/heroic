@@ -21,6 +21,7 @@ import static com.spotify.heroic.filter.Filter.or;
 import static com.spotify.heroic.filter.Filter.regex;
 import static com.spotify.heroic.filter.Filter.startsWith;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 @RunWith(MockitoJUnitRunner.class)
 public class FilterTest {
@@ -162,7 +163,7 @@ public class FilterTest {
 
     @Test
     public void testAndFilterCompareLists() {
-        AndFilter andFilterA = and( matchTag(tag, value), startsWith(tag, value), a, b, c);
+        AndFilter andFilterA = and(matchTag(tag, value), startsWith(tag, value), a, b, c);
         assertEquals(0, andFilterA.compareTo(andFilterA));
 
         AndFilter andFilterB = and(matchTag(tag, value), startsWith(tag, value), a, b);
@@ -171,6 +172,65 @@ public class FilterTest {
 
         AndFilter andFilterC = and(matchTag(tag, value), startsWith(tag, value), a, a);
         assertEquals(1, andFilterB.compareTo(andFilterC));
+
+    }
+
+    @Test
+    public void testAndFilterWithNonConflictingMatchKeys() {
+        Filter filter = AndFilter.of(matchKey(tag), matchKey(tag), startsWith(tag, value), a, b, c);
+
+        assertTrue(filter instanceof AndFilter);
+
+        AndFilter andFilter = (AndFilter) filter;
+
+        assertEquals(6, andFilter.getStatements().size());
+
+        Filter optimizedFilter = filter.optimize();
+
+        assertTrue(optimizedFilter instanceof AndFilter);
+
+        AndFilter optimizedAndFilter = (AndFilter) optimizedFilter;
+
+        assertEquals(5, optimizedAndFilter.getStatements().size());
+
+
+    }
+
+
+    @Test
+    public void testAndFilterWithConflictingMatchKeys() {
+        Filter filter = AndFilter.of(matchKey(tag), matchKey(value), startsWith(tag, value), a, b, c);
+
+        assertTrue(filter instanceof AndFilter);
+
+        AndFilter andFilter = (AndFilter) filter;
+
+        assertEquals(6, andFilter.getStatements().size());
+
+        Filter optimizedFilter = filter.optimize();
+
+        assertTrue(optimizedFilter instanceof FalseFilter);
+
+
+    }
+
+    @Test
+    public void testFilterToString() {
+        Filter filter = AndFilter.of(new TrueFilter(), new FalseFilter(), matchKey(tag), matchKey(value),
+            startsWith(tag, value), a, b, c, OrFilter.of(a, b, c));
+
+        assertEquals("[and, [true], [false], [key, tag], [key, value], [^, tag, value], [+, a], [+, b], [+, c], " +
+            "[or, [+, a], [+, b], [+, c]]]", filter.toString());
+
+    }
+
+    @Test
+    public void testFilterToDSL() {
+
+        Filter filter = AndFilter.of(new TrueFilter(), new FalseFilter(), matchKey(tag), matchKey(value),
+            startsWith(tag, value), a, b, c, OrFilter.of(a, b, c));
+        assertEquals("(true and false and $key = tag and $key = value and " +
+            "tag ^ value and +a and +b and +c and (+a or +b or +c))", filter.toDSL());
 
     }
 
