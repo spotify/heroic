@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.statistics.semantic;
 
-import com.spotify.heroic.statistics.QueryReporter;
+import com.codahale.metrics.Gauge;
 import com.spotify.heroic.statistics.AnalyticsReporter;
 import com.spotify.heroic.statistics.ClusteredManager;
 import com.spotify.heroic.statistics.ConsumerReporter;
@@ -29,20 +29,31 @@ import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.IngestionManagerReporter;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
+import com.spotify.heroic.statistics.QueryReporter;
 import com.spotify.heroic.statistics.SuggestBackendReporter;
+import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
-
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 
 @ToString(of = {})
 @RequiredArgsConstructor
 public class SemanticHeroicReporter implements HeroicReporter {
     private final SemanticMetricRegistry registry;
 
+    private final MetricId metricId = MetricId.build();
+    private final ConcurrentMap<String, List<Supplier<Long>>> cacheSizes =
+        new ConcurrentHashMap<>();
     private final Set<ClusteredManager> clusteredManagers = new HashSet<>();
 
     @Override
@@ -91,5 +102,20 @@ public class SemanticHeroicReporter implements HeroicReporter {
         for (final ClusteredManager c : clustered) {
             c.registerShards(knownShards);
         }
+    }
+
+    @Override
+    public void registerCacheSize(final String id, final Supplier<Long> cacheSize) {
+        registry.register(metricId.tagged("what", "cache-size", "id", id), (Gauge<Long>) () -> {
+            final List<Supplier<Long>> sizes = cacheSizes.getOrDefault(id, Collections.emptyList());
+            return sizes.stream().mapToLong(Supplier::get).sum();
+        });
+
+        cacheSizes.compute(id, (currentId, existing) -> {
+            final ArrayList<Supplier<Long>> current =
+                Optional.ofNullable(existing).map(ArrayList::new).orElseGet(ArrayList::new);
+            current.add(cacheSize);
+            return current;
+        });
     }
 }

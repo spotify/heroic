@@ -46,6 +46,7 @@ import com.spotify.heroic.elasticsearch.DisabledRateLimitedCache;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
+import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestModule;
 import dagger.Component;
@@ -189,7 +190,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
 
         @Provides
         @ElasticsearchScope
-        public RateLimitedCache<Pair<String, HashCode>> writeCache() {
+        public RateLimitedCache<Pair<String, HashCode>> writeCache(final HeroicReporter reporter) {
             final Cache<Pair<String, HashCode>, Boolean> cache = CacheBuilder
                 .newBuilder()
                 .concurrencyLevel(4)
@@ -199,6 +200,8 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
             if (writesPerSecond <= 0d) {
                 return new DisabledRateLimitedCache<>(cache.asMap());
             }
+
+            reporter.registerCacheSize("elasticsearch-suggest-write-through", cache::size);
 
             return new DefaultRateLimitedCache<>(cache.asMap(),
                 RateLimiter.create(writesPerSecond, rateLimitSlowStartSeconds, TimeUnit.SECONDS));
