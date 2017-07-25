@@ -40,7 +40,7 @@ public class DefaultRateLimitedCacheTest {
         final DefaultRateLimitedCache<K> c = new DefaultRateLimitedCache<K>(cache, rateLimiter);
         doReturn(value).when(cache).get(key);
 
-        assertEquals(false, c.acquire(key, notifier, notifier));
+        assertEquals(false, c.acquire(key, notifier));
 
         verify(cache).get(key);
         verify(rateLimiter, never()).tryAcquire();
@@ -48,29 +48,16 @@ public class DefaultRateLimitedCacheTest {
     }
 
     @Test
-    public void testGetRateLimiting() throws ExecutionException, RateLimitExceededException {
-        final DefaultRateLimitedCache<K> c = new DefaultRateLimitedCache<K>(cache, rateLimiter);
-        doReturn(null).when(cache).get(key);
-        doReturn(false).when(rateLimiter).tryAcquire();
-
-        assertEquals(false, c.acquire(key, notifier, notifier));
-
-        verify(cache).get(key);
-        verify(rateLimiter).tryAcquire();
-        verify(cache, never()).putIfAbsent(key, true);
-    }
-
-    @Test
     public void testGet() throws ExecutionException, RateLimitExceededException {
         final DefaultRateLimitedCache<K> c = new DefaultRateLimitedCache<K>(cache, rateLimiter);
         doReturn(null).when(cache).get(key);
-        doReturn(true).when(rateLimiter).tryAcquire();
+        doReturn(1D).when(rateLimiter).acquire();
         doReturn(null).when(cache).putIfAbsent(key, true);
 
-        assertEquals(true, c.acquire(key, notifier, notifier));
+        assertEquals(true, c.acquire(key, notifier));
 
         verify(cache).get(key);
-        verify(rateLimiter).tryAcquire();
+        verify(rateLimiter).acquire();
         verify(cache).putIfAbsent(key, true);
     }
 

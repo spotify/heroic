@@ -21,16 +21,15 @@
 
 package com.spotify.heroic.elasticsearch;
 
-import lombok.RequiredArgsConstructor;
-
 import java.util.concurrent.ConcurrentMap;
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class DisabledRateLimitedCache<K> implements RateLimitedCache<K> {
     private final ConcurrentMap<K, Boolean> cache;
 
     @Override
-    public boolean acquire(K key, final Runnable cacheHit, final Runnable rateLimitHit) {
+    public boolean acquire(K key, final Runnable cacheHit) {
         return cache.putIfAbsent(key, true) == null;
     }
 

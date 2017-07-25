@@ -544,8 +544,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
             for (final String index : indices) {
                 final Pair<String, HashCode> key = Pair.of(index, s.getHashCode());
 
-                if (!writeCache.acquire(key, reporter::reportWriteDroppedByCacheHit,
-                    reporter::reportWriteDroppedByRateLimit)) {
+                if (!writeCache.acquire(key, reporter::reportWriteDroppedByCacheHit)) {
                     continue;
                 }
 

@@ -25,12 +25,12 @@ public interface RateLimitedCache<K> {
     /**
      * Acquire a permit to perform a piece of work identified by the given key.
      */
-    public boolean acquire(K key, Runnable cacheHit, Runnable rateLimitHit);
+    boolean acquire(K key, Runnable cacheHit);
 
     /**
      * Get number of cached entries.
      *
      * @return Number of entries cached.
      */
-    public int size();
+    int size();
 }

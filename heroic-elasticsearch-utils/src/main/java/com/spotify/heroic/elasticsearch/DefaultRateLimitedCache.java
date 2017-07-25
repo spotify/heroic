@@ -37,16 +37,13 @@ public class DefaultRateLimitedCache<K> implements RateLimitedCache<K> {
     private final ConcurrentMap<K, Boolean> cache;
     private final RateLimiter rateLimiter;
 
-    public boolean acquire(K key, final Runnable cacheHit, final Runnable rateLimitHit) {
+    public boolean acquire(K key, final Runnable cacheHit) {
         if (cache.get(key) != null) {
             cacheHit.run();
             return false;
         }
 
-        if (!rateLimiter.tryAcquire()) {
-            rateLimitHit.run();
-            return false;
-        }
+        rateLimiter.acquire();
 
         if (cache.putIfAbsent(key, true) != null) {
             cacheHit.run();
