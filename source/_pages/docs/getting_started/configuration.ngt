@@ -36,7 +36,7 @@ heroic> configure
 tools/heroic-shell -P bigtable \
   -X bigtable.project=&lt;project&gt; \
   -X bigtable.instance=&lt;instance&gt; \
-  -X bigtable.credentials=&lt;default&gt; \
+  -X bigtable.credentials=default \
   -X bigtable.configure
 ...
 heroic> configure
