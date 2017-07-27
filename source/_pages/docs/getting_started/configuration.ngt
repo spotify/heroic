@@ -8,13 +8,12 @@
 
 <ul>
   <li><a ui-sref=".({'#': 'cassandra'})">Configuring Cassandra</a></li>
+  <li><a ui-sref=".({'#': 'bigtable'})">Configuring Bigtable</a></li>
   <li><a ui-sref=".({'#': 'elasticsearch'})">Configuring Elasticsearch</a></li>
   <li><a ui-sref=".({'#': 'heroic'})">Configuring Heroic</a></li>
 </ul>
 
-<h3 id="cassandra">
-  Configuring Cassandra
-</h3>
+<h3 id="cassandra">Configuring Cassandra</h3>
 
 <p>
   Heroic (by default) uses the <code>heroic</code> keyspace, which can be
@@ -27,9 +26,23 @@ tools/heroic-shell -P cassandra -X cassandra.seeds=&lt;seeds&gt; -X datastax.con
 heroic> configure
 </code></pre>
 
-<h3 id="elasticsearch">
-  Configuring ElasticSearch
-</h3>
+<h3 id="bigtable">Configuring Bigtable</h3>
+
+<p>
+  If you want to use Google Cloud Bigtable to store metrics, you can configure it with the following command.
+</p>
+
+<pre><code language="bash">
+tools/heroic-shell -P bigtable \
+  -X bigtable.project=&lt;project&gt; \
+  -X bigtable.instance=&lt;instance&gt; \
+  -X bigtable.credentials=&lt;default&gt; \
+  -X bigtable.configure
+...
+heroic> configure
+</code></pre>
+
+<h3 id="elasticsearch">Configuring ElasticSearch</h3>
 
 <p>
   Elasticsearch is also configured using the <a ui-sref="^.^.shell">Heroic shell</a>.
@@ -142,11 +155,16 @@ cluster:
     nodes:
       - "grpc://localhost"
 
+# This showcases two different metric backends, choose which one you want.
 metrics:
   backends:
     - type: datastax
       seeds:
         - localhost
+    - type: bigtable
+      instance: heroic
+      credentials:
+        type: default
 
 metadata:
   backends:
@@ -162,6 +180,10 @@ suggest:
         seeds:
           - localhost
 </codeblock>
+
+<p>
+  For more details in how the service can be configured, see the <a ui-sref="^.^.config">Configuration Section</a>.
+</p>
 
 <h4 id="heroic-data-node">Consumer Node</h4>
 

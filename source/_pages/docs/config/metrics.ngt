@@ -5,20 +5,22 @@
 </p>
 
 <p>
-  The following is an example configuration showcasing all options.
+  The following is an example configuration:
 </p>
 
 <codeblock language="yaml">
 metrics:
   backends:
-    - type: cassandra
+    - type: datastax
       groups: a
       seeds:
         - localhost
-    - type: cassandra
+    - type: bigtable
       groups: b
-      seeds:
-        - localhost
+      project: my-cloud-project-1
+      instance: heroic-metrics
+      credentials:
+        type: default
   defaultBackends:
     - a
 </codeblock>
@@ -73,14 +75,7 @@ metrics:
   </tr>
 </table>
 
-<h3>Metric Backends</h3>
-
-<p>
-  Heroic is capable of storing metrics in multiple different ways.
-  The following is a list of all available metric backends, and their configuration options.
-</p>
-
-<h4>Datastax Cassandra</h4>
+<h3 id="datastax-cassandra">Datastax Cassandra</h3>
 
 <table class="table">
   <tr>
@@ -116,7 +111,7 @@ metrics:
   </tr>
 </table>
 
-<h5 id="schema-ng">Next Generation Schema</h5>
+<h4 id="schema-ng">Next Generation Schema</h4>
 
 <table class="table">
   <tr>
@@ -133,7 +128,7 @@ metrics:
   The next version of the schema, built with no strings attached to previous implementations.
 </p>
 
-<h5 id="schema-legacy">Legacy Schema</h5>
+<h4 id="schema-legacy">Legacy Schema</h4>
 
 <table class="table">
   <tr>
@@ -150,3 +145,116 @@ metrics:
   The initial schema that was used since the dawn of time.
   It was inherited, in part, from some of the key composition utilities made available by <em>datastax</em>, making it a bit awkward to work with for other utilities.
 </p>
+
+<h3 id="google-bigtable">Google Bigtable</h3>
+
+<codeblock language="yaml">
+type: bigtable
+project: my-cloud-project-1
+instance: heroic-metrics
+credentials:
+  type: default
+</codeblock>
+
+<table class="table">
+  <tr>
+    <td><code>type</code></td>
+    <td><code>"bigtable"</code></td>
+  </tr>
+  <tr>
+    <td><code>id</code></td>
+    <td>
+      Specify which id this backend has that is used to uniquely identify this backend.
+      If not specified, the id will be generated.
+    </td>
+  </tr>
+  <tr>
+    <td><code>groups</code></td>
+    <td>
+      Specify which group, or list groups, this backend should be part of.
+    </td>
+  </tr>
+  <tr>
+    <td><code>project</code></td>
+    <td>
+      Which <a href="https://cloud.google.com/storage/docs/projects">Project</a> the backend should connect to.
+    </td>
+  </tr>
+  <tr>
+    <td><code>instance</code></td>
+    <td>
+      Which <a href="https://cloud.google.com/bigtable/docs/creating-instance">Instance</a> the backend should connect to.
+      Defaults to <code>"heroic"</code>.
+    </td>
+  </tr>
+  <tr>
+    <td><code>table</code></td>
+    <td>
+      Which table the backend should use. Defaults to <code>"metrics"</code>.
+    </td>
+  </tr>
+  <tr>
+    <td><code>credentials</code></td>
+    <td>
+      Which credentials to use to connect.
+      Can be one of:
+
+      <ul>
+        <li><a href="#json-credentials">JSON Credentials</a></li>
+        <li><a href="#compute-engine-credentials">Compute Engine Credentials</a></li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <td><code>disableBulkMutations</code></td>
+    <td>
+      Disable bulk mutations.
+      This will cause each individual write to be performed as a single request.
+    </td>
+  </tr>
+  <tr>
+    <td><code>flushIntervalSeconds</code></td>
+    <td>
+      When bulk mutations are enabled, this is the maximum amount of time a single batch will collect data for.
+    </td>
+  </tr>
+  <tr>
+    <td><code>batchSize</code></td>
+    <td>
+      When bulk mutations are enabled, this is the maximum size of a single batch.
+    </td>
+  </tr>
+</table>
+
+<h4 id="compute-engine-credentials">Compute Engine Credentials</h4>
+
+<table class="table">
+  <tr>
+    <td><code>type</code></td>
+    <td><b>compute-engine</b></td>
+  </tr>
+</table>
+
+<h4>Default Credentials</h4>
+
+<table class="table">
+  <tr>
+    <td><code>type</code></td>
+    <td><b>default</b></td>
+  </tr>
+</table>
+
+<h4 id="json-credentials">JSON Credentials</h4>
+
+<table class="table">
+  <tr>
+    <td><code>type</code></td>
+    <td><b>json</b></td>
+  </tr>
+  <tr>
+    <td><code>path</code></td>
+    <td>
+      Path to credentials file to use.
+    </td>
+  </tr>
+</table>
