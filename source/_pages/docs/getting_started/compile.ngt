@@ -28,12 +28,13 @@ $ git clone https://github.com/spotify/heroic.git
 
 <pre><code language="bash">
 $ cd heroic
+$ tools/install-repackaged
 $ mvn clean package
 </code></pre>
 
 <p>
-  The previous command will generate a new .jar file, which you can use to run
-  Heroic through <a git-href-java="heroic-dist">com.spotify.heroic.HeroicService</a>.
+  The previous command will generate a new .jar file in <b>heroic-dist/target</b>, which you can
+  use to run Heroic through <a git-href-java="heroic-dist">com.spotify.heroic.HeroicService</a>.
 </p>
 
 <pre><code language="bash">
