@@ -200,8 +200,8 @@ credentials:
       Can be one of:
 
       <ul>
-        <li><a href="#json-credentials">JSON Credentials</a></li>
-        <li><a href="#compute-engine-credentials">Compute Engine Credentials</a></li>
+        <li><a ui-sref="{'#':'json-credentials'}">JSON Credentials</a></li>
+        <li><a ui-sref="{'#':'compute-engine-credentials'}">Compute Engine Credentials</a></li>
       </ul>
     </td>
   </tr>
