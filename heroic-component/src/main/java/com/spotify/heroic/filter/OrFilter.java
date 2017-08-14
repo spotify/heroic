@@ -37,15 +37,15 @@ import lombok.EqualsAndHashCode;
 import org.apache.commons.lang3.StringUtils;
 
 @Data
-@EqualsAndHashCode(of = {"OPERATOR", "statements"}, doNotUseGetters = true)
+@EqualsAndHashCode(of = {"OPERATOR", "filters"}, doNotUseGetters = true)
 public class OrFilter implements Filter {
     public static final String OPERATOR = "or";
 
-    private final List<Filter> statements;
+    private final List<Filter> filters;
 
     @Override
     public boolean apply(Series series) {
-        return statements.stream().anyMatch(s -> s.apply(series));
+        return filters.stream().anyMatch(s -> s.apply(series));
     }
 
     @Override
@@ -55,13 +55,13 @@ public class OrFilter implements Filter {
 
     @Override
     public Filter optimize() {
-        return optimize(flatten(this.statements));
+        return optimize(flatten(this.filters));
     }
 
-    static SortedSet<Filter> flatten(final Collection<Filter> statements) {
+    static SortedSet<Filter> flatten(final Collection<Filter> filters) {
         final SortedSet<Filter> result = new TreeSet<>();
 
-        statements.stream().flatMap(f -> f.optimize().visit(new Visitor<Stream<Filter>>() {
+        filters.stream().flatMap(f -> f.optimize().visit(new Visitor<Stream<Filter>>() {
             @Override
             public Stream<Filter> visitOr(final OrFilter or) {
                 return or.terms().stream().map(Filter::optimize);
@@ -92,22 +92,22 @@ public class OrFilter implements Filter {
         return result;
     }
 
-    static Filter optimize(final SortedSet<Filter> statements) {
+    static Filter optimize(final SortedSet<Filter> filters) {
         final SortedSet<Filter> result = new TreeSet<>();
 
-        for (final Filter f : statements) {
+        for (final Filter f : filters) {
             if (f instanceof NotFilter) {
                 // Optimize away expressions which are always true.
                 // Example: foo = bar or !(foo = bar)
 
-                if (statements.contains(((NotFilter) f).getFilter())) {
+                if (filters.contains(((NotFilter) f).getFilter())) {
                     return TrueFilter.get();
                 }
             } else if (f instanceof StartsWithFilter) {
                 // Optimize away prefixes which encompass each other.
                 // Example: foo ^ hello or foo ^ helloworld -> foo ^ hello
 
-                if (FilterUtils.containsPrefixedWith(statements, (StartsWithFilter) f,
+                if (FilterUtils.containsPrefixedWith(filters, (StartsWithFilter) f,
                     (inner, outer) -> FilterUtils.prefixedWith(outer.getValue(),
                         inner.getValue()))) {
                     continue;
@@ -130,10 +130,10 @@ public class OrFilter implements Filter {
 
     @Override
     public String toString() {
-        final List<String> parts = new ArrayList<>(statements.size() + 1);
+        final List<String> parts = new ArrayList<>(filters.size() + 1);
         parts.add(OPERATOR);
 
-        for (final Filter statement : statements) {
+        for (final Filter statement : filters) {
             parts.add(statement.toString());
         }
 
@@ -146,7 +146,7 @@ public class OrFilter implements Filter {
     }
 
     public List<Filter> terms() {
-        return statements;
+        return filters;
     }
 
     public static Filter of(Filter... filters) {
@@ -167,13 +167,13 @@ public class OrFilter implements Filter {
 
     @Override
     public String toDSL() {
-        return "(" + or.join(statements.stream().map(Filter::toDSL).iterator()) + ")";
+        return "(" + or.join(filters.stream().map(Filter::toDSL).iterator()) + ")";
     }
 
     @Override
     public void hashTo(final ObjectHasher hasher) {
         hasher.putObject(this.getClass(), () -> {
-            hasher.putField("statements", statements, hasher.list(hasher.with(Filter::hashTo)));
+            hasher.putField("filters", filters, hasher.list(hasher.with(Filter::hashTo)));
         });
     }
 }
