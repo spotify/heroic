@@ -24,17 +24,20 @@ package com.spotify.heroic.filter;
 import static com.spotify.heroic.filter.FilterEncoding.filter;
 import static com.spotify.heroic.filter.FilterEncoding.string;
 
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TreeTraversingParser;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.grammar.QueryParser;
 import java.io.IOException;
@@ -43,6 +46,21 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Registry of all known filters.
+ * <p>
+ * This is primarily used to provide serialization for Filters.
+ * <p>
+ * A filter can be deserialized from an object, or an array. When an object is used, the type field
+ * is determined by the filters {@link com.fasterxml.jackson.annotation.JsonTypeName} annotation.
+ * Otherwise it falls back to the id.
+ * <p>
+ * Object-based is the more universal method, but is typically more verbose. It is useful for use in
+ * clients which are statically typed, since type-based deserialization is usually readily
+ * supported.
+ *
+ * @see com.spotify.heroic.filter.Filter
+ */
 @RequiredArgsConstructor
 public class FilterRegistry {
     private final Map<String, FilterEncoding<? extends Filter>> deserializers = new HashMap<>();
@@ -50,7 +68,8 @@ public class FilterRegistry {
     private final Map<Class<? extends Filter>, JsonSerializer<Filter>> serializers =
         new HashMap<>();
 
-    private final HashMap<Class<?>, String> typeMapping = new HashMap<>();
+    private final HashMap<Class<? extends Filter>, String> typeMapping = new HashMap<>();
+    private final HashMap<String, Class<? extends Filter>> typeNameMapping = new HashMap<>();
 
     public <T extends Filter> void registerList(
         String id, Class<T> type, FilterEncoding<T> s
@@ -89,7 +108,7 @@ public class FilterRegistry {
         }
 
         final FilterJsonDeserializer deserializer =
-            new FilterJsonDeserializer(ImmutableMap.copyOf(deserializers), parser);
+            new FilterJsonDeserializer(ImmutableMap.copyOf(deserializers), typeNameMapping, parser);
         m.addDeserializer(Filter.class, deserializer);
         return m;
     }
@@ -106,6 +125,22 @@ public class FilterRegistry {
         if (typeMapping.put(type, id) != null) {
             throw new IllegalStateException("Multiple mappings for single type: " + type);
         }
+
+        final String typeName = buildTypeId(id, type);
+
+        if (typeNameMapping.put(typeName, type) != null) {
+            throw new IllegalStateException("Multiple type names for single type: " + type);
+        }
+    }
+
+    private <T extends Filter> String buildTypeId(final String id, final Class<T> type) {
+        final JsonTypeName annotation = type.getAnnotation(JsonTypeName.class);
+
+        if (annotation == null) {
+            return id;
+        }
+
+        return annotation.value();
     }
 
     @RequiredArgsConstructor
@@ -139,18 +174,30 @@ public class FilterRegistry {
         }
     }
 
+    /**
+     * Provides both array, and object based deserialization for filters.
+     */
     @RequiredArgsConstructor
     static class FilterJsonDeserializer extends JsonDeserializer<Filter> {
         final Map<String, FilterEncoding<? extends Filter>> deserializers;
+        final HashMap<String, Class<? extends Filter>> typeNameMapping;
         final QueryParser parser;
 
         @Override
-        public Filter deserialize(JsonParser p, DeserializationContext c)
-            throws IOException, JsonProcessingException {
-            if (p.getCurrentToken() != JsonToken.START_ARRAY) {
-                throw c.mappingException("Expected start of array");
+        public Filter deserialize(JsonParser p, DeserializationContext c) throws IOException {
+            if (p.getCurrentToken() == JsonToken.START_ARRAY) {
+                return deserializeArray(p, c);
             }
 
+            if (p.getCurrentToken() == JsonToken.START_OBJECT) {
+                return deserializeObject(p, c);
+            }
+
+            throw c.mappingException("Expected start of array or object");
+        }
+
+        private Filter deserializeArray(final JsonParser p, final DeserializationContext c)
+            throws IOException {
             if (p.nextToken() != JsonToken.VALUE_STRING) {
                 throw c.mappingException("Expected operator (string)");
             }
@@ -185,6 +232,33 @@ public class FilterRegistry {
                 // use special {operator} syntax to indicate filter.
                 throw JsonMappingException.wrapWithPath(e, this, "{" + operator + "}");
             }
+        }
+
+        private Filter deserializeObject(final JsonParser p, final DeserializationContext c)
+            throws IOException {
+            final ObjectNode object = (ObjectNode) p.readValueAs(JsonNode.class);
+
+            final JsonNode typeNode = object.remove("type");
+
+            if (typeNode == null) {
+                throw c.mappingException("Expected 'type' field");
+            }
+
+            if (!typeNode.isTextual()) {
+                throw c.mappingException("Expected 'type' to be string");
+            }
+
+            final String type = typeNode.asText();
+
+            final Class<? extends Filter> cls = typeNameMapping.get(type);
+
+            if (cls == null) {
+                throw c.mappingException("No such type: " + type);
+            }
+
+            // use tree traversing parser to operate on the node (without 'type') again.
+            final TreeTraversingParser parser = new TreeTraversingParser(object, p.getCodec());
+            return parser.readValueAs(cls);
         }
 
         private Filter parseRawFilter(RawFilter filter) {
@@ -252,17 +326,16 @@ public class FilterRegistry {
         final FilterRegistry registry = new FilterRegistry();
 
         registry.registerList(AndFilter.OPERATOR, AndFilter.class,
-            new MultiArgumentsFilterBase<>(AndFilter::new, AndFilter::getStatements, filter()));
+            new MultiArgumentsFilterBase<>(AndFilter::new, AndFilter::getFilters, filter()));
 
         registry.registerList(OrFilter.OPERATOR, OrFilter.class,
-            new MultiArgumentsFilterBase<>(OrFilter::new, OrFilter::getStatements, filter()));
+            new MultiArgumentsFilterBase<>(OrFilter::new, OrFilter::getFilters, filter()));
 
         registry.registerOne(NotFilter.OPERATOR, NotFilter.class,
             new OneArgumentFilterEncoding<>(NotFilter::new, NotFilter::getFilter, filter()));
 
         registry.registerTwo(MatchKeyFilter.OPERATOR, MatchKeyFilter.class,
-            new OneArgumentFilterEncoding<>(MatchKeyFilter::new, MatchKeyFilter::getValue,
-                string()));
+            new OneArgumentFilterEncoding<>(MatchKeyFilter::new, MatchKeyFilter::getKey, string()));
 
         registry.registerTwo(MatchTagFilter.OPERATOR, MatchTagFilter.class,
             new TwoArgumentFilterEncoding<>(MatchTagFilter::new, MatchTagFilter::getTag,

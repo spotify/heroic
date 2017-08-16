@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.filter;
 
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.grammar.DSL;
@@ -29,6 +30,7 @@ import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(of = {"OPERATOR", "tag", "value"}, doNotUseGetters = true)
+@JsonTypeName("matchTag")
 public class MatchTagFilter implements Filter {
     public static final String OPERATOR = "=";
 

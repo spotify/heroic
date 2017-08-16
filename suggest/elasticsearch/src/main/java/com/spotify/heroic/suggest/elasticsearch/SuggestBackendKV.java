@@ -725,7 +725,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
             @Override
             public QueryBuilder visitMatchKey(final MatchKeyFilter matchKey) {
-                return termQuery(KEY, matchKey.getValue());
+                return termQuery(KEY, matchKey.getKey());
             }
 
             @Override

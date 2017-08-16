@@ -376,8 +376,8 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     }
 
     /**
-     * Collect the result of a list of operations and convert into a
-     * {@link com.spotify.heroic.metadata.DeleteSeries}.
+     * Collect the result of a list of operations and convert into a {@link
+     * com.spotify.heroic.metadata.DeleteSeries}.
      *
      * @return a {@link eu.toolchain.async.StreamCollector}
      */
@@ -550,7 +550,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
             @Override
             public QueryBuilder visitMatchKey(final MatchKeyFilter matchKey) {
-                return termQuery(KEY, matchKey.getValue());
+                return termQuery(KEY, matchKey.getKey());
             }
 
             @Override

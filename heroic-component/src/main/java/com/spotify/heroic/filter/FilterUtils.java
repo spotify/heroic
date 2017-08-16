@@ -119,7 +119,7 @@ public class FilterUtils {
             if (inner instanceof MatchKeyFilter) {
                 final MatchKeyFilter matchKey = (MatchKeyFilter) inner;
 
-                if (!outer.getValue().equals(matchKey.getValue())) {
+                if (!outer.getKey().equals(matchKey.getKey())) {
                     return true;
                 }
             }
