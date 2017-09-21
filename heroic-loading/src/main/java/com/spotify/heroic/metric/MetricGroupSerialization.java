@@ -67,10 +67,6 @@ public class MetricGroupSerialization {
                 throw c.mappingException("Expected end of array");
             }
 
-            if (p.getCurrentToken() != JsonToken.END_ARRAY) {
-                throw c.mappingException("Expected end of array");
-            }
-
             return new MetricGroup(timestamp, groups.build());
         }
     }
