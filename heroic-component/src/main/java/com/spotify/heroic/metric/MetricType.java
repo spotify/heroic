@@ -41,6 +41,7 @@ public enum MetricType {
     EVENT(Event.class, "events"),
     SPREAD(Spread.class, "spreads"),
     GROUP(MetricGroup.class, "groups"),
+    // TODO: rename to PAYLOAD.
     CARDINALITY(Payload.class, "cardinality");
     // @formatter:on
 

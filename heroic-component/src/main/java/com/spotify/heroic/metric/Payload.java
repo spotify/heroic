@@ -24,10 +24,8 @@ package com.spotify.heroic.metric;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import com.google.common.hash.Hasher;
-import lombok.Data;
-
-import java.beans.ConstructorProperties;
 import java.util.Map;
+import lombok.Data;
 
 @Data
 public class Payload implements Metric {
@@ -35,12 +33,6 @@ public class Payload implements Metric {
 
     private final long timestamp;
     private final byte[] state;
-
-    @ConstructorProperties({"timestamp", "state"})
-    public Payload(final long timestamp, final byte[] state) {
-        this.timestamp = timestamp;
-        this.state = state;
-    }
 
     public boolean valid() {
         return true;
@@ -50,7 +42,8 @@ public class Payload implements Metric {
 
     @Override
     public void hash(final Hasher hasher) {
-        hasher.putInt(MetricType.EVENT.ordinal());
+        hasher.putInt(MetricType.CARDINALITY.ordinal());
+        hasher.putLong(timestamp);
         hasher.putBytes(state);
     }
 }

@@ -24,18 +24,27 @@ package com.spotify.heroic.metric;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.common.Series;
-
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class EmptyMetricCollection extends MetricCollection {
-    public EmptyMetricCollection() {
-        super(MetricType.POINT, ImmutableList.of());
+public class EmptyMetricCollection implements MetricCollection {
+    static final MetricCollection INSTANCE = new EmptyMetricCollection();
+
+    @Override
+    public List<? extends Metric> getData() {
+        return ImmutableList.of();
+    }
+
+    @Override
+    public MetricType getType() {
+        // TODO: return optional
+        return MetricType.POINT;
     }
 
     @Override
     public void updateAggregation(
-        AggregationSession session, Map<String, String> tags, Set<Series> series
+        final AggregationSession session, final Map<String, String> tags, final Set<Series> series
     ) {
     }
 }
