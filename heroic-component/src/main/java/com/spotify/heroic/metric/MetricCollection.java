@@ -76,10 +76,6 @@ import lombok.Data;
     @JsonSubTypes.Type(MetricCollection.CardinalityCollection.class),
 })
 public interface MetricCollection {
-    static MetricCollection empty() {
-        return EmptyMetricCollection.INSTANCE;
-    }
-
     /**
      * Get the underlying data.
      */

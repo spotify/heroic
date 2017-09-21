@@ -22,8 +22,11 @@
 package com.spotify.heroic.http.write;
 
 import com.spotify.heroic.common.JavaxRestFramework;
+import com.spotify.heroic.ingestion.Ingestion;
+import com.spotify.heroic.ingestion.IngestionGroup;
 import com.spotify.heroic.ingestion.IngestionManager;
-
+import eu.toolchain.async.AsyncFramework;
+import eu.toolchain.async.AsyncFuture;
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
@@ -38,11 +41,16 @@ import javax.ws.rs.core.MediaType;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class WriteResource {
+    private final AsyncFramework async;
     private final IngestionManager ingestion;
     private final JavaxRestFramework httpAsync;
 
     @Inject
-    public WriteResource(final IngestionManager ingestion, final JavaxRestFramework httpAsync) {
+    public WriteResource(
+        final AsyncFramework async, final IngestionManager ingestion,
+        final JavaxRestFramework httpAsync
+    ) {
+        this.async = async;
         this.ingestion = ingestion;
         this.httpAsync = httpAsync;
     }
@@ -52,7 +60,13 @@ public class WriteResource {
         @Suspended final AsyncResponse response, @QueryParam("group") String group,
         WriteMetricRequest write
     ) throws Exception {
-        httpAsync.bind(response, ingestion.useGroup(group).write(write.toIngestionRequest()),
-            r -> r);
+        final IngestionGroup ingestionGroup = ingestion.useGroup(group);
+
+        final AsyncFuture<Ingestion> future = write
+            .toIngestionRequest()
+            .map(ingestionGroup::write)
+            .orElseGet(() -> async.resolved(Ingestion.EMPTY));
+
+        httpAsync.bind(response, future);
     }
 }
