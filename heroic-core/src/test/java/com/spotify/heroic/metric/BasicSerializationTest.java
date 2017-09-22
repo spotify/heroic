@@ -14,6 +14,7 @@ import com.spotify.heroic.test.FakeModuleLoader;
 import com.spotify.heroic.test.Resources;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -41,6 +42,24 @@ public class BasicSerializationTest {
         final MetricCollection expected = MetricCollection.points(
             ImmutableList.of(new Point(1000, 10.0d), new Point(2000, 20.0d)));
         assertSerialization("MetricCollection.json", expected, MetricCollection.class);
+    }
+
+    @Test
+    public void testMetricCollection2() throws Exception {
+        final MetricCollection expected = MetricCollection.events(
+            ImmutableList.of(new Event(1000, ImmutableMap.of("foo", "bar")),
+                new Event(2000, ImmutableMap.of("bar", "baz"))));
+        assertSerialization("MetricCollection.Event.json", expected, MetricCollection.class);
+    }
+
+    @Test
+    public void testMetricCollection3() throws Exception {
+        final byte[] foo = "foo\n".getBytes(StandardCharsets.UTF_8);
+        final byte[] bar = "bar\n".getBytes(StandardCharsets.UTF_8);
+
+        final MetricCollection expected = MetricCollection.cardinality(
+            ImmutableList.of(new Payload(1000, foo), new Payload(2000, bar)));
+        assertSerialization("MetricCollection.Payload.json", expected, MetricCollection.class);
     }
 
     @Test
@@ -104,11 +123,11 @@ public class BasicSerializationTest {
     ) throws IOException {
         // verify that it is equal to the local file.
         try (final InputStream in = Resources.openResource(getClass(), expectedFile)) {
-            assertEquals(mapper.readValue(in, type), toVerify);
+            assertEquals(toVerify, mapper.readValue(in, type));
         }
 
         // roundtrip
         final String string = mapper.writeValueAsString(toVerify);
-        assertEquals(mapper.readValue(string, type), toVerify);
+        assertEquals(toVerify, mapper.readValue(string, type));
     }
 }

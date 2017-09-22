@@ -40,7 +40,6 @@ import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.GroupsSerialization;
 import com.spotify.heroic.common.TypeNameMixin;
 import com.spotify.heroic.conditionalfeatures.ConditionalFeatures;
-import com.spotify.heroic.requestcondition.RequestCondition;
 import com.spotify.heroic.consumer.ConsumerModule;
 import com.spotify.heroic.filter.FilterRegistry;
 import com.spotify.heroic.generator.MetadataGenerator;
@@ -49,8 +48,6 @@ import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metadata.MetadataModule;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.EventSerialization;
-import com.spotify.heroic.metric.MetricCollection;
-import com.spotify.heroic.metric.MetricCollectionSerialization;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.MetricGroupSerialization;
 import com.spotify.heroic.metric.MetricModule;
@@ -61,6 +58,7 @@ import com.spotify.heroic.metric.PointSerialization;
 import com.spotify.heroic.metric.Spread;
 import com.spotify.heroic.metric.SpreadSerialization;
 import com.spotify.heroic.querylogging.QueryLoggingModule;
+import com.spotify.heroic.requestcondition.RequestCondition;
 import com.spotify.heroic.statistics.StatisticsModule;
 import com.spotify.heroic.suggest.SuggestModule;
 
@@ -144,11 +142,6 @@ public final class HeroicMappers {
 
         module.addSerializer(MetricGroup.class, new MetricGroupSerialization.Serializer());
         module.addDeserializer(MetricGroup.class, new MetricGroupSerialization.Deserializer());
-
-        module.addSerializer(MetricCollection.class,
-            new MetricCollectionSerialization.Serializer());
-        module.addDeserializer(MetricCollection.class,
-            new MetricCollectionSerialization.Deserializer());
 
         module.addSerializer(MetricType.class, new MetricTypeSerialization.Serializer());
         module.addDeserializer(MetricType.class, new MetricTypeSerialization.Deserializer());
