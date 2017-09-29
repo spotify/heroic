@@ -58,6 +58,10 @@
           <li ui-sref-active="active">
             <a ui-sref="docs.config.features">Features</a>
           </li>
+
+          <li ui-sref-active="active">
+            <a ui-sref="docs.config.query_logging">Query logging</a>
+          </li>
         </ul>
       </li>
 

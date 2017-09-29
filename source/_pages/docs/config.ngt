@@ -47,6 +47,12 @@
   Elasticsearch.
 </p>
 
+<h4><a ui-sref="^.query_logging">Query logging</a></h4>
+
+<p>
+  This section documents how to configure query logging. I.e. detailed logging of internal Heroic state at different stages of query processing.
+</p>
+
 <p class="next">
   In the next section we will talk about the <a ui-sref="^.^.data_model">data model of Heroic</a>.
 </p>

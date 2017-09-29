@@ -22,7 +22,8 @@
     '_pages/docs/config/elasticsearch_connection.ngt',
     '_pages/docs/config/shell_server.ngt',
     '_pages/docs/config/consumer.ngt',
-    '_pages/docs/config/features.ngt'
+    '_pages/docs/config/features.ngt',
+    '_pages/docs/config/query_logging.ngt'
   ]);
 
   function DocumentationCtrl($scope) {
@@ -128,6 +129,10 @@
       .state('docs.config.features', {
         url: '/features',
         templateUrl: '_pages/docs/config/features.ngt'
+      })
+      .state('docs.config.query_logging', {
+        url: '/query_logging',
+        templateUrl: '_pages/docs/config/query_logging.ngt'
       });
   });
 })();
