@@ -37,6 +37,7 @@ import com.spotify.heroic.shell.task.AnalyticsReportFetchSeries;
 import com.spotify.heroic.shell.task.BackendKeyArgument;
 import com.spotify.heroic.shell.task.Configure;
 import com.spotify.heroic.shell.task.CountData;
+import com.spotify.heroic.shell.task.AnnotatedExport;
 import com.spotify.heroic.shell.task.DataMigrate;
 import com.spotify.heroic.shell.task.DeleteKeys;
 import com.spotify.heroic.shell.task.DeserializeKey;
@@ -140,6 +141,7 @@ public final class Tasks {
         shellTask(AnalyticsDumpFetchSeries::setup, AnalyticsDumpFetchSeries.class);
         shellTask(LoadGenerated::setup, LoadGenerated.class);
         shellTask(MetadataWrite::setup, MetadataWrite.class);
+        shellTask(AnnotatedExport::setup, AnnotatedExport.class);
     }
 
     public static List<ShellTaskDefinition> available() {
