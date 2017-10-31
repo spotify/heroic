@@ -33,8 +33,9 @@ import lombok.Data;
 
 @Data
 public class SeriesSetsSummarizer {
-    private HashSet<String> uniqueKeys = new HashSet<>();
-    private Multimap<String, String> tags = HashMultimap.create();
+    private final HashSet<String> uniqueKeys = new HashSet<>();
+    private final Multimap<String, String> tags = HashMultimap.create();
+    private final Multimap<String, String> resource = HashMultimap.create();
     private final Histogram.Builder seriesSize = Histogram.builder();
 
     public void add(Set<Series> series) {
@@ -46,23 +47,34 @@ public class SeriesSetsSummarizer {
             for (Map.Entry<String, String> e : s.getTags().entrySet()) {
                 tags.put(e.getKey(), e.getValue());
             }
+
+            for (Map.Entry<String, String> e : s.getResource().entrySet()) {
+                resource.put(e.getKey(), e.getValue());
+            }
         }
     }
 
     public Summary end() {
         final Histogram.Builder tagsSize = Histogram.builder();
+        final Histogram.Builder resourceSize = Histogram.builder();
 
         for (final Map.Entry<String, Collection<String>> e : this.tags.asMap().entrySet()) {
             tagsSize.add(e.getValue().size());
         }
 
-        return new Summary(uniqueKeys.size(), tagsSize.build(), seriesSize.build());
+        for (final Map.Entry<String, Collection<String>> e : this.resource.asMap().entrySet()) {
+            resourceSize.add(e.getValue().size());
+        }
+
+        return new Summary(uniqueKeys.size(), tagsSize.build(), resourceSize.build(),
+            seriesSize.build());
     }
 
     @Data
     public static class Summary {
         final long uniqueKeys;
         final Histogram tagsSize;
+        final Histogram resourceSize;
         final Histogram seriesSize;
     }
 }

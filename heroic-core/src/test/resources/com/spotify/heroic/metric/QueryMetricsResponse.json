@@ -24,7 +24,8 @@
       "values": [],
       "key": null,
       "tags": {},
-      "tagCounts": {}
+      "tagCounts": {},
+      "resource": {}
     }
   ],
   "preAggregationSampleSize":null,

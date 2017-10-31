@@ -44,7 +44,6 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
-import eu.toolchain.serializer.Serializer;
 import java.util.Optional;
 import javax.inject.Named;
 import lombok.Data;
@@ -179,7 +178,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
 
         @Provides
         @BigtableScope
-        public Serializer<RowKey> rowKeySerializer() {
+        public RowKeySerializer rowKeySerializer() {
             return new MetricsRowKeySerializer();
         }
 

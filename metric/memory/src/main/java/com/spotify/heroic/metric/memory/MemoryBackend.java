@@ -37,6 +37,7 @@ import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.MetricReadResult;
 import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.WriteMetric;
 import eu.toolchain.async.AsyncFramework;
@@ -118,12 +119,12 @@ public class MemoryBackend extends AbstractMetricBackend {
     @Override
     public AsyncFuture<FetchData.Result> fetch(
         FetchData.Request request, FetchQuotaWatcher watcher,
-        Consumer<MetricCollection> metricsConsumer
+        Consumer<MetricReadResult> metricsConsumer
     ) {
         final QueryTrace.NamedWatch w = QueryTrace.watch(FETCH);
         final MemoryKey key = new MemoryKey(request.getType(), request.getSeries());
         final MetricCollection metrics = doFetch(key, request.getRange(), watcher);
-        metricsConsumer.accept(metrics);
+        metricsConsumer.accept(MetricReadResult.create(metrics));
         return async.resolved(FetchData.result(w.end()));
     }
 

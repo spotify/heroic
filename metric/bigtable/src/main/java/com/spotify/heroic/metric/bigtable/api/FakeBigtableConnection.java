@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
+import static com.spotify.heroic.metric.bigtable.api.RowFilter.compareByteStrings;
+
 import com.google.bigtable.v2.Mutation;
 import com.google.cloud.bigtable.grpc.scanner.FlatRow;
 import com.google.protobuf.ByteString;
@@ -225,9 +227,31 @@ public class FakeBigtableConnection implements BigtableConnection {
                 request.getFilter().<Function<ByteString, Boolean>>map(
                     filter -> filter::matchesColumn).orElse(column -> true);
 
-            final Function<ByteString, Boolean> matchesRowKey =
-                request.getRowKey().<Function<ByteString, Boolean>>map(
-                    rowKey -> rowKey::equals).orElse(key -> true);
+            final Function<ByteString, Boolean> matchesRowKey = bytes -> {
+                final boolean rangeMatches = request.getRange().map(range -> {
+                    if (range.getStart().isPresent()) {
+                        final int n = compareByteStrings(range.getStart().get(), bytes);
+
+                        if (!(n <= 0)) {
+                            return false;
+                        }
+                    }
+
+                    if (range.getEnd().isPresent()) {
+                        final int n = compareByteStrings(bytes, range.getEnd().get());
+
+                        if (!(n < 0)) {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                }).orElse(true);
+
+                final boolean keyMatches = request.getRowKey().map(bytes::equals).orElse(true);
+
+                return rangeMatches && keyMatches;
+            };
 
             return async.call(() -> rows.entrySet().stream().flatMap(entry -> {
                 final Pair<ByteString, ColumnFamily> key = entry.getKey();
@@ -267,11 +291,7 @@ public class FakeBigtableConnection implements BigtableConnection {
             storage
                 .entrySet()
                 .stream()
-                .filter(e -> {
-                    final boolean matches = matchesColumn.apply(e.getKey());
-                    final Optional<RowFilter> filter = request.getFilter();
-                    return matches;
-                })
+                .filter(e -> matchesColumn.apply(e.getKey()))
                 .map(column -> FlatRow.Cell
                     .newBuilder()
                     .withFamily(columnFamily.getName())

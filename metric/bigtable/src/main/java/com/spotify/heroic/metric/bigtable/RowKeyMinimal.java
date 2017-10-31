@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Spotify AB.
+ * Copyright (c) 2015 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,16 +19,30 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric.bigtable.api;
+package com.spotify.heroic.metric.bigtable;
 
-import com.google.protobuf.ByteString;
-
+import eu.toolchain.serializer.AutoSerialize;
+import java.util.SortedMap;
 import lombok.Data;
 
+@AutoSerialize
 @Data
-public final class ReadRowRangeRequest {
-    private final ByteString rowKey;
-    private final String columnFamily;
-    private final ByteString startQualifierOpen;
-    private final ByteString endQualifierClosed;
+public class RowKeyMinimal {
+    private final Series series;
+    private final long base;
+
+    @AutoSerialize
+    @Data
+    static class Series {
+        private final String key;
+        private final SortedMap<String, String> tags;
+
+        public static Series create(com.spotify.heroic.common.Series series) {
+            return new Series(series.getKey(), series.getTags());
+        }
+    }
+
+    public static RowKeyMinimal create(RowKey rowKey) {
+        return new RowKeyMinimal(Series.create(rowKey.getSeries()), rowKey.getBase());
+    }
 }

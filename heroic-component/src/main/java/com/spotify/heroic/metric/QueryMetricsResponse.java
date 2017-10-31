@@ -185,8 +185,9 @@ public class QueryMetricsResponse {
                 g.writeObjectField("values", collection.getData());
 
                 writeKey(g, series.getKeys());
-                writeTags(g, common, series.getTags());
+                writeTags(g, series.getTags());
                 writeTagCounts(g, series.getTags());
+                writeResource(g, series.getResource());
 
                 g.writeEndObject();
             }
@@ -205,8 +206,7 @@ public class QueryMetricsResponse {
         }
 
         void writeTags(
-            JsonGenerator g, final Map<String, SortedSet<String>> common,
-            final Map<String, SortedSet<String>> tags
+            JsonGenerator g, final Map<String, SortedSet<String>> tags
         ) throws IOException {
             g.writeFieldName("tags");
 
@@ -244,6 +244,26 @@ public class QueryMetricsResponse {
                 }
 
                 g.writeNumberField(pair.getKey(), values.size());
+            }
+
+            g.writeEndObject();
+        }
+
+        void writeResource(
+            JsonGenerator g, final Map<String, SortedSet<String>> resource
+        ) throws IOException {
+            g.writeFieldName("resource");
+
+            g.writeStartObject();
+
+            for (final Map.Entry<String, SortedSet<String>> pair : resource.entrySet()) {
+                final SortedSet<String> values = pair.getValue();
+
+                if (values.size() != 1) {
+                    continue;
+                }
+
+                g.writeStringField(pair.getKey(), values.iterator().next());
             }
 
             g.writeEndObject();

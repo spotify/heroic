@@ -18,8 +18,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedMap;
 import com.spotify.heroic.common.Feature;
 import com.spotify.heroic.common.FeatureSet;
 import com.spotify.heroic.common.Series;
@@ -51,9 +51,12 @@ import org.junit.Before;
 import org.junit.Test;
 
 public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
-    private final Series s1 = Series.of("key1", ImmutableMap.of("shared", "a", "diff", "a"));
-    private final Series s2 = Series.of("key1", ImmutableMap.of("shared", "a", "diff", "b"));
-    private final Series s3 = Series.of("key1", ImmutableMap.of("shared", "a", "diff", "c"));
+    private final Series s1 = new Series("key1", ImmutableSortedMap.of("shared", "a", "diff", "a"),
+        ImmutableSortedMap.of("resource", "a"));
+    private final Series s2 = new Series("key1", ImmutableSortedMap.of("shared", "a", "diff", "b"),
+        ImmutableSortedMap.of("resource", "b"));
+    private final Series s3 = new Series("key1", ImmutableSortedMap.of("shared", "a", "diff", "c"),
+        ImmutableSortedMap.of("resource", "c"));
 
     /* the number of queries run */
     private int queryCount = 0;
@@ -350,7 +353,8 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         for (final RequestError e : result.getErrors()) {
             assertTrue((e instanceof QueryError));
             final QueryError q = (QueryError) e;
-            assertThat(q.getError(), containsString("Some fetches failed (1) or were cancelled (0)"));
+            assertThat(q.getError(),
+                containsString("Some fetches failed (1) or were cancelled (0)"));
         }
 
         assertEquals(ResultLimits.of(ResultLimit.AGGREGATION), result.getLimits());

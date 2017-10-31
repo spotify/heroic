@@ -58,7 +58,9 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.StreamCollector;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -279,7 +281,7 @@ public class LocalMetricManager implements MetricManager {
                     for (final Series series : result.getSeries()) {
                         fetches.add(() -> metricBackend.fetch(
                             new FetchData.Request(source, series, range, options), quotaWatcher,
-                            mc -> collector.acceptMetricsCollection(series, mc)));
+                            mcr -> collector.acceptMetricsCollection(series, mcr)));
                     }
                 });
 
@@ -360,7 +362,7 @@ public class LocalMetricManager implements MetricManager {
         @Override
         public AsyncFuture<FetchData.Result> fetch(
             final FetchData.Request request, final FetchQuotaWatcher watcher,
-            final Consumer<MetricCollection> metricsConsumer
+            final Consumer<MetricReadResult> metricsConsumer
         ) {
             final List<AsyncFuture<FetchData.Result>> callbacks =
                 map(b -> b.fetch(request, watcher, metricsConsumer));
@@ -484,16 +486,34 @@ public class LocalMetricManager implements MetricManager {
             requestErrors.addAll(result.getErrors());
         }
 
-        void acceptMetricsCollection(final Series series, final MetricCollection g) {
-            g.updateAggregation(session, series.getTags(), ImmutableSet.of(series));
-            dataInMemoryReporter.reportDataNoLongerNeeded(g.size());
+        void acceptMetricsCollection(
+            final Series series, final MetricReadResult readResult
+        ) {
+            final MetricCollection metrics = readResult.getMetrics();
+            final Map<String, String> aggregationKey = buildAggregationKey(series, readResult);
 
-            g.getAverageDistanceBetweenMetrics().ifPresent(msBetweenSamples -> {
+            metrics.updateAggregation(session, aggregationKey,
+                ImmutableSet.of(series.withResource(readResult.getResource())));
+            dataInMemoryReporter.reportDataNoLongerNeeded(metrics.size());
+
+            metrics.getAverageDistanceBetweenMetrics().ifPresent(msBetweenSamples -> {
                 final double metricsPerSecond = 1000.0 / msBetweenSamples;
                 dataInMemoryReporter.reportRowDensity(metricsPerSecond);
                 final long metricsPerMegaSecond = (long) (metricsPerSecond * 1_000_000);
                 rowDensityData.add(metricsPerMegaSecond);
             });
+        }
+
+        private Map<String, String> buildAggregationKey(
+            final Series series, final MetricReadResult readResult
+        ) {
+            if (readResult.getResource().isEmpty()) {
+                return series.getTags();
+            }
+
+            final Map<String, String> key = new HashMap<>(series.getTags());
+            key.putAll(readResult.getResource());
+            return key;
         }
 
         @Override

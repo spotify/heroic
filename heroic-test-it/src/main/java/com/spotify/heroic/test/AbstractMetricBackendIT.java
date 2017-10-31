@@ -24,12 +24,12 @@ package com.spotify.heroic.test;
 import static com.spotify.heroic.test.Data.events;
 import static com.spotify.heroic.test.Data.points;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedMap;
 import com.spotify.heroic.HeroicConfig;
 import com.spotify.heroic.HeroicCore;
 import com.spotify.heroic.HeroicCoreInstance;
@@ -44,6 +44,7 @@ import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricManagerModule;
 import com.spotify.heroic.metric.MetricModule;
+import com.spotify.heroic.metric.MetricReadResult;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.WriteMetric;
 import java.util.ArrayList;
@@ -68,9 +69,12 @@ import org.junit.runners.model.Statement;
 
 @Slf4j
 public abstract class AbstractMetricBackendIT {
-    protected final Series s1 = Series.of("s1", ImmutableMap.of("id", "s1"));
-    protected final Series s2 = Series.of("s2", ImmutableMap.of("id", "s2"));
-    protected final Series s3 = Series.of("s3", ImmutableMap.of("id", "s3"));
+    protected final Series s1 =
+        new Series("s1", ImmutableSortedMap.of("id", "s1"), ImmutableSortedMap.of("resource", "a"));
+    protected final Series s2 =
+        new Series("s2", ImmutableSortedMap.of("id", "s2"), ImmutableSortedMap.of("resource", "a"));
+    protected final Series s3 =
+        new Series("s3", ImmutableSortedMap.of("id", "s3"), ImmutableSortedMap.of("resource", "a"));
 
     public static final Map<String, String> EVENT = ImmutableMap.of();
 
@@ -159,7 +163,7 @@ public abstract class AbstractMetricBackendIT {
 
     /**
      * Some backends have limits on how many metrics should be written in a single request.
-     *
+     * <p>
      * This test case creates a dense pool of metrics after a given max batch size to make sure that
      * they can be written and read out.
      */
@@ -213,33 +217,25 @@ public abstract class AbstractMetricBackendIT {
     ) throws Exception {
         backend.write(new WriteMetric.Request(s1, input)).get();
 
-        final List<MetricCollection> data = Collections.synchronizedList(new ArrayList<>());
-        FetchData.Result result = backend
+        final List<MetricReadResult> data = Collections.synchronizedList(new ArrayList<>());
+
+        backend
             .fetch(new FetchData.Request(expected.getType(), s1, range,
                 QueryOptions.builder().build()), FetchQuotaWatcher.NO_QUOTA, data::add)
             .get();
 
-        assertTrue("Read the same data that was written",
-            isSortedSetOfMetricsEqual(ImmutableSet.of(expected), ImmutableSet.copyOf(data)));
+        final Set<MetricCollection> found =
+            data.stream().map(MetricReadResult::getMetrics).collect(Collectors.toSet());
+
+        assertSortedMetricsEqual(ImmutableSet.of(expected), found);
     }
 
     // Compare the metrics contained in the MetricCollections, ignoring if the data was split into
     // multiple MCs or not.
-    private boolean isSortedSetOfMetricsEqual(
+    private void assertSortedMetricsEqual(
         final Set<MetricCollection> expected, final Set<MetricCollection> actual
     ) {
-        final Comparator<Metric> comparator = new Comparator<Metric>() {
-            @Override
-            public int compare(final Metric m1, final Metric m2) {
-                if (m1.getTimestamp() > m2.getTimestamp()) {
-                    return -1;
-                }
-                if (m1.getTimestamp() < m2.getTimestamp()) {
-                    return 1;
-                }
-                return 0;
-            }
-        };
+        final Comparator<Metric> comparator = Comparator.comparingLong(Metric::getTimestamp);
 
         final SortedSet<Metric> metricsExpected = new TreeSet<>(comparator);
         final SortedSet<Metric> metricsActual = new TreeSet<>(comparator);
@@ -248,7 +244,7 @@ public abstract class AbstractMetricBackendIT {
         metricsActual.addAll(
             actual.stream().flatMap(mc -> mc.getData().stream()).collect(Collectors.toList()));
 
-        return metricsExpected.equals(metricsActual);
+        assertEquals(metricsExpected, metricsActual);
     }
 
     private TestCase newCase() {
@@ -401,7 +397,10 @@ public abstract class AbstractMetricBackendIT {
         throws Exception {
         if (slicedFetch) {
             List<MetricCollection> fetchedMetrics = Collections.synchronizedList(new ArrayList<>());
-            backend.fetch(request, FetchQuotaWatcher.NO_QUOTA, fetchedMetrics::add).get();
+            backend
+                .fetch(request, FetchQuotaWatcher.NO_QUOTA,
+                    mcr -> fetchedMetrics.add(mcr.getMetrics()))
+                .get();
             return fetchedMetrics;
         } else {
             throw new IllegalArgumentException(

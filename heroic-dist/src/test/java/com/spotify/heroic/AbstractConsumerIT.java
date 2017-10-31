@@ -9,6 +9,7 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.MetricCollection;
+import com.spotify.heroic.metric.MetricReadResult;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
@@ -48,9 +49,9 @@ public abstract class AbstractConsumerIT extends AbstractSingleNodeIT {
         consumer.accept(request);
 
         tryUntil(() -> {
-            final List<MetricCollection> data = Collections.synchronizedList(new ArrayList<>());
+            final List<MetricReadResult> data = Collections.synchronizedList(new ArrayList<>());
 
-            FetchData.Result result = instance.inject(coreComponent -> {
+            instance.inject(coreComponent -> {
                 FetchData.Request fetchDataRequest =
                     new FetchData.Request(MetricType.POINT, s1, new DateRange(0, 100),
                         QueryOptions.defaults());
@@ -60,7 +61,9 @@ public abstract class AbstractConsumerIT extends AbstractSingleNodeIT {
                     .fetch(fetchDataRequest, FetchQuotaWatcher.NO_QUOTA, data::add);
             }).get();
 
-            assertEquals(ImmutableList.of(mc), data);
+            final MetricCollection collection = data.iterator().next().getMetrics();
+
+            assertEquals(mc, collection);
             return null;
         });
     }
@@ -83,8 +86,9 @@ public abstract class AbstractConsumerIT extends AbstractSingleNodeIT {
         }
 
         tryUntil(() -> {
-            final List<MetricCollection> data = Collections.synchronizedList(new ArrayList<>());
-            FetchData.Result result = instance.inject(coreComponent -> {
+            final List<MetricReadResult> data = Collections.synchronizedList(new ArrayList<>());
+
+            instance.inject(coreComponent -> {
                 FetchData.Request fetchDataRequest =
                     new FetchData.Request(MetricType.POINT, s1, new DateRange(0, 100),
                         QueryOptions.defaults());
@@ -94,7 +98,9 @@ public abstract class AbstractConsumerIT extends AbstractSingleNodeIT {
                     .fetch(fetchDataRequest, FetchQuotaWatcher.NO_QUOTA, data::add);
             }).get();
 
-            assertEquals(ImmutableList.of(MetricCollection.points(consumedPoints)), data);
+            final MetricCollection collection = data.iterator().next().getMetrics();
+
+            assertEquals(MetricCollection.points(consumedPoints), collection);
             return null;
         });
     }
