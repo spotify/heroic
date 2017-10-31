@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.common;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -33,15 +35,13 @@ import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import com.spotify.heroic.grammar.DSL;
 import eu.toolchain.serializer.AutoSerialize;
-import lombok.ToString;
-
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-
-import static com.google.common.base.Preconditions.checkNotNull;
+import lombok.ToString;
 
 @AutoSerialize
 @ToString(of = {"key", "tags"})
@@ -50,9 +50,11 @@ public class Series implements Comparable<Series> {
 
     static final SortedMap<String, String> EMPTY_TAGS = ImmutableSortedMap.<String, String>of();
     static final String EMPTY_STRING = "";
+    static final SortedMap<String, String> EMPTY_RESOURCE = ImmutableSortedMap.of();
 
     final String key;
     final SortedMap<String, String> tags;
+    final SortedMap<String, String> resource;
 
     @AutoSerialize.Ignore
     final HashCode hashCode;
@@ -64,9 +66,20 @@ public class Series implements Comparable<Series> {
      * @param tags The tags of the time series.
      */
     @JsonCreator
-    Series(@JsonProperty("key") String key, @JsonProperty("tags") SortedMap<String, String> tags) {
+    Series(
+        @JsonProperty("key") String key, @JsonProperty("tags") SortedMap<String, String> tags,
+        @JsonProperty("resource") Optional<SortedMap<String, String>> resource
+    ) {
+        this(key, tags, resource.orElseGet(ImmutableSortedMap::of));
+    }
+
+    Series(
+        final String key, final SortedMap<String, String> tags,
+        final SortedMap<String, String> resource
+    ) {
         this.key = key;
         this.tags = checkNotNull(tags, "tags");
+        this.resource = checkNotNull(resource, "resource");
         this.hashCode = generateHash();
     }
 
@@ -158,25 +171,35 @@ public class Series implements Comparable<Series> {
         return true;
     }
 
-    static final Series empty = new Series(EMPTY_STRING, EMPTY_TAGS);
+    static final Series empty = new Series(EMPTY_STRING, EMPTY_TAGS, EMPTY_RESOURCE);
 
     public static Series empty() {
         return empty;
     }
 
     public static Series of(String key) {
-        return new Series(key, EMPTY_TAGS);
+        return new Series(key, EMPTY_TAGS, EMPTY_RESOURCE);
     }
 
     public static Series of(String key, Map<String, String> tags) {
-        return of(key, tags.entrySet().iterator());
+        return of(key, tags.entrySet().iterator(), EMPTY_RESOURCE.entrySet().iterator());
     }
 
-    public static Series of(String key, Set<Map.Entry<String, String>> entries) {
-        return of(key, entries.iterator());
+    public static Series of(String key, Set<Map.Entry<String, String>> tagEntries) {
+        return of(key, tagEntries.iterator(), EMPTY_RESOURCE.entrySet().iterator());
     }
 
-    public static Series of(String key, Iterator<Map.Entry<String, String>> tagPairs) {
+    public static Series of(
+        String key, Set<Map.Entry<String, String>> tagEntries,
+        Set<Map.Entry<String, String>> resourceEntries
+    ) {
+        return of(key, tagEntries.iterator(), resourceEntries.iterator());
+    }
+
+    public static Series of(
+        String key, Iterator<Map.Entry<String, String>> tagPairs,
+        Iterator<Map.Entry<String, String>> resourcePairs
+    ) {
         final TreeMap<String, String> tags = new TreeMap<>();
 
         while (tagPairs.hasNext()) {
@@ -186,7 +209,15 @@ public class Series implements Comparable<Series> {
             tags.put(tk, tv);
         }
 
-        return new Series(key, tags);
+        final TreeMap<String, String> resource = new TreeMap<>();
+        while (resourcePairs.hasNext()) {
+            final Map.Entry<String, String> pair = resourcePairs.next();
+            final String tk = checkNotNull(pair.getKey());
+            final String tv = pair.getValue();
+            resource.put(tk, tv);
+        }
+
+        return new Series(key, tags, resource);
     }
 
     @Override
@@ -197,31 +228,59 @@ public class Series implements Comparable<Series> {
             return k;
         }
 
-        final Iterator<Map.Entry<String, String>> a = tags.entrySet().iterator();
-        final Iterator<Map.Entry<String, String>> b = o.tags.entrySet().iterator();
+        final Iterator<Map.Entry<String, String>> aTags = tags.entrySet().iterator();
+        final Iterator<Map.Entry<String, String>> bTags = o.tags.entrySet().iterator();
 
-        while (a.hasNext() && b.hasNext()) {
-            final Map.Entry<String, String> ae = a.next();
-            final Map.Entry<String, String> be = b.next();
+        while (aTags.hasNext() && bTags.hasNext()) {
+            final Map.Entry<String, String> aEntry = aTags.next();
+            final Map.Entry<String, String> bEntry = bTags.next();
 
-            int kc = ae.getKey().compareTo(be.getKey());
+            int kc = aEntry.getKey().compareTo(bEntry.getKey());
 
             if (kc != 0) {
                 return kc;
             }
 
-            int kv = ae.getValue().compareTo(be.getValue());
+            int kv = aEntry.getValue().compareTo(bEntry.getValue());
 
             if (kv != 0) {
                 return kv;
             }
         }
 
-        if (a.hasNext()) {
+        if (aTags.hasNext()) {
             return 1;
         }
 
-        if (b.hasNext()) {
+        if (bTags.hasNext()) {
+            return -1;
+        }
+
+        final Iterator<Map.Entry<String, String>> aResource = tags.entrySet().iterator();
+        final Iterator<Map.Entry<String, String>> bResource = o.tags.entrySet().iterator();
+
+        while (aResource.hasNext() && bResource.hasNext()) {
+            final Map.Entry<String, String> aEntry = aResource.next();
+            final Map.Entry<String, String> bEntry = bResource.next();
+
+            int kc = aEntry.getKey().compareTo(bEntry.getKey());
+
+            if (kc != 0) {
+                return kc;
+            }
+
+            int kv = aEntry.getValue().compareTo(bEntry.getValue());
+
+            if (kv != 0) {
+                return kv;
+            }
+        }
+
+        if (aResource.hasNext()) {
+            return 1;
+        }
+
+        if (bResource.hasNext()) {
             return -1;
         }
 
@@ -231,10 +290,19 @@ public class Series implements Comparable<Series> {
     public static final Joiner TAGS_JOINER = Joiner.on(", ");
 
     public String toDSL() {
-        final Iterator<String> tags =
-            this.tags.entrySet().stream().map(e -> DSL.dumpString(e.getKey()) + "=" +
-                DSL.dumpString(e.getValue())).iterator();
+        final Iterator<String> tags = this.tags
+            .entrySet()
+            .stream()
+            .map(e -> DSL.dumpString(e.getKey()) + "=" + DSL.dumpString(e.getValue()))
+            .iterator();
 
-        return DSL.dumpString(key) + " " + "{" + TAGS_JOINER.join(tags) + "}";
+        final Iterator<String> resource = this.resource
+            .entrySet()
+            .stream()
+            .map(e -> DSL.dumpString(e.getKey()) + "=" + DSL.dumpString(e.getValue()))
+            .iterator();
+
+        return DSL.dumpString(key) + " " + "{" + TAGS_JOINER.join(tags) + "}" + " " + "{" +
+            TAGS_JOINER.join(resource) + "}";
     }
 }
