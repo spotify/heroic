@@ -73,7 +73,11 @@ public class Series implements Comparable<Series> {
         this(key, tags, resource.orElseGet(ImmutableSortedMap::of));
     }
 
-    Series(
+    public Series(final String key, final SortedMap<String, String> tags) {
+        this(key, tags, EMPTY_RESOURCE);
+    }
+
+    public Series(
         final String key, final SortedMap<String, String> tags,
         final SortedMap<String, String> resource
     ) {
@@ -89,6 +93,10 @@ public class Series implements Comparable<Series> {
 
     public SortedMap<String, String> getTags() {
         return tags;
+    }
+
+    public SortedMap<String, String> getResource() {
+        return resource;
     }
 
     @JsonIgnore
@@ -182,24 +190,14 @@ public class Series implements Comparable<Series> {
     }
 
     public static Series of(String key, Map<String, String> tags) {
-        return of(key, tags.entrySet().iterator(), EMPTY_RESOURCE.entrySet().iterator());
+        return of(key, tags.entrySet().iterator());
     }
 
     public static Series of(String key, Set<Map.Entry<String, String>> tagEntries) {
-        return of(key, tagEntries.iterator(), EMPTY_RESOURCE.entrySet().iterator());
+        return of(key, tagEntries.iterator());
     }
 
-    public static Series of(
-        String key, Set<Map.Entry<String, String>> tagEntries,
-        Set<Map.Entry<String, String>> resourceEntries
-    ) {
-        return of(key, tagEntries.iterator(), resourceEntries.iterator());
-    }
-
-    public static Series of(
-        String key, Iterator<Map.Entry<String, String>> tagPairs,
-        Iterator<Map.Entry<String, String>> resourcePairs
-    ) {
+    public static Series of(String key, Iterator<Map.Entry<String, String>> tagPairs) {
         final TreeMap<String, String> tags = new TreeMap<>();
 
         while (tagPairs.hasNext()) {
@@ -209,15 +207,7 @@ public class Series implements Comparable<Series> {
             tags.put(tk, tv);
         }
 
-        final TreeMap<String, String> resource = new TreeMap<>();
-        while (resourcePairs.hasNext()) {
-            final Map.Entry<String, String> pair = resourcePairs.next();
-            final String tk = checkNotNull(pair.getKey());
-            final String tv = pair.getValue();
-            resource.put(tk, tv);
-        }
-
-        return new Series(key, tags, resource);
+        return new Series(key, tags);
     }
 
     @Override
