@@ -67,6 +67,11 @@ public class DeltaInstance implements AggregationInstance {
     }
 
     @Override
+    public AggregationInstance reducer() {
+        return INNER;
+    }
+
+    @Override
     public boolean distributable() {
         return false;
     }
