@@ -25,6 +25,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.cloud.bigtable.grpc.scanner.FlatRow;
+import com.google.cloud.bigtable.util.RowKeyUtil;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -56,6 +57,7 @@ import com.spotify.heroic.metric.bigtable.api.Mutations;
 import com.spotify.heroic.metric.bigtable.api.ReadRowRangeRequest;
 import com.spotify.heroic.metric.bigtable.api.ReadRowsRequest;
 import com.spotify.heroic.metric.bigtable.api.RowFilter;
+import com.spotify.heroic.metric.bigtable.api.RowRange;
 import com.spotify.heroic.metric.bigtable.api.Table;
 import com.spotify.heroic.metrics.Meter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
@@ -74,6 +76,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import javax.inject.Inject;
@@ -406,9 +409,13 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         final List<AsyncFuture<FetchData>> fetches = new ArrayList<>(prepared.size());
 
         for (final PreparedQuery p : prepared) {
+            final ByteString rowKeyPrefix = p.request.getRowKey();
+            final ByteString endKey = ByteString.copyFrom(
+                RowKeyUtil.calculateTheClosestNextRowKeyForPrefix(rowKeyPrefix.toByteArray()));
+
             final AsyncFuture<List<FlatRow>> readRows = client.readRows(table, ReadRowsRequest
                 .builder()
-                .rowKey(p.request.getRowKey())
+                .range(new RowRange(Optional.of(rowKeyPrefix), Optional.of(endKey)))
                 .filter(RowFilter.chain(Arrays.asList(RowFilter
                     .newColumnRangeBuilder(p.request.getColumnFamily())
                     .startQualifierOpen(p.request.getStartQualifierOpen())
@@ -457,9 +464,13 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         for (final PreparedQuery p : prepared) {
             QueryTrace.NamedWatch fs = QueryTrace.watch(FETCH_SEGMENT);
 
+            final ByteString rowKeyPrefix = p.request.getRowKey();
+            final ByteString endKey = ByteString.copyFrom(
+                RowKeyUtil.calculateTheClosestNextRowKeyForPrefix(rowKeyPrefix.toByteArray()));
+
             final AsyncFuture<List<FlatRow>> readRows = client.readRows(table, ReadRowsRequest
                 .builder()
-                .rowKey(p.request.getRowKey())
+                .range(new RowRange(Optional.of(rowKeyPrefix), Optional.of(endKey)))
                 .filter(RowFilter.chain(Arrays.asList(RowFilter
                     .newColumnRangeBuilder(p.request.getColumnFamily())
                     .startQualifierOpen(p.request.getStartQualifierOpen())
