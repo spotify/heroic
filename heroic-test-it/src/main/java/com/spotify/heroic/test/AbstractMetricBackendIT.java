@@ -170,11 +170,10 @@ public abstract class AbstractMetricBackendIT {
 
     /**
      * This test is run if the specific test overrides the {@link #period()} method and returns a
-     * value (not {@link java.util.Optional#empty()}.
-     * <p>
-     * This value will be considered the period of the metric backend, which indicates at what
-     * distance the backend will split samples up into distinct storage parts. These would typically
-     * make up edge cases that this test case attempts to read and write.
+     * value (not {@link java.util.Optional#empty()}. <p> This value will be considered the period
+     * of the metric backend, which indicates at what distance the backend will split samples up
+     * into distinct storage parts. These would typically make up edge cases that this test case
+     * attempts to read and write.
      */
     @Test
     public void testPeriod() throws Exception {
@@ -369,7 +368,10 @@ public abstract class AbstractMetricBackendIT {
         throws Exception {
         if (slicedFetch) {
             List<MetricCollection> fetchedMetrics = Collections.synchronizedList(new ArrayList<>());
-            backend.fetch(request, FetchQuotaWatcher.NO_QUOTA, fetchedMetrics::add).get();
+            backend
+                .fetch(request, FetchQuotaWatcher.NO_QUOTA,
+                    mcr -> fetchedMetrics.add(mcr.getMetrics()))
+                .get();
             return fetchedMetrics;
         } else {
             return backend.fetch(request, FetchQuotaWatcher.NO_QUOTA).get().getGroups();
@@ -395,5 +397,4 @@ public abstract class AbstractMetricBackendIT {
                 }
             });
     }
-
 }

@@ -74,7 +74,7 @@ public interface MetricBackend extends Initializing, Grouped, Collected {
      */
     AsyncFuture<FetchData.Result> fetch(
         FetchData.Request request, FetchQuotaWatcher watcher,
-        Consumer<MetricCollection> metricsConsumer
+        Consumer<MetricReadResult> metricsConsumer
     );
 
     /**

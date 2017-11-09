@@ -33,6 +33,7 @@ import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.MetricReadResult;
 import com.spotify.heroic.metric.Tracing;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
@@ -105,7 +106,8 @@ public class Fetch implements ShellTask {
             QueryOptions.builder().tracing(Tracing.fromBoolean(params.tracing));
         final QueryOptions options = optionsBuilder.build();
 
-        final Consumer<MetricCollection> printMetricsCollection = g -> {
+        final Consumer<MetricReadResult> printMetricsCollection = metricsAndResources -> {
+            MetricCollection g = metricsAndResources.getMetrics();
             Calendar current = null;
             Calendar last = null;
 
@@ -142,7 +144,10 @@ public class Fetch implements ShellTask {
                 .fetch(new FetchData.Request(source, series, range, options),
                     FetchQuotaWatcher.NO_QUOTA)
                 .lazyTransform(resultData -> {
-                    resultData.getGroups().forEach(printMetricsCollection);
+                    resultData
+                        .getGroups()
+                        .forEach(
+                            mc -> printMetricsCollection.accept(MetricReadResult.create(mc)));
                     return handleResult.transform(resultData.getResult());
                 });
         }

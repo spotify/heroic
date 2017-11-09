@@ -28,6 +28,7 @@ import com.google.cloud.bigtable.grpc.scanner.FlatRow;
 import com.google.cloud.bigtable.util.RowKeyUtil;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
@@ -45,6 +46,7 @@ import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
+import com.spotify.heroic.metric.MetricReadResult;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.QueryError;
@@ -69,6 +71,7 @@ import eu.toolchain.async.RetryResult;
 import eu.toolchain.serializer.BytesSerialWriter;
 import eu.toolchain.serializer.Serializer;
 import eu.toolchain.serializer.SerializerFramework;
+import eu.toolchain.serializer.io.CoreByteArraySerialReader;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -77,6 +80,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.SortedMap;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import javax.inject.Inject;
@@ -254,7 +258,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     @Override
     public AsyncFuture<FetchData.Result> fetch(
         final FetchData.Request request, final FetchQuotaWatcher watcher,
-        final Consumer<MetricCollection> consumer
+        final Consumer<MetricReadResult> consumer
     ) {
         return connection.doto(c -> {
             final MetricType type = request.getType();
@@ -455,7 +459,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
     private AsyncFuture<FetchData.Result> fetchBatch(
         final FetchQuotaWatcher watcher, final MetricType type, final List<PreparedQuery> prepared,
-        final BigtableConnection c, final Consumer<MetricCollection> metricsConsumer
+        final BigtableConnection c, final Consumer<MetricReadResult> metricsConsumer
     ) {
         final BigtableDataClient client = c.dataClient();
 
@@ -483,9 +487,13 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
             fetches.add(readRows.directTransform(result -> {
                 for (final FlatRow row : result) {
+                    SortedMap<String, String> resource = parseResourceFromRowKey(row.getRowKey());
+
                     watcher.readData(row.getCells().size());
                     final List<Metric> metrics = Lists.transform(row.getCells(), transform);
-                    metricsConsumer.accept(MetricCollection.build(type, metrics));
+                    final MetricCollection mc = MetricCollection.build(type, metrics);
+                    final MetricReadResult readResult = MetricReadResult.create(mc, resource);
+                    metricsConsumer.accept(readResult);
                 }
                 return FetchData.result(fs.end());
             }));
@@ -500,6 +508,18 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         try (final BytesSerialWriter writer = this.serializer.writeBytes()) {
             serializer.serialize(writer, rowKey);
             return ByteString.copyFrom(writer.toByteArray());
+        }
+    }
+
+    <T> T deserialize(ByteString in, Serializer<T> serializer) throws IOException {
+        return serializer.deserialize(new CoreByteArraySerialReader(in.toByteArray()));
+    }
+
+    private SortedMap<String, String> parseResourceFromRowKey(final ByteString rowKey) {
+        try {
+            return deserialize(rowKey, rowKeySerializer).getSeries().getResource();
+        } catch (IOException e) {
+            return ImmutableSortedMap.of();
         }
     }
 
@@ -559,16 +579,14 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     }
 
     /**
-     * Offset serialization is sensitive to byte ordering.
-     * <p>
-     * We require that for two timestamps a, and b, the following invariants hold true.
-     * <p>
+     * Offset serialization is sensitive to byte ordering. <p> We require that for two timestamps a,
+     * and b, the following invariants hold true. <p>
      * <pre>
      * offset(a) < offset(b)
      * serialized(offset(a)) < serialized(offset(b))
      * </pre>
-     * <p>
-     * Note: the serialized comparison is performed byte-by-byte, from lowest to highest address.
+     * <p> Note: the serialized comparison is performed byte-by-byte, from lowest to highest
+     * address.
      *
      * @param offset Offset to serialize
      * @return A byte array, containing the serialized offset.

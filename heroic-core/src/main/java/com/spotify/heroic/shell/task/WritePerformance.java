@@ -105,7 +105,7 @@ public class WritePerformance implements ShellTask {
             reads.add(readGroup.fetch(
                 new FetchData.Request(MetricType.POINT, s, range, QueryOptions.defaults()),
                 FetchQuotaWatcher.NO_QUOTA,
-                mc -> writeRequests.add(new WriteMetric.Request(s, mc))));
+                mcr -> writeRequests.add(new WriteMetric.Request(s, mcr.getMetrics()))));
         }
 
         return async.collect(reads).lazyTransform(input -> {

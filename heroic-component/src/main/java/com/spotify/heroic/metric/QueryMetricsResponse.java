@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.UUID;
 import lombok.Data;
@@ -187,6 +188,7 @@ public class QueryMetricsResponse {
                 writeKey(g, series.getKeys());
                 writeTags(g, common, series.getTags());
                 writeTagCounts(g, series.getTags());
+                writeResource(g, common, series.getResource());
 
                 g.writeEndObject();
             }
@@ -244,6 +246,27 @@ public class QueryMetricsResponse {
                 }
 
                 g.writeNumberField(pair.getKey(), values.size());
+            }
+
+            g.writeEndObject();
+        }
+
+        void writeResource(
+            JsonGenerator g, final Map<String, SortedSet<String>> common,
+            final Map<String, SortedSet<String>> resource
+        ) throws IOException {
+            g.writeFieldName("resource");
+
+            g.writeStartObject();
+
+            for (final Map.Entry<String, SortedSet<String>> pair : resource.entrySet()) {
+                final SortedSet<String> values = pair.getValue();
+
+                if (values.size() != 1) {
+                    continue;
+                }
+
+                g.writeStringField(pair.getKey(), values.iterator().next());
             }
 
             g.writeEndObject();

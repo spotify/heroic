@@ -60,6 +60,8 @@ import eu.toolchain.async.StreamCollector;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Semaphore;
@@ -282,14 +284,15 @@ public class LocalMetricManager implements MetricManager {
                         if (slicedFetch) {
                             fetches.add(() -> metricBackend.fetch(
                                 new FetchData.Request(source, series, range, options), quotaWatcher,
-                                mc -> collector.acceptMetricsCollection(series, mc)));
+                                mcr -> collector.acceptMetricsCollection(series, mcr)));
                         } else {
                             fetches.add(() -> metricBackend
                                 .fetch(new FetchData.Request(source, series, range, options),
                                     quotaWatcher)
                                 .directTransform(fetchData -> {
                                     fetchData.getGroups().forEach(group -> {
-                                        collector.acceptMetricsCollection(series, group);
+                                        collector.acceptMetricsCollection(series,
+                                            MetricReadResult.create(group));
                                     });
                                     return fetchData.getResult();
                                 }));
@@ -382,7 +385,7 @@ public class LocalMetricManager implements MetricManager {
         @Override
         public AsyncFuture<FetchData.Result> fetch(
             final FetchData.Request request, final FetchQuotaWatcher watcher,
-            final Consumer<MetricCollection> metricsConsumer
+            final Consumer<MetricReadResult> metricsConsumer
         ) {
             final List<AsyncFuture<FetchData.Result>> callbacks =
                 map(b -> b.fetch(request, watcher, metricsConsumer));
@@ -506,11 +509,24 @@ public class LocalMetricManager implements MetricManager {
             requestErrors.addAll(result.getErrors());
         }
 
-        void acceptMetricsCollection(final Series series, final MetricCollection g) {
-            g.updateAggregation(session, series.getTags(), ImmutableSet.of(series));
-            dataInMemoryReporter.reportDataNoLongerNeeded(g.size());
+        void acceptMetricsCollection(
+            final Series series, final MetricReadResult readResult
+        ) {
+            final MetricCollection metrics = readResult.getMetrics();
+            final SortedMap<String, String> resource = readResult.getResources();
 
-            g.getAverageDistanceBetweenMetrics().ifPresent(msBetweenSamples -> {
+            SortedMap<String, String> lookupKey = series.getTags();
+            if (resource.size() > 0) {
+                lookupKey = new TreeMap<>();
+                lookupKey.putAll(series.getTags());
+                lookupKey.putAll(resource);
+            }
+
+            metrics.updateAggregation(session, lookupKey,
+                ImmutableSet.of(series.withResource(readResult.getResources())));
+            dataInMemoryReporter.reportDataNoLongerNeeded(metrics.size());
+
+            metrics.getAverageDistanceBetweenMetrics().ifPresent(msBetweenSamples -> {
                 final double metricsPerSecond = 1000.0 / msBetweenSamples;
                 dataInMemoryReporter.reportRowDensity(metricsPerSecond);
                 final long metricsPerMegaSecond = (long) (metricsPerSecond * 1_000_000);

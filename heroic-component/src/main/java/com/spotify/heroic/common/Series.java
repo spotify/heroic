@@ -44,7 +44,7 @@ import java.util.TreeMap;
 import lombok.ToString;
 
 @AutoSerialize
-@ToString(of = {"key", "tags"})
+@ToString(of = {"key", "tags", "resource"})
 public class Series implements Comparable<Series> {
     static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
 
@@ -208,6 +208,13 @@ public class Series implements Comparable<Series> {
         }
 
         return new Series(key, tags);
+    }
+
+    public Series withResource(SortedMap<String, String> resource) {
+        TreeMap<String, String> mergedResourceTags = new TreeMap<>();
+        mergedResourceTags.putAll(this.resource);
+        mergedResourceTags.putAll(resource);
+        return new Series(this.key, this.tags, mergedResourceTags);
     }
 
     @Override
