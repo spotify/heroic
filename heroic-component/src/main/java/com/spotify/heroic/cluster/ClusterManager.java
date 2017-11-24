@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import lombok.Data;
@@ -39,8 +40,7 @@ import lombok.Data;
  * cause the cluster state to be updated.
  * <p>
  * It also provides an interface for applying a function on a node in a shard, via
- * {@link #withNodeInShardButNotWithId(shardTags, excludeIds, fn)}.
- *
+ * {@link #withNodeInShardButNotWithId(shardTags, excludeIds, registerNodeUse, fn)}. *
  * @author udoprog
  */
 public interface ClusterManager extends UsableGroupManager<List<ClusterShard>> {
@@ -81,12 +81,14 @@ public interface ClusterManager extends UsableGroupManager<List<ClusterShard>> {
      *
      * @param shard the shard
      * @param exclude predicate that can decide if a ClusterNode would be suitable to use
+     * @param registerNodeUse consumer that is called when a ClusterNode is about to be used
      * @param fn the function to apply on the node
      * @param <T> type of the return value
      * @return Return value of the applied function, Id of the node, string representation of node
      */
     <T> Optional<NodeResult<T>> withNodeInShardButNotWithId(
-        Map<String, String> shard, Predicate<ClusterNode> exclude, Function<ClusterNode.Group, T> fn
+        Map<String, String> shard, Predicate<ClusterNode> exclude,
+        Consumer<ClusterNode> registerNodeUse, Function<ClusterNode.Group, T> fn
     );
 
     /**

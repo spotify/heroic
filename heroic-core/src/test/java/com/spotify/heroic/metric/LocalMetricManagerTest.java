@@ -54,6 +54,7 @@ public class LocalMetricManagerTest {
         final OptionalLimit seriesLimit = OptionalLimit.empty();
         final OptionalLimit aggregationLimit = OptionalLimit.empty();
         final OptionalLimit dataLimit = OptionalLimit.empty();
+        final OptionalLimit concurrentQueriesBackoff = OptionalLimit.empty();
         final int fetchParallelism = 20;
         final boolean failOnLimits = true;
         final Groups groups = Groups.of("foo");
@@ -66,8 +67,8 @@ public class LocalMetricManagerTest {
         when(queryLoggerFactory.create(any())).thenReturn(queryLogger);
 
         manager = new LocalMetricManager(groupLimit, seriesLimit, aggregationLimit, dataLimit,
-            fetchParallelism, failOnLimits, async, groupSet, metadata, reporter,
-            queryLoggerFactory);
+            concurrentQueriesBackoff, fetchParallelism, failOnLimits, async, groupSet, metadata,
+            reporter, queryLoggerFactory);
     }
 
     @Test

@@ -79,6 +79,12 @@ public class MetricManagerModule {
     private final OptionalLimit dataLimit;
 
     /**
+     * Limit how many concurrent queries that the MetricManager will accept. When this level is
+     * reached, the result will be back-off so that another node in the cluster can be used instead.
+     */
+    private final OptionalLimit concurrentQueriesBackoff;
+
+    /**
      * How many data fetches are performed in parallel.
      */
     private final int fetchParallelism;
@@ -177,6 +183,13 @@ public class MetricManagerModule {
 
     @Provides
     @MetricScope
+    @Named("concurrentQueriesBackoff")
+    public OptionalLimit concurrentQueriesBackoff() {
+        return concurrentQueriesBackoff;
+    }
+
+    @Provides
+    @MetricScope
     @Named("fetchParallelism")
     public int fetchParallelism() {
         return fetchParallelism;
@@ -209,6 +222,7 @@ public class MetricManagerModule {
         private OptionalLimit seriesLimit = OptionalLimit.empty();
         private OptionalLimit aggregationLimit = OptionalLimit.empty();
         private OptionalLimit dataLimit = OptionalLimit.empty();
+        private OptionalLimit concurrentQueriesBackoff = OptionalLimit.empty();
         private Optional<Integer> fetchParallelism = empty();
         private Optional<Boolean> failOnLimits = empty();
         private Optional<Long> smallQueryThreshold = empty();
@@ -243,6 +257,11 @@ public class MetricManagerModule {
             return this;
         }
 
+        public Builder concurrentQueriesBackoff(int concurrentQueriesBackoff) {
+            this.concurrentQueriesBackoff = OptionalLimit.of(concurrentQueriesBackoff);
+            return this;
+        }
+
         public Builder fetchParallelism(Integer fetchParallelism) {
             this.fetchParallelism = of(fetchParallelism);
             return this;
@@ -267,6 +286,7 @@ public class MetricManagerModule {
                 seriesLimit.orElse(o.seriesLimit),
                 aggregationLimit.orElse(o.aggregationLimit),
                 dataLimit.orElse(o.dataLimit),
+                concurrentQueriesBackoff.orElse(o.concurrentQueriesBackoff),
                 pickOptional(fetchParallelism, o.fetchParallelism),
                 pickOptional(failOnLimits, o.failOnLimits),
                 pickOptional(smallQueryThreshold, o.smallQueryThreshold)
@@ -283,6 +303,7 @@ public class MetricManagerModule {
                 seriesLimit,
                 aggregationLimit,
                 dataLimit,
+                concurrentQueriesBackoff,
                 fetchParallelism.orElse(DEFAULT_FETCH_PARALLELISM),
                 failOnLimits.orElse(DEFAULT_FAIL_ON_LIMITS),
                 smallQueryThreshold.orElse(DEFAULT_SMALL_QUERY_THRESHOLD)

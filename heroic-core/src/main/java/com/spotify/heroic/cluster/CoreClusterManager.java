@@ -247,7 +247,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
     @Override
     public <T> Optional<ClusterManager.NodeResult<T>> withNodeInShardButNotWithId(
         final Map<String, String> shard, final Predicate<ClusterNode> exclude,
-        final Function<ClusterNode.Group, T> fn
+        final Consumer<ClusterNode> registerNodeUse, final Function<ClusterNode.Group, T> fn
     ) {
         synchronized (this.updateRegistryLock) {
             final Optional<ClusterNode> n =
@@ -256,6 +256,9 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
                 return Optional.empty();
             }
             ClusterNode node = n.get();
+
+            // Will actually use this node now
+            registerNodeUse.accept(node);
 
             return Optional.of(
                 new ClusterManager.NodeResult<T>(fn.apply(node.useDefaultGroup()), node));
