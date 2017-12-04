@@ -69,7 +69,7 @@ Heroic has been tested with the following services:
 Logging is captured using [SLF4J](http://www.slf4j.org/), and forwarded to
 [Log4j](http://logging.apache.org/log4j/).
 
-To configure logging, define the `-D -Dlog4j.configurationFile==<path>`
+To configure logging, define the `-Dlog4j.configurationFile=<path>`
 parameter. You can use [docs/log4j2-file.xml](/docs/log4j2-file.xml) as a base.
 
 ## Testing
