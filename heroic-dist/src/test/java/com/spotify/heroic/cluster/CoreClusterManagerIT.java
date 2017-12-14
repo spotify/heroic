@@ -100,14 +100,13 @@ public class CoreClusterManagerIT extends AbstractLocalClusterIT {
         while (true) {
             Optional<ClusterManager.NodeResult<AsyncFuture<Void>>> ret =
                 clusterManager.withNodeInShardButNotWithId(shard.getShard(), excludeIds::contains,
-                    ClusterNode.Group::ping);
+                    excludeIds::add, ClusterNode.Group::ping);
             if (!ret.isPresent()) {
                 // No more nodes available in shard, we're done
                 return futures;
             }
             ClusterManager.NodeResult<AsyncFuture<Void>> result = ret.get();
             futures.add(result.getReturnValue());
-            excludeIds.add(result.getNode());
         }
     }
 

@@ -29,6 +29,7 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.RetryException;
 import eu.toolchain.async.RetryPolicy;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -57,7 +58,7 @@ public class ClusterShard {
         Function<ClusterNode.Group, AsyncFuture<T>> function,
         BiFunction<T, List<QueryTrace>, T> handleRetryTraceFn
     ) {
-        final List<ClusterNode> nodesTried = new ArrayList<>();
+        final List<ClusterNode> nodesTried = Collections.synchronizedList(new ArrayList<>());
 
         if (!cluster.hasNextButNotWithId(shard, nodesTried::contains)) {
             return async.failed(new RuntimeException("No groups available"));
@@ -81,12 +82,12 @@ public class ClusterShard {
         return async
             .retryUntilResolved(() -> {
                 Optional<ClusterManager.NodeResult<AsyncFuture<T>>> ret =
-                    cluster.withNodeInShardButNotWithId(shard, nodesTried::contains, function);
+                    cluster.withNodeInShardButNotWithId(shard, nodesTried::contains,
+                        nodesTried::add, function);
                 if (!ret.isPresent()) {
                     throw new RuntimeException("No groups available");
                 }
                 ClusterManager.NodeResult<AsyncFuture<T>> result = ret.get();
-                nodesTried.add(result.getNode());
 
                 return result.getReturnValue().catchFailed(throwable -> {
                     reporter.reportClusterNodeRpcError();

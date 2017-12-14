@@ -36,6 +36,7 @@ import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Feature;
 import com.spotify.heroic.common.Features;
+import com.spotify.heroic.common.GoAwayException;
 import com.spotify.heroic.common.GroupSet;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.Histogram;
@@ -61,6 +62,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Consumer;
@@ -85,6 +87,7 @@ public class LocalMetricManager implements MetricManager {
     private final OptionalLimit seriesLimit;
     private final OptionalLimit aggregationLimit;
     private final OptionalLimit dataLimit;
+    private final int concurrentQueriesBackoff;
     private final int fetchParallelism;
     private final boolean failOnLimits;
 
@@ -93,6 +96,7 @@ public class LocalMetricManager implements MetricManager {
     private final MetadataManager metadata;
     private final MetricBackendReporter reporter;
     private final QueryLogger queryLogger;
+    private final Semaphore concurrentQueries;
 
     /**
      * @param groupLimit The maximum amount of groups this manager will allow to be generated.
@@ -108,6 +112,7 @@ public class LocalMetricManager implements MetricManager {
         @Named("seriesLimit") final OptionalLimit seriesLimit,
         @Named("aggregationLimit") final OptionalLimit aggregationLimit,
         @Named("dataLimit") final OptionalLimit dataLimit,
+        @Named("concurrentQueriesBackoff") final OptionalLimit concurrentQueriesBackoff,
         @Named("fetchParallelism") final int fetchParallelism,
         @Named("failOnLimits") final boolean failOnLimits, final AsyncFramework async,
         final GroupSet<MetricBackend> groupSet, final MetadataManager metadata,
@@ -117,6 +122,7 @@ public class LocalMetricManager implements MetricManager {
         this.seriesLimit = seriesLimit;
         this.aggregationLimit = aggregationLimit;
         this.dataLimit = dataLimit;
+        this.concurrentQueriesBackoff = concurrentQueriesBackoff.asMaxInteger(Integer.MAX_VALUE);
         this.fetchParallelism = fetchParallelism;
         this.failOnLimits = failOnLimits;
         this.async = async;
@@ -124,6 +130,7 @@ public class LocalMetricManager implements MetricManager {
         this.metadata = metadata;
         this.reporter = reporter;
         this.queryLogger = queryLoggerFactory.create("LocalMetricManager");
+        this.concurrentQueries = new Semaphore(this.concurrentQueriesBackoff);
     }
 
     @Override
@@ -296,7 +303,23 @@ public class LocalMetricManager implements MetricManager {
 
         @Override
         public AsyncFuture<FullQuery> query(final FullQuery.Request request) {
+            if (!concurrentQueries.tryAcquire()) {
+                // There's currently too many concurrent queries. Fail now so that the QueryManager
+                // gets an opportunity to try another node in the same shard instead.
+                return async.failed(new GoAwayException(
+                    "Node has reached maximum number of concurrent MetricManager requests (" +
+                        concurrentQueriesBackoff + ")"));
+            }
 
+            try {
+                return protectedQuery(request).onFinished(concurrentQueries::release);
+            } catch (Exception e) {
+                concurrentQueries.release();
+                throw new RuntimeException(e);
+            }
+        }
+
+        private AsyncFuture<FullQuery> protectedQuery(final FullQuery.Request request) {
             final QueryOptions options = request.getOptions();
             final QueryContext queryContext = request.getContext();
 
