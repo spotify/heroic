@@ -91,7 +91,7 @@ public interface MetricCollection {
      * Update the given aggregation with the content of this collection.
      */
     void updateAggregation(
-        AggregationSession session, Map<String, String> tags, Set<Series> series
+        AggregationSession session, Map<String, String> key, Set<Series> series
     );
 
     /**
@@ -250,9 +250,9 @@ public interface MetricCollection {
 
         @Override
         public void updateAggregation(
-            AggregationSession session, Map<String, String> tags, Set<Series> series
+            AggregationSession session, Map<String, String> key, Set<Series> series
         ) {
-            session.updatePoints(tags, series, data);
+            session.updatePoints(key, series, data);
         }
     }
 
@@ -273,9 +273,9 @@ public interface MetricCollection {
 
         @Override
         public void updateAggregation(
-            AggregationSession session, Map<String, String> tags, Set<Series> series
+            AggregationSession session, Map<String, String> key, Set<Series> series
         ) {
-            session.updateEvents(tags, series, data);
+            session.updateEvents(key, series, data);
         }
     }
 
@@ -296,9 +296,9 @@ public interface MetricCollection {
 
         @Override
         public void updateAggregation(
-            AggregationSession session, Map<String, String> tags, Set<Series> series
+            AggregationSession session, Map<String, String> key, Set<Series> series
         ) {
-            session.updateSpreads(tags, series, data);
+            session.updateSpreads(key, series, data);
         }
     }
 
@@ -319,9 +319,9 @@ public interface MetricCollection {
 
         @Override
         public void updateAggregation(
-            AggregationSession session, Map<String, String> tags, Set<Series> series
+            AggregationSession session, Map<String, String> key, Set<Series> series
         ) {
-            session.updateGroup(tags, series, data);
+            session.updateGroup(key, series, data);
         }
     }
 
@@ -342,9 +342,9 @@ public interface MetricCollection {
 
         @Override
         public void updateAggregation(
-            AggregationSession session, Map<String, String> tags, Set<Series> series
+            AggregationSession session, Map<String, String> key, Set<Series> series
         ) {
-            session.updatePayload(tags, series, data);
+            session.updatePayload(key, series, data);
         }
     }
 }

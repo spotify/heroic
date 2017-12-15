@@ -46,6 +46,7 @@ import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.MetricReadResult;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.QueryError;
 import com.spotify.heroic.metric.QueryTrace;
@@ -162,7 +163,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
     @Override
     public AsyncFuture<FetchData.Result> fetch(
         final FetchData.Request request, final FetchQuotaWatcher watcher,
-        final Consumer<MetricCollection> metricsConsumer
+        final Consumer<MetricReadResult> metricsConsumer
     ) {
         if (!watcher.mayReadData()) {
             throw new IllegalArgumentException("query violated data limit");
@@ -182,7 +183,9 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
 
                 final List<AsyncFuture<FetchData.Result>> results =
                     Lists.transform(fetches, fetch -> fetch.directTransform(fetchData -> {
-                        fetchData.getGroups().forEach(metricsConsumer::accept);
+                        fetchData
+                            .getGroups()
+                            .forEach(mc -> metricsConsumer.accept(MetricReadResult.create(mc)));
                         return fetchData.getResult();
                     }));
                 return async.collect(results, FetchData.collectResult(FETCH));
@@ -759,8 +762,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
     /**
      * Custom event fetcher based on the one available in
      * {@link com.datastax.driver.core.QueryTrace}.
-     * <p>
-     * We roll our own since the one available is blocking :(.
+     * <p> We roll our own since the one available is blocking :(.
      */
     private AsyncFuture<List<Event>> getEvents(final Connection c, final UUID id) {
         final ResolvableFuture<List<Event>> future = async.future();

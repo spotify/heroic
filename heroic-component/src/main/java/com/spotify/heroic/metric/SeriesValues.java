@@ -43,14 +43,17 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class SeriesValues {
     final SortedSet<String> keys;
     final Map<String, SortedSet<String>> tags;
+    final Map<String, SortedSet<String>> resource;
 
     @JsonCreator
     public SeriesValues(
         @JsonProperty("keys") SortedSet<String> keys,
-        @JsonProperty("tags") Map<String, SortedSet<String>> tags
+        @JsonProperty("tags") Map<String, SortedSet<String>> tags,
+        @JsonProperty("resource") Map<String, SortedSet<String>> resource
     ) {
         this.keys = checkNotNull(keys, "keys");
         this.tags = checkNotNull(tags, "tags");
+        this.resource = checkNotNull(resource, "resource");
     }
 
     private static final Comparator<String> COMPARATOR = new Comparator<String>() {
@@ -79,17 +82,14 @@ public class SeriesValues {
             final Series s = series.next();
             builder.addKey(s.getKey());
             builder.addSingleTags(s.getTags());
+            builder.addSingleResource(s.getResource());
         }
 
         return builder.build();
     }
 
-    public static SeriesValues of(final String k, final String v) {
-        return new SeriesValues(ImmutableSortedSet.of(), ImmutableMap.of());
-    }
-
     public static SeriesValues empty() {
-        return new SeriesValues(ImmutableSortedSet.of(), ImmutableMap.of());
+        return new SeriesValues(ImmutableSortedSet.of(), ImmutableMap.of(), ImmutableMap.of());
     }
 
     public static Builder builder() {
@@ -99,6 +99,7 @@ public class SeriesValues {
     public static class Builder {
         final SortedSet<String> keys = new TreeSet<>();
         final Map<String, SortedSet<String>> tags = new HashMap<>();
+        final Map<String, SortedSet<String>> resource = new HashMap<>();
 
         public void addKey(final String key) {
             this.keys.add(key);
@@ -117,32 +118,21 @@ public class SeriesValues {
             }
         }
 
-        public void addKeys(final Collection<String> keys) {
-            this.keys.addAll(keys);
-        }
-
-        public void addTags(final Map<String, SortedSet<String>> tags) {
-            Set<Map.Entry<String, SortedSet<String>>> entries = tags.entrySet();
-
-            for (final Map.Entry<String, SortedSet<String>> t : entries) {
-                SortedSet<String> values = this.tags.get(t.getKey());
+        public void addSingleResource(final Map<String, String> resource) {
+            for (final Map.Entry<String, String> e : resource.entrySet()) {
+                SortedSet<String> values = this.resource.get(e.getKey());
 
                 if (values == null) {
-                    values = new TreeSet<>();
-                    this.tags.put(t.getKey(), values);
+                    values = new TreeSet<String>(COMPARATOR);
+                    this.resource.put(e.getKey(), values);
                 }
 
-                values.addAll(t.getValue());
+                values.add(e.getValue());
             }
         }
 
-        public void addSeriesValues(final SeriesValues series) {
-            addKeys(series.getKeys());
-            addTags(series.getTags());
-        }
-
         public SeriesValues build() {
-            return new SeriesValues(keys, tags);
+            return new SeriesValues(keys, tags, resource);
         }
     }
 }

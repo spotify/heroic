@@ -21,29 +21,76 @@
 
 package com.spotify.heroic.metric.bigtable;
 
+import com.google.common.collect.ImmutableSortedMap;
+import com.google.protobuf.ByteString;
+import com.spotify.heroic.common.Series;
 import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.SerialWriter;
 import eu.toolchain.serializer.Serializer;
 import eu.toolchain.serializer.SerializerFramework;
 import eu.toolchain.serializer.TinySerializer;
-
+import eu.toolchain.serializer.io.CoreByteArraySerialReader;
+import java.io.EOFException;
 import java.io.IOException;
+import java.util.Optional;
+import java.util.SortedMap;
+import lombok.extern.slf4j.Slf4j;
 
-public class MetricsRowKeySerializer implements Serializer<RowKey> {
-    final SerializerFramework serializerFramework = TinySerializer
-        .builder()
-        .string(CustomStringSerializer::new)
-        .build();
+@Slf4j
+public class MetricsRowKeySerializer implements RowKeySerializer {
+    final SerializerFramework framework;
+    final Serializer<String> stringSerializer;
+    final Serializer<SortedMap<String, String>> sortedMapSerializer;
+    final Serializer<Long> longSerializer;
 
-    final RowKey_Serializer serializer = new RowKey_Serializer(serializerFramework);
-
-    @Override
-    public void serialize(SerialWriter serialWriter, RowKey rowKey) throws IOException {
-        serializer.serialize(serialWriter, rowKey);
+    public MetricsRowKeySerializer() {
+        framework = TinySerializer.builder().string(CustomStringSerializer::new).build();
+        stringSerializer = framework.string();
+        sortedMapSerializer = framework.sortedMap(framework.string(), framework.string());
+        longSerializer = framework.fixedLong();
     }
 
     @Override
-    public RowKey deserialize(SerialReader serialReader) throws IOException {
-        return serializer.deserialize(serialReader);
+    public void serialize(final SerialWriter serialWriter, final RowKey rowKey) throws IOException {
+        stringSerializer.serialize(serialWriter, rowKey.getSeries().getKey());
+        sortedMapSerializer.serialize(serialWriter, rowKey.getSeries().getTags());
+        longSerializer.serialize(serialWriter, rowKey.getBase());
+
+        // Only serialize if non-empty, for backwards compatibility
+        if (!rowKey.getSeries().getResource().isEmpty()) {
+            sortedMapSerializer.serialize(serialWriter, rowKey.getSeries().getResource());
+        }
     }
+
+    @Override
+    public RowKey deserialize(final SerialReader serialReader) throws IOException {
+        final String key = stringSerializer.deserialize(serialReader);
+        final SortedMap<String, String> tags = sortedMapSerializer.deserialize(serialReader);
+        final Long base = longSerializer.deserialize(serialReader);
+
+        Optional<SortedMap<String, String>> resource = Optional.empty();
+        try {
+            resource = Optional.of(sortedMapSerializer.deserialize(serialReader));
+        } catch (EOFException e) {
+            // There was no 'resource' part in this RowKey - that's ok, for compatibility
+        }
+
+        return new RowKey(new Series(key, tags, resource.orElseGet(ImmutableSortedMap::of)), base);
+    }
+
+    public SortedMap<String, String> deserializeResourceFromSuffix(
+        final ByteString rowKeyPrefix, final ByteString fullRowKey
+    ) throws IOException {
+        final int resourceEncodedLength = fullRowKey.size() - rowKeyPrefix.size();
+        if (resourceEncodedLength == 0) {
+            return ImmutableSortedMap.of();
+        }
+
+        final ByteString resourceEncoded = fullRowKey.substring(rowKeyPrefix.size());
+        final byte[] bytes = resourceEncoded.toByteArray();
+        final SerialReader reader = new CoreByteArraySerialReader(bytes);
+
+        return sortedMapSerializer.deserialize(reader);
+    }
+
 }
