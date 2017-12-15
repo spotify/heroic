@@ -22,12 +22,14 @@
 package com.spotify.heroic.metric.bigtable;
 
 import com.google.common.collect.ImmutableSortedMap;
+import com.google.protobuf.ByteString;
 import com.spotify.heroic.common.Series;
 import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.SerialWriter;
 import eu.toolchain.serializer.Serializer;
 import eu.toolchain.serializer.SerializerFramework;
 import eu.toolchain.serializer.TinySerializer;
+import eu.toolchain.serializer.io.CoreByteArraySerialReader;
 import java.io.EOFException;
 import java.io.IOException;
 import java.util.Optional;
@@ -35,7 +37,7 @@ import java.util.SortedMap;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class MetricsRowKeySerializer implements Serializer<RowKey> {
+public class MetricsRowKeySerializer implements RowKeySerializer {
     final SerializerFramework framework;
     final Serializer<String> stringSerializer;
     final Serializer<SortedMap<String, String>> sortedMapSerializer;
@@ -75,4 +77,20 @@ public class MetricsRowKeySerializer implements Serializer<RowKey> {
 
         return new RowKey(new Series(key, tags, resource.orElseGet(ImmutableSortedMap::of)), base);
     }
+
+    public SortedMap<String, String> deserializeResourceFromSuffix(
+        final ByteString rowKeyPrefix, final ByteString fullRowKey
+    ) throws IOException {
+        final int resourceEncodedLength = fullRowKey.size() - rowKeyPrefix.size();
+        if (resourceEncodedLength == 0) {
+            return ImmutableSortedMap.of();
+        }
+
+        final ByteString resourceEncoded = fullRowKey.substring(rowKeyPrefix.size());
+        final byte[] bytes = resourceEncoded.toByteArray();
+        final SerialReader reader = new CoreByteArraySerialReader(bytes);
+
+        return sortedMapSerializer.deserialize(reader);
+    }
+
 }

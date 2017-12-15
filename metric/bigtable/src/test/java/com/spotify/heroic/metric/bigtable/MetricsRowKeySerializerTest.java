@@ -23,7 +23,7 @@ public class MetricsRowKeySerializerTest extends TestCase {
 
 
     private final SerializerFramework serializerFramework = TinySerializer.builder().build();
-    private final Serializer<RowKey> serializer = new MetricsRowKeySerializer();
+    private final RowKeySerializer serializer = new MetricsRowKeySerializer();
 
     public void testSerializationIsBackwardsCompatible() throws Exception {
         final RowKey rowKey = new RowKey(series, 1);

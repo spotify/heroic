@@ -179,7 +179,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
 
         @Provides
         @BigtableScope
-        public Serializer<RowKey> rowKeySerializer() {
+        public RowKeySerializer rowKeySerializer() {
             return new MetricsRowKeySerializer();
         }
 
