@@ -190,15 +190,25 @@ public class Series implements Comparable<Series> {
     }
 
     public static Series of(String key, Map<String, String> tags) {
-        return of(key, tags.entrySet().iterator());
+        return of(key, tags.entrySet().iterator(), EMPTY_RESOURCE.entrySet().iterator());
     }
 
     public static Series of(String key, Set<Map.Entry<String, String>> tagEntries) {
-        return of(key, tagEntries.iterator());
+        return of(key, tagEntries.iterator(), EMPTY_RESOURCE.entrySet().iterator());
     }
 
-    public static Series of(String key, Iterator<Map.Entry<String, String>> tagPairs) {
+    public static Series of(
+        String key, Iterator<Map.Entry<String, String>> tagPairs
+    ) {
+        return of(key, tagPairs, EMPTY_RESOURCE.entrySet().iterator());
+    }
+
+    public static Series of(
+        String key, Iterator<Map.Entry<String, String>> tagPairs,
+        Iterator<Map.Entry<String, String>> resourcePairs
+    ) {
         final TreeMap<String, String> tags = new TreeMap<>();
+        final TreeMap<String, String> resource = new TreeMap<>();
 
         while (tagPairs.hasNext()) {
             final Map.Entry<String, String> pair = tagPairs.next();
@@ -207,7 +217,20 @@ public class Series implements Comparable<Series> {
             tags.put(tk, tv);
         }
 
-        return new Series(key, tags);
+        while (resourcePairs.hasNext()) {
+            final Map.Entry<String, String> pair = resourcePairs.next();
+            final String tk = checkNotNull(pair.getKey());
+            final String tv = pair.getValue();
+            resource.put(tk, tv);
+        }
+
+        return new Series(key, tags, resource);
+    }
+
+    public static Series of(
+        String key, Map<String, String> tags, SortedMap<String, String> resource
+    ) {
+        return of(key, tags.entrySet().iterator(), resource.entrySet().iterator());
     }
 
     public Series withResource(SortedMap<String, String> resource) {
