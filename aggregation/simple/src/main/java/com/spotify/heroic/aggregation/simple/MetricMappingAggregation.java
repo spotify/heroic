@@ -23,6 +23,7 @@ package com.spotify.heroic.aggregation.simple;
 
 import static java.util.stream.Collectors.toList;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.AggregationOutput;
@@ -41,10 +42,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import lombok.Data;
+import lombok.NonNull;
 
 @Data
 public abstract class MetricMappingAggregation implements AggregationInstance {
+
     private static final EmptyInstance INNER = EmptyInstance.INSTANCE;
+
+    @NonNull
+    @JsonIgnore
     private final MetricMappingStrategy metricMappingStrategy;
 
     @Override
