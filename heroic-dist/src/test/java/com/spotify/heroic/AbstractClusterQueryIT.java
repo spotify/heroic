@@ -231,6 +231,33 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     }
 
     @Test
+    public void pointsAboveTest() throws Exception {
+        final QueryResult result = query("pointsabove(2) by *", builder -> {
+            builder.features(Optional.empty());
+        });
+
+        final Set<MetricCollection> m = getResults(result);
+        final List<Long> cadences = getCadences(result);
+
+        assertEquals(ImmutableList.of(0L), cadences);
+        assertEquals(ImmutableSet.of(points().p(20, 4D).build()), m);
+    }
+
+    @Test
+    public void pointsBelowTest() throws Exception {
+        final QueryResult result = query("pointsbelow(3) by *", builder -> {
+            builder.features(Optional.empty());
+        });
+
+        final Set<MetricCollection> m = getResults(result);
+        final List<Long> cadences = getCadences(result);
+
+        assertEquals(ImmutableList.of(0L, 0L), cadences);
+        assertEquals(
+            ImmutableSet.of(points().p(10, 1D).build(), points().p(10, 1D).p(30, 2.0D).build()), m);
+    }
+
+    @Test
     public void deltaQueryTest() throws Exception {
         final QueryResult result = query("delta", builder -> {
             builder.features(Optional.empty());

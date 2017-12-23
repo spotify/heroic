@@ -22,16 +22,18 @@
 package com.spotify.heroic.aggregation.simple;
 
 import lombok.EqualsAndHashCode;
-import lombok.ToString;
+import lombok.Data;
 
 import java.beans.ConstructorProperties;
 
-@ToString
+@Data
 @EqualsAndHashCode(callSuper = true)
 public class PointsAboveInstance extends MetricMappingAggregation {
+    private final double threshold;
 
     @ConstructorProperties({"threshold"})
-    public PointsAboveInstance(double threshold) {
+    public PointsAboveInstance(final double threshold) {
         super(new FilterPointsThresholdStrategy(FilterKThresholdType.ABOVE, threshold));
+        this.threshold = threshold;
     }
 }
