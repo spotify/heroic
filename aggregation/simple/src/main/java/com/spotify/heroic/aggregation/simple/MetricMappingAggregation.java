@@ -40,11 +40,15 @@ import com.spotify.heroic.metric.Point;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import lombok.AccessLevel;
 import lombok.Data;
+import lombok.Getter;
 
 @Data
 public abstract class MetricMappingAggregation implements AggregationInstance {
     private static final EmptyInstance INNER = EmptyInstance.INSTANCE;
+
+    @Getter(value = AccessLevel.NONE)
     private final MetricMappingStrategy metricMappingStrategy;
 
     @Override
