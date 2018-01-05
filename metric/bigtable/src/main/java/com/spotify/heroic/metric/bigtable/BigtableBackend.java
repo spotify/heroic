@@ -27,7 +27,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.cloud.bigtable.grpc.scanner.FlatRow;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 import com.spotify.heroic.common.DateRange;
@@ -207,30 +206,6 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         });
     }
 
-    @Override
-    @Deprecated
-    public AsyncFuture<FetchData> fetch(
-        final FetchData.Request request, final FetchQuotaWatcher watcher
-    ) {
-        return connection.doto(c -> {
-            final MetricType type = request.getType();
-
-            if (!watcher.mayReadData()) {
-                throw new IllegalArgumentException("query violated data limit");
-            }
-
-            switch (type) {
-                case POINT:
-                    return fetchBatch(watcher, type, pointsRanges(request), c);
-                case EVENT:
-                    return fetchBatch(watcher, type, eventsRanges(request), c);
-                default:
-                    return async.resolved(FetchData.error(QueryTrace.of(FETCH),
-                        QueryError.fromMessage("unsupported source: " + request.getType())));
-            }
-        });
-    }
-
     private List<PreparedQuery> pointsRanges(final FetchData.Request request) throws IOException {
         return ranges(request.getSeries(), request.getRange(), POINTS, (t, d) -> {
             final double value = deserializeValue(d);
@@ -397,55 +372,6 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             .directTransform(result -> timer.end());
     }
 
-    private AsyncFuture<FetchData> fetchBatch(
-        final FetchQuotaWatcher watcher, final MetricType type, final List<PreparedQuery> prepared,
-        final BigtableConnection c
-    ) {
-        final BigtableDataClient client = c.dataClient();
-
-        final List<AsyncFuture<FetchData>> fetches = new ArrayList<>(prepared.size());
-
-        for (final PreparedQuery p : prepared) {
-            final AsyncFuture<List<FlatRow>> readRows = client.readRows(table, ReadRowsRequest
-                .builder()
-                .rowKey(p.request.getRowKey())
-                .filter(RowFilter.chain(Arrays.asList(RowFilter
-                    .newColumnRangeBuilder(p.request.getColumnFamily())
-                    .startQualifierOpen(p.request.getStartQualifierOpen())
-                    .endQualifierClosed(p.request.getEndQualifierClosed())
-                    .build(), RowFilter.onlyLatestCell())))
-                .build());
-
-            final Function<FlatRow.Cell, Metric> transform =
-                cell -> p.deserialize(cell.getQualifier(), cell.getValue());
-
-            final QueryTrace.NamedWatch w = QueryTrace.watch(FETCH_SEGMENT);
-
-            fetches.add(readRows.directTransform(result -> {
-                final List<Iterable<Metric>> points = new ArrayList<>();
-
-                for (final FlatRow row : result) {
-                    watcher.readData(row.getCells().size());
-                    points.add(Iterables.transform(row.getCells(), transform));
-                }
-
-                final QueryTrace trace = w.end();
-                final ImmutableList<Long> times = ImmutableList.of(trace.getElapsed());
-                final List<Metric> data =
-                    ImmutableList.copyOf(Iterables.mergeSorted(points, Metric.comparator()));
-                final List<MetricCollection> groups =
-                    ImmutableList.of(MetricCollection.build(type, data));
-
-                return FetchData.of(trace, times, groups);
-            }));
-        }
-
-        return async.collect(fetches, FetchData.collect(FETCH)).directTransform(result -> {
-            watcher.accessedRows(prepared.size());
-            return result;
-        });
-    }
-
     private AsyncFuture<FetchData.Result> fetchBatch(
         final FetchQuotaWatcher watcher, final MetricType type, final List<PreparedQuery> prepared,
         final BigtableConnection c, final Consumer<MetricCollection> metricsConsumer
@@ -548,16 +474,14 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     }
 
     /**
-     * Offset serialization is sensitive to byte ordering.
-     * <p>
-     * We require that for two timestamps a, and b, the following invariants hold true.
-     * <p>
+     * Offset serialization is sensitive to byte ordering. <p> We require that for two timestamps a,
+     * and b, the following invariants hold true. <p>
      * <pre>
      * offset(a) < offset(b)
      * serialized(offset(a)) < serialized(offset(b))
      * </pre>
-     * <p>
-     * Note: the serialized comparison is performed byte-by-byte, from lowest to highest address.
+     * <p> Note: the serialized comparison is performed byte-by-byte, from lowest to highest
+     * address.
      *
      * @param offset Offset to serialize
      * @return A byte array, containing the serialized offset.

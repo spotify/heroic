@@ -132,20 +132,10 @@ public class Fetch implements ShellTask {
             return async.resolved();
         };
 
-        if (params.slicedDataFetch) {
-            return readGroup
-                .fetch(new FetchData.Request(source, series, range, options),
-                    FetchQuotaWatcher.NO_QUOTA, printMetricsCollection)
-                .lazyTransform(handleResult);
-        } else {
-            return readGroup
-                .fetch(new FetchData.Request(source, series, range, options),
-                    FetchQuotaWatcher.NO_QUOTA)
-                .lazyTransform(resultData -> {
-                    resultData.getGroups().forEach(printMetricsCollection);
-                    return handleResult.transform(resultData.getResult());
-                });
-        }
+        return readGroup
+            .fetch(new FetchData.Request(source, series, range, options),
+                FetchQuotaWatcher.NO_QUOTA, printMetricsCollection)
+            .lazyTransform(handleResult);
     }
 
     private boolean flipped(Calendar last, Calendar current) {

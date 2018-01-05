@@ -59,16 +59,6 @@ public interface MetricBackend extends Initializing, Grouped, Collected {
      *
      * @param request Fetch request to use.
      * @param watcher The watcher implementation to use when fetching metrics.
-     * @return A future containing the fetched data wrapped in a {@link FetchData} structure.
-     */
-    @Deprecated
-    AsyncFuture<FetchData> fetch(FetchData.Request request, FetchQuotaWatcher watcher);
-
-    /**
-     * Query for data points that is part of the specified list of rows and range.
-     *
-     * @param request Fetch request to use.
-     * @param watcher The watcher implementation to use when fetching metrics.
      * @param metricsConsumer The consumer that receives the fetched data
      * @return A future containing the fetch result.
      */

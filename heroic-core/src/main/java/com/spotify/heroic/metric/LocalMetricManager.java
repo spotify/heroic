@@ -210,6 +210,12 @@ public class LocalMetricManager implements MetricManager {
             public AsyncFuture<FullQuery> transform(final FindSeries result) throws Exception {
                 final ResultLimits limits;
 
+                if (!slicedFetch) {
+                    return async.resolved(FullQuery.error(namedWatch.end(), QueryError.fromMessage(
+                        "Unable to read metrics data due to mandatory feature 'com.spotify.heroic" +
+                            ".sliced_data_fetch' being disabled.")));
+                }
+
                 if (result.isLimited()) {
                     if (failOnLimits) {
                         final RequestError error = QueryError.fromMessage(
@@ -279,21 +285,9 @@ public class LocalMetricManager implements MetricManager {
                 /* setup fetches */
                 accept(metricBackend -> {
                     for (final Series series : result.getSeries()) {
-                        if (slicedFetch) {
-                            fetches.add(() -> metricBackend.fetch(
-                                new FetchData.Request(source, series, range, options), quotaWatcher,
-                                mc -> collector.acceptMetricsCollection(series, mc)));
-                        } else {
-                            fetches.add(() -> metricBackend
-                                .fetch(new FetchData.Request(source, series, range, options),
-                                    quotaWatcher)
-                                .directTransform(fetchData -> {
-                                    fetchData.getGroups().forEach(group -> {
-                                        collector.acceptMetricsCollection(series, group);
-                                    });
-                                    return fetchData.getResult();
-                                }));
-                        }
+                        fetches.add(() -> metricBackend.fetch(
+                            new FetchData.Request(source, series, range, options), quotaWatcher,
+                            mc -> collector.acceptMetricsCollection(series, mc)));
                     }
                 });
 
@@ -369,14 +363,6 @@ public class LocalMetricManager implements MetricManager {
             }
 
             return result;
-        }
-
-        @Override
-        public AsyncFuture<FetchData> fetch(
-            final FetchData.Request request, final FetchQuotaWatcher watcher
-        ) {
-            final List<AsyncFuture<FetchData>> callbacks = map(b -> b.fetch(request, watcher));
-            return async.collect(callbacks, FetchData.collect(FETCH));
         }
 
         @Override
