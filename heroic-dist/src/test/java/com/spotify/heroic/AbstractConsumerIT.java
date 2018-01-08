@@ -12,10 +12,10 @@ import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
-import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ClockSource;
 import eu.toolchain.async.RetryPolicy;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
@@ -48,18 +48,19 @@ public abstract class AbstractConsumerIT extends AbstractSingleNodeIT {
         consumer.accept(request);
 
         tryUntil(() -> {
-            AsyncFuture<FetchData> fetchData = instance.inject(coreComponent -> {
+            final List<MetricCollection> data = Collections.synchronizedList(new ArrayList<>());
+
+            FetchData.Result result = instance.inject(coreComponent -> {
                 FetchData.Request fetchDataRequest =
                     new FetchData.Request(MetricType.POINT, s1, new DateRange(0, 100),
                         QueryOptions.defaults());
                 return coreComponent
                     .metricManager()
                     .useDefaultGroup()
-                    .fetch(fetchDataRequest, FetchQuotaWatcher.NO_QUOTA);
-            });
+                    .fetch(fetchDataRequest, FetchQuotaWatcher.NO_QUOTA, data::add);
+            }).get();
 
-            FetchData data = fetchData.get();
-            assertEquals(ImmutableList.of(mc), data.getGroups());
+            assertEquals(ImmutableList.of(mc), data);
             return null;
         });
     }
@@ -82,19 +83,18 @@ public abstract class AbstractConsumerIT extends AbstractSingleNodeIT {
         }
 
         tryUntil(() -> {
-            AsyncFuture<FetchData> fetchData = instance.inject(coreComponent -> {
+            final List<MetricCollection> data = Collections.synchronizedList(new ArrayList<>());
+            FetchData.Result result = instance.inject(coreComponent -> {
                 FetchData.Request fetchDataRequest =
                     new FetchData.Request(MetricType.POINT, s1, new DateRange(0, 100),
                         QueryOptions.defaults());
                 return coreComponent
                     .metricManager()
                     .useDefaultGroup()
-                    .fetch(fetchDataRequest, FetchQuotaWatcher.NO_QUOTA);
-            });
+                    .fetch(fetchDataRequest, FetchQuotaWatcher.NO_QUOTA, data::add);
+            }).get();
 
-            FetchData data = fetchData.get();
-            assertEquals(ImmutableList.of(MetricCollection.points(consumedPoints)),
-                data.getGroups());
+            assertEquals(ImmutableList.of(MetricCollection.points(consumedPoints)), data);
             return null;
         });
     }

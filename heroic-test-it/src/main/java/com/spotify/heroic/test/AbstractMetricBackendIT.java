@@ -24,6 +24,7 @@ package com.spotify.heroic.test;
 import static com.spotify.heroic.test.Data.events;
 import static com.spotify.heroic.test.Data.points;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 import com.google.common.collect.ImmutableList;
@@ -47,10 +48,14 @@ import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.WriteMetric;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -170,11 +175,10 @@ public abstract class AbstractMetricBackendIT {
 
     /**
      * This test is run if the specific test overrides the {@link #period()} method and returns a
-     * value (not {@link java.util.Optional#empty()}.
-     * <p>
-     * This value will be considered the period of the metric backend, which indicates at what
-     * distance the backend will split samples up into distinct storage parts. These would typically
-     * make up edge cases that this test case attempts to read and write.
+     * value (not {@link java.util.Optional#empty()}. <p> This value will be considered the period
+     * of the metric backend, which indicates at what distance the backend will split samples up
+     * into distinct storage parts. These would typically make up edge cases that this test case
+     * attempts to read and write.
      */
     @Test
     public void testPeriod() throws Exception {
@@ -209,12 +213,42 @@ public abstract class AbstractMetricBackendIT {
     ) throws Exception {
         backend.write(new WriteMetric.Request(s1, input)).get();
 
-        FetchData data = backend
+        final List<MetricCollection> data = Collections.synchronizedList(new ArrayList<>());
+        FetchData.Result result = backend
             .fetch(new FetchData.Request(expected.getType(), s1, range,
-                QueryOptions.builder().build()), FetchQuotaWatcher.NO_QUOTA)
+                QueryOptions.builder().build()), FetchQuotaWatcher.NO_QUOTA, data::add)
             .get();
 
-        assertEquals(ImmutableSet.of(expected), ImmutableSet.copyOf(data.getGroups()));
+        assertTrue("Read the same data that was written",
+            isSortedSetOfMetricsEqual(ImmutableSet.of(expected), ImmutableSet.copyOf(data)));
+    }
+
+    // Compare the metrics contained in the MetricCollections, ignoring if the data was split into
+    // multiple MCs or not.
+    private boolean isSortedSetOfMetricsEqual(
+        final Set<MetricCollection> expected, final Set<MetricCollection> actual
+    ) {
+        final Comparator<Metric> comparator = new Comparator<Metric>() {
+            @Override
+            public int compare(final Metric m1, final Metric m2) {
+                if (m1.getTimestamp() > m2.getTimestamp()) {
+                    return -1;
+                }
+                if (m1.getTimestamp() < m2.getTimestamp()) {
+                    return 1;
+                }
+                return 0;
+            }
+        };
+
+        final SortedSet<Metric> metricsExpected = new TreeSet<>(comparator);
+        final SortedSet<Metric> metricsActual = new TreeSet<>(comparator);
+        metricsExpected.addAll(
+            expected.stream().flatMap(mc -> mc.getData().stream()).collect(Collectors.toList()));
+        metricsActual.addAll(
+            actual.stream().flatMap(mc -> mc.getData().stream()).collect(Collectors.toList()));
+
+        return metricsExpected.equals(metricsActual);
     }
 
     private TestCase newCase() {
@@ -317,7 +351,6 @@ public abstract class AbstractMetricBackendIT {
                 QueryOptions.builder().build());
 
         assertEqualMetrics(points, fetchMetrics(request, true));
-        assertEqualMetrics(points, fetchMetrics(request, false));
     }
 
     @Test
@@ -362,7 +395,6 @@ public abstract class AbstractMetricBackendIT {
                 QueryOptions.builder().build());
 
         assertEqualMetrics(mc, fetchMetrics(request, true));
-        assertEqualMetrics(mc, fetchMetrics(request, false));
     }
 
     private List<MetricCollection> fetchMetrics(FetchData.Request request, boolean slicedFetch)
@@ -372,7 +404,8 @@ public abstract class AbstractMetricBackendIT {
             backend.fetch(request, FetchQuotaWatcher.NO_QUOTA, fetchedMetrics::add).get();
             return fetchedMetrics;
         } else {
-            return backend.fetch(request, FetchQuotaWatcher.NO_QUOTA).get().getGroups();
+            throw new IllegalArgumentException(
+                "Tried to read data with non-supported non-sliced code path");
         }
     }
 
@@ -395,5 +428,4 @@ public abstract class AbstractMetricBackendIT {
                 }
             });
     }
-
 }

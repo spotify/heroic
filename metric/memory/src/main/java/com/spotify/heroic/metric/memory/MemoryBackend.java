@@ -116,14 +116,6 @@ public class MemoryBackend extends AbstractMetricBackend {
     }
 
     @Override
-    public AsyncFuture<FetchData> fetch(FetchData.Request request, FetchQuotaWatcher watcher) {
-        final QueryTrace.NamedWatch w = QueryTrace.watch(FETCH);
-        final MemoryKey key = new MemoryKey(request.getType(), request.getSeries());
-        final MetricCollection metrics = doFetch(key, request.getRange(), watcher);
-        return async.resolved(FetchData.of(w.end(), ImmutableList.of(), ImmutableList.of(metrics)));
-    }
-
-    @Override
     public AsyncFuture<FetchData.Result> fetch(
         FetchData.Request request, FetchQuotaWatcher watcher,
         Consumer<MetricCollection> metricsConsumer

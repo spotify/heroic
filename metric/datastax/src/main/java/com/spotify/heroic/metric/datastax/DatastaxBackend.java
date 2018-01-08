@@ -133,33 +133,6 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
     }
 
     @Override
-    public AsyncFuture<FetchData> fetch(
-        final FetchData.Request request, final FetchQuotaWatcher watcher
-    ) {
-        if (!watcher.mayReadData()) {
-            throw new IllegalArgumentException("query violated data limit");
-        }
-
-        final int limit = watcher.getReadDataQuota();
-
-        return connection.doto(c -> {
-            final QueryTrace.Watch w = QueryTrace.watch();
-
-            final List<PreparedFetch> prepared =
-                c.schema.ranges(request.getSeries(), request.getRange());
-
-            if (request.getType() == MetricType.POINT) {
-                final List<AsyncFuture<FetchData>> fetches =
-                    fetchDataPoints(w, limit, request.getOptions(), prepared, c);
-                return async.collect(fetches, FetchData.collect(FETCH));
-            }
-
-            return async.resolved(FetchData.error(w.end(FETCH),
-                QueryError.fromMessage("unsupported source: " + request.getType())));
-        });
-    }
-
-    @Override
     public AsyncFuture<FetchData.Result> fetch(
         final FetchData.Request request, final FetchQuotaWatcher watcher,
         final Consumer<MetricCollection> metricsConsumer

@@ -74,13 +74,6 @@ class LoggingMetricModule implements MetricModule {
         }
 
         @Override
-        public AsyncFuture<FetchData> fetch(
-            final FetchData.Request request, final FetchQuotaWatcher watcher
-        ) {
-            return delegate.fetch(request, watcher);
-        }
-
-        @Override
         public AsyncFuture<FetchData.Result> fetch(
             final FetchData.Request request, final FetchQuotaWatcher watcher,
             final Consumer<MetricCollection> metricsConsumer

@@ -176,7 +176,6 @@ public class LocalMetricManager implements MetricManager {
             private final QueryOptions options;
             private final DataInMemoryReporter dataInMemoryReporter;
             private final MetricType source;
-            private final boolean slicedFetch;
 
             private Transform(
                 final FullQuery.Request request, final boolean failOnLimits,
@@ -198,7 +197,6 @@ public class LocalMetricManager implements MetricManager {
                 this.dataInMemoryReporter = dataInMemoryReporter;
 
                 final Features features = request.getFeatures();
-                this.slicedFetch = features.hasFeature(Feature.SLICED_DATA_FETCH);
                 this.bucketStrategy = options
                     .getBucketStrategy()
                     .orElseGet(
@@ -279,21 +277,9 @@ public class LocalMetricManager implements MetricManager {
                 /* setup fetches */
                 accept(metricBackend -> {
                     for (final Series series : result.getSeries()) {
-                        if (slicedFetch) {
-                            fetches.add(() -> metricBackend.fetch(
-                                new FetchData.Request(source, series, range, options), quotaWatcher,
-                                mc -> collector.acceptMetricsCollection(series, mc)));
-                        } else {
-                            fetches.add(() -> metricBackend
-                                .fetch(new FetchData.Request(source, series, range, options),
-                                    quotaWatcher)
-                                .directTransform(fetchData -> {
-                                    fetchData.getGroups().forEach(group -> {
-                                        collector.acceptMetricsCollection(series, group);
-                                    });
-                                    return fetchData.getResult();
-                                }));
-                        }
+                        fetches.add(() -> metricBackend.fetch(
+                            new FetchData.Request(source, series, range, options), quotaWatcher,
+                            mc -> collector.acceptMetricsCollection(series, mc)));
                     }
                 });
 
@@ -369,14 +355,6 @@ public class LocalMetricManager implements MetricManager {
             }
 
             return result;
-        }
-
-        @Override
-        public AsyncFuture<FetchData> fetch(
-            final FetchData.Request request, final FetchQuotaWatcher watcher
-        ) {
-            final List<AsyncFuture<FetchData>> callbacks = map(b -> b.fetch(request, watcher));
-            return async.collect(callbacks, FetchData.collect(FETCH));
         }
 
         @Override

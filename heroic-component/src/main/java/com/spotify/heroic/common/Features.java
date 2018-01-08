@@ -40,8 +40,11 @@ public class Features {
     /**
      * Default set of features.
      */
-    public static final Features DEFAULT = Features.create(
-        ImmutableSet.<Feature>builder().add(Feature.SHIFT_RANGE).add(Feature.END_BUCKET).build());
+    public static final Features DEFAULT = Features.create(ImmutableSet.<Feature>builder()
+        .add(Feature.SHIFT_RANGE)
+        .add(Feature.END_BUCKET)
+        .add(Feature.SLICED_DATA_FETCH)
+        .build());
 
     private final SortedSet<Feature> features;
 
