@@ -1,6 +1,7 @@
 package com.spotify.heroic;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -61,8 +62,8 @@ public abstract class AbstractConsumerIT extends AbstractSingleNodeIT {
                     .fetch(fetchDataRequest, FetchQuotaWatcher.NO_QUOTA, data::add);
             }).get();
 
+            assertFalse(data.isEmpty());
             final MetricCollection collection = data.iterator().next().getMetrics();
-
             assertEquals(mc, collection);
             return null;
         });
@@ -98,8 +99,8 @@ public abstract class AbstractConsumerIT extends AbstractSingleNodeIT {
                     .fetch(fetchDataRequest, FetchQuotaWatcher.NO_QUOTA, data::add);
             }).get();
 
+            assertFalse(data.isEmpty());
             final MetricCollection collection = data.iterator().next().getMetrics();
-
             assertEquals(MetricCollection.points(consumedPoints), collection);
             return null;
         });

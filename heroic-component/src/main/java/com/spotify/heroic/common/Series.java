@@ -193,6 +193,10 @@ public class Series implements Comparable<Series> {
         return of(key, tags.entrySet().iterator(), EMPTY_RESOURCE.entrySet().iterator());
     }
 
+    public static Series of(String key, Map<String, String> tags, Map<String, String> resource) {
+        return of(key, tags.entrySet().iterator(), resource.entrySet().iterator());
+    }
+
     public static Series of(String key, Set<Map.Entry<String, String>> tagEntries) {
         return of(key, tagEntries.iterator(), EMPTY_RESOURCE.entrySet().iterator());
     }
