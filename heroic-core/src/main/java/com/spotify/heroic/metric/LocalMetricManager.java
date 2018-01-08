@@ -176,7 +176,6 @@ public class LocalMetricManager implements MetricManager {
             private final QueryOptions options;
             private final DataInMemoryReporter dataInMemoryReporter;
             private final MetricType source;
-            private final boolean slicedFetch;
 
             private Transform(
                 final FullQuery.Request request, final boolean failOnLimits,
@@ -198,7 +197,6 @@ public class LocalMetricManager implements MetricManager {
                 this.dataInMemoryReporter = dataInMemoryReporter;
 
                 final Features features = request.getFeatures();
-                this.slicedFetch = features.hasFeature(Feature.SLICED_DATA_FETCH);
                 this.bucketStrategy = options
                     .getBucketStrategy()
                     .orElseGet(
@@ -209,12 +207,6 @@ public class LocalMetricManager implements MetricManager {
             @Override
             public AsyncFuture<FullQuery> transform(final FindSeries result) throws Exception {
                 final ResultLimits limits;
-
-                if (!slicedFetch) {
-                    return async.resolved(FullQuery.error(namedWatch.end(), QueryError.fromMessage(
-                        "Unable to read metrics data due to mandatory feature 'com.spotify.heroic" +
-                            ".sliced_data_fetch' being disabled.")));
-                }
 
                 if (result.isLimited()) {
                     if (failOnLimits) {

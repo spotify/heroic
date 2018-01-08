@@ -98,6 +98,7 @@ public class CoreQueryManager implements QueryManager {
         QueryTrace.identifier(CoreQueryManager.class, "query_shard");
     public static final QueryTrace.Identifier QUERY =
         QueryTrace.identifier(CoreQueryManager.class, "query");
+    private static boolean hasWarnedSlicedDataFetch = false;
 
     private final Features features;
     private final AsyncFramework async;
@@ -428,8 +429,20 @@ public class CoreQueryManager implements QueryManager {
         // apply conditional features to defaults, if present.
         final Features configured =
             conditionalFeatures.map(c -> features.applySet(c.match(context))).orElse(features);
+
         // apply rules from query last, to give them precedence.
-        return q.getFeatures().map(configured::applySet).orElse(configured);
+        final Features features = q.getFeatures().map(configured::applySet).orElse(configured);
+
+        if (!features.hasFeature(Feature.SLICED_DATA_FETCH)) {
+            if (!hasWarnedSlicedDataFetch) {
+                hasWarnedSlicedDataFetch = true;
+                log.warn(
+                    "The mandatory feature 'com.spotify.heroic.sliced_data_fetch' can't be " +
+                        "disabled!");
+            }
+        }
+
+        return features;
     }
 
     private static <T> T retryTraceHandlerNoop(T result, List<QueryTrace> traces) {
