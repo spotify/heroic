@@ -75,7 +75,8 @@ public class QueryMetricsResponse {
             QueryMetricsResponse response, JsonGenerator g, SerializerProvider provider
         ) throws IOException {
             final List<ShardedResultGroup> result = response.getResult();
-            final Map<String, SortedSet<String>> common = calculateCommon(g, result);
+            final Map<String, SortedSet<String>> common = calculateCommon(result);
+            final Map<String, SortedSet<String>> commonResource = calculateCommonResource(result);
 
             g.writeStartObject();
 
@@ -90,8 +91,11 @@ public class QueryMetricsResponse {
             g.writeFieldName("commonTags");
             serializeCommonTags(g, common);
 
+            g.writeFieldName("commonResource");
+            serializeCommonTags(g, commonResource);
+
             g.writeFieldName("result");
-            serializeResult(g, common, result);
+            serializeResult(g, result);
 
             g.writeObjectField("preAggregationSampleSize", response.getPreAggregationSampleSize());
 
@@ -133,7 +137,7 @@ public class QueryMetricsResponse {
         }
 
         private Map<String, SortedSet<String>> calculateCommon(
-            final JsonGenerator g, final List<ShardedResultGroup> result
+            final List<ShardedResultGroup> result
         ) {
             final Map<String, SortedSet<String>> common = new HashMap<>();
             final Set<String> blacklist = new HashSet<>();
@@ -165,9 +169,41 @@ public class QueryMetricsResponse {
             return common;
         }
 
-        private void serializeResult(
-            final JsonGenerator g, final Map<String, SortedSet<String>> common,
+        private Map<String, SortedSet<String>> calculateCommonResource(
             final List<ShardedResultGroup> result
+        ) {
+            final Map<String, SortedSet<String>> common = new HashMap<>();
+            final Set<String> blacklist = new HashSet<>();
+
+            for (final ShardedResultGroup r : result) {
+                final Set<Map.Entry<String, SortedSet<String>>> entries =
+                    SeriesValues.fromSeries(r.getSeries().iterator()).getResource().entrySet();
+
+                for (final Map.Entry<String, SortedSet<String>> e : entries) {
+                    if (blacklist.contains(e.getKey())) {
+                        continue;
+                    }
+
+                    final SortedSet<String> previous = common.put(e.getKey(), e.getValue());
+
+                    if (previous == null) {
+                        continue;
+                    }
+
+                    if (previous.equals(e.getValue())) {
+                        continue;
+                    }
+
+                    blacklist.add(e.getKey());
+                    common.remove(e.getKey());
+                }
+            }
+
+            return common;
+        }
+
+        private void serializeResult(
+            final JsonGenerator g, final List<ShardedResultGroup> result
         ) throws IOException {
 
             g.writeStartArray();
@@ -185,9 +221,12 @@ public class QueryMetricsResponse {
                 g.writeObjectField("values", collection.getData());
 
                 writeKey(g, series.getKeys());
+
                 writeTags(g, series.getTags());
                 writeTagCounts(g, series.getTags());
+
                 writeResource(g, series.getResource());
+                writeResourceCounts(g, series.getResource());
 
                 g.writeEndObject();
             }
@@ -233,6 +272,25 @@ public class QueryMetricsResponse {
         void writeTagCounts(JsonGenerator g, final Map<String, SortedSet<String>> tags)
             throws IOException {
             g.writeFieldName("tagCounts");
+
+            g.writeStartObject();
+
+            for (final Map.Entry<String, SortedSet<String>> pair : tags.entrySet()) {
+                final SortedSet<String> values = pair.getValue();
+
+                if (values.size() <= 1) {
+                    continue;
+                }
+
+                g.writeNumberField(pair.getKey(), values.size());
+            }
+
+            g.writeEndObject();
+        }
+
+        void writeResourceCounts(JsonGenerator g, final Map<String, SortedSet<String>> tags)
+            throws IOException {
+            g.writeFieldName("resourceCounts");
 
             g.writeStartObject();
 
