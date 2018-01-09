@@ -191,8 +191,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
             for (final String index : indices) {
                 if (!writeCache.acquire(Pair.of(index, series.getHashCode()),
-                    reporter::reportWriteDroppedByCacheHit,
-                    reporter::reportWriteDroppedByRateLimit)) {
+                    reporter::reportWriteDroppedByCacheHit)) {
                     continue;
                 }
 

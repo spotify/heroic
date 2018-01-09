@@ -23,6 +23,7 @@ package com.spotify.heroic.statistics;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 
 public interface HeroicReporter {
     ConsumerReporter newConsumer(String id);
@@ -40,4 +41,9 @@ public interface HeroicReporter {
     QueryReporter newQueryReporter();
 
     void registerShards(Set<Map<String, String>> knownShards);
+
+    /**
+     * Register cache size instrumentation.
+     */
+    void registerCacheSize(String id, Supplier<Long> cacheSize);
 }

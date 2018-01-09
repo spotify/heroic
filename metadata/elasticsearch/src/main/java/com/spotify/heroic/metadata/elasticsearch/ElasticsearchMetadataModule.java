@@ -49,6 +49,7 @@ import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataModule;
+import com.spotify.heroic.statistics.HeroicReporter;
 import dagger.Component;
 import dagger.Lazy;
 import dagger.Module;
@@ -199,7 +200,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
 
         @Provides
         @ElasticsearchScope
-        public RateLimitedCache<Pair<String, HashCode>> writeCache() {
+        public RateLimitedCache<Pair<String, HashCode>> writeCache(HeroicReporter reporter) {
             final Cache<Pair<String, HashCode>, Boolean> cache = CacheBuilder
                 .newBuilder()
                 .concurrencyLevel(4)
@@ -209,6 +210,8 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
             if (writesPerSecond <= 0d) {
                 return new DisabledRateLimitedCache<>(cache.asMap());
             }
+
+            reporter.registerCacheSize("elasticsearch-metadata-write-through", cache::size);
 
             return new DefaultRateLimitedCache<>(cache.asMap(),
                 RateLimiter.create(writesPerSecond, rateLimitSlowStartSeconds, TimeUnit.SECONDS));

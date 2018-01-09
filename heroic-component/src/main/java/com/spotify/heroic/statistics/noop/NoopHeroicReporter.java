@@ -32,6 +32,7 @@ import com.spotify.heroic.statistics.SuggestBackendReporter;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 
 public class NoopHeroicReporter implements HeroicReporter {
     @Override
@@ -71,6 +72,10 @@ public class NoopHeroicReporter implements HeroicReporter {
 
     @Override
     public void registerShards(Set<Map<String, String>> knownShards) {
+    }
+
+    @Override
+    public void registerCacheSize(final String id, final Supplier<Long> cacheSize) {
     }
 
     private static final NoopHeroicReporter instance = new NoopHeroicReporter();
