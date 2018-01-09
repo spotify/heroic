@@ -5,9 +5,9 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-import com.google.common.util.concurrent.RateLimiter;
 import com.spotify.heroic.elasticsearch.DefaultRateLimitedCache;
 import com.spotify.heroic.elasticsearch.RateLimitExceededException;
+import com.spotify.heroic.elasticsearch.SimpleRateLimiter;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -22,7 +22,7 @@ public class DefaultRateLimitedCacheTest {
     ConcurrentMap<K, Boolean> cache;
 
     @Mock
-    RateLimiter rateLimiter;
+    SimpleRateLimiter rateLimiter;
 
     final Boolean value = true;
 
