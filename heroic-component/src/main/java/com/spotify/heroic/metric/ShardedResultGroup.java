@@ -45,7 +45,10 @@ public final class ShardedResultGroup {
     private static final HashFunction HASH_FUNCTION = murmur3_32();
 
     private final Map<String, String> shard;
+
+    // key-value pairs that act as a lookup key, identifying this result group
     private final Map<String, String> key;
+
     private final Set<Series> series;
     private final MetricCollection metrics;
     private final long cadence;

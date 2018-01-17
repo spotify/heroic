@@ -15,6 +15,7 @@
   "cached": false,
   "cache": null,
   "commonTags": {},
+  "commonResource": {},
   "result": [
     {
       "type": "points",
@@ -24,7 +25,9 @@
       "values": [],
       "key": null,
       "tags": {},
-      "tagCounts": {}
+      "tagCounts": {},
+      "resource": {},
+      "resourceCounts": {}
     }
   ],
   "preAggregationSampleSize":null,

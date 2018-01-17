@@ -34,7 +34,7 @@ public interface RowFilter {
 
     /**
      * Test if the current filter matches the given column qualifier.
-     *
+     * <p>
      * This method is primarily used when testing.
      *
      * @param columnQualifier column qualifier to match
@@ -44,7 +44,7 @@ public interface RowFilter {
 
     /**
      * Test if the current filter matches the given column family.
-     *
+     * <p>
      * This method is primarily used when testing.
      *
      * @param familyName family to match
@@ -117,25 +117,25 @@ public interface RowFilter {
         @Override
         public boolean matchesColumn(final ByteString columnQualifier) {
             if (!startQualifierClosed
-                .map(sqo -> compareByteStrings(sqo, columnQualifier) <= 0)
+                .map(sqc -> compareByteStrings(sqc, columnQualifier) <= 0)
                 .orElse(true)) {
                 return false;
             }
 
             if (!startQualifierOpen
-                .map(q -> compareByteStrings(q, columnQualifier) < 0)
+                .map(sqo -> compareByteStrings(sqo, columnQualifier) < 0)
                 .orElse(true)) {
                 return false;
             }
 
             if (!endQualifierClosed
-                .map(sqo -> compareByteStrings(sqo, columnQualifier) >= 0)
+                .map(eqc -> compareByteStrings(eqc, columnQualifier) >= 0)
                 .orElse(true)) {
                 return false;
             }
 
             if (!endQualifierOpen
-                .map(sqo -> compareByteStrings(sqo, columnQualifier) > 0)
+                .map(eqo -> compareByteStrings(eqo, columnQualifier) > 0)
                 .orElse(true)) {
                 return false;
             }

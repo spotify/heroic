@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2017 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,13 +19,24 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric.bigtable;
+package com.spotify.heroic.metric;
 
-import com.spotify.heroic.common.Series;
+import com.google.common.collect.ImmutableSortedMap;
+import java.util.SortedMap;
 import lombok.Data;
 
 @Data
-public class RowKey {
-    private final Series series;
-    private final long base;
+public class MetricReadResult {
+    private final MetricCollection metrics;
+    private final SortedMap<String, String> resource;
+
+    public static MetricReadResult create(final MetricCollection metrics) {
+        return new MetricReadResult(metrics, ImmutableSortedMap.of());
+    }
+
+    public static MetricReadResult create(
+        final MetricCollection metrics, final SortedMap<String, String> resources
+    ) {
+        return new MetricReadResult(metrics, resources);
+    }
 }

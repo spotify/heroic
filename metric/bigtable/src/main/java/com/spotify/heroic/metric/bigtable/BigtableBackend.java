@@ -25,6 +25,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.cloud.bigtable.grpc.scanner.FlatRow;
+import com.google.cloud.bigtable.util.RowKeyUtil;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -43,6 +44,7 @@ import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
+import com.spotify.heroic.metric.MetricReadResult;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.QueryError;
@@ -52,9 +54,9 @@ import com.spotify.heroic.metric.bigtable.api.BigtableDataClient;
 import com.spotify.heroic.metric.bigtable.api.BigtableTableAdminClient;
 import com.spotify.heroic.metric.bigtable.api.ColumnFamily;
 import com.spotify.heroic.metric.bigtable.api.Mutations;
-import com.spotify.heroic.metric.bigtable.api.ReadRowRangeRequest;
 import com.spotify.heroic.metric.bigtable.api.ReadRowsRequest;
 import com.spotify.heroic.metric.bigtable.api.RowFilter;
+import com.spotify.heroic.metric.bigtable.api.RowRange;
 import com.spotify.heroic.metric.bigtable.api.Table;
 import com.spotify.heroic.metrics.Meter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
@@ -63,7 +65,6 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.RetryPolicy;
 import eu.toolchain.async.RetryResult;
-import eu.toolchain.serializer.BytesSerialWriter;
 import eu.toolchain.serializer.Serializer;
 import eu.toolchain.serializer.SerializerFramework;
 import java.io.IOException;
@@ -73,6 +74,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.SortedMap;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import javax.inject.Inject;
@@ -100,7 +103,8 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
     private final AsyncFramework async;
     private final SerializerFramework serializer;
-    private final Serializer<RowKey> rowKeySerializer;
+    private final RowKeySerializer rowKeySerializer;
+    private final Serializer<SortedMap<String, String>> sortedMapSerializer;
     private final Managed<BigtableConnection> connection;
     private final Groups groups;
     private final String table;
@@ -117,7 +121,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     @Inject
     public BigtableBackend(
         final AsyncFramework async, @Named("common") final SerializerFramework serializer,
-        final Serializer<RowKey> rowKeySerializer, final Managed<BigtableConnection> connection,
+        final RowKeySerializer rowKeySerializer, final Managed<BigtableConnection> connection,
         final Groups groups, @Named("table") final String table,
         @Named("configure") final boolean configure, MetricBackendReporter reporter,
         @Named("application/json") ObjectMapper mapper
@@ -126,6 +130,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         this.async = async;
         this.serializer = serializer;
         this.rowKeySerializer = rowKeySerializer;
+        this.sortedMapSerializer = serializer.sortedMap(serializer.string(), serializer.string());
         this.connection = connection;
         this.groups = groups;
         this.table = table;
@@ -226,7 +231,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     @Override
     public AsyncFuture<FetchData.Result> fetch(
         final FetchData.Request request, final FetchQuotaWatcher watcher,
-        final Consumer<MetricCollection> consumer
+        final Consumer<MetricReadResult> consumer
     ) {
         return connection.doto(c -> {
             final MetricType type = request.getType();
@@ -234,6 +239,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             if (!watcher.mayReadData()) {
                 throw new IllegalArgumentException("query violated data limit");
             }
+
             switch (type) {
                 case POINT:
                     return fetchBatch(watcher, type, pointsRanges(request), c, consumer);
@@ -331,14 +337,14 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         final RequestTimer<WriteMetric> timer = WriteMetric.timer();
 
         for (final Pair<RowKey, Mutations> e : saved) {
-            final ByteString rowKeyBytes = serialize(e.getKey(), rowKeySerializer);
+            final ByteString rowKeyBytes = rowKeySerializer.serializeFull(e.getKey());
             writes.add(client
                 .mutateRow(table, rowKeyBytes, e.getValue())
                 .directTransform(result -> timer.end()));
         }
 
         for (final Map.Entry<RowKey, Mutations.Builder> e : building.entrySet()) {
-            final ByteString rowKeyBytes = serialize(e.getKey(), rowKeySerializer);
+            final ByteString rowKeyBytes = rowKeySerializer.serializeFull(e.getKey());
             writes.add(client
                 .mutateRow(table, rowKeyBytes, e.getValue().build())
                 .directTransform(result -> timer.end()));
@@ -366,7 +372,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
         final RequestTimer<WriteMetric> timer = WriteMetric.timer();
 
-        final ByteString rowKeyBytes = serialize(rowKey, rowKeySerializer);
+        final ByteString rowKeyBytes = rowKeySerializer.serializeFull(rowKey);
         return client
             .mutateRow(table, rowKeyBytes, builder.build())
             .directTransform(result -> timer.end());
@@ -374,7 +380,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
     private AsyncFuture<FetchData.Result> fetchBatch(
         final FetchQuotaWatcher watcher, final MetricType type, final List<PreparedQuery> prepared,
-        final BigtableConnection c, final Consumer<MetricCollection> metricsConsumer
+        final BigtableConnection c, final Consumer<MetricReadResult> metricsConsumer
     ) {
         final BigtableDataClient client = c.dataClient();
 
@@ -385,11 +391,11 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
             final AsyncFuture<List<FlatRow>> readRows = client.readRows(table, ReadRowsRequest
                 .builder()
-                .rowKey(p.request.getRowKey())
+                .range(new RowRange(Optional.of(p.rowKeyStart), Optional.of(p.rowKeyEnd)))
                 .filter(RowFilter.chain(Arrays.asList(RowFilter
-                    .newColumnRangeBuilder(p.request.getColumnFamily())
-                    .startQualifierOpen(p.request.getStartQualifierOpen())
-                    .endQualifierClosed(p.request.getEndQualifierClosed())
+                    .newColumnRangeBuilder(p.columnFamily)
+                    .startQualifierOpen(p.startQualifierOpen)
+                    .endQualifierClosed(p.endQualifierClosed)
                     .build(), RowFilter.onlyLatestCell())))
                 .build());
 
@@ -398,9 +404,13 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
             fetches.add(readRows.directTransform(result -> {
                 for (final FlatRow row : result) {
+                    SortedMap<String, String> resource = parseResourceFromRowKey(row.getRowKey());
+
                     watcher.readData(row.getCells().size());
                     final List<Metric> metrics = Lists.transform(row.getCells(), transform);
-                    metricsConsumer.accept(MetricCollection.build(type, metrics));
+                    final MetricCollection mc = MetricCollection.build(type, metrics);
+                    final MetricReadResult readResult = MetricReadResult.create(mc, resource);
+                    metricsConsumer.accept(readResult);
                 }
                 return FetchData.result(fs.end());
             }));
@@ -411,11 +421,12 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         });
     }
 
-    <T> ByteString serialize(T rowKey, Serializer<T> serializer) throws IOException {
-        try (final BytesSerialWriter writer = this.serializer.writeBytes()) {
-            serializer.serialize(writer, rowKey);
-            return ByteString.copyFrom(writer.toByteArray());
-        }
+    private SortedMap<String, String> parseResourceFromRowKey(final ByteString rowKey)
+        throws IOException {
+        return rowKeySerializer
+            .deserializeFull(ByteBuffer.wrap(rowKey.toByteArray()))
+            .getSeries()
+            .getResource();
     }
 
     static long base(long timestamp) {
@@ -442,14 +453,17 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                 continue;
             }
 
-            final RowKey key = new RowKey(series, base);
-            final ByteString keyBlob = serialize(key, rowKeySerializer);
+            final ByteString key = rowKeySerializer.serializeMinimal(
+                new RowKeyMinimal(RowKeyMinimal.Series.create(series), base));
+
+            final ByteString keyEnd = ByteString.copyFrom(
+                RowKeyUtil.calculateTheClosestNextRowKeyForPrefix(key.toByteArray()));
+
             final ByteString startKey = serializeOffset(offset(modified.start()));
             final ByteString endKey = serializeOffset(offset(modified.end()));
 
-            final ReadRowRangeRequest request =
-                new ReadRowRangeRequest(keyBlob, columnFamily, startKey, endKey);
-            bases.add(new PreparedQuery(request, deserializer, base));
+            bases.add(
+                new PreparedQuery(key, keyEnd, columnFamily, startKey, endKey, deserializer, base));
         }
 
         return bases;
@@ -512,7 +526,11 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
     @RequiredArgsConstructor
     private static final class PreparedQuery {
-        private final ReadRowRangeRequest request;
+        private final ByteString rowKeyStart;
+        private final ByteString rowKeyEnd;
+        private final String columnFamily;
+        private final ByteString startQualifierOpen;
+        private final ByteString endQualifierClosed;
         private final BiFunction<Long, ByteString, Metric> deserializer;
         private final long base;
 

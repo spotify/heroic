@@ -55,7 +55,8 @@ public class RandomMetadataGenerator implements MetadataGenerator {
     private Series generateOne(int index) {
         final String key = generateKey(index);
         final Map<String, String> tags = generateTags(index);
-        return Series.of(key, tags);
+        final Map<String, String> resource = generateResource(index);
+        return Series.of(key, tags, resource);
     }
 
     private String generateKey(int index) {
@@ -69,6 +70,12 @@ public class RandomMetadataGenerator implements MetadataGenerator {
         builder.put("role", randomPick(ROLES));
         builder.put("what", randomPick(WHATS));
 
+        return builder.build();
+    }
+
+    private Map<String, String> generateResource(int index) {
+        final ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
+        builder.put("instance", String.format("%d", index % 10));
         return builder.build();
     }
 

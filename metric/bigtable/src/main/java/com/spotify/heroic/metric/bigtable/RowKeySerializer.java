@@ -21,11 +21,14 @@
 
 package com.spotify.heroic.metric.bigtable;
 
-import com.spotify.heroic.common.Series;
-import lombok.Data;
+import com.google.protobuf.ByteString;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 
-@Data
-public class RowKey {
-    private final Series series;
-    private final long base;
+public interface RowKeySerializer {
+    ByteString serializeMinimal(RowKeyMinimal value) throws IOException;
+
+    ByteString serializeFull(RowKey value) throws IOException;
+
+    RowKey deserializeFull(ByteBuffer buffer) throws IOException;
 }

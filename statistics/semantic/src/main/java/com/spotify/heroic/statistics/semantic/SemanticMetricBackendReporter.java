@@ -36,6 +36,7 @@ import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricCollection;
+import com.spotify.heroic.metric.MetricReadResult;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.statistics.DataInMemoryReporter;
 import com.spotify.heroic.statistics.FutureReporter;
@@ -227,7 +228,7 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
         @Override
         public AsyncFuture<FetchData.Result> fetch(
             final FetchData.Request request, final FetchQuotaWatcher watcher,
-            final Consumer<MetricCollection> metricsConsumer
+            final Consumer<MetricReadResult> metricsConsumer
         ) {
             return delegate.fetch(request, watcher, metricsConsumer).onDone(fetch.setup());
         }

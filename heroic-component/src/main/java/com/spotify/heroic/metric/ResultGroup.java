@@ -37,7 +37,9 @@ import lombok.Data;
 
 @Data
 public class ResultGroup {
+    // key-value pairs that act as a lookup key, identifying this result group
     final Map<String, String> key;
+
     final Set<Series> series;
     final MetricCollection group;
     /**

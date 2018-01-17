@@ -15,6 +15,7 @@ import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricModule;
+import com.spotify.heroic.metric.MetricReadResult;
 import com.spotify.heroic.metric.WriteMetric;
 import eu.toolchain.async.AsyncFuture;
 import java.util.List;
@@ -76,7 +77,7 @@ class LoggingMetricModule implements MetricModule {
         @Override
         public AsyncFuture<FetchData.Result> fetch(
             final FetchData.Request request, final FetchQuotaWatcher watcher,
-            final Consumer<MetricCollection> metricsConsumer
+            final Consumer<MetricReadResult> metricsConsumer
         ) {
             return delegate.fetch(request, watcher, metricsConsumer);
         }

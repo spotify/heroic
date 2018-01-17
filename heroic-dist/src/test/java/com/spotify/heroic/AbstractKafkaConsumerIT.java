@@ -19,8 +19,10 @@ import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.memory.MemoryMetricModule;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import lombok.Data;
 import org.junit.After;
 
 public abstract class AbstractKafkaConsumerIT extends AbstractConsumerIT {
@@ -72,11 +74,12 @@ public abstract class AbstractKafkaConsumerIT extends AbstractConsumerIT {
 
             final Series series = request.getSeries();
             for (final Point p : mc.getDataAs(Point.class)) {
-                final Spotify100.JsonMetric src =
-                    new Spotify100.JsonMetric(Spotify100.SCHEMA_VERSION, series.getKey(),
-                        "localhost", p.getTimestamp(), series.getTags(), p.getValue());
+                final Version1 src =
+                    new Version1("1.1.0", series.getKey(), "localhost", p.getTimestamp(),
+                        series.getTags(), series.getResource(), p.getValue());
 
                 final byte[] message;
+
                 try {
                     message = objectMapper.writeValueAsBytes(src);
                 } catch (Exception e) {
@@ -118,5 +121,16 @@ public abstract class AbstractKafkaConsumerIT extends AbstractConsumerIT {
         if (expectAtLeastOneCommit) {
             assertTrue(offsetsCommits > 0);
         }
+    }
+
+    @Data
+    public static class Version1 {
+        private final String version;
+        private final String key;
+        private final String host;
+        private final Long time;
+        private final Map<String, String> attributes;
+        private final Map<String, String> resource;
+        private final double value;
     }
 }

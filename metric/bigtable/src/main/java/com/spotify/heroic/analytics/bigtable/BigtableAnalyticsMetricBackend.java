@@ -33,6 +33,7 @@ import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricCollection;
+import com.spotify.heroic.metric.MetricReadResult;
 import com.spotify.heroic.metric.WriteMetric;
 import eu.toolchain.async.AsyncFuture;
 import java.time.LocalDate;
@@ -75,7 +76,7 @@ class BigtableAnalyticsMetricBackend implements MetricBackend {
     @Override
     public AsyncFuture<FetchData.Result> fetch(
         final FetchData.Request request, final FetchQuotaWatcher watcher,
-        final Consumer<MetricCollection> metricsConsumer
+        final Consumer<MetricReadResult> metricsConsumer
     ) {
         analytics.reportFetchSeries(LocalDate.now(), request.getSeries());
         return backend.fetch(request, watcher, metricsConsumer);
