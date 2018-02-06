@@ -22,14 +22,13 @@
 package com.spotify.heroic.metric.bigtable.api;
 
 import com.google.common.collect.ImmutableMap;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 @Data
 @RequiredArgsConstructor
@@ -83,5 +82,12 @@ public class Table {
 
     public static String toURI(final String clusterUri, final String name) {
         return String.format(TABLE_NAME_FORMAT, clusterUri, name);
+    }
+
+    public Table withAddColumnFamily(final ColumnFamily columnFamily) {
+        return new Table(this.clusterUri, this.name, ImmutableMap.<String, ColumnFamily>builder()
+            .putAll(columnFamilies)
+            .put(columnFamily.getName(), columnFamily)
+            .build());
     }
 }
