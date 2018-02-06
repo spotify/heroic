@@ -2,6 +2,7 @@ package com.spotify.heroic.metric.bigtable;
 
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.bigtable.credentials.ComputeEngineCredentialsBuilder;
+import com.spotify.heroic.metric.bigtable.credentials.DefaultCredentialsBuilder;
 import com.spotify.heroic.metric.bigtable.credentials.JsonCredentialsBuilder;
 import com.spotify.heroic.test.AbstractMetricBackendIT;
 import com.spotify.heroic.test.TestProperties;
@@ -41,7 +42,7 @@ public class BigtableBackendIT extends AbstractMetricBackendIT {
                 final Path credentailsPath = Paths.get(credentialsFile.get());
                 credentials = JsonCredentialsBuilder.builder().path(credentailsPath).build();
             } else {
-                credentials = new ComputeEngineCredentialsBuilder();
+                credentials = new DefaultCredentialsBuilder();
             }
 
             return BigtableMetricModule
