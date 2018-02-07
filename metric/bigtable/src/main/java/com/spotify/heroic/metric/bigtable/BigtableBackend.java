@@ -78,6 +78,7 @@ import java.util.Optional;
 import java.util.SortedMap;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import javax.inject.Inject;
 import javax.inject.Named;
 import lombok.RequiredArgsConstructor;
@@ -152,39 +153,61 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
     private AsyncFuture<Void> configureMetricsTable(final BigtableTableAdminClient admin)
         throws IOException {
-        return async
-            .call(() -> admin.getTable(table))
-            .lazyTransform(tableCheck -> tableCheck.map(async::resolved).orElseGet(() -> {
-                log.info("Creating missing table: " + table);
-                final Table createdTable = admin.createTable(table);
+        return async.call(() -> {
+            final Table createdTable =
+                admin.getTable(this.table).orElseGet(() -> admin.createTable(this.table));
 
-                // check until table exists
-                return async
-                    .retryUntilResolved(() -> {
-                        if (!admin.getTable(createdTable.getName()).isPresent()) {
-                            throw new IllegalStateException(
-                                "Table does not exist: " + createdTable.toURI());
-                        }
+            // Wait until table exists.
+            final Table table = waitUntilTable(admin, createdTable).get();
 
-                        return async.resolved(createdTable);
-                    }, RetryPolicy.timed(10000, RetryPolicy.linear(1000)))
-                    .directTransform(RetryResult::getResult);
-            }))
-            .lazyTransform(metrics -> {
-                final List<AsyncFuture<ColumnFamily>> families = new ArrayList<>();
-
-                families.add(async.call(() -> metrics.getColumnFamily(POINTS).orElseGet(() -> {
-                    log.info("Creating missing column family: " + POINTS);
-                    return admin.createColumnFamily(metrics, POINTS);
-                })));
-
-                families.add(async.call(() -> metrics.getColumnFamily(EVENTS).orElseGet(() -> {
-                    log.info("Creating missing column family: " + EVENTS);
-                    return admin.createColumnFamily(metrics, EVENTS);
-                })));
-
-                return async.collectAndDiscard(families);
+            table.getColumnFamily(POINTS).orElseGet(() -> {
+                log.info("Creating missing column family: " + POINTS);
+                return admin.createColumnFamily(table, POINTS);
             });
+
+            waitUntilColumnFamily(admin, table, POINTS).get();
+
+            table.getColumnFamily(EVENTS).orElseGet(() -> {
+                log.info("Creating missing column family: " + EVENTS);
+                return admin.createColumnFamily(table, EVENTS);
+            });
+
+            waitUntilColumnFamily(admin, table, EVENTS).get();
+
+            return null;
+        });
+    }
+
+    private AsyncFuture<Table> waitUntilTable(
+        final BigtableTableAdminClient admin, final Table table
+    ) throws InterruptedException, java.util.concurrent.ExecutionException {
+        return waitUntil(() -> admin
+            .getTable(table.getName())
+            .orElseThrow(
+                () -> new IllegalStateException("Table does not exist: " + table.toURI())));
+    }
+
+    private AsyncFuture<ColumnFamily> waitUntilColumnFamily(
+        final BigtableTableAdminClient admin, final Table originalTable, final String columnFamily
+    ) throws InterruptedException, java.util.concurrent.ExecutionException {
+        return waitUntil(() -> {
+            final Table table = admin
+                .getTable(originalTable.getName())
+                .orElseThrow(() -> new IllegalStateException(
+                    "Table does not exist: " + originalTable.toURI()));
+
+            return table
+                .getColumnFamily(columnFamily)
+                .orElseThrow(() -> new IllegalStateException(
+                    "Column Family does not exist: " + columnFamily));
+        });
+    }
+
+    private <T> AsyncFuture<T> waitUntil(final Supplier<T> test) {
+        return async
+            .retryUntilResolved(() -> async.resolved(test.get()),
+                RetryPolicy.timed(10000, RetryPolicy.linear(1000)))
+            .directTransform(RetryResult::getResult);
     }
 
     @Override
@@ -332,6 +355,13 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             }
         }
 
+        building
+            .entrySet()
+            .stream()
+            .filter(e -> e.getValue().size() > 0)
+            .map(e -> Pair.of(e.getKey(), e.getValue().build()))
+            .forEach(saved::add);
+
         final ImmutableList.Builder<AsyncFuture<WriteMetric>> writes = ImmutableList.builder();
 
         final RequestTimer<WriteMetric> timer = WriteMetric.timer();
@@ -340,13 +370,6 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             final ByteString rowKeyBytes = rowKeySerializer.serializeFull(e.getKey());
             writes.add(client
                 .mutateRow(table, rowKeyBytes, e.getValue())
-                .directTransform(result -> timer.end()));
-        }
-
-        for (final Map.Entry<RowKey, Mutations.Builder> e : building.entrySet()) {
-            final ByteString rowKeyBytes = rowKeySerializer.serializeFull(e.getKey());
-            writes.add(client
-                .mutateRow(table, rowKeyBytes, e.getValue().build())
                 .directTransform(result -> timer.end()));
         }
 

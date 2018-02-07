@@ -39,6 +39,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -48,8 +49,6 @@ public class FakeBigtableConnection implements BigtableConnection {
     private final AsyncFramework async;
 
     private final ConcurrentMap<String, TableStorage> tables = new ConcurrentHashMap<>();
-    private final ConcurrentMap<Pair<Table, String>, ColumnFamily> columnFamilies =
-        new ConcurrentHashMap<>();
 
     @Inject
     public FakeBigtableConnection(final AsyncFramework async) {
@@ -113,16 +112,13 @@ public class FakeBigtableConnection implements BigtableConnection {
                     throw new IllegalArgumentException("no such table: " + name);
                 }
 
-                final Pair<Table, String> key = Pair.of(storage.getTable(), name);
-
-                ColumnFamily columnFamily = columnFamilies.get(key);
-
-                if (columnFamily == null) {
-                    columnFamily = new ColumnFamily(table.getClusterUri(), table.getName(), name);
-                    columnFamilies.put(key, columnFamily);
-                }
-
-                return columnFamily;
+                return table.getColumnFamily(name).orElseGet(() -> {
+                    final ColumnFamily columnFamily =
+                        new ColumnFamily(table.getClusterUri(), table.getName(), name);
+                    final Table newTable = storage.getTable().withAddColumnFamily(columnFamily);
+                    storage.setTable(newTable);
+                    return columnFamily;
+                });
             }
         }
     }
@@ -170,8 +166,9 @@ public class FakeBigtableConnection implements BigtableConnection {
     }
 
     @Data
+    @AllArgsConstructor
     class TableStorage {
-        private final Table table;
+        private Table table;
 
         private final ConcurrentMap<Pair<ByteString, ColumnFamily>, RowStorage> rows =
             new ConcurrentHashMap<>();
@@ -184,26 +181,19 @@ public class FakeBigtableConnection implements BigtableConnection {
                     switch (mutation.getMutationCase()) {
                         case SET_CELL:
                             final Mutation.SetCell setCell = mutation.getSetCell();
-                            final ColumnFamily columnFamily =
-                                columnFamilies.get(Pair.of(table, setCell.getFamilyName()));
+                            final ColumnFamily columnFamily = table
+                                .getColumnFamily(setCell.getFamilyName())
+                                .orElseThrow(() -> new IllegalArgumentException(
+                                    "no such column family: " + setCell.getFamilyName()));
 
-                            if (columnFamily == null) {
-                                throw new IllegalArgumentException(
-                                    "no such column family: " + setCell.getFamilyName());
-                            }
-
-                            RowStorage rowStorage;
+                            final RowStorage rowStorage;
 
                             synchronized (lock) {
                                 final Pair<ByteString, ColumnFamily> key =
                                     Pair.of(rowKey, columnFamily);
 
-                                rowStorage = rows.get(key);
-
-                                if (rowStorage == null) {
-                                    rowStorage = new RowStorage(columnFamily);
-                                    rows.put(key, rowStorage);
-                                }
+                                rowStorage =
+                                    rows.computeIfAbsent(key, k -> new RowStorage(columnFamily));
                             }
 
                             rowStorage.runSetCell(setCell);
