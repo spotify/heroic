@@ -1,7 +1,6 @@
 package com.spotify.heroic.metric.bigtable;
 
 import com.spotify.heroic.metric.MetricModule;
-import com.spotify.heroic.metric.bigtable.credentials.ComputeEngineCredentialsBuilder;
 import com.spotify.heroic.metric.bigtable.credentials.DefaultCredentialsBuilder;
 import com.spotify.heroic.metric.bigtable.credentials.JsonCredentialsBuilder;
 import com.spotify.heroic.test.AbstractMetricBackendIT;

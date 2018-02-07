@@ -21,13 +21,13 @@
 
 package com.spotify.heroic.metric.bigtable;
 
-import com.google.appengine.repackaged.com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList;
 import com.google.cloud.bigtable.config.BigtableOptions;
 import com.google.cloud.bigtable.config.BulkOptions;
 import com.google.cloud.bigtable.config.CredentialOptions;
 import com.google.cloud.bigtable.config.RetryOptions;
 import com.google.cloud.bigtable.grpc.BigtableSession;
-import com.spotify.heroic.bigtable.grpc.Status;
+import com.spotify.heroic.bigtable.io.grpc.Status;
 import com.spotify.heroic.metric.bigtable.api.BigtableDataClient;
 import com.spotify.heroic.metric.bigtable.api.BigtableDataClientImpl;
 import com.spotify.heroic.metric.bigtable.api.BigtableMutator;

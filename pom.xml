@@ -57,7 +57,7 @@
     <jetty.version>9.3.7.v20160115</jetty.version>
     <lucene.version>5.5.0</lucene.version>
     <semantic-metrics.version>0.2.3</semantic-metrics.version>
-    <netty.version>4.1.8.Final</netty.version>
+    <netty.version>4.1.16.Final</netty.version>
     <tiny-async.version>1.11.0</tiny-async.version>
     <tiny-serializer.version>1.4.5</tiny-serializer.version>
     <antlr.version>4.5</antlr.version>

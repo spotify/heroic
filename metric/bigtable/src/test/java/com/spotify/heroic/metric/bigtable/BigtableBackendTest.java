@@ -1,7 +1,7 @@
 package com.spotify.heroic.metric.bigtable;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.ByteString.ByteIterator;
+import com.spotify.heroic.bigtable.com.google.protobuf.ByteString;
+import com.spotify.heroic.bigtable.com.google.protobuf.ByteString.ByteIterator;
 import eu.toolchain.serializer.HexUtils;
 import org.junit.Test;
 

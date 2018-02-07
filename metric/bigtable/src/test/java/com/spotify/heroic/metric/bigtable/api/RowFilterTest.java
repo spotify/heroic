@@ -5,7 +5,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import com.google.protobuf.ByteString;
+import com.spotify.heroic.bigtable.com.google.protobuf.ByteString;
 import org.junit.Test;
 
 public class RowFilterTest {

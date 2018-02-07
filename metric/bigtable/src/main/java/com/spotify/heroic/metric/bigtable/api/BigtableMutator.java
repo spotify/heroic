@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
-import com.google.protobuf.ByteString;
+import com.spotify.heroic.bigtable.com.google.protobuf.ByteString;
 import eu.toolchain.async.AsyncFuture;
 
 public interface BigtableMutator {
