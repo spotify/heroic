@@ -10,6 +10,7 @@ bin
 /*.log
 /*.gz
 *.iml
+*.p12
 .idea
 /reports/
 /assets/out/
