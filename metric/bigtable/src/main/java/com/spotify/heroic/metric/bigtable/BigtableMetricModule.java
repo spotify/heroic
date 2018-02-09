@@ -35,7 +35,7 @@ import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.bigtable.api.FakeBigtableConnection;
-import com.spotify.heroic.metric.bigtable.credentials.ComputeEngineCredentialsBuilder;
+import com.spotify.heroic.metric.bigtable.credentials.DefaultCredentialsBuilder;
 import dagger.Component;
 import dagger.Lazy;
 import dagger.Module;
@@ -56,8 +56,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
     public static final String DEFAULT_GROUP = "bigtable";
     public static final String DEFAULT_INSTANCE = "heroic";
     public static final String DEFAULT_TABLE = "metrics";
-    public static final CredentialsBuilder DEFAULT_CREDENTIALS =
-        new ComputeEngineCredentialsBuilder();
+    public static final CredentialsBuilder DEFAULT_CREDENTIALS = new DefaultCredentialsBuilder();
     public static final boolean DEFAULT_CONFIGURE = false;
     public static final boolean DEFAULT_DISABLE_BULK_MUTATIONS = false;
     public static final int DEFAULT_FLUSH_INTERVAL_SECONDS = 2;
