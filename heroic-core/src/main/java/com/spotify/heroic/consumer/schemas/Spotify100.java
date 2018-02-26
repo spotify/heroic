@@ -35,6 +35,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TreeTraversingParser;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.common.Series;
@@ -54,6 +55,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import javax.inject.Inject;
 import lombok.Data;
 import lombok.ToString;
@@ -78,14 +80,14 @@ public class Spotify100 implements ConsumerSchema {
 
         @JsonCreator
         public JsonMetric(
-            @JsonProperty("key") String key, @JsonProperty("host") String host,
+            @JsonProperty("key") String key, @JsonProperty("host") Optional<String> host,
             @JsonProperty("time") Long time,
             @JsonProperty("attributes") Map<String, String> attributes,
             @JsonProperty("resource") Map<String, String> resource,
             @JsonProperty("value") Double value
         ) {
             this.key = key;
-            this.host = host;
+            this.host = host.orElse(null);
             this.time = time;
             this.attributes = attributes;
             this.resource = resource;
@@ -273,6 +275,8 @@ public class Spotify100 implements ConsumerSchema {
      * Setup the ObjectMapper necessary to serialize types in this protocol.
      */
     static ObjectMapper objectMapper() {
-        return new ObjectMapper();
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new Jdk8Module().configureAbsentsAsNulls(true));
+        return mapper;
     }
 }
