@@ -63,6 +63,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
 
         final RetryOptions retryOptions = new RetryOptions.Builder()
             .addStatusToRetryOn(Status.Code.UNKNOWN)
+            .addStatusToRetryOn(Status.Code.UNAVAILABLE)
             .setAllowRetriesWithoutTimestamp(true)
             .build();
 
