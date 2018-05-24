@@ -270,7 +270,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         final List<Long> cadences = getCadences(result);
 
         assertEquals(ImmutableList.of(-1L, -1L), cadences);
-        assertEquals(ImmutableSet.of(points().p(30, 1D).build(), points().p(20, 3D).build()), m);
+        assertEquals(ImmutableSet.of(points().p(30, 50D).build(), points().p(20, 300D).build()), m);
     }
 
     @Test
@@ -281,7 +281,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         final List<Long> cadences = getCadences(result);
 
         assertEquals(ImmutableList.of(1L), cadences);
-        assertEquals(ImmutableSet.of(points().p(20, 3D).p(30, -2D).build()), m);
+        assertEquals(ImmutableSet.of(points().p(20, 300D).p(30, -200D).build()), m);
     }
 
     @Test

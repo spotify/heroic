@@ -94,7 +94,9 @@ public class DeltaInstance implements AggregationInstance {
         while (it.hasNext()) {
             final Point current = it.next();
             double diff = current.getValue() - previous.getValue();
-            result.add(new Point(current.getTimestamp(), diff));
+            long timeDiff = current.getTimestamp() - previous.getTimestamp();
+
+            result.add(new Point(current.getTimestamp(), diff * 1000.0 / timeDiff));
             previous = current;
         }
 
