@@ -38,6 +38,8 @@ import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
+import lombok.Data;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -45,10 +47,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import lombok.Data;
 
 @Data
-public class DeltaInstance implements AggregationInstance {
+public class DeltaPerSecondInstance implements AggregationInstance {
     private static final EmptyInstance INNER = EmptyInstance.INSTANCE;
 
     @Override
@@ -94,7 +95,9 @@ public class DeltaInstance implements AggregationInstance {
         while (it.hasNext()) {
             final Point current = it.next();
             double diff = current.getValue() - previous.getValue();
-            result.add(new Point(current.getTimestamp(), diff));
+            long timeDiff = current.getTimestamp() - previous.getTimestamp();
+
+            result.add(new Point(current.getTimestamp(), diff * 1000.0 / timeDiff));
             previous = current;
         }
 
