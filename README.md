@@ -42,7 +42,7 @@ all required dependencies.
 
 After building, the entry point of the service is
 [`com.spotify.heroic.HeroicService`](/heroic-dist/src/main/java/com/spotify/heroic/HeroicService.java).
-The following is en example of how this can be run:
+The following is an example of how this can be run:
 
 ```
 $ java -cp $PWD/heroic-dist/target/heroic-dist-0.0.1-SNAPSHOT-shaded.jar com.spotify.heroic.HeroicService <config>
