@@ -113,6 +113,12 @@ public class Module implements HeroicModule {
 
             c.register(Delta.NAME, Delta.class, DeltaInstance.class, args -> new Delta());
 
+            c.register(DeltaPerSecond.NAME, DeltaPerSecond.class,
+                DeltaPerSecondInstance.class, args -> new DeltaPerSecond());
+
+            c.register(NotNegative.NAME, NotNegative.class,
+                NotNegativeInstance.class, args -> new NotNegative());
+
             c.register(TopK.NAME, TopK.class, TopKInstance.class,
                 args -> new TopK(fetchK(args, IntegerExpression.class).getValue(),
                     Optional.empty()));

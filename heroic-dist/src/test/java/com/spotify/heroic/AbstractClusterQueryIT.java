@@ -285,6 +285,42 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     }
 
     @Test
+    public void deltaPerSecondQueryTest() throws Exception {
+        final QueryResult result = query("deltaPerSecond", builder -> {
+            builder.features(Optional.empty());
+        });
+
+        final Set<MetricCollection> m = getResults(result);
+        final List<Long> cadences = getCadences(result);
+
+        assertEquals(ImmutableList.of(-1L, -1L), cadences);
+        assertEquals(ImmutableSet.of(points().p(30, 50D).build(), points().p(20, 300D).build()), m);
+    }
+
+    @Test
+    public void distributedDeltaPerSecondQueryTest() throws Exception {
+        final QueryResult result = query("max | deltaPerSecond");
+
+        final Set<MetricCollection> m = getResults(result);
+        final List<Long> cadences = getCadences(result);
+
+        assertEquals(ImmutableList.of(1L), cadences);
+        assertEquals(ImmutableSet.of(points().p(20, 300D).p(30, -200D).build()), m);
+    }
+
+    @Test
+    public void distributedDeltaPerSecondWithNoNegativeQueryTest() throws Exception {
+        final QueryResult result = query("max | deltaPerSecond | notNegative ");
+
+        final Set<MetricCollection> m = getResults(result);
+        final List<Long> cadences = getCadences(result);
+
+        assertEquals(ImmutableList.of(1L), cadences);
+        assertEquals(ImmutableSet.of(points().p(20, 300D).build()), m);
+    }
+
+
+    @Test
     public void filterLastQueryTest() throws Exception {
         final QueryResult result = query("average(10ms) by * | topk(2) | bottomk(1)");
 
