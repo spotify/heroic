@@ -27,17 +27,16 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.google.protobuf.ByteString;
+import com.spotify.heroic.bigtable.com.google.protobuf.ByteString;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
-import lombok.extern.slf4j.Slf4j;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class BigtableMutatorImpl implements BigtableMutator {
@@ -46,13 +45,12 @@ public class BigtableMutatorImpl implements BigtableMutator {
     private final boolean disableBulkMutations;
     private final Map<String, BulkMutation> tableToBulkMutation;
     private final ScheduledExecutorService scheduler;
-    private final Object lock = new Object();
+    private final Object tableAccessLock = new Object();
+    private final Object flushLock = new Object();
 
     public BigtableMutatorImpl(
-        AsyncFramework async,
-        com.google.cloud.bigtable.grpc.BigtableSession session,
-        boolean disableBulkMutations,
-        int flushIntervalSeconds
+        AsyncFramework async, com.google.cloud.bigtable.grpc.BigtableSession session,
+        boolean disableBulkMutations, int flushIntervalSeconds
     ) {
         this.async = async;
         this.session = session;
@@ -100,10 +98,9 @@ public class BigtableMutatorImpl implements BigtableMutator {
     private AsyncFuture<Void> mutateSingleRow(
         String tableName, ByteString rowKey, Mutations mutations
     ) {
-        return convertVoid(
-            session
-                .getDataClient()
-                .mutateRowAsync(toMutateRowRequest(tableName, rowKey, mutations)));
+        return convertVoid(session
+            .getDataClient()
+            .mutateRowAsync(toMutateRowRequest(tableName, rowKey, mutations)));
     }
 
     private AsyncFuture<Void> mutateBatchRow(
@@ -114,18 +111,14 @@ public class BigtableMutatorImpl implements BigtableMutator {
     }
 
     private BulkMutation getOrAddBulkMutation(String tableName) {
-        synchronized (lock) {
+        synchronized (tableAccessLock) {
             if (tableToBulkMutation.containsKey(tableName)) {
                 return tableToBulkMutation.get(tableName);
             }
 
-            final BulkMutation bulkMutation = session
-                .createBulkMutation(
-                    session
-                        .getOptions()
-                        .getInstanceName()
-                        .toTableName(tableName),
-                    session.createAsyncExecutor());
+            final BulkMutation bulkMutation = session.createBulkMutation(
+                session.getOptions().getInstanceName().toTableName(tableName),
+                session.createAsyncExecutor());
 
             tableToBulkMutation.put(tableName, bulkMutation);
 
@@ -134,9 +127,7 @@ public class BigtableMutatorImpl implements BigtableMutator {
     }
 
     private MutateRowRequest toMutateRowRequest(
-        String tableName,
-        ByteString rowKey,
-        Mutations mutations
+        String tableName, ByteString rowKey, Mutations mutations
     ) {
         return MutateRowRequest
             .newBuilder()
@@ -165,8 +156,14 @@ public class BigtableMutatorImpl implements BigtableMutator {
     }
 
     private void flush() {
-        synchronized (lock) {
-            tableToBulkMutation.values().stream().forEach(BulkMutation::flush);
+        synchronized (flushLock) {
+            tableToBulkMutation.values().stream().forEach(mutation -> {
+                try {
+                    mutation.flush();
+                } catch (final InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            });
         }
     }
 }

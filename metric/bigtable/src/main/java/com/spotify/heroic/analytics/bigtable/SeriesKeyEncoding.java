@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.analytics.bigtable;
 
-import com.google.api.client.util.Charsets;
+import com.spotify.heroic.bigtable.com.google.api.client.util.Charsets;
 import com.google.common.base.Splitter;
-import com.google.protobuf.ByteString;
+import com.spotify.heroic.bigtable.com.google.protobuf.ByteString;
 import com.spotify.heroic.common.Series;
 import eu.toolchain.async.Transform;
 import lombok.Data;

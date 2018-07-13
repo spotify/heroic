@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.metric.bigtable;
 
-import com.google.protobuf.ByteString;
+import com.spotify.heroic.bigtable.com.google.protobuf.ByteString;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 

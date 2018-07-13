@@ -25,7 +25,7 @@ import static com.spotify.heroic.metric.bigtable.api.RowFilter.compareByteString
 
 import com.google.bigtable.v2.Mutation;
 import com.google.cloud.bigtable.grpc.scanner.FlatRow;
-import com.google.protobuf.ByteString;
+import com.spotify.heroic.bigtable.com.google.protobuf.ByteString;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.metric.bigtable.BigtableConnection;
 import eu.toolchain.async.AsyncFramework;

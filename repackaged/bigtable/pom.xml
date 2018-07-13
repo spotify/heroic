@@ -3,14 +3,14 @@
   <modelVersion>4.0.0</modelVersion>
 
   <properties>
-    <bigtable.version>0.9.6.2</bigtable.version>
+    <bigtable.version>1.0.0</bigtable.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
   </properties>
 
   <groupId>com.spotify.heroic.repackaged</groupId>
   <artifactId>bigtable-client-core</artifactId>
   <packaging>jar</packaging>
-  <version>0.9.6.2</version>
+  <version>1.0.0</version>
 
   <name>Heroic: Re-Packaging of Bigtable Client Utilities</name>
 
@@ -25,12 +25,18 @@
           <groupId>com.google.code.findbugs</groupId>
           <artifactId>jsr305</artifactId>
         </exclusion>
+
+        <exclusion>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-tcnative-boringssl-static</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
+
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-tcnative-boringssl-static</artifactId>
-      <version>1.1.33.Fork19</version>
+      <version>2.0.6.Final</version>
       <classifier>${tcnative.classifier}</classifier>
     </dependency>
   </dependencies>
@@ -40,7 +46,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>2.4.3</version>
+        <version>3.1.0</version>
         <executions>
           <execution>
             <phase>package</phase>
@@ -50,6 +56,9 @@
             <configuration>
               <promoteTransitiveDependencies>true</promoteTransitiveDependencies>
               <createDependencyReducedPom>true</createDependencyReducedPom>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+              </transformers>
               <!-- excluded dependencies will be kept as a promoted dependency -->
               <artifactSet>
                 <excludes>
@@ -61,33 +70,79 @@
               </artifactSet>
               <relocations>
                 <relocation>
-                  <pattern>io.netty</pattern>
-                  <shadedPattern>com.spotify.heroic.bigtable.netty</shadedPattern>
-                </relocation>
-                <relocation>
                   <pattern>org.apache.commons</pattern>
-                  <shadedPattern>com.spotify.heroic.bigtable.commons</shadedPattern>
+                  <shadedPattern>com.spotify.heroic.bigtable.org.apache.commons</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>io.grpc</pattern>
-                  <shadedPattern>com.spotify.heroic.bigtable.grpc</shadedPattern>
+                  <shadedPattern>com.spotify.heroic.bigtable.io.grpc</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>com.fasterxml.jackson</pattern>
-                  <shadedPattern>com.spotify.heroic.bigtable.jackson</shadedPattern>
+                  <shadedPattern>com.spotify.heroic.bigtable.com.fasterxml.jackson</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>com.google.gson</pattern>
-                  <shadedPattern>com.spotify.heroic.bigtable.gson</shadedPattern>
+                  <shadedPattern>com.spotify.heroic.bigtable.com.google.gson</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>com.codahale.metrics</pattern>
-                  <shadedPattern>com.spotify.heroic.bigtable.metrics</shadedPattern>
+                  <shadedPattern>com.spotify.heroic.bigtable.com.codahale.metrics</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>javax.activation</pattern>
-                  <shadedPattern>com.spotify.heroic.bigtable.activation</shadedPattern>
+                  <shadedPattern>com.spotify.heroic.bigtable.javax.activation</shadedPattern>
                 </relocation>
+                <relocation>
+                  <pattern>io.opencensus</pattern>
+                  <shadedPattern>com.spotify.heroic.bigtable.io.opencensus</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>com.google.api</pattern>
+                  <shadedPattern>com.spotify.heroic.bigtable.com.google.api</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>com.google.logging</pattern>
+                  <shadedPattern>com.spotify.heroic.bigtable.com.google.logging</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>com.google.protobuf</pattern>
+                  <shadedPattern>com.spotify.heroic.bigtable.com.google.protobuf</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>com.google.auth</pattern>
+                  <shadedPattern>com.spotify.heroic.bigtable.com.google.auth</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.apache.http</pattern>
+                  <shadedPattern>com.spotify.heroic.bigtable.org.apache.http</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>com.google.instrumentation</pattern>
+                  <shadedPattern>com.spotify.heroic.bigtable.com.google.instrumentation</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>com.google.longrunning</pattern>
+                  <shadedPattern>com.spotify.heroic.bigtable.com.google.longrunning</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>com.google.cloud.audit</pattern>
+                  <shadedPattern>com.spotify.heroic.bigtable.com.google.cloud.audit</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>com.google.type</pattern>
+                  <shadedPattern>com.spotify.heroic.bigtable.com.google.type</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>com.google.rpc</pattern>
+                  <shadedPattern>com.spotify.heroic.bigtable.com.google.rpc</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>com.google.errorprone</pattern>
+                  <shadedPattern>com.spotify.heroic.bigtable.com.google.errorprone</shadedPattern>
+                </relocation>
+
+
               </relocations>
             </configuration>
           </execution>

@@ -23,8 +23,8 @@ package com.spotify.heroic.metric.bigtable.api;
 
 import com.google.bigtable.admin.v2.ModifyColumnFamiliesRequest;
 import com.google.cloud.bigtable.grpc.BigtableInstanceName;
-import com.spotify.heroic.bigtable.grpc.Status;
-import com.spotify.heroic.bigtable.grpc.StatusRuntimeException;
+import com.spotify.heroic.bigtable.io.grpc.Status;
+import com.spotify.heroic.bigtable.io.grpc.StatusRuntimeException;
 import eu.toolchain.async.AsyncFramework;
 import lombok.ToString;
 

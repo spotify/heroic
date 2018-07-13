@@ -22,7 +22,7 @@
 package com.spotify.heroic.metric.bigtable.api;
 
 import com.google.cloud.bigtable.grpc.scanner.FlatRow;
-import com.google.protobuf.ByteString;
+import com.spotify.heroic.bigtable.com.google.protobuf.ByteString;
 import com.spotify.heroic.async.AsyncObservable;
 import eu.toolchain.async.AsyncFuture;
 

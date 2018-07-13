@@ -7,5 +7,5 @@ MVN_OPTS="${MVN_OPTS} -nsu"
 
 for r in repackaged/*; do
     echo "Installing $r"
-    (cd $r && $MVN $MVN_OPTS install)
+    (cd $r && $MVN $MVN_OPTS clean install)
 done
