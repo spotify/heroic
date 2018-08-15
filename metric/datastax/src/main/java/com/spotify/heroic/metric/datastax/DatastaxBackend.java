@@ -85,6 +85,8 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 
 /**
  * MetricBackend for Heroic cassandra datastore.
@@ -93,6 +95,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @ToString(of = {"connection"})
 public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles {
+    private static final Marker FAILED_METRICS = MarkerFactory.getMarker("FAILED_METRICS");
     public static final QueryTrace.Identifier FETCH_SEGMENT =
         QueryTrace.identifier(DatastaxBackend.class, "fetch_segment");
     public static final QueryTrace.Identifier FETCH =
@@ -426,6 +429,12 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
                     final long start = System.nanoTime();
                     return Async
                         .bind(async, c.session.executeAsync(stmt))
+                        .onFailed(e -> {
+                            // log series using a marker so they can be collected on their own file
+                            log.info(FAILED_METRICS, "{\"series\": \"" + request.getSeries().toString() + "\", \"timestamp\":" + d.toString() + "}");
+                            // log exceptions
+                            log.error("Failed to write metric", e);
+                        })
                         .directTransform((r) -> System.nanoTime() - start);
                 });
             }
