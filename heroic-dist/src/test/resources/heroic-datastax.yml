@@ -1,0 +1,25 @@
+metrics:
+  backends:
+    - type: datastax
+      consistencyLevel: LOCAL_ONE
+      poolingOptions:
+        maxQueueSize: 256
+        maxRequestsPerConnection:
+          LOCAL: 1024
+          REMOTE: 0
+        coreConnectionsPerHost:
+          LOCAL: 1
+          REMOTE: 0
+        maxConnectionsPerHost:
+          LOCAL: 1
+          REMOTE: 0
+      seeds:
+        - cassandra3
+      schema:
+        type: ng
+        keyspace: heroic
+  groupLimit: 10000
+  seriesLimit: 10000
+  dataLimit: 10000
+  aggregationLimit: 10000
+  failOnLimits: true
