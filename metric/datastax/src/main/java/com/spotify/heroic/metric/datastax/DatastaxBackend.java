@@ -431,9 +431,14 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
                         .bind(async, c.session.executeAsync(stmt))
                         .onFailed(e -> {
                             // log series using a marker so they can be collected on their own file
-                            log.info(FAILED_METRICS, "{\"series\": \"" + request.getSeries().toString() + "\", \"timestamp\":" + d.toString() + "}");
-                            // log exceptions
-                            log.error("Failed to write metric", e);
+                            log.info(
+                                FAILED_METRICS,
+                                "{\"series\": \"{}\", \"timestamp\": {}}",
+                                request.getSeries().toString(),
+                                d.toString()
+                            );
+                            // log exceptions without a marker for
+                            log.debug("Failed to write metric", e);
                         })
                         .directTransform((r) -> System.nanoTime() - start);
                 });
