@@ -34,6 +34,7 @@ import com.spotify.heroic.profile.ElasticsearchSuggestProfile;
 import com.spotify.heroic.profile.KafkaConsumerProfile;
 import com.spotify.heroic.profile.MemoryCacheProfile;
 import com.spotify.heroic.profile.MemoryProfile;
+import com.spotify.heroic.profile.PubSubConsumerProfile;
 import com.spotify.heroic.profile.QueryLoggingProfile;
 import com.spotify.heroic.profile.WebProfile;
 
@@ -67,7 +68,7 @@ public class HeroicModules {
         new com.spotify.heroic.aggregation.cardinality.Module(),
 
         new com.spotify.heroic.consumer.kafka.Module(),
-
+        new com.spotify.heroic.consumer.pubsub.Module(),
         new com.spotify.heroic.consumer.collectd.Module(),
 
         new com.spotify.heroic.rpc.grpc.Module(),
@@ -85,6 +86,7 @@ public class HeroicModules {
         .put("elasticsearch-metadata", new ElasticsearchMetadataProfile())
         .put("elasticsearch-suggest", new ElasticsearchSuggestProfile())
         .put("kafka-consumer", new KafkaConsumerProfile())
+        .put("pubsub", new PubSubConsumerProfile())
         .put("bigtable", new BigtableProfile())
         .put("bigtable-analytics", new BigtableAnalyticsProfile())
         .put("cluster", new ClusterProfile())

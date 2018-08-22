@@ -34,6 +34,7 @@
     <module>aggregation/cardinality</module>
     <module>consumer/kafka</module>
     <module>consumer/collectd</module>
+    <module>consumer/pubsub</module>
     <module>rpc/grpc</module>
     <module>rpc/jvm</module>
     <module>heroic-dist</module>
@@ -250,6 +251,7 @@
         <module>repackaged/bigtable</module>
         <module>repackaged/datastax</module>
         <module>repackaged/folsom</module>
+        <module>repackaged/pubsub</module>
       </modules>
     </profile>
   </profiles>
@@ -400,6 +402,11 @@
       <dependency>
         <groupId>com.spotify.heroic.consumer</groupId>
         <artifactId>heroic-consumer-collectd</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.spotify.heroic.consumer</groupId>
+        <artifactId>heroic-consumer-pubsub</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
