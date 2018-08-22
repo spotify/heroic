@@ -3,16 +3,28 @@
   <modelVersion>4.0.0</modelVersion>
 
   <properties>
-    <bigtable.version>0.9.6.2</bigtable.version>
-    <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
+    <bigtable.version>1.4.0</bigtable.version>
+    <grpc.version>1.13.1</grpc.version>
   </properties>
 
   <groupId>com.spotify.heroic.repackaged</groupId>
   <artifactId>bigtable-client-core</artifactId>
   <packaging>jar</packaging>
-  <version>0.9.6.2</version>
+  <version>1.4.0</version>
 
   <name>Heroic: Re-Packaging of Bigtable Client Utilities</name>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.google.cloud</groupId>
+        <artifactId>google-cloud-bom</artifactId>
+        <version>0.56.0-alpha</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <dependencies>
     <dependency>
@@ -25,13 +37,21 @@
           <groupId>com.google.code.findbugs</groupId>
           <artifactId>jsr305</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>io.grpc</groupId>
+          <artifactId>grpc-netty-shaded</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>io.opencensus</groupId>
+          <artifactId>opencensus-api</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
+
     <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-tcnative-boringssl-static</artifactId>
-      <version>1.1.33.Fork19</version>
-      <classifier>${tcnative.classifier}</classifier>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-netty</artifactId>
+      <version>${grpc.version}</version>
     </dependency>
   </dependencies>
 
@@ -40,7 +60,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>2.4.3</version>
+        <version>3.1.1</version>
         <executions>
           <execution>
             <phase>package</phase>
@@ -51,19 +71,19 @@
               <promoteTransitiveDependencies>true</promoteTransitiveDependencies>
               <createDependencyReducedPom>true</createDependencyReducedPom>
               <!-- excluded dependencies will be kept as a promoted dependency -->
+
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+              </transformers>
+
               <artifactSet>
                 <excludes>
                   <exclude>com.google.code.findbugs:jsr305</exclude>
                   <exclude>com.google.code.findbugs:annotations</exclude>
-                  <exclude>com.google.guava:guava</exclude>
-                  <exclude>io.netty:netty-tcnative-boringssl-static</exclude>
+                  <exclude>io.netty:*</exclude>
                 </excludes>
               </artifactSet>
               <relocations>
-                <relocation>
-                  <pattern>io.netty</pattern>
-                  <shadedPattern>com.spotify.heroic.bigtable.netty</shadedPattern>
-                </relocation>
                 <relocation>
                   <pattern>org.apache.commons</pattern>
                   <shadedPattern>com.spotify.heroic.bigtable.commons</shadedPattern>
@@ -77,10 +97,6 @@
                   <shadedPattern>com.spotify.heroic.bigtable.jackson</shadedPattern>
                 </relocation>
                 <relocation>
-                  <pattern>com.google.gson</pattern>
-                  <shadedPattern>com.spotify.heroic.bigtable.gson</shadedPattern>
-                </relocation>
-                <relocation>
                   <pattern>com.codahale.metrics</pattern>
                   <shadedPattern>com.spotify.heroic.bigtable.metrics</shadedPattern>
                 </relocation>
@@ -88,20 +104,20 @@
                   <pattern>javax.activation</pattern>
                   <shadedPattern>com.spotify.heroic.bigtable.activation</shadedPattern>
                 </relocation>
+                <relocation>
+                  <pattern>com.google</pattern>
+                  <shadedPattern>com.spotify.shaded.bigtable.com.google</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>io.opencensus</pattern>
+                  <shadedPattern>com.spotify.shaded.bigtable.io.opencensus</shadedPattern>
+                </relocation>
+
               </relocations>
             </configuration>
           </execution>
         </executions>
       </plugin>
     </plugins>
-
-    <extensions>
-      <!-- provides os.detected.classifier -->
-      <extension>
-        <groupId>kr.motd.maven</groupId>
-        <artifactId>os-maven-plugin</artifactId>
-        <version>1.5.0.Final</version>
-      </extension>
-    </extensions>
   </build>
 </project>

@@ -57,7 +57,7 @@
     <jetty.version>9.3.7.v20160115</jetty.version>
     <lucene.version>5.5.0</lucene.version>
     <semantic-metrics.version>0.2.3</semantic-metrics.version>
-    <netty.version>4.1.8.Final</netty.version>
+    <netty.version>4.1.25.Final</netty.version>
     <tiny-async.version>1.11.0</tiny-async.version>
     <tiny-serializer.version>1.4.5</tiny-serializer.version>
     <antlr.version>4.5</antlr.version>
@@ -270,6 +270,14 @@
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+          <groupId>com.google.cloud</groupId>
+          <artifactId>google-cloud-bom</artifactId>
+          <version>0.56.0-alpha</version>
+          <type>pom</type>
+          <scope>import</scope>
+        </dependency>
+
       <!-- heroic components -->
       <dependency>
         <groupId>com.spotify.heroic</groupId>
@@ -483,7 +491,7 @@
       <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
-        <version>19.0</version>
+        <version>20.0</version>
       </dependency>
 
       <dependency>
@@ -813,6 +821,7 @@
                     </excludes>
                   </filter>
                 </filters>
+
                 <transformers>
                   <!-- required for lucene -->
                   <transformer

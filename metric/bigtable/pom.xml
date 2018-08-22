@@ -22,7 +22,7 @@
   </description>
 
   <properties>
-    <bigtable.version>0.9.6.2</bigtable.version>
+    <bigtable.version>1.4.0</bigtable.version>
   </properties>
 
   <dependencies>
@@ -42,6 +42,12 @@
       <groupId>com.spotify.heroic.repackaged</groupId>
       <artifactId>bigtable-client-core</artifactId>
       <version>${bigtable.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-tcnative-boringssl-static</artifactId>
+      <version>2.0.7.Final</version>
     </dependency>
 
     <dependency>

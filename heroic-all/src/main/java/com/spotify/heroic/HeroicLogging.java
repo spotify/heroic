@@ -37,10 +37,6 @@ public class HeroicLogging {
      * redirect all logging to SLF4j.
      */
     public static void configureNetty() {
-        com.spotify.heroic.bigtable.netty.util.internal.logging.InternalLoggerFactory
-            .setDefaultFactory(
-            new com.spotify.heroic.bigtable.netty.util.internal.logging.Slf4JLoggerFactory());
-
         com.datastax.shaded.netty.util.internal.logging.InternalLoggerFactory.setDefaultFactory(
             new com.datastax.shaded.netty.util.internal.logging.Slf4JLoggerFactory());
 
