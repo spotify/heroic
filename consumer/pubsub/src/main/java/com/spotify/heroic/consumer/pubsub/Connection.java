@@ -53,13 +53,13 @@ public class Connection {
     private final ConsumerSchema.Consumer consumer;
     private final long maxOutstandingElementCount;
     private final long maxOutstandingRequestBytes;
-    private Subscriber subscriber = null;
 
     private final String projectId;
     private final String subscriptionId;
     private final ProjectTopicName topicName;
     private final ProjectSubscriptionName subscriptionName;
 
+    private Subscriber subscriber;
     private CredentialsProvider credentialsProvider;
     private TransportChannelProvider channelProvider;
 
@@ -108,7 +108,7 @@ public class Connection {
             InstantiatingExecutorProvider.newBuilder().setExecutorThreadCount(threads).build();
 
         log.info("Subscribing to {}", subscriptionName);
-        Subscriber subscriber = Subscriber
+        subscriber = Subscriber
             .newBuilder(subscriptionName, new Receiver(consumer))
             .setFlowControlSettings(flowControlSettings)
             .setExecutorProvider(executorProvider)
@@ -117,6 +117,7 @@ public class Connection {
             .build();
 
         subscriber.startAsync().awaitRunning();
+
         log.info("PubSub connection started");
         return this;
     }
@@ -124,6 +125,7 @@ public class Connection {
     public Connection shutdown() {
         log.info("Stopping PubSub connection");
         if (subscriber != null) {
+            log.debug("Waiting for subscriber to terminate");
             subscriber.stopAsync().awaitTerminated();
         }
         subscriber = null;

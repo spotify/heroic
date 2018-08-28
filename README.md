@@ -139,6 +139,10 @@ $> mvn -P integration-tests \
     clean verify
 ```
 
+##### PubSub
+
+PubSub relies on having the `PUBSUB_EMULATOR_HOST` environment variable set instead of a system property. Detailed instructions are available in the [Google PubSub emulator docs](https://cloud.google.com/pubsub/docs/emulator).
+
 #### Full Cluster Tests
 
 Full cluster tests are defined in [heroic-dist/src/test/java](/heroic-dist/src/test/java).

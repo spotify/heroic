@@ -240,7 +240,7 @@ public class PubSubConsumerModule implements ConsumerModule {
                     connection.shutdown();
                     total.set(0);
 
-                    return null;
+                    return async.resolved();
                 }
             });
         }
@@ -268,16 +268,16 @@ public class PubSubConsumerModule implements ConsumerModule {
 
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
     public static class Builder implements ConsumerModule.Builder {
-        private Optional<String> id;
-        private Optional<ConsumerSchema> schema;
-        private Optional<Integer> threads;
-        private Optional<String> projectId;
-        private Optional<String> topicId;
-        private Optional<String> subscriptionId;
-        private Optional<Long> maxOutstandingElementCount;
-        private Optional<Long> maxOutstandingRequestBytes;
-        private Optional<Integer> maxInboundMessageSize;
-        private Optional<Long> keepAlive;
+        private Optional<String> id = Optional.empty();
+        private Optional<ConsumerSchema> schema = Optional.empty();
+        private Optional<Integer> threads = Optional.empty();
+        private Optional<String> projectId = Optional.empty();
+        private Optional<String> topicId = Optional.empty();
+        private Optional<String> subscriptionId = Optional.empty();
+        private Optional<Long> maxOutstandingElementCount = Optional.empty();
+        private Optional<Long> maxOutstandingRequestBytes = Optional.empty();
+        private Optional<Integer> maxInboundMessageSize = Optional.empty();
+        private Optional<Long> keepAlive = Optional.empty();
 
         @JsonCreator
         public Builder(
@@ -322,6 +322,11 @@ public class PubSubConsumerModule implements ConsumerModule {
         public Builder schema(String schemaClass) {
             this.schema =
                 Optional.of(ReflectionUtils.buildInstance(schemaClass, ConsumerSchema.class));
+            return this;
+        }
+
+        public Builder projectId(String projectId) {
+            this.projectId = Optional.of(projectId);
             return this;
         }
 

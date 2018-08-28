@@ -19,10 +19,8 @@ import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.memory.MemoryMetricModule;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import lombok.Data;
 import org.junit.After;
 
 public abstract class AbstractKafkaConsumerIT extends AbstractConsumerIT {
@@ -121,16 +119,5 @@ public abstract class AbstractKafkaConsumerIT extends AbstractConsumerIT {
         if (expectAtLeastOneCommit) {
             assertTrue(offsetsCommits > 0);
         }
-    }
-
-    @Data
-    public static class Version1 {
-        private final String version;
-        private final String key;
-        private final String host;
-        private final Long time;
-        private final Map<String, String> attributes;
-        private final Map<String, String> resource;
-        private final double value;
     }
 }

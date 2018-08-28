@@ -9,6 +9,7 @@ import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
+import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricReadResult;
 import com.spotify.heroic.metric.MetricType;
@@ -19,8 +20,10 @@ import eu.toolchain.async.RetryPolicy;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
+import lombok.Data;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -100,8 +103,10 @@ public abstract class AbstractConsumerIT extends AbstractSingleNodeIT {
             }).get();
 
             assertFalse(data.isEmpty());
-            final MetricCollection collection = data.iterator().next().getMetrics();
-            assertEquals(MetricCollection.points(consumedPoints), collection);
+            final MetricCollection metricCollection = data.iterator().next().getMetrics();
+            List<Metric> collection = new ArrayList<>(metricCollection.getData());
+            collection.sort(Metric.comparator);
+            assertEquals(consumedPoints, collection);
             return null;
         });
     }
@@ -127,5 +132,16 @@ public abstract class AbstractConsumerIT extends AbstractSingleNodeIT {
 
             break;
         }
+    }
+
+    @Data
+    public static class Version1 {
+        private final String version;
+        private final String key;
+        private final String host;
+        private final Long time;
+        private final Map<String, String> attributes;
+        private final Map<String, String> resource;
+        private final double value;
     }
 }
