@@ -22,7 +22,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>2.4.3</version>
+        <version>3.1.1</version>
         <executions>
           <execution>
             <phase>package</phase>
@@ -38,9 +38,10 @@
                   <exclude>org.slf4j:*</exclude>
                   <exclude>com.google.code.findbugs:jsr305</exclude>
                   <exclude>com.google.code.findbugs:annotations</exclude>
-                  <exclude>com.google.guava:guava</exclude>
+                  <exclude>com.google.guava:*</exclude>
                 </excludes>
               </artifactSet>
+
               <relocations>
                 <relocation>
                   <pattern>io.netty</pattern>
@@ -63,6 +64,7 @@
                   <shadedPattern>com.spotify.heroic.folsom.metrics</shadedPattern>
                 </relocation>
               </relocations>
+
             </configuration>
           </execution>
         </executions>

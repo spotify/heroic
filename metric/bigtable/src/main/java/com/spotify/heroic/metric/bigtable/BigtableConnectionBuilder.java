@@ -21,12 +21,12 @@
 
 package com.spotify.heroic.metric.bigtable;
 
-import com.google.appengine.repackaged.com.google.common.collect.ImmutableList;
-import com.google.cloud.bigtable.config.BigtableOptions;
-import com.google.cloud.bigtable.config.BulkOptions;
-import com.google.cloud.bigtable.config.CredentialOptions;
-import com.google.cloud.bigtable.config.RetryOptions;
-import com.google.cloud.bigtable.grpc.BigtableSession;
+import com.spotify.shaded.bigtable.com.google.cloud.bigtable.config.BigtableOptions;
+import com.spotify.shaded.bigtable.com.google.cloud.bigtable.config.BulkOptions;
+import com.spotify.shaded.bigtable.com.google.cloud.bigtable.config.CredentialOptions;
+import com.spotify.shaded.bigtable.com.google.cloud.bigtable.config.RetryOptions;
+import com.spotify.shaded.bigtable.com.google.cloud.bigtable.grpc.BigtableSession;
+import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.bigtable.grpc.Status;
 import com.spotify.heroic.metric.bigtable.api.BigtableDataClient;
 import com.spotify.heroic.metric.bigtable.api.BigtableDataClientImpl;
@@ -63,6 +63,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
 
         final RetryOptions retryOptions = new RetryOptions.Builder()
             .addStatusToRetryOn(Status.Code.UNKNOWN)
+            .addStatusToRetryOn(Status.Code.UNAVAILABLE)
             .setAllowRetriesWithoutTimestamp(true)
             .build();
 

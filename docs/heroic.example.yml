@@ -156,6 +156,34 @@ metadata:
 #    #config:
 #    #  zookeeper.connect: localhost:2181
 #    #  group.id: heroic
+#  - type: pubsub
+#    # Id for consumer
+#    # @default Generated
+#    id: null
+#    # Topic to consume from (required.) Will be created if it doesn't exist.
+#    topic: metrics
+#    # GCP project to consume from (required.)
+#    project: heroic
+#    # Subscription name to consume from (required.) Will be created if it doesn't exist.
+#    subscription: heroic-consumer
+#    # Schema to use when consuming (required).
+#    # The fully qualified class name of a schema implementation for consuming.
+#    #schema: com.spotify.heroic.consumer.schemas.Spotify100
+#    # Threads per topic.
+#    # @default 8
+#    #threadsPerTopic: 2
+#    # Maximum number of messages the consumer can have unacked.
+#    # @default 10000
+#    #maxOutStandingElementCount: 50000
+#    # Maximum byte size of messages the consumer can have unacked.
+#    # @default 1000000000
+#    #maxOutstandingRequestBytes: 2000000000
+#    # Maxiumum size of a single incoming message, in bytes. 20MB is the highest allowed by the API.
+#    # @default 20971520
+#    #maxInboundMessageSize: 40960000
+#    # Amount of time to keep the PubSub connection alive, in seconds.
+#    # @default 300
+#    #keepAlive: 600
 
 ## Aggregation cache.
 #cache:

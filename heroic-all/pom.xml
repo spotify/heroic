@@ -84,10 +84,13 @@
       <groupId>com.spotify.heroic.consumer</groupId>
       <artifactId>heroic-consumer-kafka</artifactId>
     </dependency>
-
     <dependency>
       <groupId>com.spotify.heroic.consumer</groupId>
       <artifactId>heroic-consumer-collectd</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.spotify.heroic.consumer</groupId>
+      <artifactId>heroic-consumer-pubsub</artifactId>
     </dependency>
 
     <!-- rpc implementations -->

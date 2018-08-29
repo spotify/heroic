@@ -23,7 +23,6 @@ package com.spotify.heroic.metric.bigtable.api;
 
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -54,7 +53,9 @@ public class Table {
         return Optional.ofNullable(columnFamilies.get(name));
     }
 
-    public static Table fromPb(com.google.bigtable.admin.v2.Table table) {
+    public static Table fromPb(
+        com.spotify.shaded.bigtable.com.google.bigtable.admin.v2.Table table
+    ) {
         final Matcher m = TABLE_NAME_PATTERN.matcher(table.getName());
 
         if (!m.matches()) {
@@ -66,7 +67,8 @@ public class Table {
 
         final ImmutableMap.Builder<String, ColumnFamily> columnFamilies = ImmutableMap.builder();
 
-        for (final Entry<String, com.google.bigtable.admin.v2.ColumnFamily> e : table
+        for (final Map.Entry<String,
+            com.spotify.shaded.bigtable.com.google.bigtable.admin.v2.ColumnFamily> e : table
             .getColumnFamilies()
             .entrySet()) {
             final ColumnFamily columnFamily = new ColumnFamily(cluster, tableId, e.getKey());

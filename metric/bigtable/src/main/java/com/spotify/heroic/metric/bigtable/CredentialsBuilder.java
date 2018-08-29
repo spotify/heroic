@@ -23,7 +23,7 @@ package com.spotify.heroic.metric.bigtable;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.cloud.bigtable.config.CredentialOptions;
+import com.spotify.shaded.bigtable.com.google.cloud.bigtable.config.CredentialOptions;
 import com.spotify.heroic.metric.bigtable.credentials.ComputeEngineCredentialsBuilder;
 import com.spotify.heroic.metric.bigtable.credentials.DefaultCredentialsBuilder;
 import com.spotify.heroic.metric.bigtable.credentials.JsonCredentialsBuilder;

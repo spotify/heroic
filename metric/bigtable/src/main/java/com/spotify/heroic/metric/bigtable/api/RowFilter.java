@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
-import com.google.protobuf.ByteString;
+import com.spotify.shaded.bigtable.com.google.protobuf.ByteString;
 import java.util.List;
 import java.util.Optional;
 import lombok.Data;
@@ -80,7 +80,7 @@ public interface RowFilter {
         return new Chain(chain);
     }
 
-    com.google.bigtable.v2.RowFilter toPb();
+    com.spotify.shaded.bigtable.com.google.bigtable.v2.RowFilter toPb();
 
     @Data
     class Chain implements RowFilter {
@@ -97,11 +97,14 @@ public interface RowFilter {
         }
 
         @Override
-        public com.google.bigtable.v2.RowFilter toPb() {
-            final com.google.bigtable.v2.RowFilter.Chain.Builder chain =
-                com.google.bigtable.v2.RowFilter.Chain.newBuilder();
+        public com.spotify.shaded.bigtable.com.google.bigtable.v2.RowFilter toPb() {
+            final com.spotify.shaded.bigtable.com.google.bigtable.v2.RowFilter.Chain.Builder chain =
+                com.spotify.shaded.bigtable.com.google.bigtable.v2.RowFilter.Chain.newBuilder();
             this.chain.forEach(f -> chain.addFilters(f.toPb()));
-            return com.google.bigtable.v2.RowFilter.newBuilder().setChain(chain.build()).build();
+            return com.spotify.shaded.bigtable.com.google.bigtable.v2.RowFilter
+                .newBuilder()
+                .setChain(chain.build())
+                .build();
         }
     }
 
@@ -149,16 +152,18 @@ public interface RowFilter {
         }
 
         @Override
-        public com.google.bigtable.v2.RowFilter toPb() {
-            final com.google.bigtable.v2.ColumnRange.Builder builder =
-                com.google.bigtable.v2.ColumnRange.newBuilder().setFamilyName(family);
+        public com.spotify.shaded.bigtable.com.google.bigtable.v2.RowFilter toPb() {
+            final com.spotify.shaded.bigtable.com.google.bigtable.v2.ColumnRange.Builder builder =
+                com.spotify.shaded.bigtable.com.google.bigtable.v2.ColumnRange
+                    .newBuilder()
+                    .setFamilyName(family);
 
             startQualifierClosed.ifPresent(builder::setStartQualifierClosed);
             startQualifierOpen.ifPresent(builder::setStartQualifierOpen);
             endQualifierClosed.ifPresent(builder::setEndQualifierClosed);
             endQualifierOpen.ifPresent(builder::setEndQualifierOpen);
 
-            return com.google.bigtable.v2.RowFilter
+            return com.spotify.shaded.bigtable.com.google.bigtable.v2.RowFilter
                 .newBuilder()
                 .setColumnRangeFilter(builder.build())
                 .build();
@@ -213,8 +218,8 @@ public interface RowFilter {
         }
 
         @Override
-        public com.google.bigtable.v2.RowFilter toPb() {
-            return com.google.bigtable.v2.RowFilter
+        public com.spotify.shaded.bigtable.com.google.bigtable.v2.RowFilter toPb() {
+            return com.spotify.shaded.bigtable.com.google.bigtable.v2.RowFilter
                 .newBuilder()
                 .setCellsPerColumnLimitFilter(1)
                 .build();
@@ -234,8 +239,11 @@ public interface RowFilter {
         }
 
         @Override
-        public com.google.bigtable.v2.RowFilter toPb() {
-            return com.google.bigtable.v2.RowFilter.newBuilder().setBlockAllFilter(true).build();
+        public com.spotify.shaded.bigtable.com.google.bigtable.v2.RowFilter toPb() {
+            return com.spotify.shaded.bigtable.com.google.bigtable.v2.RowFilter
+                .newBuilder()
+                .setBlockAllFilter(true)
+                .build();
         }
     }
 

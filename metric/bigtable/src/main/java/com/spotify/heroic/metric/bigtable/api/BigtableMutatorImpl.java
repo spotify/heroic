@@ -21,13 +21,13 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
-import com.google.bigtable.v2.MutateRowRequest;
-import com.google.cloud.bigtable.grpc.async.BulkMutation;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.google.protobuf.ByteString;
+import com.spotify.shaded.bigtable.com.google.bigtable.v2.MutateRowRequest;
+import com.spotify.shaded.bigtable.com.google.common.util.concurrent.FutureCallback;
+import com.spotify.shaded.bigtable.com.google.common.util.concurrent.Futures;
+import com.spotify.shaded.bigtable.com.google.common.util.concurrent.ListenableFuture;
+import com.spotify.shaded.bigtable.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.spotify.shaded.bigtable.com.google.protobuf.ByteString;
+import com.spotify.shaded.bigtable.com.google.cloud.bigtable.grpc.async.BulkMutation;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
@@ -42,15 +42,17 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class BigtableMutatorImpl implements BigtableMutator {
     private final AsyncFramework async;
-    private final com.google.cloud.bigtable.grpc.BigtableSession session;
+    private final com.spotify.shaded.bigtable.com.google.cloud.bigtable.grpc.BigtableSession
+        session;
     private final boolean disableBulkMutations;
     private final Map<String, BulkMutation> tableToBulkMutation;
     private final ScheduledExecutorService scheduler;
-    private final Object lock = new Object();
+    private final Object tableAccessLock = new Object();
+    private final Object flushLock = new Object();
 
     public BigtableMutatorImpl(
         AsyncFramework async,
-        com.google.cloud.bigtable.grpc.BigtableSession session,
+        com.spotify.shaded.bigtable.com.google.cloud.bigtable.grpc.BigtableSession session,
         boolean disableBulkMutations,
         int flushIntervalSeconds
     ) {
@@ -114,14 +116,13 @@ public class BigtableMutatorImpl implements BigtableMutator {
     }
 
     private BulkMutation getOrAddBulkMutation(String tableName) {
-        synchronized (lock) {
+        synchronized (tableAccessLock) {
             if (tableToBulkMutation.containsKey(tableName)) {
                 return tableToBulkMutation.get(tableName);
             }
 
-            final BulkMutation bulkMutation = session
-                .createBulkMutation(
-                    session
+            final BulkMutation bulkMutation = session.createBulkMutation(
+                session
                         .getOptions()
                         .getInstanceName()
                         .toTableName(tableName),
@@ -165,8 +166,14 @@ public class BigtableMutatorImpl implements BigtableMutator {
     }
 
     private void flush() {
-        synchronized (lock) {
-            tableToBulkMutation.values().stream().forEach(BulkMutation::flush);
+        synchronized (flushLock) {
+            tableToBulkMutation.values().stream().forEach(mutation -> {
+                try {
+                    mutation.flush();
+                } catch (final InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            });
         }
     }
 }
