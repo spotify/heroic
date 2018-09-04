@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
-import com.spotify.shaded.bigtable.com.google.protobuf.ByteString;
+import com.google.protobuf.ByteString;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
@@ -33,18 +33,18 @@ public class ReadRowsRequest {
     private final Optional<RowFilter> filter;
     private final Optional<ByteString> rowKey;
 
-    public com.spotify.shaded.bigtable.com.google.bigtable.v2.ReadRowsRequest toPb(
+    public com.google.bigtable.v2.ReadRowsRequest toPb(
         final String tableUri
     ) {
-        final com.spotify.shaded.bigtable.com.google.bigtable.v2.RowSet.Builder rowSetBuilder =
-          com.spotify.shaded.bigtable.com.google.bigtable.v2.RowSet.newBuilder();
+        final com.google.bigtable.v2.RowSet.Builder rowSetBuilder =
+          com.google.bigtable.v2.RowSet.newBuilder();
 
         range.map(RowRange::toPb).ifPresent(rowSetBuilder::addRowRanges);
         rowKey.ifPresent(rowSetBuilder::addRowKeys);
 
-        final com.spotify.shaded.bigtable.com.google.bigtable.v2.ReadRowsRequest.Builder
+        final com.google.bigtable.v2.ReadRowsRequest.Builder
             requestBuilder =
-                com.spotify.shaded.bigtable.com.google.bigtable.v2.ReadRowsRequest.newBuilder();
+                com.google.bigtable.v2.ReadRowsRequest.newBuilder();
 
         requestBuilder.setTableName(tableUri);
         requestBuilder.setRows(rowSetBuilder.build());

@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
-import com.spotify.shaded.bigtable.com.google.protobuf.ByteString;
+import com.google.protobuf.ByteString;
 import lombok.Data;
 
 import java.util.Optional;
@@ -42,9 +42,9 @@ public class RowRange {
         return new RowRange(start, end);
     }
 
-    public com.spotify.shaded.bigtable.com.google.bigtable.v2.RowRange toPb() {
-        final com.spotify.shaded.bigtable.com.google.bigtable.v2.RowRange.Builder builder =
-            com.spotify.shaded.bigtable.com.google.bigtable.v2.RowRange.newBuilder();
+    public com.google.bigtable.v2.RowRange toPb() {
+        final com.google.bigtable.v2.RowRange.Builder builder =
+            com.google.bigtable.v2.RowRange.newBuilder();
         start.ifPresent(builder::setStartKeyClosed);
         end.ifPresent(builder::setEndKeyOpen);
         return builder.build();

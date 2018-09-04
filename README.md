@@ -328,8 +328,6 @@ available profiles are listed in `--help`.
 
 ## Repackaged Dependencies
 
-* [repackaged/bigtable](/repackaged/bigtable)
-
 These are third-party dependencies that has to be repackaged to avoid binary
 incompatibilities with dependencies.
 

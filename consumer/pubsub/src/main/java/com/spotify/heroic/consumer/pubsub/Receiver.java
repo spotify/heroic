@@ -21,10 +21,10 @@
 
 package com.spotify.heroic.consumer.pubsub;
 
-import com.spotify.shaded.pubsub.com.google.cloud.pubsub.v1.AckReplyConsumer;
-import com.spotify.shaded.pubsub.com.google.cloud.pubsub.v1.MessageReceiver;
-import com.spotify.shaded.pubsub.com.google.protobuf.ByteString;
-import com.spotify.shaded.pubsub.com.google.pubsub.v1.PubsubMessage;
+import com.google.cloud.pubsub.v1.AckReplyConsumer;
+import com.google.cloud.pubsub.v1.MessageReceiver;
+import com.google.protobuf.ByteString;
+import com.google.pubsub.v1.PubsubMessage;
 import com.spotify.heroic.consumer.ConsumerSchema;
 import com.spotify.heroic.consumer.ConsumerSchemaException;
 import lombok.extern.slf4j.Slf4j;

@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.metric.bigtable.credentials;
 
-import com.spotify.shaded.bigtable.com.google.cloud.bigtable.config.CredentialOptions;
+import com.google.cloud.bigtable.config.CredentialOptions;
 import com.spotify.heroic.metric.bigtable.CredentialsBuilder;
 import lombok.ToString;
 
