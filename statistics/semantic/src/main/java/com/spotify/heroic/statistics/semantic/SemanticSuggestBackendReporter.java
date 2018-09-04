@@ -36,12 +36,16 @@ import com.spotify.heroic.suggest.WriteSuggest;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 import eu.toolchain.async.AsyncFuture;
+import io.opencensus.trace.Span;
+import io.opencensus.trace.Tracer;
+import io.opencensus.trace.Tracing;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @ToString(of = {"base"})
 public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
     private static final String COMPONENT = "suggest-backend";
+    private static final Tracer tracer = Tracing.getTracer();
 
     private final FutureReporter tagValuesSuggest;
     private final FutureReporter tagKeyCount;
@@ -146,7 +150,14 @@ public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
 
         @Override
         public AsyncFuture<WriteSuggest> write(final WriteSuggest.Request request) {
-            return delegate.write(request).onDone(write.setup());
+            return write(request, tracer.getCurrentSpan());
+        }
+
+        @Override
+        public AsyncFuture<WriteSuggest> write(
+            final WriteSuggest.Request request, final Span parentSpan
+        ) {
+            return delegate.write(request, parentSpan).onDone(write.setup());
         }
 
         @Override

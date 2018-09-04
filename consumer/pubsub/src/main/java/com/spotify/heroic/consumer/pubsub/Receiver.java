@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.consumer.pubsub;
 
+import static io.opencensus.trace.AttributeValue.stringAttributeValue;
+
 import com.google.cloud.pubsub.v1.AckReplyConsumer;
 import com.google.cloud.pubsub.v1.MessageReceiver;
 import com.google.protobuf.ByteString;
@@ -30,6 +32,11 @@ import com.spotify.heroic.consumer.ConsumerSchemaValidationException;
 import com.spotify.heroic.statistics.ConsumerReporter;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
+import io.opencensus.common.Scope;
+import io.opencensus.trace.Span;
+import io.opencensus.trace.Status;
+import io.opencensus.trace.Tracer;
+import io.opencensus.trace.Tracing;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -38,6 +45,7 @@ class Receiver implements MessageReceiver {
     private final ConsumerReporter reporter;
     private final AtomicLong errors;
     private final LongAdder consumed;
+    private final Tracer tracer = Tracing.getTracer();
 
     Receiver(
         final ConsumerSchema.Consumer consumer,
@@ -53,11 +61,16 @@ class Receiver implements MessageReceiver {
 
     @Override
     public void receiveMessage(PubsubMessage message, AckReplyConsumer replyConsumer) {
+        Scope ss = tracer.spanBuilder("PubSub.receiveMessage").startScopedSpan();
+
         // handle incoming message, then ack/nack the received message
         final ByteString data = message.getData();
         final String messageId = message.getMessageId();
         log.debug("Received ID:{} with content: {}", messageId, data.toStringUtf8());
         final byte[] bytes = data.toByteArray();
+
+        Span span = tracer.getCurrentSpan();
+        span.putAttribute("id", stringAttributeValue(messageId));
 
         // process the data
         try {
@@ -74,8 +87,12 @@ class Receiver implements MessageReceiver {
         } catch (Exception e) {
             errors.incrementAndGet();
             log.error("ID:{} - Failed to consume", messageId, e);
+            span.setStatus(Status.INTERNAL.withDescription(e.toString()));
             reporter.reportMessageError();
             replyConsumer.nack();
+        } finally {
+            span.end();
+            ss.close();
         }
   }
 
