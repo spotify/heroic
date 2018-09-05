@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
-import com.spotify.shaded.bigtable.com.google.protobuf.ByteString;
+import com.google.protobuf.ByteString;
 import lombok.Data;
 
 import java.util.Iterator;
@@ -29,7 +29,7 @@ import java.util.Iterator;
 @Data
 public class Family {
     final String name;
-    final Iterable<com.spotify.shaded.bigtable.com.google.bigtable.v2.Column> columns;
+    final Iterable<com.google.bigtable.v2.Column> columns;
 
     /**
      * Get an iterable of the latest cells in a given column.
@@ -38,7 +38,7 @@ public class Family {
      */
     public Iterable<LatestCellValueColumn> latestCellValue() {
         return () -> {
-            final Iterator<com.spotify.shaded.bigtable.com.google.bigtable.v2.Column> iterator =
+            final Iterator<com.google.bigtable.v2.Column> iterator =
                 columns.iterator();
 
             return new Iterator<LatestCellValueColumn>() {
@@ -49,7 +49,7 @@ public class Family {
 
                 @Override
                 public LatestCellValueColumn next() {
-                    final com.spotify.shaded.bigtable.com.google.bigtable.v2.Column next =
+                    final com.google.bigtable.v2.Column next =
                         iterator.next();
 
                     if (next.getCellsCount() < 1) {

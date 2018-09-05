@@ -21,10 +21,10 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
-import com.spotify.shaded.bigtable.com.google.bigtable.admin.v2.ModifyColumnFamiliesRequest;
-import com.spotify.shaded.bigtable.com.google.cloud.bigtable.grpc.BigtableInstanceName;
-import com.spotify.heroic.bigtable.grpc.Status;
-import com.spotify.heroic.bigtable.grpc.StatusRuntimeException;
+import com.google.bigtable.admin.v2.ModifyColumnFamiliesRequest;
+import com.google.cloud.bigtable.grpc.BigtableInstanceName;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import eu.toolchain.async.AsyncFramework;
 import lombok.ToString;
 
@@ -32,7 +32,7 @@ import java.util.Optional;
 
 @ToString
 public class BigtableTableTableAdminClientImpl implements BigtableTableAdminClient {
-    final com.spotify.shaded.bigtable.com.google.cloud.bigtable.grpc.BigtableTableAdminClient
+    final com.google.cloud.bigtable.grpc.BigtableTableAdminClient
         client;
 
     private final String project;
@@ -44,7 +44,7 @@ public class BigtableTableTableAdminClientImpl implements BigtableTableAdminClie
 
     public BigtableTableTableAdminClientImpl(
         final AsyncFramework async,
-        final com.spotify.shaded.bigtable.com.google.cloud.bigtable.grpc.BigtableTableAdminClient
+        final com.google.cloud.bigtable.grpc.BigtableTableAdminClient
             client,
         final String project,
         final String instance
@@ -60,7 +60,7 @@ public class BigtableTableTableAdminClientImpl implements BigtableTableAdminClie
     public Optional<Table> getTable(String name) {
         try {
             return Optional.of(Table.fromPb(client.getTable(
-                com.spotify.shaded.bigtable.com.google.bigtable.admin.v2.GetTableRequest
+                com.google.bigtable.admin.v2.GetTableRequest
                     .newBuilder()
                     .setName(Table.toURI(clusterUri, name))
                     .build())));
@@ -76,7 +76,7 @@ public class BigtableTableTableAdminClientImpl implements BigtableTableAdminClie
     @Override
     public Table createTable(String name) {
         client.createTable(
-            com.spotify.shaded.bigtable.com.google.bigtable.admin.v2.CreateTableRequest
+            com.google.bigtable.admin.v2.CreateTableRequest
             .newBuilder()
             .setParent(bigtableInstanceName.toString())
             .setTableId(name)
@@ -91,14 +91,14 @@ public class BigtableTableTableAdminClientImpl implements BigtableTableAdminClie
           ModifyColumnFamiliesRequest.Modification
             .newBuilder()
             .setCreate(
-                com.spotify.shaded.bigtable.com.google.bigtable.admin.v2.ColumnFamily
+                com.google.bigtable.admin.v2.ColumnFamily
                     .newBuilder()
                     .build()
             )
             .setId(name).build();
 
         client.modifyColumnFamily(
-            com.spotify.shaded.bigtable.com.google.bigtable.admin.v2.ModifyColumnFamiliesRequest
+            com.google.bigtable.admin.v2.ModifyColumnFamiliesRequest
             .newBuilder()
             .addModifications(modification)
             .setName(bigtableInstanceName.toTableNameStr(table.getName()))

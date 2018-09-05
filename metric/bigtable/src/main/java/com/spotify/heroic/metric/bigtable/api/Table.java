@@ -54,7 +54,7 @@ public class Table {
     }
 
     public static Table fromPb(
-        com.spotify.shaded.bigtable.com.google.bigtable.admin.v2.Table table
+        com.google.bigtable.admin.v2.Table table
     ) {
         final Matcher m = TABLE_NAME_PATTERN.matcher(table.getName());
 
@@ -68,7 +68,7 @@ public class Table {
         final ImmutableMap.Builder<String, ColumnFamily> columnFamilies = ImmutableMap.builder();
 
         for (final Map.Entry<String,
-            com.spotify.shaded.bigtable.com.google.bigtable.admin.v2.ColumnFamily> e : table
+            com.google.bigtable.admin.v2.ColumnFamily> e : table
             .getColumnFamilies()
             .entrySet()) {
             final ColumnFamily columnFamily = new ColumnFamily(cluster, tableId, e.getKey());

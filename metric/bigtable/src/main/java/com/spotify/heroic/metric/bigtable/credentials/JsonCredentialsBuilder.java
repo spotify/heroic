@@ -25,7 +25,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.shaded.bigtable.com.google.cloud.bigtable.config.CredentialOptions;
+import com.google.cloud.bigtable.config.CredentialOptions;
 import com.spotify.heroic.metric.bigtable.CredentialsBuilder;
 import java.nio.file.Files;
 import java.nio.file.Path;

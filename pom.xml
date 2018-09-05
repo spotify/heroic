@@ -248,10 +248,8 @@
       <id>repackaged</id>
 
       <modules>
-        <module>repackaged/bigtable</module>
         <module>repackaged/datastax</module>
         <module>repackaged/folsom</module>
-        <module>repackaged/pubsub</module>
       </modules>
     </profile>
   </profiles>

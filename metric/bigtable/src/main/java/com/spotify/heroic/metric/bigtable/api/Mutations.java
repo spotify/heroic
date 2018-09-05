@@ -22,7 +22,7 @@
 package com.spotify.heroic.metric.bigtable.api;
 
 import com.google.common.collect.ImmutableList;
-import com.spotify.shaded.bigtable.com.google.protobuf.ByteString;
+import com.google.protobuf.ByteString;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.Data;
@@ -30,7 +30,7 @@ import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class Mutations {
-    private final List<com.spotify.shaded.bigtable.com.google.bigtable.v2.Mutation> mutations;
+    private final List<com.google.bigtable.v2.Mutation> mutations;
 
     /**
      * Get the list of mutations.
@@ -41,7 +41,7 @@ public class Mutations {
      *
      * @return The list of mutations.
      */
-    List<com.spotify.shaded.bigtable.com.google.bigtable.v2.Mutation> getMutations() {
+    List<com.google.bigtable.v2.Mutation> getMutations() {
         return mutations;
     }
 
@@ -51,21 +51,21 @@ public class Mutations {
 
     @Data
     public static class Builder {
-        final List<com.spotify.shaded.bigtable.com.google.bigtable.v2.Mutation> mutations =
+        final List<com.google.bigtable.v2.Mutation> mutations =
             new ArrayList<>();
 
         public Builder setCell(
             String family, ByteString columnQualifier, ByteString value
         ) {
-            final com.spotify.shaded.bigtable.com.google.bigtable.v2.Mutation.SetCell.Builder
-                setCell = com.spotify.shaded.bigtable.com.google.bigtable.v2.Mutation.SetCell
+            final com.google.bigtable.v2.Mutation.SetCell.Builder
+                setCell = com.google.bigtable.v2.Mutation.SetCell
                     .newBuilder()
                     .setFamilyName(family)
                     .setColumnQualifier(columnQualifier)
                     .setValue(value);
 
             mutations.add(
-                com.spotify.shaded.bigtable.com.google.bigtable.v2.Mutation
+                com.google.bigtable.v2.Mutation
                 .newBuilder()
                 .setSetCell(setCell)
                     .build()

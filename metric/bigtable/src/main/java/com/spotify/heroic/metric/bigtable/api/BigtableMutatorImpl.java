@@ -21,13 +21,13 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
-import com.spotify.shaded.bigtable.com.google.bigtable.v2.MutateRowRequest;
-import com.spotify.shaded.bigtable.com.google.common.util.concurrent.FutureCallback;
-import com.spotify.shaded.bigtable.com.google.common.util.concurrent.Futures;
-import com.spotify.shaded.bigtable.com.google.common.util.concurrent.ListenableFuture;
-import com.spotify.shaded.bigtable.com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.spotify.shaded.bigtable.com.google.protobuf.ByteString;
-import com.spotify.shaded.bigtable.com.google.cloud.bigtable.grpc.async.BulkMutation;
+import com.google.bigtable.v2.MutateRowRequest;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.protobuf.ByteString;
+import com.google.cloud.bigtable.grpc.async.BulkMutation;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
@@ -42,7 +42,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class BigtableMutatorImpl implements BigtableMutator {
     private final AsyncFramework async;
-    private final com.spotify.shaded.bigtable.com.google.cloud.bigtable.grpc.BigtableSession
+    private final com.google.cloud.bigtable.grpc.BigtableSession
         session;
     private final boolean disableBulkMutations;
     private final Map<String, BulkMutation> tableToBulkMutation;
@@ -52,7 +52,7 @@ public class BigtableMutatorImpl implements BigtableMutator {
 
     public BigtableMutatorImpl(
         AsyncFramework async,
-        com.spotify.shaded.bigtable.com.google.cloud.bigtable.grpc.BigtableSession session,
+        com.google.cloud.bigtable.grpc.BigtableSession session,
         boolean disableBulkMutations,
         int flushIntervalSeconds
     ) {

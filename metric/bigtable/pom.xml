@@ -23,6 +23,7 @@
 
   <properties>
     <bigtable.version>1.4.0</bigtable.version>
+    <grpc.version>1.13.1</grpc.version>
   </properties>
 
   <dependencies>
@@ -39,9 +40,33 @@
     </dependency>
 
     <dependency>
-      <groupId>com.spotify.heroic.repackaged</groupId>
+      <groupId>com.google.cloud.bigtable</groupId>
       <artifactId>bigtable-client-core</artifactId>
       <version>${bigtable.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>io.grpc</groupId>
+          <artifactId>grpc-netty-shaded</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>io.opencensus</groupId>
+          <artifactId>opencensus-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>io.opencensus</groupId>
+          <artifactId>opencensus-contrib-grpc-metrics</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>io.opencensus</groupId>
+          <artifactId>opencensus-contrib-grpc-util</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-netty</artifactId>
+      <version>${grpc.version}</version>
     </dependency>
 
     <dependency>
