@@ -39,9 +39,12 @@ import com.google.cloud.pubsub.v1.TopicAdminSettings;
 import com.google.pubsub.v1.ProjectSubscriptionName;
 import com.google.pubsub.v1.ProjectTopicName;
 import com.google.pubsub.v1.PushConfig;
+import com.spotify.heroic.statistics.ConsumerReporter;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.threeten.bp.Duration;
@@ -51,6 +54,9 @@ import org.threeten.bp.Duration;
 public class Connection {
     private final int threads;
     private final ConsumerSchema.Consumer consumer;
+    private final ConsumerReporter reporter;
+    private final AtomicLong errors;
+    private final LongAdder consumed;
     private final long maxOutstandingElementCount;
     private final long maxOutstandingRequestBytes;
 
@@ -65,6 +71,9 @@ public class Connection {
 
     Connection(
         ConsumerSchema.Consumer consumer,
+        ConsumerReporter reporter,
+        AtomicLong errors,
+        LongAdder consumed,
         String projectId,
         String topicId,
         String subscriptionId,
@@ -75,6 +84,9 @@ public class Connection {
         long keepAlive
     ) {
         this.consumer = consumer;
+        this.reporter = reporter;
+        this.errors = errors;
+        this.consumed = consumed;
         this.projectId = projectId;
         this.subscriptionId = subscriptionId;
         this.threads = threads;
@@ -108,8 +120,9 @@ public class Connection {
             InstantiatingExecutorProvider.newBuilder().setExecutorThreadCount(threads).build();
 
         log.info("Subscribing to {}", subscriptionName);
+        final Receiver receiver = new Receiver(consumer, reporter, errors, consumed);
         subscriber = Subscriber
-            .newBuilder(subscriptionName, new Receiver(consumer))
+            .newBuilder(subscriptionName, receiver)
             .setFlowControlSettings(flowControlSettings)
             .setExecutorProvider(executorProvider)
             .setChannelProvider(channelProvider)
