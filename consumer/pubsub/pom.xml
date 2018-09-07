@@ -16,7 +16,7 @@
     <name>Heroic: PubSub Consumer</name>
 
     <properties>
-        <pubsub.version>1.36.0</pubsub.version>
+        <pubsub.version>1.43.0</pubsub.version>
         <grpc.version>1.13.1</grpc.version>
     </properties>
 
