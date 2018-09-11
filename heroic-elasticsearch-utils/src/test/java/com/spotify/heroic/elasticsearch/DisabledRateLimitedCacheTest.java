@@ -2,7 +2,7 @@ package com.spotify.heroic.elasticsearch;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.verify;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,7 +26,7 @@ public class DisabledRateLimitedCacheTest {
         assertFalse(writeCache.acquire("key1", notifier));
         assertTrue(writeCache.acquire("key2", notifier));
 
-        verify(notifier, never()).run();
+        verify(notifier, atLeastOnce()).run();
     }
 
 

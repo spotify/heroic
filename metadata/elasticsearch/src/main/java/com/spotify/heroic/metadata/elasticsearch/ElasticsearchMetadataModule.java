@@ -207,11 +207,11 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
                 .expireAfterWrite(writeCacheDurationMinutes, TimeUnit.MINUTES)
                 .build();
 
+            reporter.registerCacheSize("elasticsearch-metadata-write-through", cache::size);
+
             if (writesPerSecond <= 0d) {
                 return new DisabledRateLimitedCache<>(cache.asMap());
             }
-
-            reporter.registerCacheSize("elasticsearch-metadata-write-through", cache::size);
 
             return new DefaultRateLimitedCache<>(cache.asMap(),
                 RateLimiter.create(writesPerSecond, rateLimitSlowStartSeconds, TimeUnit.SECONDS));
