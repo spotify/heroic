@@ -89,6 +89,32 @@
       <version>0.1.1</version>
     </dependency>
 
+    <!-- tracing -->
+    <dependency>
+      <groupId>io.opencensus</groupId>
+      <artifactId>opencensus-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.opencensus</groupId>
+      <artifactId>opencensus-impl</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.opencensus</groupId>
+      <artifactId>opencensus-exporter-trace-stackdriver</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.opencensus</groupId>
+      <artifactId>opencensus-exporter-trace-jaeger</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.opencensus</groupId>
+      <artifactId>opencensus-contrib-zpages</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.opencensus</groupId>
+      <artifactId>opencensus-contrib-grpc-util</artifactId>
+    </dependency>
+
     <!-- testing -->
     <dependency>
       <groupId>junit</groupId>

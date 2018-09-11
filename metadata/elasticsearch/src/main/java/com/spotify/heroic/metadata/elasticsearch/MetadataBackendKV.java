@@ -71,6 +71,12 @@ import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
 import eu.toolchain.async.StreamCollector;
 import eu.toolchain.async.Transform;
+import io.opencensus.common.Scope;
+import io.opencensus.trace.AttributeValue;
+import io.opencensus.trace.Span;
+import io.opencensus.trace.Status;
+import io.opencensus.trace.Tracer;
+import io.opencensus.trace.Tracing;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -111,6 +117,7 @@ import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 @ToString(of = {"connection"})
 public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     implements MetadataBackend, LifeCycles {
+    private final Tracer tracer = Tracing.getTracer();
     public static final String WRITE_CACHE_SIZE = "write-cache-size";
 
     static final String KEY = "key";
@@ -175,51 +182,84 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
     @Override
     public AsyncFuture<WriteMetadata> write(final WriteMetadata.Request request) {
+        return write(request, tracer.getCurrentSpan());
+    }
+
+    @Override
+    public AsyncFuture<WriteMetadata> write(
+        final WriteMetadata.Request request, final Span parentSpan
+    ) {
         return doto(c -> {
+            final String rootSpanName = "MetadataBackendKV.write";
+            final Scope rootScope = tracer
+                .spanBuilderWithExplicitParent(rootSpanName, parentSpan)
+                .startScopedSpan();
+            final Span rootSpan = tracer.getCurrentSpan();
+
             final Series series = request.getSeries();
             final String id = series.hash();
+            rootSpan.putAttribute("id", AttributeValue.stringAttributeValue(id));
 
             final String[] indices;
 
             try {
                 indices = c.writeIndices();
             } catch (NoIndexSelectedException e) {
+                rootSpan.setStatus(Status.INTERNAL.withDescription(e.toString()));
+                rootSpan.end();
                 return async.failed(e);
             }
 
             final List<AsyncFuture<WriteMetadata>> writes = new ArrayList<>();
 
             for (final String index : indices) {
-                if (!writeCache.acquire(Pair.of(index, series.getHashCode()),
-                    reporter::reportWriteDroppedByCacheHit)) {
-                    continue;
+                final String indexSpanName = rootSpanName + ".index";
+                try (Scope scope = tracer.spanBuilder(indexSpanName).startScopedSpan()) {
+                    final Span span = tracer.getCurrentSpan();
+                    span.putAttribute("index", AttributeValue.stringAttributeValue(index));
+
+                    if (!writeCache.acquire(Pair.of(index, series.getHashCode()),
+                        reporter::reportWriteDroppedByCacheHit)) {
+                        span.setStatus(
+                            Status.ALREADY_EXISTS.withDescription("Write dropped by cache hit"));
+                        span.end();
+                        continue;
+                    }
+
+                    final XContentBuilder source = XContentFactory.jsonBuilder();
+
+                    source.startObject();
+                    buildContext(source, series);
+                    source.endObject();
+
+                    final IndexRequestBuilder builder = c
+                        .index(index, TYPE_METADATA)
+                        .setId(id)
+                        .setSource(source)
+                        .setOpType(OpType.CREATE);
+
+                    final RequestTimer<WriteMetadata> timer = WriteMetadata.timer();
+                    final FutureReporter.Context writeContext =
+                        reporter.setupBackendWriteReporter();
+
+                    try (Scope ss = tracer.spanBuilder(indexSpanName + ".write")
+                        .startScopedSpan()
+                    ) {
+                        final Span writeSpan = tracer.getCurrentSpan();
+                        AsyncFuture<WriteMetadata> result = bind(builder.execute())
+                            .directTransform(response -> timer.end())
+                            .catchFailed(handleVersionConflict(WriteMetadata::of,
+                                reporter::reportWriteDroppedByDuplicate))
+                            .onDone(writeContext)
+                            .onFinished(writeSpan::end);
+
+                        writes.add(result);
+                    }
                 }
-
-                final XContentBuilder source = XContentFactory.jsonBuilder();
-
-                source.startObject();
-                buildContext(source, series);
-                source.endObject();
-
-                final IndexRequestBuilder builder = c
-                    .index(index, TYPE_METADATA)
-                    .setId(id)
-                    .setSource(source)
-                    .setOpType(OpType.CREATE);
-
-                final RequestTimer<WriteMetadata> timer = WriteMetadata.timer();
-                final FutureReporter.Context writeContext = reporter.setupBackendWriteReporter();
-
-                AsyncFuture<WriteMetadata> result = bind(builder.execute())
-                    .directTransform(response -> timer.end())
-                    .catchFailed(handleVersionConflict(WriteMetadata::of,
-                        reporter::reportWriteDroppedByDuplicate))
-                    .onDone(writeContext);
-
-                writes.add(result);
             }
 
-            return async.collect(writes, WriteMetadata.reduce());
+            rootScope.close();
+            return async.collect(writes, WriteMetadata.reduce()).onFinished(rootSpan::end);
         });
     }
 

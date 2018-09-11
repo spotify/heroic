@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.consumer.schemas;
 
+import static io.opencensus.trace.AttributeValue.stringAttributeValue;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -51,6 +53,11 @@ import com.spotify.heroic.statistics.ConsumerReporter;
 import com.spotify.heroic.time.Clock;
 import dagger.Component;
 import eu.toolchain.async.AsyncFuture;
+import io.opencensus.common.Scope;
+import io.opencensus.trace.Span;
+import io.opencensus.trace.Status;
+import io.opencensus.trace.Tracer;
+import io.opencensus.trace.Tracing;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -63,8 +70,8 @@ import lombok.ToString;
 @ToString
 public class Spotify100 implements ConsumerSchema {
     private static final String HOST_TAG = "host";
-
     private static final ObjectMapper mapper = objectMapper();
+    private static final Tracer tracer = Tracing.getTracer();
 
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -147,38 +154,50 @@ public class Spotify100 implements ConsumerSchema {
         public AsyncFuture<Void> consume(final byte[] message) throws ConsumerSchemaException {
             final JsonNode tree;
 
-            try {
-                tree = mapper.readTree(message);
-            } catch (final Exception e) {
-                throw new ConsumerSchemaValidationException("Invalid metric", e);
+            try (Scope ss = tracer.spanBuilder("ConsumerSchema.consume").startScopedSpan()) {
+                Span span = tracer.getCurrentSpan();
+                span.putAttribute("schema", stringAttributeValue("Spotify100"));
+
+                try {
+                    tree = mapper.readTree(message);
+                } catch (final Exception e) {
+                    span.setStatus(Status.INVALID_ARGUMENT.withDescription(e.toString()));
+                    throw new ConsumerSchemaValidationException("Invalid metric", e);
+                }
+
+                if (tree.getNodeType() != JsonNodeType.OBJECT) {
+                    span.setStatus(
+                        Status.INVALID_ARGUMENT.withDescription("Metric is not an object"));
+                    throw new ConsumerSchemaValidationException(
+                        "Expected object, but got: " + tree.getNodeType());
+                }
+
+                final ObjectNode object = (ObjectNode) tree;
+
+                final JsonNode versionNode = object.remove("version");
+
+                if (versionNode == null) {
+                    span.setStatus(Status.INVALID_ARGUMENT.withDescription("Missing version"));
+                    throw new ConsumerSchemaValidationException(
+                        "Missing version in received object");
+                }
+
+                final Version version;
+
+                try {
+                    version = Version.parse(versionNode.asText());
+                } catch (final Exception e) {
+                    span.setStatus(Status.INVALID_ARGUMENT.withDescription("Bad version"));
+                    throw new ConsumerSchemaValidationException("Bad version: " + versionNode);
+                }
+
+                if (version.getMajor() == 1) {
+                    return handleVersion1(tree);
+                }
+
+                span.setStatus(Status.INVALID_ARGUMENT.withDescription("Unsupported version"));
+                throw new ConsumerSchemaValidationException("Unsupported version: " + version);
             }
-
-            if (tree.getNodeType() != JsonNodeType.OBJECT) {
-                throw new ConsumerSchemaValidationException(
-                    "Expected object, but got: " + tree.getNodeType());
-            }
-
-            final ObjectNode object = (ObjectNode) tree;
-
-            final JsonNode versionNode = object.remove("version");
-
-            if (versionNode == null) {
-                throw new ConsumerSchemaValidationException("Missing version in received object");
-            }
-
-            final Version version;
-
-            try {
-                version = Version.parse(versionNode.asText());
-            } catch (final Exception e) {
-                throw new ConsumerSchemaValidationException("Bad version: " + versionNode);
-            }
-
-            if (version.getMajor() == 1) {
-                return handleVersion1(tree);
-            }
-
-            throw new ConsumerSchemaValidationException("Unsupported version: " + version);
         }
 
         private AsyncFuture<Void> handleVersion1(final JsonNode tree)
@@ -227,7 +246,7 @@ public class Spotify100 implements ConsumerSchema {
 
             // Return Void future, to not leak unnecessary information from the backend but just
             // allow monitoring of when the consumption is done.
-            return ingestionFuture.directTransform(future -> (Void) null);
+            return ingestionFuture.directTransform(future -> null);
         }
     }
 

@@ -60,7 +60,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import lombok.AllArgsConstructor;
@@ -116,6 +118,7 @@ public class HeroicConfig {
     private final StatisticsModule statistics;
     private final QueryLoggingModule queryLogging;
     private final Optional<ConditionalFeatures> conditionalFeature;
+    private final Map<String, Object> tracing;
 
     private final String version;
     private final String service;
@@ -197,6 +200,7 @@ public class HeroicConfig {
         private Optional<StatisticsModule> statistics = empty();
         private Optional<QueryLoggingModule> queryLogging = empty();
         private Optional<ConditionalFeatures> conditionalFeatures = empty();
+        private Optional<Map<String, Object>> tracing = empty();
 
         private Optional<String> version = empty();
         private Optional<String> service = empty();
@@ -297,6 +301,11 @@ public class HeroicConfig {
             return this;
         }
 
+        public Builder tracing(Map<String, Object> tracing) {
+            this.tracing = of(tracing);
+            return this;
+        }
+
         public Builder merge(Builder o) {
             // @formatter:off
             return new Builder(
@@ -323,6 +332,7 @@ public class HeroicConfig {
                 pickOptional(statistics, o.statistics),
                 pickOptional(queryLogging, o.queryLogging),
                 pickOptional(conditionalFeatures, o.conditionalFeatures),
+                pickOptional(tracing, o.tracing),
                 pickOptional(service, o.service),
                 pickOptional(version, o.version)
             );
@@ -364,6 +374,7 @@ public class HeroicConfig {
                 statistics.orElseGet(NoopStatisticsModule::new),
                 queryLogging.orElseGet(NoopQueryLoggingModule::new),
                 conditionalFeatures,
+                tracing.orElseGet(HashMap::new),
                 version.orElse(defaultVersion),
                 service.orElse(DEFAULT_SERVICE)
             );
