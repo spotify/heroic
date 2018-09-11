@@ -30,6 +30,7 @@ import com.google.pubsub.v1.PubsubMessage;
 import com.spotify.heroic.consumer.ConsumerSchema;
 import com.spotify.heroic.consumer.ConsumerSchemaValidationException;
 import com.spotify.heroic.statistics.ConsumerReporter;
+import com.spotify.heroic.statistics.FutureReporter;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import io.opencensus.common.Scope;
@@ -72,26 +73,31 @@ class Receiver implements MessageReceiver {
         Span span = tracer.getCurrentSpan();
         span.putAttribute("id", stringAttributeValue(messageId));
 
+        final FutureReporter.Context consumptionContext = reporter.reportConsumption();
+
         // process the data
         try {
-            consumer.consume(bytes);
-            reporter.reportMessageSize(bytes.length);
-            consumed.increment();
-            replyConsumer.ack();
+            consumer.consume(bytes).onDone(consumptionContext).onFinished(() -> {
+                reporter.reportMessageSize(bytes.length);
+                replyConsumer.ack();
+                span.end();
+            });
         } catch (ConsumerSchemaValidationException e) {
             reporter.reportConsumerSchemaError();
             log.error("ID:{} - {}", messageId, e.getMessage(), e);
 
             // The message will never be processable, ack it to make it go away
             replyConsumer.ack();
+            span.end();
         } catch (Exception e) {
             errors.incrementAndGet();
             log.error("ID:{} - Failed to consume", messageId, e);
             span.setStatus(Status.INTERNAL.withDescription(e.toString()));
             reporter.reportMessageError();
             replyConsumer.nack();
-        } finally {
             span.end();
+        } finally {
+            consumed.increment();
             ss.close();
         }
   }
