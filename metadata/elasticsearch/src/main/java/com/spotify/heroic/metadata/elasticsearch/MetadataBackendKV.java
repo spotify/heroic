@@ -242,14 +242,19 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                     final FutureReporter.Context writeContext =
                         reporter.setupBackendWriteReporter();
 
-                    AsyncFuture<WriteMetadata> result = bind(builder.execute())
-                        .directTransform(response -> timer.end())
-                        .catchFailed(handleVersionConflict(WriteMetadata::of,
-                            reporter::reportWriteDroppedByDuplicate))
-                        .onDone(writeContext)
-                        .onFinished(span::end);
+                    try (Scope ss = tracer.spanBuilder(indexSpanName + ".write")
+                        .startScopedSpan()
+                    ) {
+                        final Span writeSpan = tracer.getCurrentSpan();
+                        AsyncFuture<WriteMetadata> result = bind(builder.execute())
+                            .directTransform(response -> timer.end())
+                            .catchFailed(handleVersionConflict(WriteMetadata::of,
+                                reporter::reportWriteDroppedByDuplicate))
+                            .onDone(writeContext)
+                            .onFinished(writeSpan::end);
 
-                    writes.add(result);
+                        writes.add(result);
+                    }
                 }
             }
 

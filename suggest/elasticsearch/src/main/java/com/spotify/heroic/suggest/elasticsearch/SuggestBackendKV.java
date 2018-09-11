@@ -586,18 +586,21 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 buildContext(series, s);
                 series.endObject();
 
-                writes.add(bind(c
-                    .index(index, SERIES_TYPE)
-                    .setId(seriesId)
-                    .setSource(series)
-                    .setOpType(DocWriteRequest.OpType.CREATE)
-                    .execute()).directTransform(response -> timer.end())
-                    .onFinished(indexSpan::end));
+                try (Scope ss = tracer.spanBuilder(indexSpanName + ".write").startScopedSpan()) {
+                    final Span indexWriteSpan = tracer.getCurrentSpan();
+
+                    writes.add(bind(c.index(index, SERIES_TYPE)
+                        .setId(seriesId)
+                        .setSource(series)
+                        .setOpType(DocWriteRequest.OpType.CREATE)
+                        .execute()).directTransform(response -> timer.end())
+                        .onFinished(indexWriteSpan::end));
+                }
 
                 for (final Map.Entry<String, String> e : s.getTags().entrySet()) {
                     final String tagSpanName = rootSpanName + ".tags";
                     try (Scope tagScope = tracer
-                        .spanBuilderWithExplicitParent(tagSpanName, rootSpan)
+                        .spanBuilderWithExplicitParent(tagSpanName, indexSpan)
                         .startScopedSpan()
                     ) {
 
