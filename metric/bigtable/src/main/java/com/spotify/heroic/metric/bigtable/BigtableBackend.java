@@ -337,20 +337,23 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         final String columnFamily, final Series series, final BigtableDataClient client,
         final List<T> batch, final Function<T, ByteString> serializer, final Span parentSpan
     ) throws IOException {
-        final Scope ss = tracer
+        final Span span = tracer
             .spanBuilderWithExplicitParent("Bigtable.writeBatch", parentSpan)
-            .startScopedSpan();
-        final Span span = tracer.getCurrentSpan();
+            .startSpan();
+        final Scope scope = tracer.withSpan(span);
         span.putAttribute("type", AttributeValue.stringAttributeValue(columnFamily));
         span.putAttribute("batchSize", AttributeValue.longAttributeValue(batch.size()));
 
         // common case for consumers
         if (batch.size() == 1) {
-            return writeOne(columnFamily, series, client, batch.get(0), serializer)
-                .onFinished(() -> {
-                    written.mark();
-                    span.end();
-                });
+            final AsyncFuture<WriteMetric> future =
+                writeOne(columnFamily, series, client, batch.get(0), serializer)
+                    .onFinished(() -> {
+                        written.mark();
+                        span.end();
+                    });
+            scope.close();
+            return future;
         }
 
         final List<Pair<RowKey, Mutations>> saved = new ArrayList<>();
@@ -399,7 +402,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                 .directTransform(result -> timer.end()));
         }
 
-        ss.close();
+        scope.close();
         return async.collect(writes.build(), WriteMetric.reduce()).onFinished(span::end);
     }
 

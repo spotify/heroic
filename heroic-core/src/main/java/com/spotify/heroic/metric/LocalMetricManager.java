@@ -57,6 +57,7 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.StreamCollector;
+import io.opencensus.trace.Span;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -370,8 +371,15 @@ public class LocalMetricManager implements MetricManager {
         }
 
         @Override
-        public AsyncFuture<WriteMetric> write(final WriteMetric.Request write) {
-            return async.collect(map(b -> b.write(write)), WriteMetric.reduce());
+        public AsyncFuture<WriteMetric> write(final WriteMetric.Request request) {
+            return write(request, io.opencensus.trace.Tracing.getTracer().getCurrentSpan());
+        }
+
+        @Override
+        public AsyncFuture<WriteMetric> write(
+            final WriteMetric.Request request, final Span parentSpan
+        ) {
+            return async.collect(map(b -> b.write(request, parentSpan)), WriteMetric.reduce());
         }
 
         @Override

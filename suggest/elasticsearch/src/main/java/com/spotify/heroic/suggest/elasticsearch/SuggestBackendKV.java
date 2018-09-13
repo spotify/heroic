@@ -543,10 +543,10 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     ) {
         return connection.doto((final Connection c) -> {
             final String rootSpanName = "SuggestBackendKV.write";
-            final Scope rootScope = tracer
+            final Span rootSpan = tracer
                 .spanBuilderWithExplicitParent(rootSpanName, parentSpan)
-                .startScopedSpan();
-            final Span rootSpan = tracer.getCurrentSpan();
+                .startSpan();
+            final Scope rootScope = tracer.withSpan(rootSpan);
 
             final Series s = request.getSeries();
             final String seriesId = s.hash();
@@ -559,16 +559,20 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
             } catch (NoIndexSelectedException e) {
                 rootSpan.setStatus(Status.INTERNAL.withDescription(e.toString()));
                 rootSpan.end();
+                rootScope.close();
                 return async.failed(e);
             }
 
             final RequestTimer<WriteSuggest> timer = WriteSuggest.timer();
             final List<AsyncFuture<WriteSuggest>> writes = new ArrayList<>();
+            final List<Span> indexSpans = new ArrayList<>();
 
             for (final String index : indices) {
                 final String indexSpanName = rootSpanName + ".index";
-                final Scope indexScope = tracer.spanBuilder(indexSpanName).startScopedSpan();
-                final Span indexSpan = tracer.getCurrentSpan();
+                final Span indexSpan = tracer.spanBuilder(indexSpanName).startSpan();
+                indexSpans.add(indexSpan);
+
+                final Scope indexScope = tracer.withSpan(indexSpan);
                 indexSpan.putAttribute("index", AttributeValue.stringAttributeValue(index));
 
                 final Pair<String, HashCode> key = Pair.of(index, s.getHashCode());
@@ -576,9 +580,11 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 if (!writeCache.acquire(key, reporter::reportWriteDroppedByCacheHit)) {
                     indexSpan.setStatus(
                         Status.ALREADY_EXISTS.withDescription("Write dropped by cache hit"));
+                    indexScope.close();
                     indexSpan.end();
                     continue;
                 }
+                indexSpan.addAnnotation("Write cache rate limit acquired");
 
                 final XContentBuilder series = XContentFactory.jsonBuilder();
 
@@ -586,61 +592,57 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 buildContext(series, s);
                 series.endObject();
 
-                try (Scope ss = tracer.spanBuilder(indexSpanName + ".write").startScopedSpan()) {
-                    final Span indexWriteSpan = tracer.getCurrentSpan();
-
-                    writes.add(bind(c.index(index, SERIES_TYPE)
-                        .setId(seriesId)
-                        .setSource(series)
-                        .setOpType(DocWriteRequest.OpType.CREATE)
-                        .execute()).directTransform(response -> timer.end())
-                        .onFinished(indexWriteSpan::end));
-                }
+                final Span indexWriteSpan = tracer
+                    .spanBuilderWithExplicitParent(indexSpanName + ".writeIndex", indexSpan)
+                    .startSpan();
+                writes.add(bind(c.index(index, SERIES_TYPE)
+                    .setId(seriesId)
+                    .setSource(series)
+                    .setOpType(DocWriteRequest.OpType.CREATE)
+                    .execute()).directTransform(response -> timer.end())
+                    .onFinished(indexWriteSpan::end));
 
                 for (final Map.Entry<String, String> e : s.getTags().entrySet()) {
-                    final String tagSpanName = rootSpanName + ".tags";
-                    try (Scope tagScope = tracer
-                        .spanBuilderWithExplicitParent(tagSpanName, indexSpan)
-                        .startScopedSpan()
-                    ) {
+                    final Span tagSpan = tracer
+                        .spanBuilderWithExplicitParent(indexSpanName + ".writeTags", indexSpan)
+                        .startSpan();
+                    tagSpan.putAttribute("index", AttributeValue.stringAttributeValue(index));
 
-                        final Span tagSpan = tracer.getCurrentSpan();
-                        tagSpan
-                            .putAttribute("index", AttributeValue.stringAttributeValue(index));
+                    final XContentBuilder suggest = XContentFactory.jsonBuilder();
 
-                        final XContentBuilder suggest = XContentFactory.jsonBuilder();
+                    suggest.startObject();
+                    buildContext(suggest, s);
+                    buildTag(suggest, e);
+                    suggest.endObject();
 
-                        suggest.startObject();
-                        buildContext(suggest, s);
-                        buildTag(suggest, e);
-                        suggest.endObject();
+                    final String suggestId =
+                        seriesId + ":" + Integer.toHexString(e.hashCode());
+                    tagSpan.putAttribute("suggestId",
+                        AttributeValue.stringAttributeValue(suggestId));
+                    final FutureReporter.Context writeContext =
+                        reporter.setupWriteReporter();
 
-                        final String suggestId =
-                            seriesId + ":" + Integer.toHexString(e.hashCode());
-                        tagSpan.putAttribute("suggestId",
-                            AttributeValue.stringAttributeValue(suggestId));
-                        final FutureReporter.Context writeContext =
-                            reporter.setupWriteReporter();
-
-                        writes.add(bind(c
-                            .index(index, TAG_TYPE)
-                            .setId(suggestId)
-                            .setSource(suggest)
-                            .setOpType(DocWriteRequest.OpType.CREATE)
-                            .execute())
-                            .directTransform(response -> timer.end())
-                            .catchFailed(handleVersionConflict(WriteSuggest::of,
-                                reporter::reportWriteDroppedByDuplicate))
-                            .onDone(writeContext)
-                            .onFinished(tagSpan::end));
-                    }
+                    writes.add(bind(c
+                        .index(index, TAG_TYPE)
+                        .setId(suggestId)
+                        .setSource(suggest)
+                        .setOpType(DocWriteRequest.OpType.CREATE)
+                        .execute())
+                        .directTransform(response -> timer.end())
+                        .catchFailed(handleVersionConflict(WriteSuggest::of,
+                            reporter::reportWriteDroppedByDuplicate))
+                        .onDone(writeContext)
+                        .onFinished(tagSpan::end));
                 }
 
                 indexScope.close();
             }
 
             rootScope.close();
-            return async.collect(writes, WriteSuggest.reduce()).onFinished(rootSpan::end);
+            return async.collect(writes, WriteSuggest.reduce()).onFinished(() -> {
+                indexSpans.forEach(Span::end);
+                rootSpan.end();
+            });
         });
     }
 
