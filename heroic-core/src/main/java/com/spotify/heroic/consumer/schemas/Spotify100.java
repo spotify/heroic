@@ -153,21 +153,22 @@ public class Spotify100 implements ConsumerSchema {
         @Override
         public AsyncFuture<Void> consume(final byte[] message) throws ConsumerSchemaException {
             final JsonNode tree;
+            final Span span = tracer.spanBuilder("ConsumerSchema.consume").startSpan();
+            span.putAttribute("schema", stringAttributeValue("Spotify100"));
 
-            try (Scope ss = tracer.spanBuilder("ConsumerSchema.consume").startScopedSpan()) {
-                Span span = tracer.getCurrentSpan();
-                span.putAttribute("schema", stringAttributeValue("Spotify100"));
-
+            try (Scope ws = tracer.withSpan(span)) {
                 try {
                     tree = mapper.readTree(message);
                 } catch (final Exception e) {
                     span.setStatus(Status.INVALID_ARGUMENT.withDescription(e.toString()));
+                    span.end();
                     throw new ConsumerSchemaValidationException("Invalid metric", e);
                 }
 
                 if (tree.getNodeType() != JsonNodeType.OBJECT) {
                     span.setStatus(
                         Status.INVALID_ARGUMENT.withDescription("Metric is not an object"));
+                    span.end();
                     throw new ConsumerSchemaValidationException(
                         "Expected object, but got: " + tree.getNodeType());
                 }
@@ -178,6 +179,7 @@ public class Spotify100 implements ConsumerSchema {
 
                 if (versionNode == null) {
                     span.setStatus(Status.INVALID_ARGUMENT.withDescription("Missing version"));
+                    span.end();
                     throw new ConsumerSchemaValidationException(
                         "Missing version in received object");
                 }
@@ -192,10 +194,11 @@ public class Spotify100 implements ConsumerSchema {
                 }
 
                 if (version.getMajor() == 1) {
-                    return handleVersion1(tree);
+                    return handleVersion1(tree).onFinished(span::end);
                 }
 
                 span.setStatus(Status.INVALID_ARGUMENT.withDescription("Unsupported version"));
+                span.end();
                 throw new ConsumerSchemaValidationException("Unsupported version: " + version);
             }
         }

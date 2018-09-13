@@ -86,8 +86,7 @@ public class CoreIngestionGroup implements IngestionGroup {
     }
 
     protected AsyncFuture<Ingestion> syncWrite(final Ingestion.Request request) {
-        final Scope ss = tracer.spanBuilder("CoreIngestionGroup.syncWrite").startScopedSpan();
-        final Span span = tracer.getCurrentSpan();
+        final Span span = tracer.spanBuilder("CoreIngestionGroup.syncWrite").startSpan();
 
         if (!filter.get().apply(request.getSeries())) {
             reporter.reportDroppedByFilter();
@@ -109,28 +108,27 @@ public class CoreIngestionGroup implements IngestionGroup {
         span.addAnnotation("Acquired write lock");
         reporter.incrementConcurrentWrites();
 
-        return doWrite(request).onFinished(() -> {
-            writePermits.release();
-            reporter.decrementConcurrentWrites();
-            span.end();
-        });
-
+        try (Scope ws = tracer.withSpan(span)) {
+            return doWrite(request).onFinished(() -> {
+                writePermits.release();
+                reporter.decrementConcurrentWrites();
+                span.end();
+            });
+        }
     }
 
     protected AsyncFuture<Ingestion> doWrite(final Ingestion.Request request) {
-        try (Scope ss = tracer.spanBuilder("CoreIngestionGroup.doWrite").startScopedSpan()) {
-            final Span span = tracer.getCurrentSpan();
-            final List<AsyncFuture<Ingestion>> futures = new ArrayList<>();
+        final Span span = tracer.spanBuilder("CoreIngestionGroup.doWrite").startSpan();
+        final List<AsyncFuture<Ingestion>> futures = new ArrayList<>();
 
-            final Supplier<DateRange> range = rangeSupplier(request);
+        final Supplier<DateRange> range = rangeSupplier(request);
 
-            metric.map(m -> doMetricWrite(m, request, span)).ifPresent(futures::add);
-            metadata.map(m -> doMetadataWrite(m, request, range.get(), span))
-                .ifPresent(futures::add);
-            suggest.map(s -> doSuggestWrite(s, request, range.get(), span)).ifPresent(futures::add);
+        metric.map(m -> doMetricWrite(m, request, span)).ifPresent(futures::add);
+        metadata.map(m -> doMetadataWrite(m, request, range.get(), span))
+            .ifPresent(futures::add);
+        suggest.map(s -> doSuggestWrite(s, request, range.get(), span)).ifPresent(futures::add);
 
-            return async.collect(futures, Ingestion.reduce()).onFinished(span::end);
-        }
+        return async.collect(futures, Ingestion.reduce()).onFinished(span::end);
     }
 
     protected AsyncFuture<Ingestion> doMetricWrite(

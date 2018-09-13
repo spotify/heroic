@@ -44,6 +44,8 @@ import com.spotify.heroic.statistics.MetricBackendReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 import eu.toolchain.async.AsyncFuture;
+import io.opencensus.trace.Span;
+import io.opencensus.trace.Tracing;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -222,7 +224,13 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
 
         @Override
         public AsyncFuture<WriteMetric> write(final WriteMetric.Request request) {
-            return delegate.write(request).onDone(write.setup());
+            return write(request, Tracing.getTracer().getCurrentSpan());
+        }
+
+        @Override
+        public AsyncFuture<WriteMetric> write(
+            final WriteMetric.Request request, final Span parentSpan) {
+            return delegate.write(request, parentSpan).onDone(write.setup());
         }
 
         @Override

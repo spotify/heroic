@@ -34,6 +34,7 @@ import eu.toolchain.async.ResolvableFuture;
 import io.opencensus.common.Scope;
 import io.opencensus.trace.AttributeValue;
 import io.opencensus.trace.Span;
+import io.opencensus.trace.Status;
 import io.opencensus.trace.Tracer;
 import io.opencensus.trace.Tracing;
 import lombok.extern.slf4j.Slf4j;
@@ -108,8 +109,8 @@ public class BigtableMutatorImpl implements BigtableMutator {
     private AsyncFuture<Void> mutateSingleRow(
         String tableName, ByteString rowKey, Mutations mutations
     ) {
-        try (Scope ss = tracer.spanBuilder("BigtableMutator.mutateSingleRow").startScopedSpan()) {
-            final Span span = tracer.getCurrentSpan();
+        final Span span = tracer.spanBuilder("BigtableMutator.mutateSingleRow").startSpan();
+        try (Scope ws = tracer.withSpan(span)) {
             return convertVoid(
                 session
                     .getDataClient()
@@ -121,8 +122,8 @@ public class BigtableMutatorImpl implements BigtableMutator {
     private AsyncFuture<Void> mutateBatchRow(
         String tableName, ByteString rowKey, Mutations mutations
     ) {
-        try (Scope ss = tracer.spanBuilder("BigtableMutator.mutateBatchRow").startScopedSpan()) {
-            final Span span = tracer.getCurrentSpan();
+        final Span span = tracer.spanBuilder("BigtableMutator.mutateBatchRow").startSpan();
+        try (Scope ws = tracer.withSpan(span)) {
             span.putAttribute("table", AttributeValue.stringAttributeValue(tableName));
 
             final BulkMutation bulkMutation = getOrAddBulkMutation(tableName);
@@ -134,14 +135,15 @@ public class BigtableMutatorImpl implements BigtableMutator {
     }
 
     private BulkMutation getOrAddBulkMutation(String tableName) {
-        final String spanName = "BigtableMutator.getOrAddBulkMutation";
-        try (Scope ss = tracer.spanBuilder(spanName).startScopedSpan()) {
-            final Span span = tracer.getCurrentSpan();
+        final Span span = tracer.spanBuilder("BigtableMutator.getOrAddBulkMutation").startSpan();
+        try (Scope ws = tracer.withSpan(span)) {
             span.addAnnotation("Acquiring lock");
             synchronized (tableAccessLock) {
                 span.addAnnotation("Lock acquired");
 
                 if (tableToBulkMutation.containsKey(tableName)) {
+                    span.setStatus(Status.ALREADY_EXISTS.withDescription("Mutation exists in map"));
+                    span.end();
                     return tableToBulkMutation.get(tableName);
                 }
 
@@ -149,11 +151,11 @@ public class BigtableMutatorImpl implements BigtableMutator {
                     session
                         .getOptions()
                         .getInstanceName()
-                        .toTableName(tableName),
-                    session.createAsyncExecutor());
+                        .toTableName(tableName));
 
                 tableToBulkMutation.put(tableName, bulkMutation);
 
+                span.end();
                 return bulkMutation;
             }
         }

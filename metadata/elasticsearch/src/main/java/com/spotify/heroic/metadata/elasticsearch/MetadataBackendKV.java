@@ -191,10 +191,10 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     ) {
         return doto(c -> {
             final String rootSpanName = "MetadataBackendKV.write";
-            final Scope rootScope = tracer
+            final Span rootSpan = tracer
                 .spanBuilderWithExplicitParent(rootSpanName, parentSpan)
-                .startScopedSpan();
-            final Span rootSpan = tracer.getCurrentSpan();
+                .startSpan();
+            final Scope rootScope = tracer.withSpan(rootSpan);
 
             final Series series = request.getSeries();
             final String id = series.hash();
@@ -211,11 +211,12 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
             }
 
             final List<AsyncFuture<WriteMetadata>> writes = new ArrayList<>();
+            final List<Span> indexSpans = new ArrayList<>();
 
             for (final String index : indices) {
                 final String indexSpanName = rootSpanName + ".index";
-                try (Scope scope = tracer.spanBuilder(indexSpanName).startScopedSpan()) {
-                    final Span span = tracer.getCurrentSpan();
+                final Span span = tracer.spanBuilder(indexSpanName).startSpan();
+                try (Scope ws = tracer.withSpan(span)) {
                     span.putAttribute("index", AttributeValue.stringAttributeValue(index));
 
                     if (!writeCache.acquire(Pair.of(index, series.getHashCode()),
@@ -225,6 +226,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                         span.end();
                         continue;
                     }
+                    indexSpans.add(span);
 
                     final XContentBuilder source = XContentFactory.jsonBuilder();
 
@@ -242,24 +244,25 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                     final FutureReporter.Context writeContext =
                         reporter.setupBackendWriteReporter();
 
-                    try (Scope ss = tracer.spanBuilder(indexSpanName + ".write")
-                        .startScopedSpan()
-                    ) {
-                        final Span writeSpan = tracer.getCurrentSpan();
-                        AsyncFuture<WriteMetadata> result = bind(builder.execute())
-                            .directTransform(response -> timer.end())
-                            .catchFailed(handleVersionConflict(WriteMetadata::of,
-                                reporter::reportWriteDroppedByDuplicate))
-                            .onDone(writeContext)
-                            .onFinished(writeSpan::end);
+                    final Span writeSpan = tracer
+                        .spanBuilder(indexSpanName + ".writeIndex")
+                        .startSpan();
+                    AsyncFuture<WriteMetadata> result = bind(builder.execute())
+                        .directTransform(response -> timer.end())
+                        .catchFailed(handleVersionConflict(WriteMetadata::of,
+                            reporter::reportWriteDroppedByDuplicate))
+                        .onDone(writeContext)
+                        .onFinished(writeSpan::end);
 
-                        writes.add(result);
-                    }
+                    writes.add(result);
                 }
             }
 
             rootScope.close();
-            return async.collect(writes, WriteMetadata.reduce()).onFinished(rootSpan::end);
+            return async.collect(writes, WriteMetadata.reduce()).onFinished(() -> {
+                indexSpans.forEach(Span::end);
+                rootSpan.end();
+            });
         });
     }
 

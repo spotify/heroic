@@ -62,21 +62,19 @@ class Receiver implements MessageReceiver {
 
     @Override
     public void receiveMessage(PubsubMessage message, AckReplyConsumer replyConsumer) {
-        Scope ss = tracer.spanBuilder("PubSub.receiveMessage").startScopedSpan();
-
         // handle incoming message, then ack/nack the received message
         final ByteString data = message.getData();
         final String messageId = message.getMessageId();
         log.debug("Received ID:{} with content: {}", messageId, data.toStringUtf8());
         final byte[] bytes = data.toByteArray();
 
-        Span span = tracer.getCurrentSpan();
+        Span span = tracer.spanBuilder("PubSub.receiveMessage").startSpan();
         span.putAttribute("id", stringAttributeValue(messageId));
 
         final FutureReporter.Context consumptionContext = reporter.reportConsumption();
 
         // process the data
-        try {
+        try (Scope ws = tracer.withSpan(span)) {
             consumer.consume(bytes).onDone(consumptionContext).onFinished(() -> {
                 reporter.reportMessageSize(bytes.length);
                 replyConsumer.ack();
@@ -98,7 +96,6 @@ class Receiver implements MessageReceiver {
             span.end();
         } finally {
             consumed.increment();
-            ss.close();
         }
   }
 
