@@ -258,3 +258,13 @@ credentials:
     </td>
   </tr>
 </table>
+
+<p>
+A note on sending metrics with the same timestamp and/or duplicate metrics.
+
+These metric values will not be duplicated within the row, since Heroic is mutating rows and not appending to the column family. In bigtable each 
+timestamp + value is a column within the row.
+
+<img style="width: 100%;" src="images/row-mutation.png"></img>
+
+</p>
