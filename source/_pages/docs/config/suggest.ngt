@@ -3,6 +3,7 @@
 <p>
   The ability to perform suggestions is an important usability feature.
   It makes the difference for your system to be a complete black box, to giving your developers the ability to find and make use of time series on their own.
+  Suggests are fairly expensive in terms of data storage and indexing operations. As each tag that is part of a metric is indexed. 
 </p>
 
 <p>
@@ -23,6 +24,15 @@ suggest:
           pattern: heroic-a-%s
 </codeblock>
 
+
+<p>
+  <b>WARNINGS</b> There are ElasticSearch settings and mappings that must be configured before indexing operations are processed. These are required to make the reads efficient. At Spotify
+  these settings are added when setting up the ElasticSearch cluster with Puppet.
+
+<a href="https://github.com/spotify/heroic/tree/7ff07a654048ce760e867835e11f230cd7c5a4ee/suggest/elasticsearch/src/main/resources/com.spotify.heroic.suggest.elasticsearch/kv">
+  settings/mappings are here</a>
+</p>
+
 <table class="table">
   <tr>
     <td><code>backends</code></td>
@@ -33,7 +43,7 @@ suggest:
     <td>
       A list of backend group names that are part of the default group.
       The default group is the group of backends that are used for operations unless a specified group is used.
-      The default behaviour is to include <em>all configured backends</em> in the default group.
+      The default behavior is to include <em>all configured backends</em> in the default group.
     </td>
   </tr>
 </table>
@@ -101,3 +111,15 @@ suggest:
     </td>
   </tr>
 </table>
+
+
+<p>
+  Example of what the stored suggestions look like.
+</p>
+<codeblock language="json">
+
+{'_index': 'heroic-1536192000000', '_type': 'series', '_id': '447939eaf69475f685518dc2c179ddaf', '_version': 1, 'found': True, '_source': {'key': 'apollo', 'tags': ['component\x00memcache-client', 'operation\x00get', 'what\x00memcache-results'], 'tag_keys': [component', 'operation', 'what'], 'series_id': '447939eaf69475f685518dc2c179ddaf'}}
+
+{'_index': 'heroic-1536192000000', '_type': 'tag', '_id': '447939eaf69475f685518dc2c179ddaf:687d7854', '_version': 1, 'found': True, '_source': {'key': 'apollo', 'tags': ['component\x00memcache-client', 'what\x00memcache-results', 'operation\x00get'], 'tag_keys': ['component', 'what', 'operation'], 'series_id': '447939eaf69475f685518dc2c179ddaf', 'skey': 'component', 'sval': 'memcache-client', 'kv': 'component\x00memcache-client'}}
+
+</codeblock>

@@ -23,6 +23,14 @@ metadata:
           pattern: heroic-a-%s
 </codeblock>
 
+<p>
+  <b>WARNINGS</b> There are ElasticSearch settings and mappings that must be configured before indexing operations are processed. These are required to make the reads efficient. At Spotify
+  these settings are added when setting up the ElasticSearch cluster with Puppet.
+
+<a href="https://github.com/spotify/heroic/blob/7ff07a654048ce760e867835e11f230cd7c5a4ee/metadata/elasticsearch/src/main/resources/com.spotify.heroic.metadata.elasticsearch/kv/metadata.json">settings/mappings are here</a>
+
+</p>
+
 <table class="table">
   <tr>
     <td><code>backends</code></td>
@@ -101,3 +109,13 @@ metadata:
     </td>
   </tr>
 </table>
+
+<p>
+  Example of what the stored metadata look like.
+</p>
+<codeblock language="json">
+
+{'_index': 'heroic-1535587200000', '_type': 'metadata', '_id': '447939eaf69475f685518dc2c179ddaf', '_version': 1, 'found': True, '_source': {'key': 'apollo', 'tags': ['component\x00memcache-client', 'operation\x00get', 'what\x00memcache-results'], 'tag_keys': ['component', 'operation', 'what']}}
+
+
+</codeblock>
