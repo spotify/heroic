@@ -23,9 +23,6 @@ package com.spotify.heroic.cache.memcached;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.net.HostAndPort;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
 import com.spotify.folsom.BinaryMemcacheClient;
 import com.spotify.folsom.ConnectFuture;
 import com.spotify.folsom.MemcacheClient;
@@ -45,11 +42,9 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
 import eu.toolchain.async.ResolvableFuture;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import javax.annotation.Nullable;
 import javax.inject.Named;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
@@ -86,40 +81,31 @@ public class MemcachedCacheModule implements CacheModule {
     public Managed<MemcacheClient<byte[]>> memcacheClient(final AsyncFramework async) {
         return async.managed(new ManagedSetup<MemcacheClient<byte[]>>() {
             @Override
-            public AsyncFuture<MemcacheClient<byte[]>> construct() throws Exception {
-                final List<HostAndPort> addresses = new ArrayList<>();
+            public AsyncFuture<MemcacheClient<byte[]>> construct() {
+
+                final MemcacheClientBuilder<byte[]> builder = MemcacheClientBuilder
+                  .newByteArrayClient();
 
                 for (final String address : MemcachedCacheModule.this.addresses) {
-                    addresses.add(HostAndPort.fromString(address));
+                    builder.withAddress(address);
                 }
 
-                final BinaryMemcacheClient<byte[]> client = MemcacheClientBuilder
-                    .newByteArrayClient()
-                    .withAddresses(addresses)
-                    .connectBinary();
+                final BinaryMemcacheClient<byte[]> client = builder.connectBinary();
 
                 final ResolvableFuture<MemcacheClient<byte[]>> future = async.future();
 
-                Futures.addCallback(ConnectFuture.connectFuture(client),
-                    new FutureCallback<Void>() {
-                        @Override
-                        public void onSuccess(@Nullable final Void result) {
-                            future.resolve(client);
-                        }
-
-                        @Override
-                        public void onFailure(final Throwable cause) {
-                            future.fail(cause);
-                        }
-                    });
+                ConnectFuture.connectFuture(client).toCompletableFuture()
+                  .thenAccept(x -> future.resolve(client))
+                  .exceptionally(throwable -> {
+                      future.fail(throwable);
+                      return null;
+                });
 
                 return future;
             }
 
             @Override
-            public AsyncFuture<Void> destruct(
-                final MemcacheClient<byte[]> value
-            ) throws Exception {
+            public AsyncFuture<Void> destruct(final MemcacheClient<byte[]> value) {
                 return async.call(() -> {
                     value.shutdown();
                     return null;

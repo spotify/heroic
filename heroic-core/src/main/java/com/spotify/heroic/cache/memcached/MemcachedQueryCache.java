@@ -26,10 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
 import com.spotify.folsom.MemcacheClient;
-import com.spotify.folsom.MemcacheStatus;
 import com.spotify.heroic.HeroicMappers;
 import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.cache.CacheScope;
@@ -59,7 +56,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
-import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Named;
 import lombok.Data;
@@ -85,7 +81,8 @@ public class MemcachedQueryCache implements QueryCache {
     public MemcachedQueryCache(
         final Managed<MemcacheClient<byte[]>> client,
         @Named(HeroicMappers.APPLICATION_JSON_INTERNAL) final ObjectMapper mapper,
-        final AsyncFramework async, final Clock clock,
+        final AsyncFramework async,
+        final Clock clock,
         @Named("maxTtl") final Optional<Duration> maxTtl
     ) {
         this.client = client;
@@ -126,45 +123,38 @@ public class MemcachedQueryCache implements QueryCache {
         return client.doto(client -> {
             final ResolvableFuture<QueryResult> future = async.future();
 
-            Futures.addCallback(client.get(key), new FutureCallback<byte[]>() {
-                @Override
-                public void onSuccess(@Nullable final byte[] result) {
-                    if (result == null) {
-                        cacheSet(future, loader, key, cadence);
-                        return;
-                    }
-
-                    final CachedResult cachedResult;
-
-                    try (final InputStream input = new GZIPInputStream(
-                        new ByteArrayInputStream(result))) {
-                        cachedResult = mapper.readValue(input, CachedResult.class);
-                    } catch (final Exception e) {
-                        log.error("{}: failed to deserialize value from cache", key, e);
-                        // fallback to regular request
-                        cacheSet(future, loader, key, cadence);
-                        return;
-                    }
-
-                    final int ttl = calculateTtl(cadence);
-                    final CacheInfo cache = new CacheInfo(true, ttl, key);
-
-                    final QueryResult queryResult =
-                        new QueryResult(cachedResult.getRange(), cachedResult.getGroups(),
-                            ImmutableList.of(), watch.end(), cachedResult.getLimits(),
-                            cachedResult.getPreAggregationSampleSize(), Optional.of(cache));
-
-                    future.resolve(queryResult);
+            client.get(key).toCompletableFuture().thenAccept(result -> {
+                if (result == null) {
+                    cacheSet(future, loader, key, cadence);
+                    return;
                 }
+                final CachedResult cachedResult;
 
-                @Override
-                public void onFailure(final Throwable t) {
-                    log.error("{}: failed to load value from cache", key, t);
+                try (final InputStream input = new GZIPInputStream(
+                    new ByteArrayInputStream(result))) {
+                    cachedResult = mapper.readValue(input, CachedResult.class);
+                } catch (final Exception e) {
+                    log.error("{}: failed to deserialize value from cache", key, e);
                     // fallback to regular request
                     cacheSet(future, loader, key, cadence);
+                    return;
                 }
-            });
 
+                final int ttl = calculateTtl(cadence);
+                final CacheInfo cache = new CacheInfo(true, ttl, key);
+
+                final QueryResult queryResult =
+                    new QueryResult(cachedResult.getRange(), cachedResult.getGroups(),
+                        ImmutableList.of(), watch.end(), cachedResult.getLimits(),
+                        cachedResult.getPreAggregationSampleSize(), Optional.of(cache));
+
+                future.resolve(queryResult);
+            }).exceptionally(t -> {
+                log.error("{}: failed to load value from cache", key, t);
+                // fallback to regular request
+                cacheSet(future, loader, key, cadence);
+                return null;
+            });
             return future;
         });
     }
@@ -240,21 +230,14 @@ public class MemcachedQueryCache implements QueryCache {
 
         log.debug("{}: storing ({} bytes) with ttl ({}s)", key, bytes.length, ttl);
 
-        Futures.addCallback(borrowed.get().set(key, bytes, ttl),
-            new FutureCallback<MemcacheStatus>() {
-                @Override
-                public void onSuccess(@Nullable final MemcacheStatus result) {
-                    log.info("{}: stored ({} bytes) with ttl ({}s)", key, bytes.length, ttl);
-                    borrowed.release();
-                }
-
-                @Override
-                public void onFailure(final Throwable e) {
-                    log.error("{}: failed to store ({} bytes) with ttl ({}s)", key, bytes.length,
-                        ttl, e);
-                    borrowed.release();
-                }
-            });
+        borrowed.get().set(key, bytes, ttl).thenAccept(result -> {
+            log.info("{}: stored ({} bytes) with ttl ({}s)", key, bytes.length, ttl);
+            borrowed.release();
+        }).exceptionally(t -> {
+            log.error("{}: failed to store ({} bytes) with ttl ({}s)", key, bytes.length, ttl, t);
+            borrowed.release();
+            return null;
+        });
     }
 
     private int calculateTtl(final long cadence) {
