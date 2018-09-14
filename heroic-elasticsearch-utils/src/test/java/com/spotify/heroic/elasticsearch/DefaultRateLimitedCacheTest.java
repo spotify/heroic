@@ -1,4 +1,4 @@
-package com.spotify.heroic.elasticsearch.index;
+package com.spotify.heroic.elasticsearch;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.doReturn;
@@ -6,8 +6,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.google.common.util.concurrent.RateLimiter;
-import com.spotify.heroic.elasticsearch.DefaultRateLimitedCache;
-import com.spotify.heroic.elasticsearch.RateLimitExceededException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;

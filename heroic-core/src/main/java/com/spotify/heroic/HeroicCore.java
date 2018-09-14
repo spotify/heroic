@@ -80,6 +80,15 @@ import com.spotify.heroic.suggest.DaggerCoreSuggestComponent;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
+import io.opencensus.contrib.zpages.ZPageHandlers;
+import io.opencensus.exporter.trace.jaeger.JaegerTraceExporter;
+import io.opencensus.exporter.trace.stackdriver.StackdriverTraceConfiguration;
+import io.opencensus.exporter.trace.stackdriver.StackdriverTraceExporter;
+import io.opencensus.exporter.trace.zipkin.ZipkinTraceExporter;
+import io.opencensus.trace.Tracing;
+import io.opencensus.trace.config.TraceConfig;
+import io.opencensus.trace.samplers.Samplers;
+import java.io.IOException;
 import java.io.InputStream;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.InetSocketAddress;
@@ -89,6 +98,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -220,6 +230,8 @@ public class HeroicCore implements HeroicConfiguration {
 
         final HeroicConfig config = config(loading);
 
+        enableTracing(config.getTracing());
+
         final CoreEarlyComponent early = earlyInjector(loading, config);
         runBootstrappers(early, this.early);
 
@@ -244,6 +256,66 @@ public class HeroicCore implements HeroicConfiguration {
         injector.set(primary);
 
         return instance;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void enableTracing(Map<String, Object> config) throws IOException {
+        final Object stackdriverConfig = config.get("stackdriver");
+        if (stackdriverConfig != null) {
+            final Map<String, String> configMap = (Map) stackdriverConfig;
+            final String projectId = configMap.get("project");
+
+            if (projectId == null) {
+                throw new IllegalArgumentException("Configuration for stackdriver is incomplete");
+            }
+
+            log.info("Setting up StackDriver tracing for {}", projectId);
+            // Create and register the Stackdriver Tracing exporter
+            StackdriverTraceExporter.createAndRegister(
+                StackdriverTraceConfiguration.builder()
+                    .setProjectId(projectId)
+                    .build());
+        }
+
+        final Object jaegerConfig = config.get("jaeger");
+        if (jaegerConfig != null) {
+            final Map<String, String> configMap = (Map) jaegerConfig;
+            final String service = configMap.getOrDefault("service", "heroic");
+            final String thriftEndpoint = configMap.get("thriftEndpoint");
+
+            if (thriftEndpoint == null) {
+                throw new IllegalArgumentException("Configuration for jaeger is incomplete");
+            }
+
+            log.info("Setting up Jaeger tracing for service {}", service);
+            // Create and register the Jaeger Tracing exporter
+            JaegerTraceExporter.createAndRegister(thriftEndpoint, service);
+        }
+
+        final Object zipkinConfig = config.get("zipkin");
+        if (zipkinConfig != null) {
+            final Map<String, String> configMap = (Map) zipkinConfig;
+            final String service = configMap.getOrDefault("service", "heroic");
+            final String url = configMap.get("url");
+            ZipkinTraceExporter.createAndRegister(url, service);
+        }
+
+        final Integer zpagesPort = (Integer) config.get("zpagesPort");
+        if (zpagesPort != null) {
+            log.info("Starting zpage handlers on port {}", zpagesPort.toString());
+            // Start a web server for tracing data
+            ZPageHandlers.startHttpServerAndRegisterAll(zpagesPort);
+        }
+
+        final double probability = (double) config.getOrDefault("probability", 0.01);
+        log.info("Setting tracing to sample with a probability of {}", String.valueOf(probability));
+        TraceConfig traceConfig = Tracing.getTraceConfig();
+        traceConfig.updateActiveTraceParams(
+            traceConfig
+                .getActiveTraceParams()
+                .toBuilder()
+                .setSampler(Samplers.probabilitySampler(probability))
+                .build());
     }
 
     /**

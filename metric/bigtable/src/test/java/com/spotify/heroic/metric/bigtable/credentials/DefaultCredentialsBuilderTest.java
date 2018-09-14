@@ -26,7 +26,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.spotify.shaded.bigtable.com.google.cloud.bigtable.config.CredentialOptions;
+import com.google.cloud.bigtable.config.CredentialOptions;
 import com.spotify.heroic.metric.bigtable.CredentialsBuilder;
 import org.junit.Test;
 

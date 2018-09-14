@@ -22,7 +22,7 @@
 package com.spotify.heroic.analytics.bigtable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.spotify.shaded.bigtable.com.google.protobuf.ByteString;
+import com.google.protobuf.ByteString;
 import com.spotify.heroic.analytics.MetricAnalytics;
 import com.spotify.heroic.analytics.SeriesHit;
 import com.spotify.heroic.async.AsyncObservable;

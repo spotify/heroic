@@ -27,6 +27,7 @@ import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Initializing;
 import com.spotify.heroic.common.Statistics;
 import eu.toolchain.async.AsyncFuture;
+import io.opencensus.trace.Span;
 
 public interface MetadataBackend extends Grouped, Initializing, Collected {
     AsyncFuture<Void> configure();
@@ -35,6 +36,10 @@ public interface MetadataBackend extends Grouped, Initializing, Collected {
      * Buffer a write for the specified series.
      */
     AsyncFuture<WriteMetadata> write(WriteMetadata.Request request);
+    default AsyncFuture<WriteMetadata> write(WriteMetadata.Request request, Span parentSpan) {
+        // Ignore the parent span if the module does not specifically implement it.
+        return write(request);
+    }
 
     /**
      * Iterate <em>all</em> available metadata.

@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
-import com.spotify.shaded.bigtable.com.google.protobuf.ByteString;
+import com.google.protobuf.ByteString;
 import com.spotify.heroic.async.AsyncObservable;
-import com.spotify.shaded.bigtable.com.google.cloud.bigtable.grpc.scanner.FlatRow;
+import com.google.cloud.bigtable.grpc.scanner.FlatRow;
 import eu.toolchain.async.AsyncFuture;
 import java.util.List;
 

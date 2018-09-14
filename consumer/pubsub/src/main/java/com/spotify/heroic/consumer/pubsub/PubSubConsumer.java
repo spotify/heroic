@@ -25,7 +25,7 @@ import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
-import com.spotify.shaded.pubsub.com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMap;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;

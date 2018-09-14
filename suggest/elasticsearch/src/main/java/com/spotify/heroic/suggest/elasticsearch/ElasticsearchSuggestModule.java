@@ -197,11 +197,11 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
                 .expireAfterWrite(writeCacheDurationMinutes, TimeUnit.MINUTES)
                 .build();
 
+            reporter.registerCacheSize("elasticsearch-suggest-write-through", cache::size);
+
             if (writesPerSecond <= 0d) {
                 return new DisabledRateLimitedCache<>(cache.asMap());
             }
-
-            reporter.registerCacheSize("elasticsearch-suggest-write-through", cache::size);
 
             return new DefaultRateLimitedCache<>(cache.asMap(),
                 RateLimiter.create(writesPerSecond, rateLimitSlowStartSeconds, TimeUnit.SECONDS));

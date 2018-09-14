@@ -21,19 +21,19 @@
 
 package com.spotify.heroic.consumer.pubsub;
 
-import com.spotify.shaded.pubsub.com.google.api.gax.core.CredentialsProvider;
-import com.spotify.shaded.pubsub.com.google.api.gax.core.NoCredentialsProvider;
-import com.spotify.shaded.pubsub.com.google.api.gax.grpc.GrpcTransportChannel;
-import com.spotify.shaded.pubsub.com.google.api.gax.rpc.AlreadyExistsException;
-import com.spotify.shaded.pubsub.com.google.api.gax.rpc.FixedTransportChannelProvider;
-import com.spotify.shaded.pubsub.com.google.api.gax.rpc.TransportChannelProvider;
-import com.spotify.shaded.pubsub.com.google.cloud.pubsub.v1.Publisher;
-import com.spotify.shaded.pubsub.com.google.cloud.pubsub.v1.SubscriptionAdminClient;
-import com.spotify.shaded.pubsub.com.google.cloud.pubsub.v1.SubscriptionAdminSettings;
-import com.spotify.shaded.pubsub.com.google.pubsub.v1.ProjectSubscriptionName;
-import com.spotify.shaded.pubsub.com.google.pubsub.v1.ProjectTopicName;
-import com.spotify.shaded.pubsub.io.grpc.ManagedChannel;
-import com.spotify.shaded.pubsub.io.grpc.ManagedChannelBuilder;
+import com.google.api.gax.core.CredentialsProvider;
+import com.google.api.gax.core.NoCredentialsProvider;
+import com.google.api.gax.grpc.GrpcTransportChannel;
+import com.google.api.gax.rpc.AlreadyExistsException;
+import com.google.api.gax.rpc.FixedTransportChannelProvider;
+import com.google.api.gax.rpc.TransportChannelProvider;
+import com.google.cloud.pubsub.v1.Publisher;
+import com.google.cloud.pubsub.v1.SubscriptionAdminClient;
+import com.google.cloud.pubsub.v1.SubscriptionAdminSettings;
+import com.google.pubsub.v1.ProjectSubscriptionName;
+import com.google.pubsub.v1.ProjectTopicName;
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
 import java.io.IOException;
 
 public class EmulatorHelper {

@@ -22,7 +22,7 @@
 package com.spotify.heroic.metric.bigtable.api;
 
 import com.google.common.collect.ImmutableList;
-import com.spotify.shaded.bigtable.com.google.protobuf.ByteString;
+import com.google.protobuf.ByteString;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
@@ -31,7 +31,7 @@ import java.util.List;
 
 @RequiredArgsConstructor
 public class ReadModifyWriteRules {
-    private final List<com.spotify.shaded.bigtable.com.google.bigtable.v2.ReadModifyWriteRule>
+    private final List<com.google.bigtable.v2.ReadModifyWriteRule>
         rules;
 
     /**
@@ -43,7 +43,7 @@ public class ReadModifyWriteRules {
      *
      * @return The list of rules.
      */
-    List<com.spotify.shaded.bigtable.com.google.bigtable.v2.ReadModifyWriteRule> getRules() {
+    List<com.google.bigtable.v2.ReadModifyWriteRule> getRules() {
         return rules;
     }
 
@@ -53,13 +53,13 @@ public class ReadModifyWriteRules {
 
     @Data
     public static class Builder {
-        final List<com.spotify.shaded.bigtable.com.google.bigtable.v2.ReadModifyWriteRule> rules =
+        final List<com.google.bigtable.v2.ReadModifyWriteRule> rules =
             new ArrayList<>();
 
         public Builder increment(
             final String family, final ByteString column, final long value
         ) {
-            rules.add(com.spotify.shaded.bigtable.com.google.bigtable.v2.ReadModifyWriteRule
+            rules.add(com.google.bigtable.v2.ReadModifyWriteRule
                 .newBuilder()
                 .setFamilyName(family)
                 .setColumnQualifier(column)

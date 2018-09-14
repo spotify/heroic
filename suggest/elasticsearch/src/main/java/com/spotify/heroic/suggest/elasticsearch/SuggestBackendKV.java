@@ -68,6 +68,12 @@ import com.spotify.heroic.suggest.WriteSuggest;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
+import io.opencensus.common.Scope;
+import io.opencensus.trace.AttributeValue;
+import io.opencensus.trace.Span;
+import io.opencensus.trace.Status;
+import io.opencensus.trace.Tracer;
+import io.opencensus.trace.Tracing;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -117,6 +123,7 @@ import org.elasticsearch.search.aggregations.metrics.tophits.TopHitsAggregationB
 @ToString(of = {"connection"})
 public class SuggestBackendKV extends AbstractElasticsearchBackend
     implements SuggestBackend, Grouped, LifeCycles {
+    private final Tracer tracer = Tracing.getTracer();
     public static final String WRITE_CACHE_SIZE = "write-cache-size";
 
     static final String TAG_TYPE = "tag";
@@ -527,28 +534,57 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
     @Override
     public AsyncFuture<WriteSuggest> write(final WriteSuggest.Request request) {
+        return write(request, tracer.getCurrentSpan());
+    }
+
+    @Override
+    public AsyncFuture<WriteSuggest> write(
+        final WriteSuggest.Request request, final Span parentSpan
+    ) {
         return connection.doto((final Connection c) -> {
+            final String rootSpanName = "SuggestBackendKV.write";
+            final Span rootSpan = tracer
+                .spanBuilderWithExplicitParent(rootSpanName, parentSpan)
+                .startSpan();
+            final Scope rootScope = tracer.withSpan(rootSpan);
+
             final Series s = request.getSeries();
+            final String seriesId = s.hash();
+            rootSpan.putAttribute("id", AttributeValue.stringAttributeValue(seriesId));
 
             final String[] indices;
 
             try {
                 indices = c.writeIndices();
             } catch (NoIndexSelectedException e) {
+                rootSpan.setStatus(Status.INTERNAL.withDescription(e.toString()));
+                rootSpan.end();
+                rootScope.close();
                 return async.failed(e);
             }
 
             final RequestTimer<WriteSuggest> timer = WriteSuggest.timer();
             final List<AsyncFuture<WriteSuggest>> writes = new ArrayList<>();
+            final List<Span> indexSpans = new ArrayList<>();
 
             for (final String index : indices) {
+                final String indexSpanName = rootSpanName + ".index";
+                final Span indexSpan = tracer.spanBuilder(indexSpanName).startSpan();
+                indexSpans.add(indexSpan);
+
+                final Scope indexScope = tracer.withSpan(indexSpan);
+                indexSpan.putAttribute("index", AttributeValue.stringAttributeValue(index));
+
                 final Pair<String, HashCode> key = Pair.of(index, s.getHashCode());
 
                 if (!writeCache.acquire(key, reporter::reportWriteDroppedByCacheHit)) {
+                    indexSpan.setStatus(
+                        Status.ALREADY_EXISTS.withDescription("Write dropped by cache hit"));
+                    indexScope.close();
+                    indexSpan.end();
                     continue;
                 }
-
-                final String seriesId = s.hash();
+                indexSpan.addAnnotation("Write cache rate limit acquired");
 
                 final XContentBuilder series = XContentFactory.jsonBuilder();
 
@@ -556,14 +592,22 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 buildContext(series, s);
                 series.endObject();
 
-                writes.add(bind(c
-                    .index(index, SERIES_TYPE)
+                final Span indexWriteSpan = tracer
+                    .spanBuilderWithExplicitParent(indexSpanName + ".writeIndex", indexSpan)
+                    .startSpan();
+                writes.add(bind(c.index(index, SERIES_TYPE)
                     .setId(seriesId)
                     .setSource(series)
                     .setOpType(DocWriteRequest.OpType.CREATE)
-                    .execute()).directTransform(response -> timer.end()));
+                    .execute()).directTransform(response -> timer.end())
+                    .onFinished(indexWriteSpan::end));
 
                 for (final Map.Entry<String, String> e : s.getTags().entrySet()) {
+                    final Span tagSpan = tracer
+                        .spanBuilderWithExplicitParent(indexSpanName + ".writeTags", indexSpan)
+                        .startSpan();
+                    tagSpan.putAttribute("index", AttributeValue.stringAttributeValue(index));
+
                     final XContentBuilder suggest = XContentFactory.jsonBuilder();
 
                     suggest.startObject();
@@ -571,8 +615,12 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                     buildTag(suggest, e);
                     suggest.endObject();
 
-                    final String suggestId = seriesId + ":" + Integer.toHexString(e.hashCode());
-                    final FutureReporter.Context writeContext = reporter.setupWriteReporter();
+                    final String suggestId =
+                        seriesId + ":" + Integer.toHexString(e.hashCode());
+                    tagSpan.putAttribute("suggestId",
+                        AttributeValue.stringAttributeValue(suggestId));
+                    final FutureReporter.Context writeContext =
+                        reporter.setupWriteReporter();
 
                     writes.add(bind(c
                         .index(index, TAG_TYPE)
@@ -583,11 +631,18 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                         .directTransform(response -> timer.end())
                         .catchFailed(handleVersionConflict(WriteSuggest::of,
                             reporter::reportWriteDroppedByDuplicate))
-                        .onDone(writeContext));
+                        .onDone(writeContext)
+                        .onFinished(tagSpan::end));
                 }
+
+                indexScope.close();
             }
 
-            return async.collect(writes, WriteSuggest.reduce());
+            rootScope.close();
+            return async.collect(writes, WriteSuggest.reduce()).onFinished(() -> {
+                indexSpans.forEach(Span::end);
+                rootSpan.end();
+            });
         });
     }
 

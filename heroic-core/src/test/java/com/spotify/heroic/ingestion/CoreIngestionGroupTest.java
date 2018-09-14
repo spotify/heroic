@@ -28,6 +28,7 @@ import static java.util.Optional.empty;
 import static java.util.Optional.of;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
@@ -208,16 +209,16 @@ public class CoreIngestionGroupTest {
         doReturn(rangeSupplier).when(group).rangeSupplier(request);
         doReturn(expected).when(async).collect(futures, Ingestion.reduce());
 
-        doReturn(other).when(group).doMetricWrite(metric, request);
-        doReturn(other).when(group).doMetadataWrite(metadata, request, range);
-        doReturn(other).when(group).doSuggestWrite(suggest, request, range);
+        doReturn(other).when(group).doMetricWrite(eq(metric), eq(request), any());
+        doReturn(other).when(group).doMetadataWrite(eq(metadata), eq(request), eq(range), any());
+        doReturn(other).when(group).doSuggestWrite(eq(suggest), eq(request), eq(range), any());
 
         assertEquals(expected, group.doWrite(request));
 
         verify(group).rangeSupplier(request);
-        verify(group).doMetricWrite(metric, request);
-        verify(group).doMetadataWrite(metadata, request, range);
-        verify(group).doSuggestWrite(suggest, request, range);
+        verify(group).doMetricWrite(eq(metric), eq(request), any());
+        verify(group).doMetadataWrite(eq(metadata), eq(request), eq(range), any());
+        verify(group).doSuggestWrite(eq(suggest), eq(request), eq(range), any());
         verify(rangeSupplier, times(2)).get();
     }
 
@@ -230,16 +231,16 @@ public class CoreIngestionGroupTest {
         doReturn(rangeSupplier).when(group).rangeSupplier(request);
         doReturn(expected).when(async).collect(futures, Ingestion.reduce());
 
-        doReturn(other).when(group).doMetricWrite(metric, request);
-        doReturn(other).when(group).doMetadataWrite(metadata, request, range);
-        doReturn(other).when(group).doSuggestWrite(suggest, request, range);
+        doReturn(other).when(group).doMetricWrite(eq(metric), eq(request), any());
+        doReturn(other).when(group).doMetadataWrite(eq(metadata), eq(request), eq(range), any());
+        doReturn(other).when(group).doSuggestWrite(eq(suggest), eq(request), eq(range), any());
 
         assertEquals(expected, group.doWrite(request));
 
         verify(group).rangeSupplier(request);
-        verify(group).doMetricWrite(metric, request);
-        verify(group, never()).doMetadataWrite(metadata, request, range);
-        verify(group).doSuggestWrite(suggest, request, range);
+        verify(group).doMetricWrite(eq(metric), eq(request), any());
+        verify(group, never()).doMetadataWrite(eq(metadata), eq(request), eq(range), any());
+        verify(group).doSuggestWrite(eq(suggest), eq(request), eq(range), any());
         verify(rangeSupplier, times(1)).get();
     }
 }

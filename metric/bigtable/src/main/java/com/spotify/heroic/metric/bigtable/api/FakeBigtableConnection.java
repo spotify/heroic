@@ -23,10 +23,10 @@ package com.spotify.heroic.metric.bigtable.api;
 
 import static com.spotify.heroic.metric.bigtable.api.RowFilter.compareByteStrings;
 
-import com.spotify.shaded.bigtable.com.google.bigtable.v2.Mutation;
-import com.spotify.shaded.bigtable.com.google.protobuf.ByteString;
+import com.google.bigtable.v2.Mutation;
+import com.google.protobuf.ByteString;
 import com.spotify.heroic.async.AsyncObservable;
-import com.spotify.shaded.bigtable.com.google.cloud.bigtable.grpc.scanner.FlatRow;
+import com.google.cloud.bigtable.grpc.scanner.FlatRow;
 import com.spotify.heroic.metric.bigtable.BigtableConnection;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;

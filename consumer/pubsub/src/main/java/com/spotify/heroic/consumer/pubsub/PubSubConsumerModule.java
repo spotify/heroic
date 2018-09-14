@@ -222,7 +222,8 @@ public class PubSubConsumerModule implements ConsumerModule {
                         log.info("project:{}, topic:{}, subscription:{}",
                                  projectId, topicId, subscriptionId);
                         final Connection connection = new Connection(
-                            consumer, projectId, topicId, subscriptionId, threads,
+                            consumer, reporter, errors, consumed,
+                            projectId, topicId, subscriptionId, threads,
                             maxOutstandingElementCount, maxOutstandingRequestBytes,
                             maxInboundMessageSize, keepAlive);
                         connection.setEmulatorOptions();
