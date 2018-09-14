@@ -240,3 +240,10 @@ metadata:
 #  #  # GCP project to send traces to. (required)
 #  #  # @default empty
 #  #  project: heroic
+#  #zipkin:
+#  #  # Zipkin URL to send traces to. (required)
+#  #  # @default empty
+#  #  url: http://localhost:9411/api/v2/spans
+#  #  # Name of the service to report to Zipkin.
+#  #  # @default "heroic"
+#  #  service: heroic
