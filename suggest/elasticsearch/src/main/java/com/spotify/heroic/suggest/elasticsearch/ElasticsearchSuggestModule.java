@@ -22,8 +22,11 @@
 package com.spotify.heroic.suggest.elasticsearch;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.lang.Math.toIntExact;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
+import static java.util.concurrent.TimeUnit.MINUTES;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -34,6 +37,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.hash.HashCode;
 import com.google.common.util.concurrent.RateLimiter;
 import com.spotify.heroic.ExtraParameters;
+import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.DynamicModuleId;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.ModuleId;
@@ -43,6 +47,8 @@ import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.ConnectionModule;
 import com.spotify.heroic.elasticsearch.DefaultRateLimitedCache;
 import com.spotify.heroic.elasticsearch.DisabledRateLimitedCache;
+import com.spotify.heroic.elasticsearch.DistributedRateLimitedCache;
+import com.spotify.heroic.elasticsearch.MemcachedConnection;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
@@ -58,7 +64,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import javax.inject.Named;
 import lombok.Data;
@@ -84,6 +89,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
     private final double writesPerSecond;
     private final Long rateLimitSlowStartSeconds;
     private final long writeCacheDurationMinutes;
+    private final String distributedCacheSrvRecord;
     private final String templateName;
     private final String backendType;
     private final boolean configure;
@@ -105,11 +111,13 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
 
     @JsonCreator
     public ElasticsearchSuggestModule(
-        @JsonProperty("id") Optional<String> id, @JsonProperty("groups") Optional<Groups> groups,
+        @JsonProperty("id") Optional<String> id,
+        @JsonProperty("groups") Optional<Groups> groups,
         @JsonProperty("connection") Optional<ConnectionModule> connection,
         @JsonProperty("writesPerSecond") Optional<Double> writesPerSecond,
         @JsonProperty("rateLimitSlowStartSeconds") Optional<Long> rateLimitSlowStartSeconds,
         @JsonProperty("writeCacheDurationMinutes") Optional<Long> writeCacheDurationMinutes,
+        @JsonProperty("distributedCacheSrvRecord") Optional<String> distributedCacheSrvRecord,
         @JsonProperty("templateName") Optional<String> templateName,
         @JsonProperty("backendType") Optional<String> backendType,
         @JsonProperty("configure") Optional<Boolean> configure
@@ -122,6 +130,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
             rateLimitSlowStartSeconds.orElse(DEFAULT_RATE_LIMIT_SLOW_START_SECONDS);
         this.writeCacheDurationMinutes =
             writeCacheDurationMinutes.orElse(DEFAULT_WRITES_CACHE_DURATION_MINUTES);
+        this.distributedCacheSrvRecord = distributedCacheSrvRecord.orElse("");
         this.templateName = templateName.orElse(DEFAULT_TEMPLATE_NAME);
         this.backendType = backendType.orElse(DEFAULT_BACKEND_TYPE);
         this.type = backendType.map(this::lookupBackendType).orElse(defaultSetup);
@@ -194,17 +203,27 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
             final Cache<Pair<String, HashCode>, Boolean> cache = CacheBuilder
                 .newBuilder()
                 .concurrencyLevel(4)
-                .expireAfterWrite(writeCacheDurationMinutes, TimeUnit.MINUTES)
+                .expireAfterWrite(writeCacheDurationMinutes, MINUTES)
                 .build();
 
             reporter.registerCacheSize("elasticsearch-suggest-write-through", cache::size);
+
 
             if (writesPerSecond <= 0d) {
                 return new DisabledRateLimitedCache<>(cache.asMap());
             }
 
+            if (distributedCacheSrvRecord.length() > 0) {
+                return new DistributedRateLimitedCache<>(
+                  cache.asMap(),
+                  RateLimiter.create(writesPerSecond, rateLimitSlowStartSeconds, SECONDS),
+                  MemcachedConnection.create(distributedCacheSrvRecord),
+                  toIntExact(Duration.of(writeCacheDurationMinutes, MINUTES).convert(SECONDS))
+                );
+            }
+
             return new DefaultRateLimitedCache<>(cache.asMap(),
-                RateLimiter.create(writesPerSecond, rateLimitSlowStartSeconds, TimeUnit.SECONDS));
+                RateLimiter.create(writesPerSecond, rateLimitSlowStartSeconds, SECONDS));
         }
 
         @Provides
@@ -238,6 +257,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
         private Optional<Double> writesPerSecond = empty();
         private Optional<Long> rateLimitSlowStartSeconds = empty();
         private Optional<Long> writeCacheDurationMinutes = empty();
+        private Optional<String> distributedCacheSrvRecord = empty();
         private Optional<String> templateName = empty();
         private Optional<String> backendType = empty();
         private Optional<Boolean> configure = empty();
@@ -277,6 +297,11 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
             this.writeCacheDurationMinutes = of(writeCacheDurationMinutes);
             return this;
         }
+        public Builder distributedCacheSrvRecord(final String distributedCacheSrvRecord) {
+            checkNotNull(distributedCacheSrvRecord, "distributedCacheSrvRecord");
+            this.distributedCacheSrvRecord = of(distributedCacheSrvRecord);
+            return this;
+        }
 
         public Builder templateName(final String templateName) {
             checkNotNull(templateName, "templateName");
@@ -297,8 +322,8 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
 
         public ElasticsearchSuggestModule build() {
             return new ElasticsearchSuggestModule(id, groups, connection, writesPerSecond,
-                rateLimitSlowStartSeconds, writeCacheDurationMinutes, templateName, backendType,
-                configure);
+                rateLimitSlowStartSeconds, writeCacheDurationMinutes, distributedCacheSrvRecord,
+                templateName, backendType, configure);
         }
     }
 }
