@@ -84,6 +84,7 @@ import io.opencensus.contrib.zpages.ZPageHandlers;
 import io.opencensus.exporter.trace.jaeger.JaegerTraceExporter;
 import io.opencensus.exporter.trace.stackdriver.StackdriverTraceConfiguration;
 import io.opencensus.exporter.trace.stackdriver.StackdriverTraceExporter;
+import io.opencensus.exporter.trace.zipkin.ZipkinTraceExporter;
 import io.opencensus.trace.Tracing;
 import io.opencensus.trace.config.TraceConfig;
 import io.opencensus.trace.samplers.Samplers;
@@ -289,6 +290,14 @@ public class HeroicCore implements HeroicConfiguration {
             log.info("Setting up Jaeger tracing for service {}", service);
             // Create and register the Jaeger Tracing exporter
             JaegerTraceExporter.createAndRegister(thriftEndpoint, service);
+        }
+
+        final Object zipkinConfig = config.get("zipkin");
+        if (zipkinConfig != null) {
+            final Map<String, String> configMap = (Map) zipkinConfig;
+            final String service = configMap.getOrDefault("service", "heroic");
+            final String url = configMap.get("url");
+            ZipkinTraceExporter.createAndRegister(url, service);
         }
 
         final Integer zpagesPort = (Integer) config.get("zpagesPort");
