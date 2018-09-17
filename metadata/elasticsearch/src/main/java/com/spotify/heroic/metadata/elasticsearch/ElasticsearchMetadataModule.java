@@ -22,9 +22,12 @@
 package com.spotify.heroic.metadata.elasticsearch;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.lang.Math.toIntExact;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
 import static java.util.Optional.ofNullable;
+import static java.util.concurrent.TimeUnit.MINUTES;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -35,6 +38,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.hash.HashCode;
 import com.google.common.util.concurrent.RateLimiter;
 import com.spotify.heroic.ExtraParameters;
+import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.DynamicModuleId;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.ModuleId;
@@ -44,6 +48,8 @@ import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.ConnectionModule;
 import com.spotify.heroic.elasticsearch.DefaultRateLimitedCache;
 import com.spotify.heroic.elasticsearch.DisabledRateLimitedCache;
+import com.spotify.heroic.elasticsearch.DistributedRateLimitedCache;
+import com.spotify.heroic.elasticsearch.MemcachedConnection;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
@@ -73,6 +79,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
     private static final double DEFAULT_WRITES_PER_SECOND = 3000d;
     private static final long DEFAULT_RATE_LIMIT_SLOW_START_SECONDS = 0L;
     private static final long DEFAULT_WRITE_CACHE_DURATION_MINUTES = 240L;
+
     public static final String DEFAULT_GROUP = "elasticsearch";
     public static final String DEFAULT_TEMPLATE_NAME = "heroic-metadata";
 
@@ -83,6 +90,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
     private final Double writesPerSecond;
     private final Long rateLimitSlowStartSeconds;
     private final Long writeCacheDurationMinutes;
+    private final String distributedCacheSrvRecord;
     private final int deleteParallelism;
     private final boolean configure;
 
@@ -104,11 +112,13 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
 
     @JsonCreator
     public ElasticsearchMetadataModule(
-        @JsonProperty("id") Optional<String> id, @JsonProperty("groups") Optional<Groups> groups,
+        @JsonProperty("id") Optional<String> id,
+        @JsonProperty("groups") Optional<Groups> groups,
         @JsonProperty("connection") Optional<ConnectionModule> connection,
         @JsonProperty("writesPerSecond") Optional<Double> writesPerSecond,
         @JsonProperty("rateLimitSlowStartSeconds") Optional<Long> rateLimitSlowStartSeconds,
         @JsonProperty("writeCacheDurationMinutes") Optional<Long> writeCacheDurationMinutes,
+        @JsonProperty("distributedCacheSrvRecord") Optional<String> distributedCacheSrvRecord,
         @JsonProperty("deleteParallelism") Optional<Integer> deleteParallelism,
         @JsonProperty("templateName") Optional<String> templateName,
         @JsonProperty("backendType") Optional<String> backendType,
@@ -122,6 +132,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
             rateLimitSlowStartSeconds.orElse(DEFAULT_RATE_LIMIT_SLOW_START_SECONDS);
         this.writeCacheDurationMinutes =
             writeCacheDurationMinutes.orElse(DEFAULT_WRITE_CACHE_DURATION_MINUTES);
+        this.distributedCacheSrvRecord = distributedCacheSrvRecord.orElse("");
         this.deleteParallelism = deleteParallelism.orElse(DEFAULT_DELETE_PARALLELISM);
         this.templateName = templateName.orElse(DEFAULT_TEMPLATE_NAME);
         this.backendTypeBuilder =
@@ -213,6 +224,15 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
                 return new DisabledRateLimitedCache<>(cache.asMap());
             }
 
+            if (distributedCacheSrvRecord.length() > 0) {
+                return new DistributedRateLimitedCache<>(
+                  cache.asMap(),
+                  RateLimiter.create(writesPerSecond, rateLimitSlowStartSeconds, SECONDS),
+                  MemcachedConnection.create(distributedCacheSrvRecord),
+                  toIntExact(Duration.of(writeCacheDurationMinutes, MINUTES).convert(SECONDS))
+                );
+            }
+
             return new DefaultRateLimitedCache<>(cache.asMap(),
                 RateLimiter.create(writesPerSecond, rateLimitSlowStartSeconds, TimeUnit.SECONDS));
         }
@@ -251,6 +271,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
         private Optional<Double> writesPerSecond = empty();
         private Optional<Long> rateLimitSlowStartSeconds = empty();
         private Optional<Long> writeCacheDurationMinutes = empty();
+        private Optional<String> distributedCacheSrvRecord = empty();
         private Optional<Integer> deleteParallelism = empty();
         private Optional<String> templateName = empty();
         private Optional<String> backendType = empty();
@@ -291,6 +312,11 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
             return this;
         }
 
+        public Builder distributedCacheSrvRecord(final String distributedCacheSrvRecord) {
+            this.distributedCacheSrvRecord = of(distributedCacheSrvRecord);
+            return this;
+        }
+
         public Builder deleteParallelism(final int deleteParallelism) {
             this.deleteParallelism = of(deleteParallelism);
             return this;
@@ -315,8 +341,8 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
 
         public ElasticsearchMetadataModule build() {
             return new ElasticsearchMetadataModule(id, groups, connection, writesPerSecond,
-                rateLimitSlowStartSeconds, writeCacheDurationMinutes, deleteParallelism,
-                templateName, backendType, configure);
+                rateLimitSlowStartSeconds, writeCacheDurationMinutes, distributedCacheSrvRecord,
+                deleteParallelism, templateName, backendType, configure);
         }
     }
 }
