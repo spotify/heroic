@@ -124,6 +124,7 @@ public class Connection {
         subscriber = Subscriber
             .newBuilder(subscriptionName, receiver)
             .setFlowControlSettings(flowControlSettings)
+            .setParallelPullCount(threads)
             .setExecutorProvider(executorProvider)
             .setChannelProvider(channelProvider)
             .setCredentialsProvider(credentialsProvider)
