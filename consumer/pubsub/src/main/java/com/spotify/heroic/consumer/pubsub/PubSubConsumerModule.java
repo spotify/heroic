@@ -56,7 +56,7 @@ import lombok.extern.slf4j.Slf4j;
 @Data
 public class PubSubConsumerModule implements ConsumerModule {
     private static final int DEFAULT_THREADS_PER_SUBSCRIPTION = 8;
-    private static final Long DEFAULT_MAX_OUTSTANDING_ELEMENT_COUNT = 10_000L;
+    private static final Long DEFAULT_MAX_OUTSTANDING_ELEMENT_COUNT = 20_000L;
     private static final Long DEFAULT_MAX_OUTSTANDING_REQUEST_BYTES = 1_000_000_000L;
     // 20MB API maximum message size.
     private static final int DEFAULT_MAX_INBOUND_MESSAGE_SIZE = 20 * 1024 * 1024;
