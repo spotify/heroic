@@ -251,11 +251,11 @@ public class HttpServer implements LifeCycles {
     }
 
     private ResourceConfig setupResourceConfig() throws Exception {
-        final ResourceConfig c = new ResourceConfig();
+        final ResourceConfig config = new ResourceConfig();
 
         int count = 0;
 
-        for (final Function<CoreComponent, List<Object>> resource : config.getResources()) {
+        for (final Function<CoreComponent, List<Object>> resource : this.config.getResources()) {
             if (log.isTraceEnabled()) {
                 log.trace("Loading resource: {}", resource);
             }
@@ -263,7 +263,7 @@ public class HttpServer implements LifeCycles {
             final List<Object> resources = instance.inject(resource::apply);
 
             for (final Object r : resources) {
-                c.register(r);
+                config.register(r);
             }
 
             count += resources.size();
@@ -271,10 +271,11 @@ public class HttpServer implements LifeCycles {
 
         // Resources.
         if (enableCors) {
-            c.register(new CorsResponseFilter(corsAllowOrigin.orElse(DEFAULT_CORS_ALLOW_ORIGIN)));
+            config.register(
+                new CorsResponseFilter(corsAllowOrigin.orElse(DEFAULT_CORS_ALLOW_ORIGIN)));
         }
 
         log.info("Loaded {} resource(s)", count);
-        return c;
+        return config;
     }
 }
