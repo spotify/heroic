@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicCoreInstance;
 import com.spotify.heroic.dagger.CoreComponent;
+import com.spotify.heroic.http.tracing.OpenCensusFeature;
 import com.spotify.heroic.jetty.JettyJSONErrorHandler;
 import com.spotify.heroic.jetty.JettyServerConnector;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
@@ -252,6 +253,7 @@ public class HttpServer implements LifeCycles {
 
     private ResourceConfig setupResourceConfig() throws Exception {
         final ResourceConfig config = new ResourceConfig();
+        config.register(OpenCensusFeature.class);
 
         int count = 0;
 
