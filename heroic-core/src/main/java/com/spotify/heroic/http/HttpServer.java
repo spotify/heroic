@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicCoreInstance;
 import com.spotify.heroic.dagger.CoreComponent;
+import com.spotify.heroic.http.tracing.OpenCensusFeature;
 import com.spotify.heroic.jetty.JettyJSONErrorHandler;
 import com.spotify.heroic.jetty.JettyServerConnector;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
@@ -251,11 +252,12 @@ public class HttpServer implements LifeCycles {
     }
 
     private ResourceConfig setupResourceConfig() throws Exception {
-        final ResourceConfig c = new ResourceConfig();
+        final ResourceConfig config = new ResourceConfig();
+        config.register(OpenCensusFeature.class);
 
         int count = 0;
 
-        for (final Function<CoreComponent, List<Object>> resource : config.getResources()) {
+        for (final Function<CoreComponent, List<Object>> resource : this.config.getResources()) {
             if (log.isTraceEnabled()) {
                 log.trace("Loading resource: {}", resource);
             }
@@ -263,7 +265,7 @@ public class HttpServer implements LifeCycles {
             final List<Object> resources = instance.inject(resource::apply);
 
             for (final Object r : resources) {
-                c.register(r);
+                config.register(r);
             }
 
             count += resources.size();
@@ -271,10 +273,11 @@ public class HttpServer implements LifeCycles {
 
         // Resources.
         if (enableCors) {
-            c.register(new CorsResponseFilter(corsAllowOrigin.orElse(DEFAULT_CORS_ALLOW_ORIGIN)));
+            config.register(
+                new CorsResponseFilter(corsAllowOrigin.orElse(DEFAULT_CORS_ALLOW_ORIGIN)));
         }
 
         log.info("Loaded {} resource(s)", count);
-        return c;
+        return config;
     }
 }

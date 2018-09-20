@@ -22,8 +22,7 @@
 package com.spotify.heroic.shell;
 
 import com.google.common.collect.ImmutableList;
-import jersey.repackaged.com.google.common.collect.ImmutableMap;
-
+import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
