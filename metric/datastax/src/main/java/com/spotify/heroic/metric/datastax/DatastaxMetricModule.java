@@ -92,6 +92,8 @@ public final class DatastaxMetricModule implements MetricModule, DynamicModuleId
     private final RetryPolicy retryPolicy;
     /* authentication to apply to builder */
     private final DatastaxAuthentication authentication;
+    /* client pooling options */
+    private final DatastaxPoolingOptions poolingOptions;
 
     @JsonCreator
     public DatastaxMetricModule(
@@ -103,7 +105,8 @@ public final class DatastaxMetricModule implements MetricModule, DynamicModuleId
         @JsonProperty("readTimeout") Optional<Duration> readTimeout,
         @JsonProperty("consistencyLevel") Optional<ConsistencyLevel> consistencyLevel,
         @JsonProperty("retryPolicy") Optional<RetryPolicy> retryPolicy,
-        @JsonProperty("authentication") Optional<DatastaxAuthentication> authentication
+        @JsonProperty("authentication") Optional<DatastaxAuthentication> authentication,
+        @JsonProperty("poolingOptions") Optional<DatastaxPoolingOptions> poolingOptions
     ) {
         this.id = id;
         this.groups = groups.orElseGet(Groups::empty).or("heroic");
@@ -115,6 +118,7 @@ public final class DatastaxMetricModule implements MetricModule, DynamicModuleId
         this.consistencyLevel = consistencyLevel.orElse(ConsistencyLevel.ONE);
         this.retryPolicy = retryPolicy.orElse(DefaultRetryPolicy.INSTANCE);
         this.authentication = authentication.orElseGet(DatastaxAuthentication.None::new);
+        this.poolingOptions = poolingOptions.orElseGet(DatastaxPoolingOptions::new);
     }
 
     private static List<InetSocketAddress> convert(Set<String> source) {
@@ -199,7 +203,7 @@ public final class DatastaxMetricModule implements MetricModule, DynamicModuleId
         ) {
             return async.managed(
                 new ManagedSetupConnection(async, seeds, schema, configure, fetchSize, readTimeout,
-                    consistencyLevel, retryPolicy, authentication));
+                    consistencyLevel, retryPolicy, authentication, poolingOptions));
         }
 
         @Provides
@@ -229,6 +233,7 @@ public final class DatastaxMetricModule implements MetricModule, DynamicModuleId
         private Optional<ConsistencyLevel> consistencyLevel = empty();
         private Optional<RetryPolicy> retryPolicy = empty();
         private Optional<DatastaxAuthentication> authentication = empty();
+        private Optional<DatastaxPoolingOptions> poolingOptions = empty();
 
         public Builder id(String id) {
             this.id = of(id);
@@ -282,7 +287,7 @@ public final class DatastaxMetricModule implements MetricModule, DynamicModuleId
 
         public DatastaxMetricModule build() {
             return new DatastaxMetricModule(id, groups, seeds, schema, configure, fetchSize,
-                readTimeout, consistencyLevel, retryPolicy, authentication);
+                readTimeout, consistencyLevel, retryPolicy, authentication, poolingOptions);
         }
     }
 }

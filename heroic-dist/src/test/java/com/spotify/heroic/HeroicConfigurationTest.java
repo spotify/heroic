@@ -141,6 +141,11 @@ public class HeroicConfigurationTest {
         });
     }
 
+    @Test
+    public void testDatastaxConfiguration() throws Exception {
+        testConfiguration("heroic-datastax.yml");
+    }
+
     /**
      * Test that conditional features from configuration can be parsed and used.
      */
