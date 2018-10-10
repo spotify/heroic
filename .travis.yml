@@ -40,3 +40,8 @@ after_script:
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
+
+deploy:
+  # trigger docker hub build
+  provider: script
+  script: curl --data build=true -X POST https://registry.hub.docker.com/u/spotify/heroic/trigger/$DOCKER_TOKEN/
