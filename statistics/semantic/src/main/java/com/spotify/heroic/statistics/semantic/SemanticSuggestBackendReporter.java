@@ -56,7 +56,6 @@ public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
     private final FutureReporter backendWrite;
 
     private final Meter writesDroppedByCacheHit;
-    private final Meter writesDroppedByRateLimit;
     private final Meter writesDroppedByDuplicate;
 
     public SemanticSuggestBackendReporter(SemanticMetricRegistry registry) {
@@ -79,8 +78,6 @@ public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
 
         writesDroppedByCacheHit =
             registry.meter(base.tagged("what", "writes-dropped-by-cache-hit", "unit", Units.DROP));
-        writesDroppedByRateLimit =
-            registry.meter(base.tagged("what", "writes-dropped-by-rate-limit", "unit", Units.DROP));
         writesDroppedByDuplicate =
             registry.meter(base.tagged("what", "writes-dropped-by-duplicate", "unit", Units.DROP));
     }
@@ -95,11 +92,6 @@ public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
     @Override
     public void reportWriteDroppedByCacheHit() {
         writesDroppedByCacheHit.mark();
-    }
-
-    @Override
-    public void reportWriteDroppedByRateLimit() {
-        writesDroppedByRateLimit.mark();
     }
 
     @Override

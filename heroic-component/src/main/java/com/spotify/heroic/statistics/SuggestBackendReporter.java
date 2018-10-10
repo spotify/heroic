@@ -28,8 +28,6 @@ public interface SuggestBackendReporter {
 
     void reportWriteDroppedByCacheHit();
 
-    void reportWriteDroppedByRateLimit();
-
     void reportWriteDroppedByDuplicate();
 
     FutureReporter.Context setupWriteReporter();
