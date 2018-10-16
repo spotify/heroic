@@ -63,7 +63,6 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
     private final Meter entries;
 
     private final Meter writesDroppedByCacheHit;
-    private final Meter writesDroppedByRateLimit;
     private final Meter writesDroppedByDuplicate;
 
     private final Histogram writeBatchDuration;
@@ -93,8 +92,6 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
 
         writesDroppedByCacheHit =
             registry.meter(base.tagged("what", "writes-dropped-by-cache-hit", "unit", Units.DROP));
-        writesDroppedByRateLimit =
-            registry.meter(base.tagged("what", "writes-dropped-by-rate-limit", "unit", Units.DROP));
         writesDroppedByDuplicate =
             registry.meter(base.tagged("what", "writes-dropped-by-duplicate", "unit", Units.DROP));
 
@@ -117,11 +114,6 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
     @Override
     public void reportWriteDroppedByCacheHit() {
         writesDroppedByCacheHit.mark();
-    }
-
-    @Override
-    public void reportWriteDroppedByRateLimit() {
-        writesDroppedByRateLimit.mark();
     }
 
     @Override

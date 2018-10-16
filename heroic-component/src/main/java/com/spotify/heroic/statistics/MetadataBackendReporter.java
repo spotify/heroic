@@ -26,8 +26,6 @@ import com.spotify.heroic.metadata.MetadataBackend;
 public interface MetadataBackendReporter {
     void reportWriteDroppedByCacheHit();
 
-    void reportWriteDroppedByRateLimit();
-
     void reportWriteDroppedByDuplicate();
 
     FutureReporter.Context setupBackendWriteReporter();

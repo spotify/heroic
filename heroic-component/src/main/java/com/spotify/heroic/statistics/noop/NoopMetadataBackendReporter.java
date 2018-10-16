@@ -53,10 +53,6 @@ public class NoopMetadataBackendReporter implements MetadataBackendReporter {
     }
 
     @Override
-    public void reportWriteDroppedByRateLimit() {
-    }
-
-    @Override
     public void reportWriteDroppedByDuplicate() {
     }
 
