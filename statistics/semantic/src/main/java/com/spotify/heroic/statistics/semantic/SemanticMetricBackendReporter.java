@@ -59,7 +59,6 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
     private static final String COMPONENT = "metric-backend";
 
     private final FutureReporter write;
-    private final FutureReporter writeBatch;
     private final FutureReporter fetch;
     private final FutureReporter deleteKey;
     private final FutureReporter countKey;
@@ -91,8 +90,6 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
 
         this.write =
             new SemanticFutureReporter(registry, base.tagged("what", "write", "unit", Units.WRITE));
-        this.writeBatch = new SemanticFutureReporter(registry,
-            base.tagged("what", "write-batch", "unit", Units.WRITE));
         this.fetch =
             new SemanticFutureReporter(registry, base.tagged("what", "fetch", "unit", Units.QUERY));
         this.deleteKey = new SemanticFutureReporter(registry,
