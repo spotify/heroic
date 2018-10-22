@@ -10,9 +10,9 @@ RUN mvn clean package
 FROM openjdk:8
 LABEL maintainer "layer8 <layer8@spotify.com>"
 
-ENTRYPOINT ["/usr/bin/heroic.sh"]
-EXPOSE 8080 #API
-EXPOSE 9190 #SHELL
+#ENTRYPOINT ["/usr/bin/heroic.sh"]
+EXPOSE 8080 
+EXPOSE 9190
 
 COPY --from=builder heroic-dist/target/heroic-dist-0.0.1-SNAPSHOT-shaded.jar /usr/share/heroic/heroic.jar
 COPY run-heroic.sh /usr/bin/heroic.sh
