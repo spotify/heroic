@@ -64,6 +64,22 @@ Heroic has been tested with the following services:
       [elastic/elasticsearch#13273](https://github.com/elastic/elasticsearch/issues/13273)
 * Kafka (`0.8.x`) when using [consumer/kafka](/consumer/kafka).
 
+### Building/Running via docker
+
+A docker container with the shaded jar is now available. To build the container:
+
+```
+$ docker build -t heroic:latest .
+```
+
+This is a multi-stage build and will first build Heroic via a `mvn clean package` and then copy the resulting shaded jar into the runtime container.
+
+Running heroic via docker can be done:
+
+```
+$ docker run -d -p 8080:8080 -p 9091:9091 -v /path/to/config.yml:/heroic.yml spotify/heroic:latest
+```
+
 #### Logging
 
 Logging is captured using [SLF4J](http://www.slf4j.org/), and forwarded to
