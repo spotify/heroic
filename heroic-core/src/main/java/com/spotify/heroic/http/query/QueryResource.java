@@ -26,6 +26,7 @@ import com.spotify.heroic.Query;
 import com.spotify.heroic.QueryManager;
 import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.http.CoreHttpContextFactory;
+import com.spotify.heroic.metric.Arithmetic;
 import com.spotify.heroic.metric.QueryMetrics;
 import com.spotify.heroic.metric.QueryMetricsResponse;
 import com.spotify.heroic.metric.QueryResult;
@@ -53,11 +54,13 @@ import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Triple;
 
 @Path("query")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Slf4j
 public class QueryResource {
     private final JavaxRestFramework httpAsync;
     private final QueryManager query;
@@ -114,9 +117,7 @@ public class QueryResource {
         bindMetricsResponse(response, callback, queryContext);
     }
 
-    @POST
-    @Path("batch")
-    public void metrics(
+    private AsyncFuture<QueryBatchResponse> batchMetricsHelper(
         @Suspended final AsyncResponse response, @QueryParam("backend") String group,
         @Context final HttpServletRequest servletReq, final QueryBatch query
     ) {
@@ -166,9 +167,50 @@ public class QueryResource {
 
                 return new QueryBatchResponse(results.build());
             });
+        return future;
+    }
 
+    @POST
+    @Path("batchV2")
+    public void metrics(
+        @Suspended final AsyncResponse response, @QueryParam("backend") String group,
+        @Context final HttpServletRequest servletReq, final QueryBatchV2 query
+    ) {
+        final QueryBatch v1Batch = new QueryBatch(query.queries, query.range);
+        final AsyncFuture<QueryBatchResponse> futureBase = batchMetricsHelper(response, group,
+            servletReq, v1Batch);
+        final AsyncFuture<QueryBatchResponse> future;
+        if (!query.arithmeticQueries.isPresent()) {
+            future = futureBase;
+        } else {
+            final ImmutableMap.Builder<String, QueryMetricsResponse> newResults =
+                ImmutableMap.builder();
+            future = futureBase.directTransform(results -> {
+                final Map<String, QueryMetricsResponse> resultsMap = results.getResults();
+                query.arithmeticQueries.get().entrySet().stream().forEach(arithmeticEntrySet
+                    -> {
+                    final String id = arithmeticEntrySet.getKey();
+                    final Arithmetic arithmetic = arithmeticEntrySet.getValue();
+                    final QueryMetricsResponse result =
+                        ArithmeticEngine.run(arithmetic, resultsMap);
+                    newResults.put(id, result);
+                });
+                newResults.putAll(results.results);
+                return new QueryBatchResponse(newResults.build());
+            });
+        }
         response.setTimeout(300, TimeUnit.SECONDS);
+        httpAsync.bind(response, future);
+    }
 
+    @POST
+    @Path("batch")
+    public void metrics(
+        @Suspended final AsyncResponse response, @QueryParam("backend") String group,
+        @Context final HttpServletRequest servletReq, final QueryBatch query
+    ) {
+        final AsyncFuture<QueryBatchResponse> future = batchMetricsHelper(response, group, servletReq, query);
+        response.setTimeout(300, TimeUnit.SECONDS);
         httpAsync.bind(response, future);
     }
 
