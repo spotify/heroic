@@ -30,18 +30,6 @@ public class NoopMetadataBackendReporter implements MetadataBackendReporter {
     }
 
     @Override
-    public void reportWriteSuccess(long n) {
-    }
-
-    @Override
-    public void reportWriteFailure(long n) {
-    }
-
-    @Override
-    public void reportWriteBatchDuration(long millis) {
-    }
-
-    @Override
     public MetadataBackend decorate(
         final MetadataBackend backend
     ) {
@@ -50,10 +38,6 @@ public class NoopMetadataBackendReporter implements MetadataBackendReporter {
 
     @Override
     public void reportWriteDroppedByCacheHit() {
-    }
-
-    @Override
-    public void reportWriteDroppedByRateLimit() {
     }
 
     @Override

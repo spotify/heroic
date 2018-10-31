@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.statistics.semantic;
 
-import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.Groups;
@@ -58,15 +57,11 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
     private final FutureReporter write;
     private final FutureReporter backendWrite;
 
-    private final Meter writeSuccess;
-    private final Meter writeFailure;
     private final Meter entries;
 
     private final Meter writesDroppedByCacheHit;
-    private final Meter writesDroppedByRateLimit;
     private final Meter writesDroppedByDuplicate;
 
-    private final Histogram writeBatchDuration;
 
     public SemanticMetadataBackendReporter(SemanticMetricRegistry registry) {
         final MetricId base = MetricId.build().tagged("component", COMPONENT);
@@ -87,19 +82,13 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
             new SemanticFutureReporter(registry, base.tagged("what", "write", "unit", Units.WRITE));
         backendWrite = new SemanticFutureReporter(registry,
             base.tagged("what", "backend-write", "unit", Units.WRITE));
-        writeSuccess = registry.meter(base.tagged("what", "write-success", "unit", Units.WRITE));
-        writeFailure = registry.meter(base.tagged("what", "write-failure", "unit", Units.FAILURE));
         entries = registry.meter(base.tagged("what", "entries", "unit", Units.QUERY));
 
         writesDroppedByCacheHit =
             registry.meter(base.tagged("what", "writes-dropped-by-cache-hit", "unit", Units.DROP));
-        writesDroppedByRateLimit =
-            registry.meter(base.tagged("what", "writes-dropped-by-rate-limit", "unit", Units.DROP));
         writesDroppedByDuplicate =
             registry.meter(base.tagged("what", "writes-dropped-by-duplicate", "unit", Units.DROP));
 
-        writeBatchDuration = registry.histogram(
-            base.tagged("what", "write-bulk-duration", "unit", Units.MILLISECOND));
     }
 
     @Override
@@ -120,28 +109,8 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
     }
 
     @Override
-    public void reportWriteDroppedByRateLimit() {
-        writesDroppedByRateLimit.mark();
-    }
-
-    @Override
     public void reportWriteDroppedByDuplicate() {
         writesDroppedByDuplicate.mark();
-    }
-
-    @Override
-    public void reportWriteSuccess(long n) {
-        writeSuccess.mark(n);
-    }
-
-    @Override
-    public void reportWriteFailure(long n) {
-        writeFailure.mark(n);
-    }
-
-    @Override
-    public void reportWriteBatchDuration(long millis) {
-        writeBatchDuration.update(millis);
     }
 
     @RequiredArgsConstructor
