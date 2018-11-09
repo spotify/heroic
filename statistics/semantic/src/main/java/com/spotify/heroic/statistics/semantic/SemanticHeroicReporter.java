@@ -27,6 +27,7 @@ import com.spotify.heroic.statistics.ClusteredManager;
 import com.spotify.heroic.statistics.ConsumerReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.IngestionManagerReporter;
+import com.spotify.heroic.statistics.MemcachedReporter;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 import com.spotify.heroic.statistics.QueryReporter;
@@ -84,6 +85,11 @@ public class SemanticHeroicReporter implements HeroicReporter {
     @Override
     public MetricBackendReporter newMetricBackend() {
         return new SemanticMetricBackendReporter(registry);
+    }
+
+    @Override
+    public MemcachedReporter newMemcachedReporter(final String consumerType) {
+        return new SemanticMemcachedReporter(registry, consumerType);
     }
 
     @Override

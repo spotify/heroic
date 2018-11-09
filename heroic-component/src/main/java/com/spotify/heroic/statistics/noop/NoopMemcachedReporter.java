@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2018 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,33 +19,39 @@
  * under the License.
  */
 
-package com.spotify.heroic.statistics;
+package com.spotify.heroic.statistics.noop;
 
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Supplier;
+import com.spotify.heroic.statistics.MemcachedReporter;
 
-public interface HeroicReporter {
-    ConsumerReporter newConsumer(String id);
+public class NoopMemcachedReporter implements MemcachedReporter {
 
-    IngestionManagerReporter newIngestionManager();
+  private NoopMemcachedReporter() {
+  }
 
-    AnalyticsReporter newAnalyticsReporter();
+  @Override
+  public void reportMemcachedHit() {
 
-    MetadataBackendReporter newMetadataBackend();
+  }
 
-    SuggestBackendReporter newSuggestBackend();
+  @Override
+  public void reportMemcachedMiss() {
 
-    MetricBackendReporter newMetricBackend();
+  }
 
-    QueryReporter newQueryReporter();
+  @Override
+  public void reportMemcachedTimeout() {
 
-    MemcachedReporter newMemcachedReporter(final String consumerType);
+  }
 
-    void registerShards(Set<Map<String, String>> knownShards);
+  @Override
+  public void reportMemcachedError() {
 
-    /**
-     * Register cache size instrumentation.
-     */
-    void registerCacheSize(String id, Supplier<Long> cacheSize);
+  }
+
+  private static final NoopMemcachedReporter instance = new NoopMemcachedReporter();
+
+  public static NoopMemcachedReporter get() {
+    return instance;
+  }
+
 }

@@ -218,7 +218,8 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
                   cache.asMap(),
                   RateLimiter.create(writesPerSecond, rateLimitSlowStartSeconds, SECONDS),
                   MemcachedConnection.create(distributedCacheSrvRecord),
-                  toIntExact(Duration.of(writeCacheDurationMinutes, MINUTES).convert(SECONDS))
+                  toIntExact(Duration.of(writeCacheDurationMinutes, MINUTES).convert(SECONDS)),
+                  reporter.newMemcachedReporter("suggest")
                 );
             }
 

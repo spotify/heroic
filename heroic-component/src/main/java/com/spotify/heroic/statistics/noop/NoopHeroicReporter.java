@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.statistics.noop;
 
+import com.spotify.heroic.statistics.MemcachedReporter;
 import com.spotify.heroic.statistics.QueryReporter;
 import com.spotify.heroic.statistics.AnalyticsReporter;
 import com.spotify.heroic.statistics.ConsumerReporter;
@@ -71,12 +72,18 @@ public class NoopHeroicReporter implements HeroicReporter {
     }
 
     @Override
+    public MemcachedReporter newMemcachedReporter(final String consumerType) {
+        return NoopMemcachedReporter.get();
+    }
+
+    @Override
     public void registerShards(Set<Map<String, String>> knownShards) {
     }
 
     @Override
     public void registerCacheSize(final String id, final Supplier<Long> cacheSize) {
     }
+
 
     private static final NoopHeroicReporter instance = new NoopHeroicReporter();
 

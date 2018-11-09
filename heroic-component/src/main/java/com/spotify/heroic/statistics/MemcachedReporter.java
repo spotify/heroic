@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2018 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -21,31 +21,13 @@
 
 package com.spotify.heroic.statistics;
 
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Supplier;
+public interface MemcachedReporter {
 
-public interface HeroicReporter {
-    ConsumerReporter newConsumer(String id);
+  void reportMemcachedHit();
 
-    IngestionManagerReporter newIngestionManager();
+  void reportMemcachedMiss();
 
-    AnalyticsReporter newAnalyticsReporter();
+  void reportMemcachedTimeout();
 
-    MetadataBackendReporter newMetadataBackend();
-
-    SuggestBackendReporter newSuggestBackend();
-
-    MetricBackendReporter newMetricBackend();
-
-    QueryReporter newQueryReporter();
-
-    MemcachedReporter newMemcachedReporter(final String consumerType);
-
-    void registerShards(Set<Map<String, String>> knownShards);
-
-    /**
-     * Register cache size instrumentation.
-     */
-    void registerCacheSize(String id, Supplier<Long> cacheSize);
+  void reportMemcachedError();
 }

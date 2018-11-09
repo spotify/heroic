@@ -26,6 +26,7 @@ import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.RateLimiter;
 import com.spotify.folsom.MemcacheClient;
+import com.spotify.heroic.statistics.MemcachedReporter;
 import io.opencensus.common.Scope;
 import io.opencensus.trace.Span;
 import io.opencensus.trace.Status;
@@ -56,9 +57,11 @@ public class DistributedRateLimitedCache<K> implements RateLimitedCache<K> {
   private final RateLimiter rateLimiter;
   private final MemcacheClient memcachedClient;
   private final int memcachedTtlSeconds;
+  private final MemcachedReporter memcachedReporter;
 
   private static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
   private final Tracer tracer = Tracing.getTracer();
+
 
   /**
    *
@@ -80,16 +83,23 @@ public class DistributedRateLimitedCache<K> implements RateLimitedCache<K> {
       try {
         if (memcachedClient.get(
           cacheKey).toCompletableFuture().get(100, TimeUnit.MILLISECONDS) != null) {
+          memcachedReporter.reportMemcachedHit();
           span.addAnnotation("Found key in memcached");
           cache.putIfAbsent(key, true);
           cacheHit.run();
           return false;
+        } else {
+          memcachedReporter.reportMemcachedMiss();
         }
-      } catch (TimeoutException | InterruptedException | ExecutionException e) {
+      } catch (TimeoutException e) {
         span.setStatus(Status.INTERNAL.withDescription(e.getMessage()));
+        memcachedReporter.reportMemcachedTimeout();
+        log.error("Failed to get key from memecached");
+      } catch (InterruptedException | ExecutionException e) {
+        span.setStatus(Status.INTERNAL.withDescription(e.getMessage()));
+        memcachedReporter.reportMemcachedError();
         log.error("Failed to get key from memecached", e);
       }
-
       span.addAnnotation("Acquiring rate limiter");
       rateLimiter.acquire();
       span.addAnnotation("Acquired rate limiter");
