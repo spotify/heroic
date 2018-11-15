@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 
 import com.google.common.util.concurrent.RateLimiter;
 import com.spotify.folsom.MemcacheClient;
+import com.spotify.heroic.statistics.noop.NoopHeroicReporter;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
@@ -45,7 +46,8 @@ public class DistributedRateLimitedCacheTest {
     public void setUp() {
        cache = new ConcurrentHashMap<>();
        writeCache = new DistributedRateLimitedCache<>(
-         cache, rateLimiter, memcacheClient, MEMCACHED_TTL_SECONDS);
+         cache, rateLimiter, memcacheClient, MEMCACHED_TTL_SECONDS, new NoopHeroicReporter()
+           .newMemcachedReporter("test"));
     }
 
 

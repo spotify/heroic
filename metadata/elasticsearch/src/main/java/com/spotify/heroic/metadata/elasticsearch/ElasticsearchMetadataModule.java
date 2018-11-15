@@ -229,7 +229,8 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
                   cache.asMap(),
                   RateLimiter.create(writesPerSecond, rateLimitSlowStartSeconds, SECONDS),
                   MemcachedConnection.create(distributedCacheSrvRecord),
-                  toIntExact(Duration.of(writeCacheDurationMinutes, MINUTES).convert(SECONDS))
+                  toIntExact(Duration.of(writeCacheDurationMinutes, MINUTES).convert(SECONDS)),
+                  reporter.newMemcachedReporter("metadata")
                 );
             }
 
