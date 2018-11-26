@@ -77,6 +77,7 @@ public class Spotify100 implements ConsumerSchema {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class JsonMetric {
         private final String key;
+        @Deprecated
         private final String host;
         private final Long time;
         @JsonDeserialize(using = TagsDeserializer.class)
@@ -87,7 +88,8 @@ public class Spotify100 implements ConsumerSchema {
 
         @JsonCreator
         public JsonMetric(
-            @JsonProperty("key") String key, @JsonProperty("host") Optional<String> host,
+            @JsonProperty("key") String key,
+            @JsonProperty("host") Optional<String> host,
             @JsonProperty("time") Long time,
             @JsonProperty("attributes") Map<String, String> attributes,
             @JsonProperty("resource") Map<String, String> resource,
