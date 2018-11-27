@@ -3,7 +3,7 @@ LABEL maintainer "layer8 <layer8@spotify.com>"
 
 COPY . .
 RUN tools/install-repackaged
-RUN mvn clean package
+RUN _JAVA_OPTIONS=-Djdk.net.URLClassPath.disableClassPathURLCheck=true mvn clean package
 
 
 #Final
