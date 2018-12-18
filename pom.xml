@@ -72,6 +72,8 @@
     <hamcrest.version>2.0.0.0</hamcrest.version>
     <folsom.version>1.2.1</folsom.version>
     <opencensus.version>0.15.0</opencensus.version>
+
+    <google-cloud-bom.version>0.74.0-alpha</google-cloud-bom.version>
   </properties>
 
   <profiles>
@@ -273,7 +275,7 @@
       <dependency>
           <groupId>com.google.cloud</groupId>
           <artifactId>google-cloud-bom</artifactId>
-          <version>0.61.0-alpha</version>
+          <version>${google-cloud-bom.version}</version>
           <type>pom</type>
           <scope>import</scope>
         </dependency>

@@ -11,7 +11,7 @@
   </parent>
 
   <properties>
-    <grpc.version>1.13.1</grpc.version>
+    <grpc.version>1.16.1</grpc.version>
   </properties>
 
   <groupId>com.spotify.heroic.rpc</groupId>
@@ -19,18 +19,6 @@
   <packaging>jar</packaging>
 
   <name>Heroic: GRPC RPC Protocol</name>
-
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>com.google.cloud</groupId>
-        <artifactId>google-cloud-bom</artifactId>
-        <version>0.56.0-alpha</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
 
   <dependencies>
     <dependency>

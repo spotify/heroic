@@ -23,7 +23,7 @@
 
   <properties>
     <bigtable.version>1.4.0</bigtable.version>
-    <grpc.version>1.13.1</grpc.version>
+    <grpc.version>1.16.1</grpc.version>
   </properties>
 
   <dependencies>
