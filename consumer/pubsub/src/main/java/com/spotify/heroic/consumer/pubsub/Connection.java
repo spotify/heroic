@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.consumer.pubsub;
 
-import com.spotify.heroic.consumer.ConsumerSchema;
 import com.google.api.gax.batching.FlowControlSettings;
 import com.google.api.gax.core.CredentialsProvider;
 import com.google.api.gax.core.ExecutorProvider;
@@ -36,9 +35,11 @@ import com.google.cloud.pubsub.v1.SubscriptionAdminClient;
 import com.google.cloud.pubsub.v1.SubscriptionAdminSettings;
 import com.google.cloud.pubsub.v1.TopicAdminClient;
 import com.google.cloud.pubsub.v1.TopicAdminSettings;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.pubsub.v1.ProjectSubscriptionName;
 import com.google.pubsub.v1.ProjectTopicName;
 import com.google.pubsub.v1.PushConfig;
+import com.spotify.heroic.consumer.ConsumerSchema;
 import com.spotify.heroic.statistics.ConsumerReporter;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -119,6 +120,7 @@ public class Connection {
         ExecutorProvider executorProvider =
             InstantiatingExecutorProvider.newBuilder().setExecutorThreadCount(threads).build();
 
+
         log.info("Subscribing to {}", subscriptionName);
         final Receiver receiver = new Receiver(consumer, reporter, errors, consumed);
         subscriber = Subscriber
@@ -129,6 +131,17 @@ public class Connection {
             .setChannelProvider(channelProvider)
             .setCredentialsProvider(credentialsProvider)
             .build();
+
+        subscriber.addListener(
+          new Subscriber.Listener() {
+              @Override
+              public void failed(Subscriber.State from, Throwable failure) {
+                  // Called when the Subscriber encountered a fatal error and is shutting down
+                  log.error(
+                    "An error on subscriber happened (from state: " + from.name() + ")", failure);
+                  System.exit(1);
+              } }, MoreExecutors.directExecutor());
+
 
         subscriber.startAsync().awaitRunning();
 
