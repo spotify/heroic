@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package spotify.metric;
+option java_package = "com.spotify.proto";
+
+option optimize_for = SPEED;
+
+message Metric {
+  // key of metric.
+  string key = 1;
+
+  // time in ms when metric was generated.
+  int64 time = 2;
+
+  // value of metric.
+  double value = 3;
+
+  // tags associated to a metric, used to be referred to as attributes.
+  map<string, string> tags = 4;
+
+  // resource "tags" associated to metric.
+  map<string, string> resource = 5;
+}
