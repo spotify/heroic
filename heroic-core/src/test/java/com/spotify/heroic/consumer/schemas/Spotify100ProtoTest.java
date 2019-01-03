@@ -34,14 +34,19 @@ import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.statistics.ConsumerReporter;
 import com.spotify.heroic.time.Clock;
+import com.spotify.proto.Spotify100.Batch;
 import com.spotify.proto.Spotify100.Metric;
+import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import java.util.List;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
+import org.xerial.snappy.Snappy;
 
 @RunWith(MockitoJUnitRunner.class)
 public class Spotify100ProtoTest {
@@ -56,19 +61,25 @@ public class Spotify100ProtoTest {
   ConsumerReporter reporter;
 
   @Mock
+  AsyncFramework async;
+
+  @Mock
   private AsyncFuture<Ingestion> resolved;
 
   private Spotify100Proto.Consumer consumer;
+
+  @Rule
+  public ExpectedException exceptionRule = ExpectedException.none();
 
   @Before
   public void setup() {
     when(clock.currentTimeMillis()).thenReturn(1542830485000L);
     when(ingestion.write(any(Ingestion.Request.class))).thenReturn(resolved);
-    consumer = new Spotify100Proto.Consumer(clock, ingestion, reporter);
+    consumer = new Spotify100Proto.Consumer(clock, ingestion, reporter, async);
   }
 
   @Test
-  public void testConsumeMetric() throws Exception {
+  public void testConsumeBatchMetric() throws Exception {
     final Metric metric = Metric.newBuilder()
       .setKey("foo")
       .setValue(1.0)
@@ -77,7 +88,9 @@ public class Spotify100ProtoTest {
       .putResource("resource", "bar")
       .build();
 
-    consumer.consume(metric.toByteArray());
+    final Batch batch = Batch.newBuilder().addMetric(metric).build();
+
+    consumer.consume(Snappy.compress(batch.toByteArray()));
 
     final Series s = Series.of(metric.getKey(), metric.getTagsMap(), metric.getResourceMap());
     final Point p = new Point(metric.getTime(), metric.getValue());
@@ -88,35 +101,36 @@ public class Spotify100ProtoTest {
   }
 
   @Test
-  public void testConsumeMetricBytes() throws Exception {
-    final Metric metric = Metric.parseFrom(
-      new byte[]{10, 3, 102, 111, 111, 16, -128, -75, -13, -66, -13, 44, 25, 0, 0, 0, 0, 0, 0, -16,
-                 63, 34, 11, 10, 4, 116, 97, 103, 49, 18, 3, 102, 111, 111, 42, 15, 10, 8, 114, 101,
-                 115, 111, 117, 114, 99, 101, 18, 3, 98, 97, 114});
+  public void testInvalidBatchMetrics() throws Exception {
+    exceptionRule.expect(ConsumerSchemaValidationException.class);
+    exceptionRule.expectMessage("Invalid batch of metrics");
 
-    consumer.consume(metric.toByteArray());
-
-    final Series s = Series.of(metric.getKey(), metric.getTagsMap(), metric.getResourceMap());
-    final Point p = new Point(metric.getTime(), metric.getValue());
-    final List<Point> points = ImmutableList.of(p);
-
-    verify(reporter).reportMessageDrift(5000);
-    verify(ingestion).write(new Ingestion.Request(s, MetricCollection.points(points)));
-  }
-
-
-  @Test(expected = ConsumerSchemaValidationException.class)
-  public void testTimeValidationError() throws Exception {
     final Metric metric = Metric.newBuilder().setTime(-1542830480000L).build();
 
     consumer.consume(metric.toByteArray());
   }
 
-  @Test(expected = ConsumerSchemaValidationException.class)
-  public void testKeyDefinedValidationError() throws Exception {
-    final Metric metric = Metric.newBuilder().setTime(1000L).build();
+  @Test
+  public void testTimeValidationError() throws Exception {
+    exceptionRule.expect(ConsumerSchemaValidationException.class);
+    exceptionRule.expectMessage("time: field must be a positive number");
 
-    consumer.consume(metric.toByteArray());
+    final Metric metric = Metric.newBuilder().setTime(-1542830480000L).build();
+    final Batch batch = Batch.newBuilder().addMetric(metric).build();
+
+    consumer.consume(Snappy.compress(batch.toByteArray()));
+  }
+
+
+  @Test
+  public void testKeyDefinedValidationError() throws Exception {
+    exceptionRule.expect(ConsumerSchemaValidationException.class);
+    exceptionRule.expectMessage("key: field must be defined");
+
+    final Metric metric = Metric.newBuilder().setTime(1000L).build();
+    final Batch batch = Batch.newBuilder().addMetric(metric).build();
+
+    consumer.consume(Snappy.compress((batch.toByteArray())));
   }
 
 }
