@@ -1,0 +1,19 @@
+conditionalFeatures:
+  type: list
+  list:
+    - type: match
+      features:
+        - com.spotify.heroic.cache_query
+      condition:
+        type: clientId
+        clientId: foobar
+    - type: match
+      features:
+        - com.spotify.heroic.cache_query
+      condition:
+        type: any
+        conditions:
+          - type: clientId
+            clientId: foo
+          - type: clientId
+            clientId: bar

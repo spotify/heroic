@@ -21,13 +21,14 @@
 
 package com.spotify.heroic;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableSortedSet;
-
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationCombiner;
 import com.spotify.heroic.aggregation.AggregationContext;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.aggregation.AggregationInstance;
+import com.spotify.heroic.aggregation.BucketStrategy;
 import com.spotify.heroic.aggregation.DistributedAggregationCombiner;
 import com.spotify.heroic.aggregation.Empty;
 import com.spotify.heroic.cache.QueryCache;
@@ -37,9 +38,9 @@ import com.spotify.heroic.cluster.ClusterShard;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.Feature;
-import com.spotify.heroic.common.FeatureSet;
 import com.spotify.heroic.common.Features;
 import com.spotify.heroic.common.OptionalLimit;
+import com.spotify.heroic.conditionalfeatures.ConditionalFeatures;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.grammar.DefaultScope;
@@ -58,36 +59,35 @@ import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.WriteMetadata;
 import com.spotify.heroic.metric.FullQuery;
 import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.QueryError;
 import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.QueryResultPart;
 import com.spotify.heroic.metric.QueryTrace;
-import com.spotify.heroic.metric.ResultLimits;
 import com.spotify.heroic.metric.Tracing;
 import com.spotify.heroic.metric.WriteMetric;
+import com.spotify.heroic.querylogging.QueryContext;
+import com.spotify.heroic.querylogging.QueryLogger;
+import com.spotify.heroic.querylogging.QueryLoggerFactory;
+import com.spotify.heroic.statistics.QueryReporter;
 import com.spotify.heroic.suggest.KeySuggest;
 import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
-
+import com.spotify.heroic.time.Clock;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Collector;
+import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.Transform;
-
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.SortedSet;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-
 import javax.inject.Inject;
 import javax.inject.Named;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -98,28 +98,43 @@ public class CoreQueryManager implements QueryManager {
         QueryTrace.identifier(CoreQueryManager.class, "query_shard");
     public static final QueryTrace.Identifier QUERY =
         QueryTrace.identifier(CoreQueryManager.class, "query");
+    private static boolean hasWarnedSlicedDataFetch = false;
 
     private final Features features;
     private final AsyncFramework async;
+    private final Clock clock;
     private final ClusterManager cluster;
     private final QueryParser parser;
     private final QueryCache queryCache;
     private final AggregationFactory aggregations;
     private final OptionalLimit groupLimit;
+    private final QueryReporter reporter;
+    private final QueryLogger queryLogger;
+    private final Optional<ConditionalFeatures> conditionalFeatures;
+
+    private final long smallQueryThreshold;
 
     @Inject
     public CoreQueryManager(
-        @Named("features") final Features features, final AsyncFramework async,
+        @Named("features") final Features features, final AsyncFramework async, final Clock clock,
         final ClusterManager cluster, final QueryParser parser, final QueryCache queryCache,
-        final AggregationFactory aggregations, @Named("groupLimit") final OptionalLimit groupLimit
+        final AggregationFactory aggregations, @Named("groupLimit") final OptionalLimit groupLimit,
+        @Named("smallQueryThreshold") final long smallQueryThreshold, final QueryReporter reporter,
+        final Optional<ConditionalFeatures> conditionalFeatures,
+        final QueryLoggerFactory queryLoggerFactory
     ) {
         this.features = features;
         this.async = async;
+        this.clock = clock;
         this.cluster = cluster;
         this.parser = parser;
         this.queryCache = queryCache;
         this.aggregations = aggregations;
         this.groupLimit = groupLimit;
+        this.reporter = reporter;
+        this.smallQueryThreshold = smallQueryThreshold;
+        this.conditionalFeatures = conditionalFeatures;
+        this.queryLogger = queryLoggerFactory.create("CoreQueryManager");
     }
 
     @Override
@@ -131,7 +146,7 @@ public class CoreQueryManager implements QueryManager {
     public QueryBuilder newQueryFromString(final String queryString) {
         final List<Expression> expressions = parser.parse(queryString);
 
-        final Expression.Scope scope = new DefaultScope(System.currentTimeMillis());
+        final Expression.Scope scope = new DefaultScope(clock.currentTimeMillis());
 
         if (expressions.size() != 1) {
             throw new IllegalArgumentException("Expected exactly one expression");
@@ -184,11 +199,16 @@ public class CoreQueryManager implements QueryManager {
         private final List<ClusterShard> shards;
 
         @Override
-        public AsyncFuture<QueryResult> query(Query q) {
+        public AsyncFuture<QueryResult> query(final Query q, final QueryContext queryContext) {
             final QueryOptions options = q.getOptions().orElseGet(QueryOptions::defaults);
-            final Tracing tracing = options.getTracing();
+            final Tracing tracing = options.tracing();
 
             final QueryTrace.NamedWatch shardWatch = tracing.watch(QUERY_SHARD);
+            final Stopwatch fullQueryWatch = Stopwatch.createStarted();
+            final long now = clock.currentTimeMillis();
+            final FutureDone onDoneQueryReporter = reporter.reportQuery();
+
+            queryLogger.logQuery(queryContext, q);
 
             final List<AsyncFuture<QueryResultPart>> futures = new ArrayList<>();
 
@@ -196,8 +216,6 @@ public class CoreQueryManager implements QueryManager {
 
             final Aggregation aggregation = q.getAggregation().orElse(Empty.INSTANCE);
             final DateRange rawRange = buildRange(q);
-
-            final long now = System.currentTimeMillis();
 
             final Filter filter = q.getFilter().orElseGet(TrueFilter::get);
 
@@ -207,8 +225,7 @@ public class CoreQueryManager implements QueryManager {
 
             final AggregationInstance aggregationInstance;
 
-            final Features features = CoreQueryManager.this.features.applySet(
-                q.getFeatures().orElseGet(FeatureSet::empty));
+            final Features features = requestFeatures(q, queryContext);
 
             boolean isDistributed = features.hasFeature(Feature.DISTRIBUTED_AGGREGATIONS);
 
@@ -224,33 +241,48 @@ public class CoreQueryManager implements QueryManager {
 
             if (features.hasFeature(Feature.DETERMINISTIC_AGGREGATIONS) &&
                 aggregationInstance.estimate(range) < 0) {
-                return async.resolved(new QueryResult(range, Collections.emptyList(),
-                    Collections.singletonList(QueryError.fromMessage(
-                        "Aggregation can not be evaluated with deterministic resources")),
-                    shardWatch.end(), ResultLimits.of()));
+                return async.resolved(QueryResult.error(range,
+                    "Aggregation can not be evaluated with deterministic resources",
+                    shardWatch.end()));
             }
+
+            final BucketStrategy bucketStrategy = options
+                .getBucketStrategy()
+                .orElseGet(() -> features.withFeature(Feature.END_BUCKET, () -> BucketStrategy.END,
+                    () -> BucketStrategy.START));
 
             final AggregationCombiner combiner;
 
             if (isDistributed) {
-                combiner = new DistributedAggregationCombiner(root.reducer(), range);
+                combiner = DistributedAggregationCombiner.create(root, range, bucketStrategy);
             } else {
                 combiner = AggregationCombiner.DEFAULT;
             }
 
             final FullQuery.Request request =
-                new FullQuery.Request(source, filter, range, aggregationInstance, options);
+                new FullQuery.Request(source, filter, range, aggregationInstance, options,
+                    queryContext, features);
 
-            return queryCache.load(request, () -> {
+            queryLogger.logOutgoingRequestToShards(queryContext, request);
+
+            final AsyncFuture<QueryResult> query = queryCache.load(request, () -> {
                 for (final ClusterShard shard : shards) {
                     final QueryTrace.NamedWatch shardLocalWatch =
                         shardWatch.extendIdentifier(shard.getShard().toString());
                     final AsyncFuture<QueryResultPart> queryPart = shard
                         .apply(g -> g.query(request), getStoreTracesTransform(shardLocalWatch))
                         .catchFailed(FullQuery.shardError(shardLocalWatch, shard))
+                        .directTransform(fullQuery -> {
+                            queryLogger.logIncomingResponseFromShard(queryContext, fullQuery);
+                            return fullQuery;
+                        })
                         .directTransform(QueryResultPart.fromResultGroup(shard));
 
-                    futures.add(queryPart);
+                    if (!shard.isDarkload()) {
+                        // Stash the future to be able to gather result from all shards.
+                        // Except if this shard is a darkload shard, then we will just fire & forget
+                        futures.add(queryPart);
+                    }
                 }
 
                 final OptionalLimit limit = options.getGroupLimit().orElse(groupLimit);
@@ -258,6 +290,24 @@ public class CoreQueryManager implements QueryManager {
                 return async.collect(futures,
                     QueryResult.collectParts(QUERY, range, combiner, limit));
             });
+
+            return query.directTransform(result -> {
+                reportCompletedQuery(result, fullQueryWatch);
+                return result;
+            }).onDone(onDoneQueryReporter);
+        }
+
+        private void reportCompletedQuery(
+            final QueryResult result, final Stopwatch fullQueryWatch
+        ) {
+            final long sampleSize = result.getPreAggregationSampleSize();
+            if (sampleSize > smallQueryThreshold) {
+                return;
+            }
+            final long durationNs = fullQueryWatch.elapsed(TimeUnit.NANOSECONDS);
+            reporter.reportLatencyVsSize(durationNs, result.getPreAggregationSampleSize());
+            final long durationMs = TimeUnit.NANOSECONDS.toMillis(durationNs);
+            reporter.reportSmallQueryLatency(durationMs);
         }
 
         @Override
@@ -352,7 +402,7 @@ public class CoreQueryManager implements QueryManager {
         }
 
         private DateRange buildRange(Query q) {
-            final long now = System.currentTimeMillis();
+            final long now = clock.currentTimeMillis();
 
             return q
                 .getRange()
@@ -373,6 +423,26 @@ public class CoreQueryManager implements QueryManager {
                 return fullQuery.withTrace(newTrace);
             };
         }
+    }
+
+    private Features requestFeatures(final Query q, final QueryContext context) {
+        // apply conditional features to defaults, if present.
+        final Features configured =
+            conditionalFeatures.map(c -> features.applySet(c.match(context))).orElse(features);
+
+        // apply rules from query last, to give them precedence.
+        final Features features = q.getFeatures().map(configured::applySet).orElse(configured);
+
+        if (!features.hasFeature(Feature.SLICED_DATA_FETCH)) {
+            if (!hasWarnedSlicedDataFetch) {
+                hasWarnedSlicedDataFetch = true;
+                log.warn(
+                    "The mandatory feature 'com.spotify.heroic.sliced_data_fetch' can't be " +
+                        "disabled!");
+            }
+        }
+
+        return features;
     }
 
     private static <T> T retryTraceHandlerNoop(T result, List<QueryTrace> traces) {

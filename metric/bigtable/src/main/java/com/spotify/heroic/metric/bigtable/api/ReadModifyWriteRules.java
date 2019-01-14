@@ -31,7 +31,8 @@ import java.util.List;
 
 @RequiredArgsConstructor
 public class ReadModifyWriteRules {
-    private final List<com.google.bigtable.v2.ReadModifyWriteRule> rules;
+    private final List<com.google.bigtable.v2.ReadModifyWriteRule>
+        rules;
 
     /**
      * Get the list of rules.
@@ -52,7 +53,8 @@ public class ReadModifyWriteRules {
 
     @Data
     public static class Builder {
-        final List<com.google.bigtable.v2.ReadModifyWriteRule> rules = new ArrayList<>();
+        final List<com.google.bigtable.v2.ReadModifyWriteRule> rules =
+            new ArrayList<>();
 
         public Builder increment(
             final String family, final ByteString column, final long value

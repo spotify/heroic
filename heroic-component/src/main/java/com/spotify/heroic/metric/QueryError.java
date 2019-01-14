@@ -30,4 +30,8 @@ public class QueryError implements RequestError {
     public static RequestError fromMessage(final String message) {
         return new QueryError(message);
     }
+
+    public static QueryError fromThrowable(final Throwable e) {
+        return new QueryError(e.getMessage());
+    }
 }

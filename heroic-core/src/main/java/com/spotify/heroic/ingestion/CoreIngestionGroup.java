@@ -37,8 +37,11 @@ import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.WriteSuggest;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.RequiredArgsConstructor;
-
+import io.opencensus.common.Scope;
+import io.opencensus.trace.Span;
+import io.opencensus.trace.Status;
+import io.opencensus.trace.Tracer;
+import io.opencensus.trace.Tracing;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -46,9 +49,12 @@ import java.util.Optional;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Supplier;
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class CoreIngestionGroup implements IngestionGroup {
+    private final Tracer tracer = Tracing.getTracer();
+
     private final AsyncFramework async;
     private final Supplier<Filter> filter;
     private final Semaphore writePermits;
@@ -80,59 +86,74 @@ public class CoreIngestionGroup implements IngestionGroup {
     }
 
     protected AsyncFuture<Ingestion> syncWrite(final Ingestion.Request request) {
+        final Span span = tracer.spanBuilder("CoreIngestionGroup.syncWrite").startSpan();
+
         if (!filter.get().apply(request.getSeries())) {
             reporter.reportDroppedByFilter();
+            span.setStatus(Status.FAILED_PRECONDITION.withDescription("Dropped by filter"));
+            span.end();
             return async.resolved(Ingestion.of(ImmutableList.of()));
         }
 
         try {
+            span.addAnnotation("Acquiring write lock");
             writePermits.acquire();
         } catch (final InterruptedException e) {
-            return async.failed(
-                new Exception("Failed to acquire semaphore for bounded request", e));
+            String error = "Failed to acquire semaphore for bounded request";
+            span.setStatus(Status.INTERNAL.withDescription(error));
+            span.end();
+            return async.failed(new Exception(error, e));
         }
 
+        span.addAnnotation("Acquired write lock");
         reporter.incrementConcurrentWrites();
 
-        return doWrite(request).onFinished(() -> {
-            writePermits.release();
-            reporter.decrementConcurrentWrites();
-        });
+        try (Scope ws = tracer.withSpan(span)) {
+            return doWrite(request).onFinished(() -> {
+                writePermits.release();
+                reporter.decrementConcurrentWrites();
+                span.end();
+            });
+        }
     }
 
     protected AsyncFuture<Ingestion> doWrite(final Ingestion.Request request) {
+        final Span span = tracer.spanBuilder("CoreIngestionGroup.doWrite").startSpan();
         final List<AsyncFuture<Ingestion>> futures = new ArrayList<>();
 
         final Supplier<DateRange> range = rangeSupplier(request);
 
-        metric.map(m -> doMetricWrite(m, request)).ifPresent(futures::add);
-        metadata.map(m -> doMetadataWrite(m, request, range.get())).ifPresent(futures::add);
-        suggest.map(s -> doSuggestWrite(s, request, range.get())).ifPresent(futures::add);
+        metric.map(m -> doMetricWrite(m, request, span)).ifPresent(futures::add);
+        metadata.map(m -> doMetadataWrite(m, request, range.get(), span))
+            .ifPresent(futures::add);
+        suggest.map(s -> doSuggestWrite(s, request, range.get(), span)).ifPresent(futures::add);
 
-        return async.collect(futures, Ingestion.reduce());
+        return async.collect(futures, Ingestion.reduce()).onFinished(span::end);
     }
 
     protected AsyncFuture<Ingestion> doMetricWrite(
-        final MetricBackend metric, final Ingestion.Request write
+        final MetricBackend metric, final Ingestion.Request write, final Span parentSpan
     ) {
         return metric
-            .write(new WriteMetric.Request(write.getSeries(), write.getData()))
+            .write(new WriteMetric.Request(write.getSeries(), write.getData()), parentSpan)
             .directTransform(Ingestion::fromWriteMetric);
     }
 
     protected AsyncFuture<Ingestion> doMetadataWrite(
-        final MetadataBackend metadata, final Ingestion.Request write, final DateRange range
+        final MetadataBackend metadata, final Ingestion.Request write, final DateRange range,
+        final Span parentSpan
     ) {
         return metadata
-            .write(new WriteMetadata.Request(write.getSeries(), range))
+            .write(new WriteMetadata.Request(write.getSeries(), range), parentSpan)
             .directTransform(Ingestion::fromWriteMetadata);
     }
 
     protected AsyncFuture<Ingestion> doSuggestWrite(
-        final SuggestBackend suggest, final Ingestion.Request write, final DateRange range
+        final SuggestBackend suggest, final Ingestion.Request write, final DateRange range,
+        final Span parentSpan
     ) {
         return suggest
-            .write(new WriteSuggest.Request(write.getSeries(), range))
+            .write(new WriteSuggest.Request(write.getSeries(), range), parentSpan)
             .directTransform(Ingestion::fromWriteSuggest);
     }
 

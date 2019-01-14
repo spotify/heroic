@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.profile;
 
+import static com.spotify.heroic.ParameterSpecification.parameter;
+
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.HeroicConfig;
@@ -29,13 +31,10 @@ import com.spotify.heroic.cluster.ClusterManagerModule;
 import com.spotify.heroic.cluster.discovery.simple.SrvRecordDiscoveryModule;
 import com.spotify.heroic.cluster.discovery.simple.StaticListDiscoveryModule;
 import com.spotify.heroic.rpc.grpc.GrpcRpcProtocolModule;
-
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Optional;
-
-import static com.spotify.heroic.ParameterSpecification.parameter;
 
 public class ClusterProfile extends HeroicProfileBase {
     public static final String DEFAULT_PROTOCOL = "grpc";

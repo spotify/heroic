@@ -12,10 +12,14 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedMap;
 import com.spotify.heroic.common.Feature;
 import com.spotify.heroic.common.FeatureSet;
 import com.spotify.heroic.common.Series;
@@ -23,6 +27,7 @@ import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.ingestion.Ingestion;
 import com.spotify.heroic.ingestion.IngestionComponent;
 import com.spotify.heroic.ingestion.IngestionManager;
+import com.spotify.heroic.metric.FullQuery;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.QueryError;
@@ -31,6 +36,8 @@ import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.metric.ResultLimit;
 import com.spotify.heroic.metric.ResultLimits;
 import com.spotify.heroic.metric.ShardedResultGroup;
+import com.spotify.heroic.querylogging.QueryContext;
+import com.spotify.heroic.querylogging.QueryLogger;
 import eu.toolchain.async.AsyncFuture;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,15 +46,24 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
-    private final Series s1 = Series.of("key1", ImmutableMap.of("shared", "a", "diff", "a"));
-    private final Series s2 = Series.of("key1", ImmutableMap.of("shared", "a", "diff", "b"));
-    private final Series s3 = Series.of("key1", ImmutableMap.of("shared", "a", "diff", "c"));
+    private final Series s1 = new Series("key1", ImmutableSortedMap.of("shared", "a", "diff", "a"),
+        ImmutableSortedMap.of("resource", "a"));
+    private final Series s2 = new Series("key1", ImmutableSortedMap.of("shared", "a", "diff", "b"),
+        ImmutableSortedMap.of("resource", "b"));
+    private final Series s3 = new Series("key1", ImmutableSortedMap.of("shared", "a", "diff", "c"),
+        ImmutableSortedMap.of("resource", "c"));
+
+    /* the number of queries run */
+    private int queryCount = 0;
 
     private QueryManager query;
+
+    private QueryContext queryContext;
 
     protected boolean cardinalitySupport = true;
 
@@ -58,7 +74,37 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     public final void setupAbstract() {
         setupSupport();
 
+        queryContext = QueryContext.empty();
+
         query = instances.get(0).inject(CoreComponent::queryManager);
+    }
+
+    @After
+    public final void verifyLoggers() {
+        final QueryLogger coreQueryManagerLogger = getQueryLogger("CoreQueryManager").orElseThrow(
+            () -> new AssertionError("Should have logger for CoreQueryManager"));
+
+        final QueryLogger localMetricManagerLogger =
+            getQueryLogger("LocalMetricManager").orElseThrow(
+                () -> new AssertionError("Should have logger for LocalMetricManager"));
+
+        /* number of expected log-calls is related to the number of queries performed during the
+         * test */
+        final int apiNodeCount = queryCount;
+        final int dataNodeCount = queryCount * 2;
+
+        verify(coreQueryManagerLogger, times(apiNodeCount)).logQuery(any(QueryContext.class),
+            any(Query.class));
+        verify(coreQueryManagerLogger, times(apiNodeCount)).logOutgoingRequestToShards(
+            any(QueryContext.class), any(FullQuery.Request.class));
+        verify(localMetricManagerLogger, times(dataNodeCount)).logIncomingRequestAtNode(
+            any(QueryContext.class), any(FullQuery.Request.class));
+        verify(localMetricManagerLogger, times(dataNodeCount)).logOutgoingResponseAtNode(
+            any(QueryContext.class), any(FullQuery.class));
+        verify(coreQueryManagerLogger, times(dataNodeCount)).logIncomingResponseFromShard(
+            any(QueryContext.class), any(FullQuery.class));
+
+        verifyNoMoreInteractions(coreQueryManagerLogger, localMetricManagerLogger);
     }
 
     @Override
@@ -95,13 +141,15 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
 
     public QueryResult query(final QueryBuilder builder, final Consumer<QueryBuilder> modifier)
         throws Exception {
+        queryCount += 1;
+
         builder
             .features(Optional.of(FeatureSet.of(Feature.DISTRIBUTED_AGGREGATIONS)))
             .source(Optional.of(MetricType.POINT))
-            .rangeIfAbsent(Optional.of(new QueryDateRange.Absolute(10, 40)));
+            .rangeIfAbsent(Optional.of(new QueryDateRange.Absolute(0, 40)));
 
         modifier.accept(builder);
-        return query.useDefaultGroup().query(builder.build()).get();
+        return query.useDefaultGroup().query(builder.build(), queryContext).get();
     }
 
     @Test
@@ -186,6 +234,33 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     }
 
     @Test
+    public void pointsAboveTest() throws Exception {
+        final QueryResult result = query("pointsabove(2) by *", builder -> {
+            builder.features(Optional.empty());
+        });
+
+        final Set<MetricCollection> m = getResults(result);
+        final List<Long> cadences = getCadences(result);
+
+        assertEquals(ImmutableList.of(0L), cadences);
+        assertEquals(ImmutableSet.of(points().p(20, 4D).build()), m);
+    }
+
+    @Test
+    public void pointsBelowTest() throws Exception {
+        final QueryResult result = query("pointsbelow(3) by *", builder -> {
+            builder.features(Optional.empty());
+        });
+
+        final Set<MetricCollection> m = getResults(result);
+        final List<Long> cadences = getCadences(result);
+
+        assertEquals(ImmutableList.of(0L, 0L), cadences);
+        assertEquals(
+            ImmutableSet.of(points().p(10, 1D).build(), points().p(10, 1D).p(30, 2.0D).build()), m);
+    }
+
+    @Test
     public void deltaQueryTest() throws Exception {
         final QueryResult result = query("delta", builder -> {
             builder.features(Optional.empty());
@@ -208,6 +283,42 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         assertEquals(ImmutableList.of(1L), cadences);
         assertEquals(ImmutableSet.of(points().p(20, 3D).p(30, -2D).build()), m);
     }
+
+    @Test
+    public void deltaPerSecondQueryTest() throws Exception {
+        final QueryResult result = query("deltaPerSecond", builder -> {
+            builder.features(Optional.empty());
+        });
+
+        final Set<MetricCollection> m = getResults(result);
+        final List<Long> cadences = getCadences(result);
+
+        assertEquals(ImmutableList.of(-1L, -1L), cadences);
+        assertEquals(ImmutableSet.of(points().p(30, 50D).build(), points().p(20, 300D).build()), m);
+    }
+
+    @Test
+    public void distributedDeltaPerSecondQueryTest() throws Exception {
+        final QueryResult result = query("max | deltaPerSecond");
+
+        final Set<MetricCollection> m = getResults(result);
+        final List<Long> cadences = getCadences(result);
+
+        assertEquals(ImmutableList.of(1L), cadences);
+        assertEquals(ImmutableSet.of(points().p(20, 300D).p(30, -200D).build()), m);
+    }
+
+    @Test
+    public void distributedDeltaPerSecondWithNoNegativeQueryTest() throws Exception {
+        final QueryResult result = query("max | deltaPerSecond | notNegative ");
+
+        final Set<MetricCollection> m = getResults(result);
+        final List<Long> cadences = getCadences(result);
+
+        assertEquals(ImmutableList.of(1L), cadences);
+        assertEquals(ImmutableSet.of(points().p(20, 300D).build()), m);
+    }
+
 
     @Test
     public void filterLastQueryTest() throws Exception {
@@ -278,7 +389,8 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         for (final RequestError e : result.getErrors()) {
             assertTrue((e instanceof QueryError));
             final QueryError q = (QueryError) e;
-            assertThat(q.getError(), containsString("Query exceeded quota"));
+            assertThat(q.getError(),
+                containsString("Some fetches failed (1) or were cancelled (0)"));
         }
 
         assertEquals(ResultLimits.of(ResultLimit.AGGREGATION), result.getLimits());

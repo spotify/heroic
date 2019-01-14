@@ -22,6 +22,8 @@
 package com.spotify.heroic.dagger;
 
 import com.spotify.heroic.HeroicConfig;
+import com.spotify.heroic.common.CoreJavaxRestFramework;
+import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.common.ServiceInfo;
 import com.spotify.heroic.lifecycle.CoreLifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
@@ -71,5 +73,11 @@ public class EarlyModule {
     @EarlyScope
     LifeCycleRegistry lifeCycleRegistry() {
         return new CoreLifeCycleRegistry();
+    }
+
+    @Provides
+    @EarlyScope
+    JavaxRestFramework javaxRestFramework() {
+        return new CoreJavaxRestFramework();
     }
 }

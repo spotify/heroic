@@ -21,6 +21,10 @@
 
 package com.spotify.heroic;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.spotify.heroic.common.Optionals.pickOptional;
+
+import com.fasterxml.jackson.databind.JsonNode;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.Group;
 import com.spotify.heroic.common.FeatureSet;
@@ -29,15 +33,11 @@ import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.MatchKeyFilter;
 import com.spotify.heroic.filter.MatchTagFilter;
 import com.spotify.heroic.metric.MetricType;
-import lombok.RequiredArgsConstructor;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.spotify.heroic.common.Optionals.pickOptional;
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class QueryBuilder {
@@ -49,6 +49,7 @@ public class QueryBuilder {
     private Optional<QueryDateRange> range = Optional.empty();
     private Optional<Aggregation> aggregation = Optional.empty();
     private Optional<QueryOptions> options = Optional.empty();
+    private Optional<JsonNode> clientContext = Optional.empty();
     private Optional<FeatureSet> features = Optional.empty();
 
     /**
@@ -122,6 +123,12 @@ public class QueryBuilder {
     public QueryBuilder options(final Optional<QueryOptions> options) {
         checkNotNull(options, "options");
         this.options = pickOptional(this.options, options);
+        return this;
+    }
+
+    public QueryBuilder clientContext(final Optional<JsonNode> clientContext) {
+        checkNotNull(clientContext, "clientContext");
+        this.clientContext = pickOptional(this.clientContext, clientContext);
         return this;
     }
 

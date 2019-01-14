@@ -26,9 +26,7 @@ import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.RequestTimer;
-import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
-import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.metric.AbstractMetricBackend;
 import com.spotify.heroic.metric.BackendEntry;
 import com.spotify.heroic.metric.BackendKey;
@@ -36,61 +34,80 @@ import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
+import com.spotify.heroic.metric.MetricReadResult;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.WriteMetric;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.Data;
-import lombok.ToString;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableMap;
-import java.util.TreeMap;
+import java.util.SortedMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.function.Consumer;
+import javax.inject.Inject;
+import lombok.Data;
+import lombok.ToString;
 
 /**
  * MetricBackend for Heroic cassandra datastore.
  */
-@ToString(exclude = {"storage", "async", "createLock"})
+@ToString(exclude = {"storage", "async"})
 public class MemoryBackend extends AbstractMetricBackend {
     public static final String MEMORY_KEYS = "memory-keys";
 
     public static final QueryTrace.Identifier FETCH =
         QueryTrace.identifier(MemoryBackend.class, "fetch");
 
+    public static final Comparator<Map.Entry<String, String>> ENTRY_COMPARATOR =
+        Comparator.<Map.Entry<String, String>, String>comparing(Map.Entry::getKey).thenComparing(
+            Map.Entry::getValue);
+
     static final List<BackendEntry> EMPTY_ENTRIES = new ArrayList<>();
 
-    static final Comparator<MemoryKey> COMPARATOR = (a, b) -> {
-        final int t = a.getSource().compareTo(b.getSource());
+    static final Comparator<SortedMap<String, String>> MAP_COMPARATOR = (a, b) -> {
+        final Iterator<Map.Entry<String, String>> aIter = a.entrySet().iterator();
+        final Iterator<Map.Entry<String, String>> bIter = b.entrySet().iterator();
 
-        if (t != 0) {
-            return t;
+        while (aIter.hasNext()) {
+            if (!bIter.hasNext()) {
+                return 1;
+            }
+
+            final int n = ENTRY_COMPARATOR.compare(aIter.next(), bIter.next());
+
+            if (n != 0) {
+                return n;
+            }
         }
 
-        return a.getSeries().compareTo(b.getSeries());
+        if (bIter.hasNext()) {
+            return -1;
+        }
+
+        return 0;
     };
 
-    private final Object createLock = new Object();
+    static final Comparator<MemoryKey> COMPARATOR = Comparator
+        .comparing(MemoryKey::getSource)
+        .thenComparing(Comparator.comparing(MemoryKey::getTags, MAP_COMPARATOR));
 
     private final AsyncFramework async;
     private final Groups groups;
-    private final Map<MemoryKey, NavigableMap<Long, Metric>> storage;
+    private final ConcurrentMap<MemoryKey, MemoryCell> storage;
 
     @Inject
-    public MemoryBackend(
-        final AsyncFramework async, final Groups groups,
-        @Named("storage") final Map<MemoryKey, NavigableMap<Long, Metric>> storage,
-        LifeCycleRegistry registry
-    ) {
+    public MemoryBackend(final AsyncFramework async, final Groups groups) {
         super(async);
         this.async = async;
         this.groups = groups;
-        this.storage = storage;
+        this.storage = new ConcurrentHashMap<>();
     }
 
     @Override
@@ -116,11 +133,14 @@ public class MemoryBackend extends AbstractMetricBackend {
     }
 
     @Override
-    public AsyncFuture<FetchData> fetch(FetchData.Request request, FetchQuotaWatcher watcher) {
+    public AsyncFuture<FetchData.Result> fetch(
+        FetchData.Request request, FetchQuotaWatcher watcher,
+        Consumer<MetricReadResult> metricsConsumer
+    ) {
         final QueryTrace.NamedWatch w = QueryTrace.watch(FETCH);
-        final MemoryKey key = new MemoryKey(request.getType(), request.getSeries());
-        final List<MetricCollection> groups = doFetch(key, request.getRange(), watcher);
-        return async.resolved(FetchData.of(w.end(), ImmutableList.of(), groups));
+        final MemoryKey key = new MemoryKey(request.getType(), request.getSeries().getTags());
+        doFetch(key, request.getRange(), watcher, metricsConsumer);
+        return async.resolved(FetchData.result(w.end()));
     }
 
     @Override
@@ -135,69 +155,64 @@ public class MemoryBackend extends AbstractMetricBackend {
 
     @Override
     public AsyncFuture<Void> deleteKey(BackendKey key, QueryOptions options) {
-        storage.remove(new MemoryKey(key.getType(), key.getSeries()));
+        storage.remove(new MemoryKey(key.getType(), key.getSeries().getTags()));
         return async.resolved();
-    }
-
-    @Data
-    public static final class MemoryKey {
-        private final MetricType source;
-        private final Series series;
     }
 
     private void writeOne(final WriteMetric.Request request) {
         final MetricCollection g = request.getData();
 
-        final MemoryKey key = new MemoryKey(g.getType(), request.getSeries());
-        final NavigableMap<Long, Metric> tree = getOrCreate(key);
+        final MemoryKey key = new MemoryKey(g.getType(), request.getSeries().getTags());
 
-        synchronized (tree) {
-            for (final Metric d : g.getData()) {
-                tree.put(d.getTimestamp(), d);
-            }
+        final MemoryCell cell =
+            storage.computeIfAbsent(key, k -> new MemoryCell(new ConcurrentHashMap<>()));
+
+        final ConcurrentSkipListMap<Long, Metric> metrics = cell.entries
+            .computeIfAbsent(request.getSeries().getResource(),
+                k -> new MemoryEntry(new ConcurrentSkipListMap<>()))
+            .getMetrics();
+
+        for (final Metric d : g.getData()) {
+            metrics.put(d.getTimestamp(), d);
         }
     }
 
-    private List<MetricCollection> doFetch(
-        final MemoryKey key, final DateRange range, final FetchQuotaWatcher watcher
+    private void doFetch(
+        final MemoryKey key, final DateRange range, final FetchQuotaWatcher watcher,
+        final Consumer<MetricReadResult> metricsConsumer
     ) {
-        final NavigableMap<Long, Metric> tree = storage.get(key);
+        final MemoryCell cell = storage.get(key);
 
-        if (tree == null) {
-            return ImmutableList.of(MetricCollection.build(key.getSource(), ImmutableList.of()));
+        // empty
+        if (cell == null) {
+            return;
         }
 
-        synchronized (tree) {
-            final Iterable<Metric> metrics = tree.subMap(range.getStart(), range.getEnd()).values();
+        for (final Map.Entry<SortedMap<String, String>, MemoryEntry> e : cell.entries.entrySet()) {
+            final Collection<Metric> metrics =
+                e.getValue().metrics.subMap(range.getStart(), false, range.getEnd(), true).values();
+
+            watcher.readData(metrics.size());
+
             final List<Metric> data = ImmutableList.copyOf(metrics);
-            watcher.readData(data.size());
-            return ImmutableList.of(MetricCollection.build(key.getSource(), data));
+            final MetricCollection collection = MetricCollection.build(key.getSource(), data);
+            metricsConsumer.accept(MetricReadResult.create(collection, e.getKey()));
         }
     }
 
-    /**
-     * Get or create a new navigable map to store time data.
-     *
-     * @param key The key to create the map under.
-     * @return An existing, or a newly created navigable map for the given key.
-     */
-    private NavigableMap<Long, Metric> getOrCreate(final MemoryKey key) {
-        final NavigableMap<Long, Metric> tree = storage.get(key);
+    @Data
+    public static final class MemoryKey {
+        private final MetricType source;
+        private final SortedMap<String, String> tags;
+    }
 
-        if (tree != null) {
-            return tree;
-        }
+    @Data
+    public static final class MemoryEntry {
+        private final ConcurrentSkipListMap<Long, Metric> metrics;
+    }
 
-        synchronized (createLock) {
-            final NavigableMap<Long, Metric> checked = storage.get(key);
-
-            if (checked != null) {
-                return checked;
-            }
-
-            final NavigableMap<Long, Metric> created = new TreeMap<>();
-            storage.put(key, created);
-            return created;
-        }
+    @Data
+    public static final class MemoryCell {
+        private final ConcurrentMap<SortedMap<String, String>, MemoryEntry> entries;
     }
 }

@@ -24,15 +24,15 @@ package com.spotify.heroic.aggregation.cardinality;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.grammar.DoubleExpression;
 import com.spotify.heroic.grammar.Expression;
 import com.spotify.heroic.grammar.FunctionExpression;
 import com.spotify.heroic.grammar.IntegerExpression;
 import com.spotify.heroic.grammar.StringExpression;
-import lombok.Data;
-
 import java.beans.ConstructorProperties;
 import java.util.Optional;
+import lombok.Data;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 @JsonSubTypes({
@@ -45,6 +45,8 @@ public interface CardinalityMethod {
     default CardinalityMethod reducer() {
         throw new RuntimeException("reducer not supported");
     }
+
+    void hashTo(ObjectHasher hasher);
 
     @Data
     @JsonTypeName("exact")
@@ -61,6 +63,13 @@ public interface CardinalityMethod {
         @Override
         public CardinalityBucket build(final long timestamp) {
             return new ExactCardinalityBucket(timestamp, includeKey);
+        }
+
+        @Override
+        public void hashTo(final ObjectHasher hasher) {
+            hasher.putObject(getClass(), () -> {
+                hasher.putField("includeKey", includeKey, hasher.bool());
+            });
         }
     }
 
@@ -90,6 +99,14 @@ public interface CardinalityMethod {
         public CardinalityMethod reducer() {
             return new ReduceHyperLogLogCardinalityMethod();
         }
+
+        @Override
+        public void hashTo(final ObjectHasher hasher) {
+            hasher.putObject(this.getClass(), () -> {
+                hasher.putField("precision", precision, hasher.doubleValue());
+                hasher.putField("includeKey", includeKey, hasher.bool());
+            });
+        }
     }
 
     @Data
@@ -118,6 +135,14 @@ public interface CardinalityMethod {
         public CardinalityMethod reducer() {
             return new ReduceHyperLogLogPlusCardinalityMethod();
         }
+
+        @Override
+        public void hashTo(final ObjectHasher hasher) {
+            hasher.putObject(this.getClass(), () -> {
+                hasher.putField("precision", precision, hasher.integer());
+                hasher.putField("includeKey", includeKey, hasher.bool());
+            });
+        }
     }
 
     @Data
@@ -126,6 +151,11 @@ public interface CardinalityMethod {
         public CardinalityBucket build(final long timestamp) {
             return new ReduceHyperLogLogCardinalityBucket(timestamp);
         }
+
+        @Override
+        public void hashTo(final ObjectHasher hasher) {
+            hasher.putObject(getClass());
+        }
     }
 
     @Data
@@ -133,6 +163,11 @@ public interface CardinalityMethod {
         @Override
         public CardinalityBucket build(final long timestamp) {
             return new ReduceHyperLogLogPlusCardinalityBucket(timestamp);
+        }
+
+        @Override
+        public void hashTo(final ObjectHasher hasher) {
+            hasher.putObject(getClass());
         }
     }
 

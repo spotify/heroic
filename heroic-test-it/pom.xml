@@ -27,13 +27,13 @@
 
     <dependency>
       <groupId>com.spotify.heroic</groupId>
-      <artifactId>heroic-core</artifactId>
+      <artifactId>heroic-test</artifactId>
+      <scope>compile</scope>
     </dependency>
 
     <dependency>
       <groupId>com.spotify.heroic</groupId>
-      <artifactId>heroic-test-base</artifactId>
-      <scope>compile</scope>
+      <artifactId>heroic-core</artifactId>
     </dependency>
 
     <dependency>

@@ -25,23 +25,21 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
-import com.spotify.heroic.common.OptionalLimit;
 import eu.toolchain.async.AsyncFramework;
-import lombok.Data;
-import org.apache.commons.lang3.tuple.Pair;
-
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import lombok.Data;
 
 @Data
 public class NodeRegistry {
-    private static final Random random = new Random(System.currentTimeMillis());
+    private static final Random random = new Random();
 
     private final AsyncFramework async;
     private final List<ClusterNode> entries;
@@ -71,62 +69,38 @@ public class NodeRegistry {
         return totalNodes - entries.size();
     }
 
-    /**
-     * Find multiple registry entries from all shards.
-     *
-     * @param n Max number of entries to find.
-     * @return An iterable of iterables, containing all found entries.
-     */
-    public List<Pair<Map<String, String>, List<ClusterNode>>> findFromAllShards(
-        OptionalLimit n
-    ) {
-        final List<Pair<Map<String, String>, List<ClusterNode>>> result = Lists.newArrayList();
+    public Set<Map<String, String>> getShards() {
+        return buildShards(entries).keySet();
+    }
 
-        final Multimap<Map<String, String>, ClusterNode> shards = buildShards(entries);
+    public List<ClusterNode> getNodesInShard(final Map<String, String> shard) {
+        final Multimap<Map<String, String>, ClusterNode> shardToNode = buildShards(entries);
 
-        final Set<Entry<Map<String, String>, Collection<ClusterNode>>> entries =
-            shards.asMap().entrySet();
-
-        for (final Entry<Map<String, String>, Collection<ClusterNode>> e : entries) {
-            result.add(Pair.of(e.getKey(), pickN(e.getValue(), n)));
-        }
+        final Collection<ClusterNode> nodesInShard = shardToNode.get(shard);
+        final List<ClusterNode> result = Lists.newArrayList();
+        result.addAll(nodesInShard);
 
         return result;
     }
 
-    private ClusterNode pickOne(Collection<ClusterNode> options) {
-        if (options.isEmpty()) {
-            return null;
-        }
+    public Optional<ClusterNode> getNodeInShardButNotWithId(
+        final Map<String, String> shard, final Predicate<ClusterNode> exclude
+    ) {
+        final Multimap<Map<String, String>, ClusterNode> shardToNode = buildShards(entries);
 
-        final int selection = random.nextInt(options.size());
+        final Collection<ClusterNode> nodesInShard = shardToNode.get(shard);
 
-        if (options instanceof List) {
-            final List<ClusterNode> list = (List<ClusterNode>) options;
-            return list.get(selection);
-        }
+        final List<ClusterNode> randomizedList =
+            nodesInShard.stream().filter(ClusterNode::isAlive).collect(Collectors.toList());
+        Collections.shuffle(randomizedList, random);
 
-        int i = 0;
-
-        for (final ClusterNode e : options) {
-            if (i++ == selection) {
-                return e;
+        for (final ClusterNode n : randomizedList) {
+            if (exclude.test(n)) {
+                continue;
             }
+            return Optional.of(n);
         }
 
-        return null;
-    }
-
-    private List<ClusterNode> pickN(final Collection<ClusterNode> options, OptionalLimit n) {
-        if (options.isEmpty()) {
-            return ImmutableList.of();
-        }
-
-        final List<ClusterNode> entries =
-            options.stream().filter(ClusterNode::isAlive).collect(Collectors.toList());
-
-        Collections.shuffle(entries, random);
-
-        return n.limitList(entries);
+        return Optional.empty();
     }
 }

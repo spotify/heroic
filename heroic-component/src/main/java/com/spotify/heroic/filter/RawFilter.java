@@ -21,12 +21,15 @@
 
 package com.spotify.heroic.filter;
 
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.Series;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(of = {"OPERATOR", "filter"}, doNotUseGetters = true)
+@JsonTypeName("raw")
 public class RawFilter implements Filter {
     public static final String OPERATOR = "q";
 
@@ -70,5 +73,12 @@ public class RawFilter implements Filter {
     @Override
     public String toDSL() {
         throw new RuntimeException("raw filter cannot be converted to DSL");
+    }
+
+    @Override
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(getClass(), () -> {
+            hasher.putField("filter", filter, hasher.string());
+        });
     }
 }

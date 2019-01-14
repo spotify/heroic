@@ -40,7 +40,7 @@ public interface Metric {
         return invalid;
     }
 
-    Comparator<Metric> comparator = (a, b) -> Long.compare(a.getTimestamp(), b.getTimestamp());
+    Comparator<Metric> comparator = Comparator.comparingLong(Metric::getTimestamp);
 
     Metric invalid = new Metric() {
         @Override

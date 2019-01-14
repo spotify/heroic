@@ -12,10 +12,12 @@
 
   <modules>
     <module>heroic-component</module>
+    <module>heroic-component-test</module>
     <module>heroic-elasticsearch-utils</module>
     <module>heroic-elasticsearch-test</module>
+    <module>heroic-loading</module>
     <module>heroic-core</module>
-    <module>heroic-test-base</module>
+    <module>heroic-test</module>
     <module>heroic-test-it</module>
     <module>heroic-shell</module>
     <module>heroic-parser</module>
@@ -32,6 +34,7 @@
     <module>aggregation/cardinality</module>
     <module>consumer/kafka</module>
     <module>consumer/collectd</module>
+    <module>consumer/pubsub</module>
     <module>rpc/grpc</module>
     <module>rpc/jvm</module>
     <module>heroic-dist</module>
@@ -49,19 +52,17 @@
     <threadCount>1</threadCount>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <jersey.version>2.13</jersey.version>
-    <jackson.version>2.7.4</jackson.version>
-    <hk2.version>2.3.0</hk2.version>
-    <jetty.version>9.3.7.v20160115</jetty.version>
-    <lucene.version>4.10.4</lucene.version>
-    <datastax.version>3.0.2</datastax.version>
+    <jersey.version>2.27</jersey.version>
+    <jackson.version>2.8.11</jackson.version>
+    <jetty.version>9.4.12.v20180830</jetty.version>
+    <lucene.version>5.5.0</lucene.version>
     <semantic-metrics.version>0.2.3</semantic-metrics.version>
-    <netty.version>4.1.0.CR3</netty.version>
+    <netty.version>4.1.31.Final</netty.version>
     <tiny-async.version>1.11.0</tiny-async.version>
     <tiny-serializer.version>1.4.5</tiny-serializer.version>
     <antlr.version>4.5</antlr.version>
-    <log4j.version>2.2</log4j.version>
-    <elasticsearch.version>1.7.5</elasticsearch.version>
+    <log4j.version>2.6.2</log4j.version>
+    <elasticsearch.version>5.3.2</elasticsearch.version>
     <joda-time.version>2.8.2</joda-time.version>
     <lombok.version>1.16.6</lombok.version>
     <findbugs.version>3.0.1</findbugs.version>
@@ -69,6 +70,10 @@
     <slf4j.version>1.7.21</slf4j.version>
     <junit.version>4.12</junit.version>
     <hamcrest.version>2.0.0.0</hamcrest.version>
+    <folsom.version>1.2.1</folsom.version>
+    <opencensus.version>0.15.0</opencensus.version>
+
+    <google-cloud-bom.version>0.74.0-alpha</google-cloud-bom.version>
   </properties>
 
   <profiles>
@@ -245,7 +250,8 @@
       <id>repackaged</id>
 
       <modules>
-        <module>repackaged/bigtable</module>
+        <module>repackaged/datastax</module>
+        <module>repackaged/folsom</module>
       </modules>
     </profile>
   </profiles>
@@ -266,10 +272,23 @@
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+          <groupId>com.google.cloud</groupId>
+          <artifactId>google-cloud-bom</artifactId>
+          <version>${google-cloud-bom.version}</version>
+          <type>pom</type>
+          <scope>import</scope>
+        </dependency>
+
       <!-- heroic components -->
       <dependency>
         <groupId>com.spotify.heroic</groupId>
         <artifactId>heroic-component</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.spotify.heroic</groupId>
+        <artifactId>heroic-loading</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
@@ -296,6 +315,16 @@
       <dependency>
         <groupId>com.spotify.heroic</groupId>
         <artifactId>heroic-test-base</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.spotify.heroic</groupId>
+        <artifactId>heroic-component-test</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.spotify.heroic</groupId>
+        <artifactId>heroic-test</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
@@ -373,6 +402,11 @@
       <dependency>
         <groupId>com.spotify.heroic.consumer</groupId>
         <artifactId>heroic-consumer-collectd</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.spotify.heroic.consumer</groupId>
+        <artifactId>heroic-consumer-pubsub</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
@@ -461,24 +495,47 @@
       </dependency>
 
       <dependency>
-        <groupId>com.datastax.cassandra</groupId>
-        <artifactId>cassandra-driver-core</artifactId>
-        <classifier>shaded</classifier>
-        <version>${datastax.version}</version>
-
-        <exclusions>
-          <exclusion>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-handler</artifactId>
-          </exclusion>
-        </exclusions>
+        <groupId>io.opencensus</groupId>
+        <artifactId>opencensus-api</artifactId>
+        <version>${opencensus.version}</version>
       </dependency>
+      <dependency>
+        <groupId>io.opencensus</groupId>
+        <artifactId>opencensus-impl</artifactId>
+        <version>${opencensus.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.opencensus</groupId>
+        <artifactId>opencensus-exporter-trace-stackdriver</artifactId>
+        <version>${opencensus.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.opencensus</groupId>
+        <artifactId>opencensus-exporter-trace-jaeger</artifactId>
+        <version>${opencensus.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.opencensus</groupId>
+        <artifactId>opencensus-exporter-trace-zipkin</artifactId>
+        <version>${opencensus.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.opencensus</groupId>
+        <artifactId>opencensus-contrib-zpages</artifactId>
+        <version>${opencensus.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.opencensus</groupId>
+        <artifactId>opencensus-contrib-grpc-util</artifactId>
+        <version>${opencensus.version}</version>
+      </dependency>
+
 
       <!-- useful collections and utilities -->
       <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
-        <version>19.0</version>
+        <version>20.0</version>
       </dependency>
 
       <dependency>
@@ -554,6 +611,11 @@
         <artifactId>jersey-client</artifactId>
         <version>${jersey.version}</version>
       </dependency>
+      <dependency>
+        <groupId>org.glassfish.jersey.inject</groupId>
+        <artifactId>jersey-hk2</artifactId>
+        <version>${jersey.version}</version>
+      </dependency>
       <!-- jetty -->
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
@@ -571,6 +633,11 @@
         <version>${jetty.version}</version>
       </dependency>
       <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-util</artifactId>
+        <version>${jetty.version}</version>
+      </dependency>
+      <dependency>
         <groupId>javax.servlet</groupId>
         <artifactId>javax.servlet-api</artifactId>
         <version>3.1.0</version>
@@ -583,7 +650,7 @@
       <dependency>
         <groupId>javax.ws.rs</groupId>
         <artifactId>javax.ws.rs-api</artifactId>
-        <version>2.0.1</version>
+        <version>2.1</version>
       </dependency>
       <!-- netty -->
       <dependency>
@@ -611,7 +678,7 @@
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-databind</artifactId>
-        <version>${jackson.version}</version>
+        <version>2.8.11.3</version>
       </dependency>
       <dependency>
         <groupId>com.fasterxml.jackson.dataformat</groupId>
@@ -644,20 +711,9 @@
       <!-- used by com.spotify.heroic.metadata.elasticsearch
            TODO: break out -->
       <dependency>
-        <groupId>org.elasticsearch</groupId>
-        <artifactId>elasticsearch</artifactId>
+        <groupId>org.elasticsearch.client</groupId>
+        <artifactId>transport</artifactId>
         <version>${elasticsearch.version}</version>
-      </dependency>
-      <!--  used by com.spotify.heroic.metadata.lucene -->
-      <dependency>
-        <groupId>org.apache.lucene</groupId>
-        <artifactId>lucene-core</artifactId>
-        <version>${lucene.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.lucene</groupId>
-        <artifactId>lucene-codecs</artifactId>
-        <version>${lucene.version}</version>
       </dependency>
       <!-- graphing -->
       <dependency>
@@ -679,6 +735,11 @@
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>jul-to-slf4j</artifactId>
+        <version>${slf4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>jcl-over-slf4j</artifactId>
         <version>${slf4j.version}</version>
       </dependency>
       <dependency>
@@ -722,6 +783,13 @@
         <version>${antlr.version}</version>
       </dependency>
 
+      <!-- repackaged memcached client -->
+      <dependency>
+        <groupId>com.spotify.heroic.repackaged</groupId>
+        <artifactId>folsom</artifactId>
+        <version>${folsom.version}</version>
+      </dependency>
+
       <dependency>
         <groupId>org.antlr</groupId>
         <artifactId>antlr4</artifactId>
@@ -731,15 +799,15 @@
 
       <!-- testing -->
       <dependency>
-        <groupId>junit</groupId>
-        <artifactId>junit</artifactId>
-        <version>${junit.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
         <groupId>org.hamcrest</groupId>
         <artifactId>java-hamcrest</artifactId>
         <version>${hamcrest.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>${junit.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -807,6 +875,7 @@
                     </excludes>
                   </filter>
                 </filters>
+
                 <transformers>
                   <!-- required for lucene -->
                   <transformer

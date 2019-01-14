@@ -1,0 +1,14 @@
+# attributes (a.k.a tags)
+{"key": "foo", "attributes": {}} | {"key": "foo", "attributes": {}}
+{"key": "foo", "attributes": {}} | {"key": "foo", "attributes": {}}
+{"key": "foo", "attributes": {"foo": null}} | {"key": "foo", "attributes": {}}
+{"key": "foo", "attributes": {"foo": "bar"}} | {"key": "foo", "attributes": {"foo": "bar"}}
+{"key": "foo", "attributes": {"foo": "bar", "bar": "baz"}} | {"key": "foo", "attributes": {"foo": "bar", "bar": "baz"}}
+
+# resource tags
+{"key": "foo"} | {"key": "foo", "resource": {}}
+{"key": "foo", "resource": {}} | {"key": "foo", "resource": {}}
+{"key": "foo", "resource": null} | {"key": "foo", "resource": {}}
+{"key": "foo", "resource": {"foo": null}} | {"key": "foo", "resource": {}}
+{"key": "foo", "resource": {"foo": "bar"}} | {"key": "foo", "resource": {"foo": "bar"}}
+{"key": "foo", "resource": {"foo": "bar", "bar": "baz"}} | {"key": "foo", "resource": {"foo": "bar", "bar": "baz"}}

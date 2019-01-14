@@ -3,6 +3,7 @@
 [![Build Status](https://travis-ci.org/spotify/heroic.svg?branch=master)](https://travis-ci.org/spotify/heroic)
 [![Codecov](https://img.shields.io/codecov/c/github/spotify/heroic.svg)](https://codecov.io/gh/spotify/heroic)
 [![License](https://img.shields.io/github/license/spotify/heroic.svg)](LICENSE)
+[![Join the chat at https://gitter.im/spotify/heroic](https://badges.gitter.im/spotify/heroic.svg)](https://gitter.im/spotify/heroic)
 
 A scalable time series database based on Bigtable, Cassandra, and Elasticsearch.
 Go to https://spotify.github.io/heroic/ for documentation, please join [`#heroic at Freenode`](irc://freenode.net/heroic) if you need help or want to chat.
@@ -41,11 +42,15 @@ all required dependencies.
 
 After building, the entry point of the service is
 [`com.spotify.heroic.HeroicService`](/heroic-dist/src/main/java/com/spotify/heroic/HeroicService.java).
-The following is en example of how this can be run:
+The following is an example of how this can be run:
 
 ```
 $ java -cp $PWD/heroic-dist/target/heroic-dist-0.0.1-SNAPSHOT-shaded.jar com.spotify.heroic.HeroicService <config>
 ```
+
+For help on how to write a configuration file, see the [Configuration Section][configuration] of the official documentation.
+
+[configuration]: http://spotify.github.io/heroic/#!/docs/config
 
 Heroic has been tested with the following services:
 
@@ -59,12 +64,28 @@ Heroic has been tested with the following services:
       [elastic/elasticsearch#13273](https://github.com/elastic/elasticsearch/issues/13273)
 * Kafka (`0.8.x`) when using [consumer/kafka](/consumer/kafka).
 
+### Building/Running via docker
+
+A docker container with the shaded jar is now available. To build the container:
+
+```
+$ docker build -t heroic:latest .
+```
+
+This is a multi-stage build and will first build Heroic via a `mvn clean package` and then copy the resulting shaded jar into the runtime container.
+
+Running heroic via docker can be done:
+
+```
+$ docker run -d -p 8080:8080 -p 9091:9091 -v /path/to/config.yml:/heroic.yml spotify/heroic:latest
+```
+
 #### Logging
 
 Logging is captured using [SLF4J](http://www.slf4j.org/), and forwarded to
 [Log4j](http://logging.apache.org/log4j/).
 
-To configure logging, define the `-D -Dlog4j.configurationFile==<path>`
+To configure logging, define the `-Dlog4j.configurationFile=<path>`
 parameter. You can use [docs/log4j2-file.xml](/docs/log4j2-file.xml) as a base.
 
 ## Testing
@@ -134,6 +155,10 @@ $> mvn -P integration-tests \
     clean verify
 ```
 
+##### PubSub
+
+PubSub relies on having the `PUBSUB_EMULATOR_HOST` environment variable set instead of a system property. Detailed instructions are available in the [Google PubSub emulator docs](https://cloud.google.com/pubsub/docs/emulator).
+
 #### Full Cluster Tests
 
 Full cluster tests are defined in [heroic-dist/src/test/java](/heroic-dist/src/test/java).
@@ -194,11 +219,33 @@ If you encounter problems, you can troubleshoot the build with `DH_VERBOSE`:
 $ env DH_VERBOSE=1 dpkg-buildpackage -uc -us
 ```
 
-## Hacking
+## Contributing
+
+Fork the code at https://github.com/spotify/heroic
+
+Make sure you format the code using the provided formatter in [idea](idea). Even if you disagree
+with the way it is formatted, consistency is more important.
+For special cases, see [Bypassing Validation](#bypassing-validation).
+
+If possible, limit your changes to one module per commit.
+If you add new, or modify existing classes. Keep that change to a single commit while maintaing
+backwards compatible behaviour. Deprecate any old APIs as appropriate with `@Deprecated` and
+add documentation for how to use the new API.
+
+The first line of the commit should be formatted with `[module1,module2] my message`.
+
+`module1` and `module2` are paths to the modules affected with any `heroic-` prefix stripped.
+So if your change affects `heroic-core` and `metric/bigtable`, the message should say
+`[core,metric/bigtable] did x to y`.
+
+If more than _3 modules_ are affected by a commit, use `[all]`.
+For other cases, adapt to the format of existing commit messages.
+
+Before setting up a pull request, run the comprehensive test suite as specified in
+[Testing](#testing).
 
 * [A Guide to Dagger 2](docs/guide-to-dagger2.md)
 * [Using IDEA](idea/README.md)
-* [Using Eclipse](eclipse/README.md)
 
 #### Module Orientation
 
@@ -296,8 +343,6 @@ There are also profiles that can be activated with the `-P <profile>` switch,
 available profiles are listed in `--help`.
 
 ## Repackaged Dependencies
-
-* [repackaged/bigtable](/repackaged/bigtable)
 
 These are third-party dependencies that has to be repackaged to avoid binary
 incompatibilities with dependencies.

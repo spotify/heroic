@@ -35,6 +35,7 @@ import com.spotify.heroic.cluster.CoreClusterComponent;
 import com.spotify.heroic.cluster.DaggerCoreClusterComponent;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.Optionals;
+import com.spotify.heroic.common.TypeNameMixin;
 import com.spotify.heroic.consumer.ConsumersComponent;
 import com.spotify.heroic.consumer.CoreConsumersModule;
 import com.spotify.heroic.consumer.DaggerCoreConsumersComponent;
@@ -59,6 +60,7 @@ import com.spotify.heroic.http.HttpServer;
 import com.spotify.heroic.http.HttpServerComponent;
 import com.spotify.heroic.http.HttpServerModule;
 import com.spotify.heroic.ingestion.IngestionComponent;
+import com.spotify.heroic.jetty.JettyConnectionFactory;
 import com.spotify.heroic.lifecycle.CoreLifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleHook;
@@ -67,6 +69,7 @@ import com.spotify.heroic.metadata.CoreMetadataComponent;
 import com.spotify.heroic.metadata.DaggerCoreMetadataComponent;
 import com.spotify.heroic.metric.CoreMetricComponent;
 import com.spotify.heroic.metric.DaggerCoreMetricComponent;
+import com.spotify.heroic.querylogging.QueryLoggingComponent;
 import com.spotify.heroic.shell.DaggerShellServerComponent;
 import com.spotify.heroic.shell.ShellServerComponent;
 import com.spotify.heroic.shell.ShellServerModule;
@@ -77,6 +80,15 @@ import com.spotify.heroic.suggest.DaggerCoreSuggestComponent;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
+import io.opencensus.contrib.zpages.ZPageHandlers;
+import io.opencensus.exporter.trace.jaeger.JaegerTraceExporter;
+import io.opencensus.exporter.trace.stackdriver.StackdriverTraceConfiguration;
+import io.opencensus.exporter.trace.stackdriver.StackdriverTraceExporter;
+import io.opencensus.exporter.trace.zipkin.ZipkinTraceExporter;
+import io.opencensus.trace.Tracing;
+import io.opencensus.trace.config.TraceConfig;
+import io.opencensus.trace.samplers.Samplers;
+import java.io.IOException;
 import java.io.InputStream;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.InetSocketAddress;
@@ -86,10 +98,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -122,10 +136,6 @@ public class HeroicCore implements HeroicConfiguration {
     static final boolean DEFAULT_ONESHOT = false;
     static final boolean DEFAULT_DISABLE_BACKENDS = false;
     static final boolean DEFAULT_SETUP_SHELL_SERVER = true;
-
-    public static final String APPLICATION_JSON_INTERNAL = "application/json+internal";
-    public static final String APPLICATION_JSON = "application/json";
-    public static final String APPLICATION_HEROIC_CONFIG = "application/heroic-config";
 
     static final UncaughtExceptionHandler uncaughtExceptionHandler = (Thread t, Throwable e) -> {
         try {
@@ -212,8 +222,6 @@ public class HeroicCore implements HeroicConfiguration {
      * <p>
      * <p>
      * Start all the external modules. {@link #startLifeCycles}
-     *
-     * @throws Exception
      */
     public HeroicCoreInstance newInstance() throws Exception {
         final CoreLoadingComponent loading = loadingInjector();
@@ -221,6 +229,8 @@ public class HeroicCore implements HeroicConfiguration {
         loadModules(loading);
 
         final HeroicConfig config = config(loading);
+
+        enableTracing(config.getTracing());
 
         final CoreEarlyComponent early = earlyInjector(loading, config);
         runBootstrappers(early, this.early);
@@ -248,13 +258,72 @@ public class HeroicCore implements HeroicConfiguration {
         return instance;
     }
 
+    @SuppressWarnings("unchecked")
+    private void enableTracing(Map<String, Object> config) throws IOException {
+        final Object stackdriverConfig = config.get("stackdriver");
+        if (stackdriverConfig != null) {
+            final Map<String, String> configMap = (Map) stackdriverConfig;
+            final String projectId = configMap.get("project");
+
+            if (projectId == null) {
+                throw new IllegalArgumentException("Configuration for stackdriver is incomplete");
+            }
+
+            log.info("Setting up StackDriver tracing for {}", projectId);
+            // Create and register the Stackdriver Tracing exporter
+            StackdriverTraceExporter.createAndRegister(
+                StackdriverTraceConfiguration.builder()
+                    .setProjectId(projectId)
+                    .build());
+        }
+
+        final Object jaegerConfig = config.get("jaeger");
+        if (jaegerConfig != null) {
+            final Map<String, String> configMap = (Map) jaegerConfig;
+            final String service = configMap.getOrDefault("service", "heroic");
+            final String thriftEndpoint = configMap.get("thriftEndpoint");
+
+            if (thriftEndpoint == null) {
+                throw new IllegalArgumentException("Configuration for jaeger is incomplete");
+            }
+
+            log.info("Setting up Jaeger tracing for service {}", service);
+            // Create and register the Jaeger Tracing exporter
+            JaegerTraceExporter.createAndRegister(thriftEndpoint, service);
+        }
+
+        final Object zipkinConfig = config.get("zipkin");
+        if (zipkinConfig != null) {
+            final Map<String, String> configMap = (Map) zipkinConfig;
+            final String service = configMap.getOrDefault("service", "heroic");
+            final String url = configMap.get("url");
+            ZipkinTraceExporter.createAndRegister(url, service);
+        }
+
+        final Integer zpagesPort = (Integer) config.get("zpagesPort");
+        if (zpagesPort != null) {
+            log.info("Starting zpage handlers on port {}", zpagesPort.toString());
+            // Start a web server for tracing data
+            ZPageHandlers.startHttpServerAndRegisterAll(zpagesPort);
+        }
+
+        final double probability = (double) config.getOrDefault("probability", 0.01);
+        log.info("Setting tracing to sample with a probability of {}", String.valueOf(probability));
+        TraceConfig traceConfig = Tracing.getTraceConfig();
+        traceConfig.updateActiveTraceParams(
+            traceConfig
+                .getActiveTraceParams()
+                .toBuilder()
+                .setSampler(Samplers.probabilitySampler(probability))
+                .build());
+    }
+
     /**
      * This method basically goes through the list of bootstrappers registered by modules and runs
      * them.
      *
      * @param early Injector to inject boostrappers using.
      * @param bootstrappers Bootstraps to run.
-     * @throws Exception
      */
     static void runBootstrappers(
         final CoreEarlyComponent early, final List<HeroicBootstrap> bootstrappers
@@ -308,7 +377,6 @@ public class HeroicCore implements HeroicConfiguration {
      * Setup a fixed thread pool executor that correctly handles unhandled exceptions.
      *
      * @param threads Number of threads to configure.
-     * @return
      */
     private ExecutorService setupExecutor(final int threads) {
         return new ThreadPoolExecutor(threads, threads, 0L, TimeUnit.MILLISECONDS,
@@ -360,11 +428,9 @@ public class HeroicCore implements HeroicConfiguration {
         final CoreEarlyComponent early, final HeroicConfig config, final HeroicCoreInstance instance
     ) {
         log.info("Building Primary Injector");
-
         final List<LifeCycle> life = new ArrayList<>();
 
         final StatisticsComponent statistics = config.getStatistics().module(early);
-
         life.add(statistics.life());
 
         final HeroicReporter reporter = statistics.reporter();
@@ -373,28 +439,13 @@ public class HeroicCore implements HeroicConfiguration {
         final CorePrimaryComponent primary = DaggerCorePrimaryComponent
             .builder()
             .coreEarlyComponent(early)
-            .primaryModule(new PrimaryModule(instance, config.getFeatures(), reporter))
+            .primaryModule(new PrimaryModule(instance, config.getFeatures(), reporter,
+                config.getConditionalFeature()))
             .build();
 
-        final Optional<HttpServer> server;
+        final QueryLoggingComponent queryLogging = config.getQueryLogging().component(primary);
 
-        if (setupService) {
-            final InetSocketAddress bindAddress = setupBindAddress(config);
-
-            final HttpServerComponent serverComponent = DaggerHttpServerComponent
-                .builder()
-                .primaryComponent(primary)
-                .httpServerModule(new HttpServerModule(bindAddress, config.isEnableCors(),
-                    config.getCorsAllowOrigin(), config.getConnectors()))
-                .build();
-
-            // Trigger life cycle registration
-            life.add(serverComponent.life());
-
-            server = Optional.of(serverComponent.server());
-        } else {
-            server = Optional.empty();
-        }
+        final Optional<HttpServer> server = setupServer(config, life, primary);
 
         final CacheComponent cache = config.getCache().module(primary);
         life.add(cache.cacheLife());
@@ -424,6 +475,7 @@ public class HeroicCore implements HeroicConfiguration {
             .metadataComponent(metadata)
             .analyticsComponent(analytics)
             .metricManagerModule(config.getMetric())
+            .queryLoggingComponent(queryLogging)
             .build();
 
         life.add(metric.metricLife());
@@ -476,10 +528,12 @@ public class HeroicCore implements HeroicConfiguration {
 
         final QueryComponent query = DaggerCoreQueryComponent
             .builder()
-            .queryModule(new QueryModule(config.getMetric().getGroupLimit()))
+            .queryModule(new QueryModule(config.getMetric().getGroupLimit(),
+                config.getMetric().getSmallQueryThreshold()))
             .corePrimaryComponent(primary)
             .clusterComponent(cluster)
             .cacheComponent(cache)
+            .queryLoggingComponent(queryLogging)
             .build();
         life.add(query.queryLife());
 
@@ -500,10 +554,33 @@ public class HeroicCore implements HeroicConfiguration {
             .metadataComponent(metadata)
             .suggestComponent(suggest)
             .queryComponent(query)
+            .queryLoggingComponent(queryLogging)
             .ingestionComponent(ingestion)
             .clusterComponent(cluster)
             .generatorComponent(generator)
             .build();
+    }
+
+    private Optional<HttpServer> setupServer(
+        final HeroicConfig config, final List<LifeCycle> life, final CorePrimaryComponent primary
+    ) {
+        if (!setupService) {
+            return Optional.empty();
+        }
+
+        final InetSocketAddress bindAddress = setupBindAddress(config);
+
+        final HttpServerComponent serverComponent = DaggerHttpServerComponent
+            .builder()
+            .primaryComponent(primary)
+            .httpServerModule(new HttpServerModule(bindAddress, config.isEnableCors(),
+                config.getCorsAllowOrigin(), config.getConnectors()))
+            .build();
+
+        // Trigger life cycle registration
+        life.add(serverComponent.life());
+
+        return Optional.of(serverComponent.server());
     }
 
     private Optional<ShellServerModule> buildShellServer(final HeroicConfig config) {
@@ -613,7 +690,10 @@ public class HeroicCore implements HeroicConfiguration {
             builder = builder.merge(fragment);
         }
 
-        final ObjectMapper mapper = loading.configMapper();
+        final ObjectMapper mapper = loading.configMapper().copy();
+
+        // TODO: figure out where to put this
+        mapper.addMixIn(JettyConnectionFactory.Builder.class, TypeNameMixin.class);
 
         if (configPath.isPresent()) {
             builder = HeroicConfig
@@ -933,36 +1013,39 @@ public class HeroicCore implements HeroicConfiguration {
                 return null;
             });
 
-            this.stopped = async.collect(ImmutableList.of(started, stop)).directTransform(n -> {
-                final CoreComponent core = coreInjector.get();
-                assert core != null;
+            this.stopped = async.collect(ImmutableList.of(started, stop)).lazyTransform(n -> {
+                return async.call(() -> {
+                    final CoreComponent core = coreInjector.get();
+                    assert core != null;
 
-                final CoreLifeCycleRegistry coreRegistry =
-                    (CoreLifeCycleRegistry) core.lifeCycleRegistry();
+                    final CoreLifeCycleRegistry coreRegistry =
+                        (CoreLifeCycleRegistry) core.lifeCycleRegistry();
 
-                core.stopSignal().run();
+                    core.stopSignal().run();
 
-                log.info("Shutting down Heroic");
+                    log.info("Shutting down Heroic");
 
-                try {
-                    stopLifeCycles(coreRegistry, core, config);
-                } catch (Exception e) {
-                    log.error("Failed to stop all lifecycles, continuing anyway...", e);
-                }
+                    try {
+                        stopLifeCycles(coreRegistry, core, config);
+                    } catch (Exception e) {
+                        log.error("Failed to stop all lifecycles, continuing anyway...", e);
+                    }
 
-                log.info("Stopping internal life cycle");
+                    log.info("Stopping internal life cycle");
 
-                final CoreLifeCycleRegistry internalRegistry =
-                    (CoreLifeCycleRegistry) core.internalLifeCycleRegistry();
+                    final CoreLifeCycleRegistry internalRegistry =
+                        (CoreLifeCycleRegistry) core.internalLifeCycleRegistry();
 
-                try {
-                    stopLifeCycles(internalRegistry, core, config);
-                } catch (Exception e) {
-                    log.error("Failed to stop all internal lifecycles, continuing anyway...", e);
-                }
+                    try {
+                        stopLifeCycles(internalRegistry, core, config);
+                    } catch (Exception e) {
+                        log.error("Failed to stop all internal lifecycles, continuing anyway...",
+                            e);
+                    }
 
-                log.info("Done shutting down, bye bye!");
-                return null;
+                    log.info("Done shutting down, bye bye!");
+                    return null;
+                }, Executors.newSingleThreadExecutor());
             });
         }
 

@@ -49,4 +49,3 @@ public enum FilterKThresholdType {
         return metrics.min(comparator);
     }
 }
-

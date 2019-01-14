@@ -21,15 +21,17 @@
 
 package com.spotify.heroic.filter;
 
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.grammar.DSL;
+import java.util.regex.Pattern;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import java.util.regex.Pattern;
-
 @Data
 @EqualsAndHashCode(of = {"OPERATOR", "tag", "value"}, doNotUseGetters = true)
+@JsonTypeName("regex")
 public class RegexFilter implements Filter {
     public static final String OPERATOR = "~";
 
@@ -82,5 +84,13 @@ public class RegexFilter implements Filter {
     @Override
     public String toDSL() {
         return DSL.dumpString(tag) + " ~ " + DSL.dumpString(value);
+    }
+
+    @Override
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(getClass(), () -> {
+            hasher.putField("tag", tag, hasher.string());
+            hasher.putField("value", value, hasher.string());
+        });
     }
 }

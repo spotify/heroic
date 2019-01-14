@@ -21,6 +21,11 @@
 
 package com.spotify.heroic.metric;
 
+import static com.spotify.heroic.common.Optionals.mergeOptionalList;
+import static com.spotify.heroic.common.Optionals.pickOptional;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.analytics.MetricAnalytics;
@@ -33,27 +38,22 @@ import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 import dagger.Module;
 import dagger.Provides;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-
-import static com.spotify.heroic.common.Optionals.mergeOptionalList;
-import static com.spotify.heroic.common.Optionals.pickOptional;
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
+import javax.inject.Named;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @Module
 public class MetricManagerModule {
     public static final int DEFAULT_FETCH_PARALLELISM = 100;
     public static final boolean DEFAULT_FAIL_ON_LIMITS = false;
+    public static final long DEFAULT_SMALL_QUERY_THRESHOLD = 200000;
 
     private final List<MetricModule> backends;
     private final Optional<List<String>> defaultBackends;
@@ -79,6 +79,12 @@ public class MetricManagerModule {
     private final OptionalLimit dataLimit;
 
     /**
+     * Limit how many concurrent queries that the MetricManager will accept. When this level is
+     * reached, the result will be back-off so that another node in the cluster can be used instead.
+     */
+    private final OptionalLimit concurrentQueriesBackoff;
+
+    /**
      * How many data fetches are performed in parallel.
      */
     private final int fetchParallelism;
@@ -87,6 +93,11 @@ public class MetricManagerModule {
      * If {@code true}, will cause any limits applied to be reported as a failure.
      */
     private final boolean failOnLimits;
+
+    /**
+     * Threshold for defining a "small" query, measured in pre-aggregation sample size
+     */
+    private final long smallQueryThreshold;
 
     @Provides
     @MetricScope
@@ -172,6 +183,13 @@ public class MetricManagerModule {
 
     @Provides
     @MetricScope
+    @Named("concurrentQueriesBackoff")
+    public OptionalLimit concurrentQueriesBackoff() {
+        return concurrentQueriesBackoff;
+    }
+
+    @Provides
+    @MetricScope
     @Named("fetchParallelism")
     public int fetchParallelism() {
         return fetchParallelism;
@@ -182,6 +200,13 @@ public class MetricManagerModule {
     @Named("failOnLimits")
     public boolean failOnLimits() {
         return failOnLimits;
+    }
+
+    @Provides
+    @MetricScope
+    @Named("smallQueryThreshold")
+    public long smallQueryThreshold() {
+        return smallQueryThreshold;
     }
 
     public static Builder builder() {
@@ -197,8 +222,10 @@ public class MetricManagerModule {
         private OptionalLimit seriesLimit = OptionalLimit.empty();
         private OptionalLimit aggregationLimit = OptionalLimit.empty();
         private OptionalLimit dataLimit = OptionalLimit.empty();
+        private OptionalLimit concurrentQueriesBackoff = OptionalLimit.empty();
         private Optional<Integer> fetchParallelism = empty();
         private Optional<Boolean> failOnLimits = empty();
+        private Optional<Long> smallQueryThreshold = empty();
 
         public Builder backends(List<MetricModule> backends) {
             this.backends = of(backends);
@@ -230,6 +257,11 @@ public class MetricManagerModule {
             return this;
         }
 
+        public Builder concurrentQueriesBackoff(int concurrentQueriesBackoff) {
+            this.concurrentQueriesBackoff = OptionalLimit.of(concurrentQueriesBackoff);
+            return this;
+        }
+
         public Builder fetchParallelism(Integer fetchParallelism) {
             this.fetchParallelism = of(fetchParallelism);
             return this;
@@ -237,6 +269,11 @@ public class MetricManagerModule {
 
         public Builder failOnLimits(boolean failOnLimits) {
             this.failOnLimits = of(failOnLimits);
+            return this;
+        }
+
+        public Builder smallQueryThreshold(long smallQueryThreshold) {
+            this.smallQueryThreshold = of(smallQueryThreshold);
             return this;
         }
 
@@ -249,8 +286,10 @@ public class MetricManagerModule {
                 seriesLimit.orElse(o.seriesLimit),
                 aggregationLimit.orElse(o.aggregationLimit),
                 dataLimit.orElse(o.dataLimit),
+                concurrentQueriesBackoff.orElse(o.concurrentQueriesBackoff),
                 pickOptional(fetchParallelism, o.fetchParallelism),
-                pickOptional(failOnLimits, o.failOnLimits)
+                pickOptional(failOnLimits, o.failOnLimits),
+                pickOptional(smallQueryThreshold, o.smallQueryThreshold)
             );
             // @formatter:on
         }
@@ -264,8 +303,10 @@ public class MetricManagerModule {
                 seriesLimit,
                 aggregationLimit,
                 dataLimit,
+                concurrentQueriesBackoff,
                 fetchParallelism.orElse(DEFAULT_FETCH_PARALLELISM),
-                failOnLimits.orElse(DEFAULT_FAIL_ON_LIMITS)
+                failOnLimits.orElse(DEFAULT_FAIL_ON_LIMITS),
+                smallQueryThreshold.orElse(DEFAULT_SMALL_QUERY_THRESHOLD)
             );
             // @formatter:on
         }

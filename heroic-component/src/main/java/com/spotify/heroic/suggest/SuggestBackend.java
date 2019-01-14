@@ -26,6 +26,7 @@ import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Initializing;
 import com.spotify.heroic.common.Statistics;
 import eu.toolchain.async.AsyncFuture;
+import io.opencensus.trace.Span;
 
 public interface SuggestBackend extends Grouped, Initializing, Collected {
     AsyncFuture<Void> configure();
@@ -48,6 +49,10 @@ public interface SuggestBackend extends Grouped, Initializing, Collected {
     AsyncFuture<TagValueSuggest> tagValueSuggest(TagValueSuggest.Request request);
 
     AsyncFuture<WriteSuggest> write(WriteSuggest.Request request);
+    default AsyncFuture<WriteSuggest> write(WriteSuggest.Request request, Span parentSpan) {
+        // Ignore the parent span if the module does not specifically implement it.
+        return write(request);
+    }
 
     default Statistics getStatistics() {
         return Statistics.empty();

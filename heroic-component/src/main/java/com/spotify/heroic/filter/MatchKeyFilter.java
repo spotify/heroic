@@ -21,21 +21,24 @@
 
 package com.spotify.heroic.filter;
 
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.grammar.DSL;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 @Data
-@EqualsAndHashCode(of = {"OPERATOR", "value"}, doNotUseGetters = true)
+@EqualsAndHashCode(of = {"OPERATOR", "key"}, doNotUseGetters = true)
+@JsonTypeName("key")
 public class MatchKeyFilter implements Filter {
     public static final String OPERATOR = "key";
 
-    private final String value;
+    private final String key;
 
     @Override
     public boolean apply(Series series) {
-        return series.getKey().equals(value);
+        return series.getKey().equals(key);
     }
 
     @Override
@@ -45,7 +48,7 @@ public class MatchKeyFilter implements Filter {
 
     @Override
     public String toString() {
-        return "[" + OPERATOR + ", " + value + "]";
+        return "[" + OPERATOR + ", " + key + "]";
     }
 
     @Override
@@ -65,11 +68,18 @@ public class MatchKeyFilter implements Filter {
         }
 
         final MatchKeyFilter other = (MatchKeyFilter) o;
-        return value.compareTo(other.value);
+        return key.compareTo(other.key);
     }
 
     @Override
     public String toDSL() {
-        return "$key = " + DSL.dumpString(value);
+        return "$key = " + DSL.dumpString(key);
+    }
+
+    @Override
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(getClass(), () -> {
+            hasher.putField("key", key, hasher.string());
+        });
     }
 }

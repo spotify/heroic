@@ -23,7 +23,6 @@ package com.spotify.heroic.metric.datastax;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.ConsistencyLevel;
-import com.datastax.driver.core.PoolingOptions;
 import com.datastax.driver.core.QueryOptions;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.SocketOptions;
@@ -53,11 +52,11 @@ public class ManagedSetupConnection implements ManagedSetup<Connection> {
     private final ConsistencyLevel consistencyLevel;
     private final RetryPolicy retryPolicy;
     private final DatastaxAuthentication authentication;
+    private final DatastaxPoolingOptions poolingOptions;
 
     public AsyncFuture<Connection> construct() {
         AsyncFuture<Session> session = async.call(() -> {
-            // @formatter:off
-            final PoolingOptions pooling = new PoolingOptions();
+
 
             final QueryOptions queryOptions = new QueryOptions()
                 .setFetchSize(fetchSize)
@@ -69,13 +68,14 @@ public class ManagedSetupConnection implements ManagedSetup<Connection> {
             final Cluster.Builder cluster = Cluster.builder()
                 .addContactPointsWithPorts(seeds)
                 .withRetryPolicy(retryPolicy)
-                .withPoolingOptions(pooling)
                 .withQueryOptions(queryOptions)
                 .withSocketOptions(socketOptions)
                 .withLoadBalancingPolicy(new TokenAwarePolicy(new RoundRobinPolicy()));
             // @formatter:on
 
             authentication.accept(cluster);
+            poolingOptions.apply(cluster);
+
             return cluster.build().connect();
         });
 

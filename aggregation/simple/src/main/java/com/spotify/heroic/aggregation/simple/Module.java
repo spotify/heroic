@@ -77,6 +77,8 @@ public class Module implements HeroicModule {
 
             c.register(Sum.NAME, Sum.class, SumInstance.class, samplingBuilder(Sum::new));
 
+            c.register(Sum2.NAME, Sum2.class, Sum2Instance.class, samplingBuilder(Sum2::new));
+
             c.register(Average.NAME, Average.class, AverageInstance.class,
                 samplingBuilder(Average::new));
 
@@ -110,6 +112,12 @@ public class Module implements HeroicModule {
                 });
 
             c.register(Delta.NAME, Delta.class, DeltaInstance.class, args -> new Delta());
+
+            c.register(DeltaPerSecond.NAME, DeltaPerSecond.class,
+                DeltaPerSecondInstance.class, args -> new DeltaPerSecond());
+
+            c.register(NotNegative.NAME, NotNegative.class,
+                NotNegativeInstance.class, args -> new NotNegative());
 
             c.register(TopK.NAME, TopK.class, TopKInstance.class,
                 args -> new TopK(fetchK(args, IntegerExpression.class).getValue(),

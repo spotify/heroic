@@ -26,7 +26,6 @@ import com.spotify.heroic.CoreHeroicContext;
 import com.spotify.heroic.CoreQueryManager;
 import com.spotify.heroic.CoreShellTasks;
 import com.spotify.heroic.HeroicContext;
-import com.spotify.heroic.HeroicCore;
 import com.spotify.heroic.HeroicCoreInstance;
 import com.spotify.heroic.HeroicMappers;
 import com.spotify.heroic.QueryManager;
@@ -34,6 +33,7 @@ import com.spotify.heroic.ShellTasks;
 import com.spotify.heroic.aggregation.AggregationRegistry;
 import com.spotify.heroic.common.FeatureSet;
 import com.spotify.heroic.common.Features;
+import com.spotify.heroic.conditionalfeatures.ConditionalFeatures;
 import com.spotify.heroic.grammar.CoreQueryParser;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.lifecycle.CoreLifeCycleManager;
@@ -45,6 +45,7 @@ import com.spotify.heroic.statistics.HeroicReporter;
 import dagger.Module;
 import dagger.Provides;
 import eu.toolchain.async.AsyncFramework;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 
 import javax.inject.Named;
@@ -58,6 +59,7 @@ public class PrimaryModule {
     private final HeroicCoreInstance instance;
     private final FeatureSet features;
     private final HeroicReporter reporter;
+    private final Optional<ConditionalFeatures> conditionalFeatures;
 
     @Provides
     @PrimaryScope
@@ -97,7 +99,7 @@ public class PrimaryModule {
     }
 
     @Provides
-    @Named(HeroicCore.APPLICATION_JSON_INTERNAL)
+    @Named(HeroicMappers.APPLICATION_JSON_INTERNAL)
     @PrimaryScope
     ObjectMapper internalMapper(
         QueryParser parser, AggregationRegistry aggregation
@@ -111,9 +113,9 @@ public class PrimaryModule {
     }
 
     @Provides
-    @Named(HeroicCore.APPLICATION_JSON)
+    @Named(HeroicMappers.APPLICATION_JSON)
     @PrimaryScope
-    ObjectMapper jsonMapper(@Named(HeroicCore.APPLICATION_JSON_INTERNAL) ObjectMapper mapper) {
+    ObjectMapper jsonMapper(@Named(HeroicMappers.APPLICATION_JSON_INTERNAL) ObjectMapper mapper) {
         return mapper;
     }
 
@@ -133,6 +135,12 @@ public class PrimaryModule {
     @PrimaryScope
     HeroicContext context(CoreHeroicContext context) {
         return context;
+    }
+
+    @Provides
+    @PrimaryScope
+    Optional<ConditionalFeatures> conditionalFeatures() {
+        return conditionalFeatures;
     }
 
     private SortedMap<String, ShellTask> setupTasks(

@@ -1,0 +1,51 @@
+port: 8081
+
+
+cluster:
+  tags:
+    site: guc
+
+metadata:
+  backends:
+    - type: memory
+
+metrics:
+  seriesLimit: 20000
+  dataLimit: 20000000
+  groupLimit: 1000
+  aggregationLimit: 1000000
+  failOnLimits: true
+  backends:
+    - type: bigtable
+      project: google-test-project
+      instance: test-instance
+      #credentials:
+      #  type: compute-engine
+
+
+consumers:
+  - type: pubsub
+    schema: com.spotify.heroic.consumer.schemas.Spotify100
+    topic: test-topic
+    project: google-test-project 
+    subscription: test-subscription
+
+
+ingestion:
+  updateMetrics: true
+  updateMetadata: true
+  updateSuggestions: false
+
+shellServer:
+  port: 9290
+
+
+statistics:
+  type: semantic
+
+queryLogging:
+  type: slf4j
+  name: "com.spotify.heroic.query_logging"
+
+features:
+  - com.spotify.heroic.sliced_data_fetch

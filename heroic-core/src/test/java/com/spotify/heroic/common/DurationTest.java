@@ -3,6 +3,7 @@ package com.spotify.heroic.common;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.HeroicMappers;
 import com.spotify.heroic.grammar.QueryParser;
+import com.spotify.heroic.test.FakeModuleLoader;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -12,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.assertEquals;
 
 public class DurationTest {
-    private ObjectMapper mapper = HeroicMappers.json(Mockito.mock(QueryParser.class));
+    private ObjectMapper mapper = FakeModuleLoader.builder().build().json();
 
     @Test
     public void testShorthandDurationSerializer() throws IOException {

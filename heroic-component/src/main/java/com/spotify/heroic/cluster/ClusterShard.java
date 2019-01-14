@@ -23,17 +23,21 @@ package com.spotify.heroic.cluster;
 
 import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.RuntimeNodeException;
+import com.spotify.heroic.statistics.QueryReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.RetryException;
 import eu.toolchain.async.RetryPolicy;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
@@ -42,19 +46,21 @@ import lombok.extern.slf4j.Slf4j;
 public class ClusterShard {
     private static final QueryTrace.Identifier RETRY_BACKOFF =
         new QueryTrace.Identifier("retry-backoff");
+    private static final String DARKLOAD = "darkload";
 
     private final AsyncFramework async;
 
     private final Map<String, String> shard;
-    private final List<ClusterNode.Group> groups;
+    private final QueryReporter reporter;
+    private final ClusterManager cluster;
 
     public <T> AsyncFuture<T> apply(
         Function<ClusterNode.Group, AsyncFuture<T>> function,
         BiFunction<T, List<QueryTrace>, T> handleRetryTraceFn
     ) {
-        final Iterator<ClusterNode.Group> it = groups.iterator();
+        final List<ClusterNode> nodesTried = Collections.synchronizedList(new ArrayList<>());
 
-        if (!it.hasNext()) {
+        if (!cluster.hasNextButNotWithId(shard, nodesTried::contains)) {
             return async.failed(new RuntimeException("No groups available"));
         }
 
@@ -65,7 +71,7 @@ public class ClusterShard {
             final RetryPolicy.Instance p = parent.apply(clockSource);
 
             return () -> {
-                if (it.hasNext()) {
+                if (cluster.hasNextButNotWithId(shard, nodesTried::contains)) {
                     return p.next();
                 }
 
@@ -75,16 +81,44 @@ public class ClusterShard {
 
         return async
             .retryUntilResolved(() -> {
-                final ClusterNode.Group next = it.next();
-                return function.apply(next).catchFailed(throwable -> {
+                Optional<ClusterManager.NodeResult<AsyncFuture<T>>> ret =
+                    cluster.withNodeInShardButNotWithId(shard, nodesTried::contains,
+                        nodesTried::add, function);
+                if (!ret.isPresent()) {
+                    throw new RuntimeException("No groups available");
+                }
+                ClusterManager.NodeResult<AsyncFuture<T>> result = ret.get();
+
+                return result.getReturnValue().catchFailed(throwable -> {
+                    reporter.reportClusterNodeRpcError();
                     /* Actually never return;s, instead throws a new exception with added info.
                      * The point is to get Node identifying information into the exception */
-                    throw new RuntimeNodeException(next.toString(), throwable.getMessage(),
-                        throwable);
+                    throw new RuntimeNodeException(result.getNode().toString(),
+                        throwable.getMessage(), throwable);
+                }).catchCancelled(ignore -> {
+                    reporter.reportClusterNodeRpcCancellation();
+                    /* In case of the future being cancelled, we should note it as a node exception
+                     * and try with the next node in the shard.
+                     * It seems like we can get cancellations when there are network issues. */
+                    throw new RuntimeNodeException(result.getNode().toString(),
+                        "Operation cancelled");
                 });
             }, iteratorPolicy)
             .directTransform(retryResult -> handleRetryTraceFn.apply(retryResult.getResult(),
                 queryTracesFromRetries(retryResult.getErrors(), retryResult.getBackoffTimings())));
+    }
+
+    public List<String> getNodesAsStringList() {
+        final List<String> nodes = cluster
+            .getNodesForShard(shard)
+            .stream()
+            .map(Object::toString)
+            .collect(Collectors.toList());
+        return nodes;
+    }
+
+    public boolean isDarkload() {
+        return shard.containsKey(DARKLOAD);
     }
 
     private List<QueryTrace> queryTracesFromRetries(

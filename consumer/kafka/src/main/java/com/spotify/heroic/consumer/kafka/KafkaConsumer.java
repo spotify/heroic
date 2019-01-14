@@ -31,14 +31,13 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.Managed;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
+import javax.inject.Inject;
+import javax.inject.Named;
 
 @KafkaScope
 public class KafkaConsumer implements Consumer, LifeCycles {
@@ -118,7 +117,7 @@ public class KafkaConsumer implements Consumer, LifeCycles {
         try {
             final Connection c = b.get();
             final int threads = c.getThreads().size();
-            final int paused = c.getThreads().stream().mapToInt(t -> t.isPaused() ? 1 : 0).sum();
+            final int paused = c.getThreads().stream().mapToInt(t -> t.isPausing() ? 1 : 0).sum();
             return String.format(
                 "KafkaConsumer(configured, topics=%s, config=%s, threads=%d, " + "paused=%d)",
                 topics, config, threads, paused);

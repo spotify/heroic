@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.filter;
 
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.grammar.DSL;
 import lombok.Data;
@@ -28,6 +30,7 @@ import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(of = {"OPERATOR", "tag"}, doNotUseGetters = true)
+@JsonTypeName("hasTag")
 public class HasTagFilter implements Filter {
     public static final String OPERATOR = "+";
 
@@ -71,6 +74,13 @@ public class HasTagFilter implements Filter {
     @Override
     public String toDSL() {
         return "+" + DSL.dumpString(tag);
+    }
+
+    @Override
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(getClass(), () -> {
+            hasher.putField("tag", tag, hasher.string());
+        });
     }
 
     public static Filter of(String tag) {

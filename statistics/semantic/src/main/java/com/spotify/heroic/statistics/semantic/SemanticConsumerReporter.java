@@ -24,6 +24,8 @@ package com.spotify.heroic.statistics.semantic;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
 import com.spotify.heroic.statistics.ConsumerReporter;
+import com.spotify.heroic.statistics.FutureReporter;
+import com.spotify.heroic.statistics.HeroicTimer;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 import lombok.RequiredArgsConstructor;
@@ -39,10 +41,16 @@ public class SemanticConsumerReporter implements ConsumerReporter {
 
     private final Meter messageIn;
     private final Meter messageError;
+    private final Meter messageRetry;
     private final Meter consumerSchemaError;
     private final SemanticRatioGauge consumerThreadsLiveRatio;
     private final Histogram messageSize;
     private final Histogram messageDrift;
+    private final SemanticFutureReporter consumer;
+
+    private final SemanticHeroicTimerGauge consumerCommitWholeOperationTimer;
+    private final SemanticHeroicTimerGauge consumerCommitPhase1Timer;
+    private final SemanticHeroicTimerGauge consumerCommitPhase2Timer;
 
     public SemanticConsumerReporter(SemanticMetricRegistry registry, String id) {
         this.registry = registry;
@@ -51,14 +59,30 @@ public class SemanticConsumerReporter implements ConsumerReporter {
 
         messageIn = registry.meter(base.tagged("what", "message-in", "unit", Units.MESSAGE));
         messageError = registry.meter(base.tagged("what", "message-error", "unit", Units.FAILURE));
+        messageRetry = registry.meter(base.tagged("what", "message-retry", "unit", Units.COUNT));
         consumerSchemaError =
             registry.meter(base.tagged("what", "consumer-schema-error", "unit", Units.FAILURE));
         consumerThreadsLiveRatio = new SemanticRatioGauge();
         registry.register(base.tagged("what", "consumer-threads-live-ratio", "unit", Units.RATIO),
             consumerThreadsLiveRatio);
-        messageSize = registry.histogram(base.tagged("what", "message-size", "unit", Units.BYTE));
+        messageSize = registry.getOrAdd(base.tagged("what", "message-size", "unit", Units.BYTE),
+            HistogramBuilder.HISTOGRAM);
         messageDrift =
-            registry.histogram(base.tagged("what", "message-drift", "unit", Units.MILLISECOND));
+            registry.getOrAdd(base.tagged("what", "message-drift", "unit", Units.MILLISECOND),
+                HistogramBuilder.HISTOGRAM);
+
+        consumer = new SemanticFutureReporter(registry,
+            base.tagged("what", "consumer", "unit", Units.WRITE));
+
+        consumerCommitWholeOperationTimer =
+            registry.register(base.tagged("what", "consumer-commit-latency"),
+                new SemanticHeroicTimerGauge());
+        consumerCommitPhase1Timer =
+            registry.register(base.tagged("what", "consumer-commit-phase1-latency"),
+                new SemanticHeroicTimerGauge());
+        consumerCommitPhase2Timer =
+            registry.register(base.tagged("what", "consumer-commit-phase2-latency"),
+                new SemanticHeroicTimerGauge());
     }
 
     @Override
@@ -70,6 +94,11 @@ public class SemanticConsumerReporter implements ConsumerReporter {
     @Override
     public void reportMessageError() {
         messageError.mark();
+    }
+
+    @Override
+    public void reportMessageRetry() {
+        messageRetry.mark();
     }
 
     @Override
@@ -95,5 +124,25 @@ public class SemanticConsumerReporter implements ConsumerReporter {
     @Override
     public void reportMessageDrift(final long ms) {
         messageDrift.update(ms);
+    }
+
+    @Override
+    public FutureReporter.Context reportConsumption() {
+        return consumer.setup();
+    }
+
+    @Override
+    public HeroicTimer.Context reportConsumerCommitOperation() {
+        return consumerCommitWholeOperationTimer.time();
+    }
+
+    @Override
+    public HeroicTimer.Context reportConsumerCommitPhase1() {
+        return consumerCommitPhase1Timer.time();
+    }
+
+    @Override
+    public HeroicTimer.Context reportConsumerCommitPhase2() {
+        return consumerCommitPhase2Timer.time();
     }
 }

@@ -30,19 +30,20 @@ import com.spotify.heroic.dagger.PrimaryComponent;
 import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
-import lombok.Data;
-
-import javax.inject.Named;
 import java.net.URI;
 import java.util.List;
 import java.util.Optional;
+import javax.inject.Named;
+import lombok.Data;
 
 @Data
 public class StaticListDiscoveryModule implements ClusterDiscoveryModule {
     private final List<URI> nodes;
 
     @JsonCreator
-    public StaticListDiscoveryModule(@JsonProperty("nodes") List<URI> nodes) {
+    public StaticListDiscoveryModule(
+        @JsonProperty("nodes") List<URI> nodes
+    ) {
         this.nodes = Optional.ofNullable(nodes).orElseGet(ImmutableList::of);
     }
 

@@ -22,6 +22,10 @@
 package com.spotify.heroic.elasticsearch;
 
 import com.google.common.util.concurrent.RateLimiter;
+import io.opencensus.common.Scope;
+import io.opencensus.trace.Span;
+import io.opencensus.trace.Tracer;
+import io.opencensus.trace.Tracing;
 import lombok.RequiredArgsConstructor;
 
 import java.util.concurrent.ConcurrentMap;
@@ -30,24 +34,35 @@ import java.util.concurrent.ConcurrentMap;
  * A cache that does not allow to be called more than a specific rate.
  *
  * @param <K>
- * @param <V>
  * @author mehrdad
  */
 @RequiredArgsConstructor
 public class DefaultRateLimitedCache<K> implements RateLimitedCache<K> {
     private final ConcurrentMap<K, Boolean> cache;
     private final RateLimiter rateLimiter;
+    private final Tracer tracer = Tracing.getTracer();
 
-    public boolean acquire(K key) {
-        if (cache.get(key) != null) {
-            return false;
+    public boolean acquire(K key, final Runnable cacheHit) {
+        try (Scope ss = tracer.spanBuilder("DefaultRateLimitedCache").startScopedSpan()) {
+            Span span = tracer.getCurrentSpan();
+
+            if (cache.get(key) != null) {
+                cacheHit.run();
+                span.addAnnotation("Found key in cache");
+                return false;
+            }
+
+            span.addAnnotation("Acquiring rate limiter");
+            rateLimiter.acquire();
+            span.addAnnotation("Acquired rate limiter");
+
+            if (cache.putIfAbsent(key, true) != null) {
+                cacheHit.run();
+                return false;
+            }
+
+            return true;
         }
-
-        if (!rateLimiter.tryAcquire()) {
-            return false;
-        }
-
-        return cache.putIfAbsent(key, true) == null;
     }
 
     public int size() {

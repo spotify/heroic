@@ -27,10 +27,11 @@ import com.spotify.heroic.aggregation.AggregationCombiner;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.OptionalLimit;
 import eu.toolchain.async.Collector;
-import lombok.Data;
-
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+import lombok.Data;
 
 @Data
 public class QueryResult {
@@ -58,6 +59,23 @@ public class QueryResult {
 
     private final ResultLimits limits;
 
+    private final long preAggregationSampleSize;
+
+    /**
+     * Extra information about caching.
+     */
+    private final Optional<CacheInfo> cache;
+
+    /**
+     * Add cache info to the result.
+     * @param cache cache info to add.
+     * @return an copied instanceof query result with cache info added
+     */
+    public QueryResult withCache(final CacheInfo cache) {
+        return new QueryResult(range, groups, errors, trace, limits, preAggregationSampleSize,
+            Optional.of(cache));
+    }
+
     /**
      * Collect result parts into a complete result.
      *
@@ -75,11 +93,13 @@ public class QueryResult {
             final List<RequestError> errors = new ArrayList<>();
             final ImmutableList.Builder<QueryTrace> queryTraces = ImmutableList.builder();
             final ImmutableSet.Builder<ResultLimit> limits = ImmutableSet.builder();
+            long preAggregationSampleSize = 0;
 
             for (final QueryResultPart part : parts) {
                 errors.addAll(part.getErrors());
                 queryTraces.add(part.getQueryTrace());
                 limits.addAll(part.getLimits().getLimits());
+                preAggregationSampleSize += part.getPreAggregationSampleSize();
 
                 if (part.isEmpty()) {
                     continue;
@@ -96,7 +116,13 @@ public class QueryResult {
             }
 
             return new QueryResult(range, groupLimit.limitList(groups), errors, trace,
-                new ResultLimits(limits.build()));
+                new ResultLimits(limits.build()), preAggregationSampleSize, Optional.empty());
         };
+    }
+
+    public static QueryResult error(DateRange range, String errorMessage, QueryTrace trace) {
+        return new QueryResult(range, Collections.emptyList(),
+            Collections.singletonList(QueryError.fromMessage(errorMessage)), trace,
+            ResultLimits.of(), 0, Optional.empty());
     }
 }

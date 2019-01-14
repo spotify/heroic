@@ -21,11 +21,16 @@
 
 package com.spotify.heroic.aggregation.simple;
 
+import static java.util.stream.Collectors.toList;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.aggregation.AggregationInstance;
+import com.spotify.heroic.aggregation.AggregationOutput;
 import com.spotify.heroic.aggregation.AggregationResult;
 import com.spotify.heroic.aggregation.AggregationSession;
+import com.spotify.heroic.aggregation.BucketStrategy;
 import com.spotify.heroic.aggregation.EmptyInstance;
-import com.spotify.heroic.aggregation.AggregationOutput;
 import com.spotify.heroic.aggregation.RetainQuotaWatcher;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
@@ -33,18 +38,19 @@ import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
-import lombok.Data;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import static java.util.stream.Collectors.toList;
+import lombok.Data;
+import lombok.NonNull;
 
 @Data
 public abstract class MetricMappingAggregation implements AggregationInstance {
 
     private static final EmptyInstance INNER = EmptyInstance.INSTANCE;
+
+    @NonNull
+    @JsonIgnore
     private final MetricMappingStrategy metricMappingStrategy;
 
     @Override
@@ -58,13 +64,23 @@ public abstract class MetricMappingAggregation implements AggregationInstance {
     }
 
     @Override
-    public AggregationSession session(DateRange range, RetainQuotaWatcher quotaWatcher) {
-        return new Session(INNER.session(range, quotaWatcher));
+    public AggregationSession session(
+        DateRange range, RetainQuotaWatcher quotaWatcher, BucketStrategy bucketStrategy
+    ) {
+        return new Session(INNER.session(range, quotaWatcher, bucketStrategy));
     }
 
     @Override
     public AggregationInstance distributed() {
         return INNER;
+    }
+
+    @Override
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(getClass(), () -> {
+            hasher.putField("metricMappingStrategy", metricMappingStrategy,
+                hasher.with(MetricMappingStrategy::hashTo));
+        });
     }
 
     class Session implements AggregationSession {
@@ -117,11 +133,9 @@ public abstract class MetricMappingAggregation implements AggregationInstance {
             List<AggregationOutput> outputs = aggregationResult
                 .getResult()
                 .stream()
-                .map(aggregationOutput -> new AggregationOutput(
-                    aggregationOutput.getKey(),
+                .map(aggregationOutput -> new AggregationOutput(aggregationOutput.getKey(),
                     aggregationOutput.getSeries(),
-                    metricMappingStrategy.apply(aggregationOutput.getMetrics())
-                ))
+                    metricMappingStrategy.apply(aggregationOutput.getMetrics())))
                 .collect(toList());
             return new AggregationResult(outputs, aggregationResult.getStatistics());
         }

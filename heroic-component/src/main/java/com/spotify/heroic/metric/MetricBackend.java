@@ -27,9 +27,12 @@ import com.spotify.heroic.common.Collected;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Initializing;
 import com.spotify.heroic.common.Statistics;
+
 import eu.toolchain.async.AsyncFuture;
 
+import io.opencensus.trace.Span;
 import java.util.List;
+import java.util.function.Consumer;
 
 public interface MetricBackend extends Initializing, Grouped, Collected {
     Statistics getStatistics();
@@ -47,19 +50,27 @@ public interface MetricBackend extends Initializing, Grouped, Collected {
     /**
      * Execute a single write.
      *
-     * @param write
+     * @param request
      * @return
      */
-    AsyncFuture<WriteMetric> write(WriteMetric.Request write);
+    AsyncFuture<WriteMetric> write(WriteMetric.Request request);
+    default AsyncFuture<WriteMetric> write(WriteMetric.Request request, Span parentSpan) {
+        // Ignore the parent span if the module does not specifically implement it.
+        return write(request);
+    }
 
     /**
      * Query for data points that is part of the specified list of rows and range.
      *
      * @param request Fetch request to use.
      * @param watcher The watcher implementation to use when fetching metrics.
-     * @return A future containing the fetched data wrapped in a {@link FetchData} structure.
+     * @param metricsConsumer The consumer that receives the fetched data
+     * @return A future containing the fetch result.
      */
-    AsyncFuture<FetchData> fetch(FetchData.Request request, FetchQuotaWatcher watcher);
+    AsyncFuture<FetchData.Result> fetch(
+        FetchData.Request request, FetchQuotaWatcher watcher,
+        Consumer<MetricReadResult> metricsConsumer
+    );
 
     /**
      * List all series directly from the database.

@@ -21,30 +21,21 @@
 
 package com.spotify.heroic.metric.memory;
 
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.common.DynamicModuleId;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.ModuleId;
 import com.spotify.heroic.dagger.PrimaryComponent;
-import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricModule;
 import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
-import eu.toolchain.async.AsyncFramework;
-import lombok.Data;
-
-import javax.inject.Named;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.NavigableMap;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentSkipListMap;
-
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
+import lombok.Data;
 
 @Data
 @ModuleId("memory")
@@ -88,19 +79,6 @@ public final class MemoryMetricModule implements MetricModule, DynamicModuleId {
         @MemoryScope
         public Groups groups() {
             return groups;
-        }
-
-        @Provides
-        @MemoryScope
-        @Named("storage")
-        public Map<MemoryBackend.MemoryKey, NavigableMap<Long, Metric>> metricBackend(
-            final AsyncFramework async
-        ) {
-            if (synchronizedStorage) {
-                return Collections.synchronizedMap(new HashMap<>());
-            }
-
-            return new ConcurrentSkipListMap<>(MemoryBackend.COMPARATOR);
         }
     }
 

@@ -10,6 +10,13 @@ bin
 /*.log
 /*.gz
 *.iml
+*.p12
 .idea
 /reports/
 /assets/out/
+.meghanada
+
+# doc build artifacts
+bower_components
+node_modules
+output

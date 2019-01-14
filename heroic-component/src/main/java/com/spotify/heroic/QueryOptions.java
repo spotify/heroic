@@ -21,17 +21,19 @@
 
 package com.spotify.heroic;
 
+import com.spotify.heroic.aggregation.BucketStrategy;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.Tracing;
-
 import java.util.Optional;
-
 import lombok.Data;
 
 @Data
 public class QueryOptions {
-    public static final Tracing DEFAULT_TRACING = Tracing.DEFAULT;
+    /**
+     * Strategy for how to create buckets when performing a sampling aggregation.
+     */
+    private final Optional<BucketStrategy> bucketStrategy;
 
     /**
      * Indicates if tracing is enabled.
@@ -41,7 +43,7 @@ public class QueryOptions {
      *
      * @return {@code true} if tracing is enabled.
      */
-    private final Tracing tracing;
+    private final Optional<Tracing> tracing;
 
     /**
      * The number of entries to fetch for every batch.
@@ -73,20 +75,35 @@ public class QueryOptions {
      */
     private final Optional<Boolean> failOnLimits;
 
-    public Optional<Integer> getFetchSize() {
-        return fetchSize;
+    public Tracing tracing() {
+        return tracing.orElse(Tracing.DEFAULT);
     }
 
     public static QueryOptions defaults() {
-        return new QueryOptions(DEFAULT_TRACING, Optional.empty(), OptionalLimit.empty(),
-            OptionalLimit.empty(), OptionalLimit.empty(), OptionalLimit.empty(), Optional.empty());
+        return new QueryOptions(Optional.empty(), Optional.empty(), Optional.empty(),
+            OptionalLimit.empty(), OptionalLimit.empty(), OptionalLimit.empty(),
+            OptionalLimit.empty(), Optional.empty());
     }
 
     public static Builder builder() {
         return new Builder();
     }
 
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(getClass(), () -> {
+            hasher.putField("bucketStrategy", bucketStrategy,
+                hasher.optional(hasher.with(BucketStrategy::hashTo)));
+            hasher.putField("dataLimit", dataLimit, hasher.with(OptionalLimit::hashTo));
+            hasher.putField("aggregationLimit", aggregationLimit,
+                hasher.with(OptionalLimit::hashTo));
+            hasher.putField("groupLimit", groupLimit, hasher.with(OptionalLimit::hashTo));
+            hasher.putField("seriesLimit", seriesLimit, hasher.with(OptionalLimit::hashTo));
+            hasher.putField("failOnLimits", failOnLimits, hasher.optional(hasher.bool()));
+        });
+    }
+
     public static class Builder {
+        private Optional<BucketStrategy> bucketStrategy = Optional.empty();
         private Optional<Tracing> tracing = Optional.empty();
         private Optional<Integer> fetchSize = Optional.empty();
         private OptionalLimit dataLimit = OptionalLimit.empty();
@@ -94,6 +111,11 @@ public class QueryOptions {
         private OptionalLimit groupLimit = OptionalLimit.empty();
         private OptionalLimit seriesLimit = OptionalLimit.empty();
         private Optional<Boolean> failOnLimits = Optional.empty();
+
+        public Builder bucketStrategy(BucketStrategy bucketStrategy) {
+            this.bucketStrategy = Optional.of(bucketStrategy);
+            return this;
+        }
 
         public Builder tracing(Tracing tracing) {
             this.tracing = Optional.of(tracing);
@@ -115,7 +137,6 @@ public class QueryOptions {
             return this;
         }
 
-
         public Builder groupLimit(long groupLimit) {
             this.groupLimit = OptionalLimit.of(groupLimit);
             return this;
@@ -132,10 +153,8 @@ public class QueryOptions {
         }
 
         public QueryOptions build() {
-            final Tracing tracing = this.tracing.orElse(DEFAULT_TRACING);
-
-            return new QueryOptions(tracing, fetchSize, dataLimit, aggregationLimit, groupLimit,
-                seriesLimit, failOnLimits);
+            return new QueryOptions(bucketStrategy, tracing, fetchSize, dataLimit, aggregationLimit,
+                groupLimit, seriesLimit, failOnLimits);
         }
     }
 }

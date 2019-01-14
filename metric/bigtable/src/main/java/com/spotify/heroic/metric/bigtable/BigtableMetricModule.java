@@ -21,6 +21,9 @@
 
 package com.spotify.heroic.metric.bigtable;
 
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.ExtraParameters;
@@ -31,23 +34,19 @@ import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
 import com.spotify.heroic.metric.MetricModule;
-import com.spotify.heroic.metric.bigtable.credentials.ComputeEngineCredentialsBuilder;
+import com.spotify.heroic.metric.bigtable.api.FakeBigtableConnection;
+import com.spotify.heroic.metric.bigtable.credentials.DefaultCredentialsBuilder;
 import dagger.Component;
+import dagger.Lazy;
 import dagger.Module;
 import dagger.Provides;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
-import eu.toolchain.serializer.Serializer;
-import lombok.Data;
-
-import javax.inject.Named;
 import java.util.Optional;
-import java.util.concurrent.ExecutorService;
-
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
+import javax.inject.Named;
+import lombok.Data;
 
 @Data
 @ModuleId("bigtable")
@@ -57,11 +56,11 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
     public static final String DEFAULT_GROUP = "bigtable";
     public static final String DEFAULT_INSTANCE = "heroic";
     public static final String DEFAULT_TABLE = "metrics";
-    public static final CredentialsBuilder DEFAULT_CREDENTIALS =
-        new ComputeEngineCredentialsBuilder();
+    public static final CredentialsBuilder DEFAULT_CREDENTIALS = new DefaultCredentialsBuilder();
     public static final boolean DEFAULT_CONFIGURE = false;
     public static final boolean DEFAULT_DISABLE_BULK_MUTATIONS = false;
     public static final int DEFAULT_FLUSH_INTERVAL_SECONDS = 2;
+    public static final boolean DEFAULT_FAKE = false;
 
     private final Optional<String> id;
     private final Groups groups;
@@ -73,6 +72,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
     private final boolean disableBulkMutations;
     private final int flushIntervalSeconds;
     private final Optional<Integer> batchSize;
+    private final boolean fake;
 
     @JsonCreator
     public BigtableMetricModule(
@@ -84,7 +84,8 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         @JsonProperty("configure") Optional<Boolean> configure,
         @JsonProperty("disableBulkMutations") Optional<Boolean> disableBulkMutations,
         @JsonProperty("flushIntervalSeconds") Optional<Integer> flushIntervalSeconds,
-        @JsonProperty("batchSize") Optional<Integer> batchSize
+        @JsonProperty("batchSize") Optional<Integer> batchSize,
+        @JsonProperty("fake") Optional<Boolean> fake
     ) {
         this.id = id;
         this.groups = groups.orElseGet(Groups::empty).or(DEFAULT_GROUP);
@@ -96,6 +97,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         this.disableBulkMutations = disableBulkMutations.orElse(DEFAULT_DISABLE_BULK_MUTATIONS);
         this.flushIntervalSeconds = flushIntervalSeconds.orElse(DEFAULT_FLUSH_INTERVAL_SECONDS);
         this.batchSize = batchSize;
+        this.fake = fake.orElse(DEFAULT_FAKE);
     }
 
     @Override
@@ -123,15 +125,29 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         @Provides
         @BigtableScope
         public Managed<BigtableConnection> connection(
-            final AsyncFramework async, final ExecutorService executorService
+            final AsyncFramework async, final Lazy<FakeBigtableConnection> fakeBigtableConnection
         ) {
+            if (fake) {
+                return async.managed(new ManagedSetup<BigtableConnection>() {
+                    @Override
+                    public AsyncFuture<BigtableConnection> construct() throws Exception {
+                        return async.resolved(fakeBigtableConnection.get());
+                    }
+
+                    @Override
+                    public AsyncFuture<Void> destruct(final BigtableConnection value)
+                        throws Exception {
+                        return value.close();
+                    }
+                });
+            }
+
             return async.managed(new ManagedSetup<BigtableConnection>() {
                 @Override
                 public AsyncFuture<BigtableConnection> construct() throws Exception {
                     return async.call(
                         new BigtableConnectionBuilder(project, instance, credentials, async,
-                            executorService, disableBulkMutations, flushIntervalSeconds,
-                            batchSize));
+                            disableBulkMutations, flushIntervalSeconds, batchSize));
                 }
 
                 @Override
@@ -161,8 +177,8 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
 
         @Provides
         @BigtableScope
-        public Serializer<RowKey> rowKeySerializer() {
-           return new MetricsRowKeySerializer();
+        public RowKeySerializer rowKeySerializer() {
+            return new MetricsRowKeySerializer();
         }
 
         @Provides
@@ -198,6 +214,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         private Optional<Boolean> disableBulkMutations = empty();
         private Optional<Integer> flushIntervalSeconds = empty();
         private Optional<Integer> batchSize = empty();
+        private Optional<Boolean> fake = empty();
 
         public Builder id(String id) {
             this.id = of(id);
@@ -234,7 +251,6 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
             return this;
         }
 
-
         public Builder flushIntervalSeconds(int flushIntervalSeconds) {
             this.flushIntervalSeconds = of(flushIntervalSeconds);
             return this;
@@ -250,9 +266,14 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
             return this;
         }
 
+        public Builder fake(final boolean fake) {
+            this.fake = of(fake);
+            return this;
+        }
+
         public BigtableMetricModule build() {
             return new BigtableMetricModule(id, groups, project, instance, table, credentials,
-                configure, disableBulkMutations, flushIntervalSeconds, batchSize);
+                configure, disableBulkMutations, flushIntervalSeconds, batchSize, fake);
         }
     }
 }

@@ -23,6 +23,18 @@
       </Policies>
       <DefaultRolloverStrategy max="100"/>
     </RollingFile>
+    <!-- Remove if you don't use queryLogging -->
+    <RollingFile name="query_log" fileName="/var/log/heroic/heroic.query_log"
+                 filePattern="/var/log/heroic/heroic-%d{MM-dd-yyyy}-%i.query_log.gz">
+      <PatternLayout>
+        <Pattern>%m%n</Pattern>
+      </PatternLayout>
+      <Policies>
+        <TimeBasedTriggeringPolicy />
+        <SizeBasedTriggeringPolicy size="100 MB"/>
+      </Policies>
+      <DefaultRolloverStrategy max="100"/>
+    </RollingFile>
   </Appenders>
   <Loggers>
     <Logger name="org.eclipse.jetty.server.RequestLog" level="INFO" additivity="false">
@@ -30,6 +42,10 @@
     </Logger>
     <Logger name="com.spotify.heroic" level="INFO" additivity="false">
       <AppenderRef ref="primary" />
+    </Logger>
+    <!-- Remove if you don't use queryLogging -->
+    <Logger name="com.spotify.heroic.query_logging" level="TRACE" additivity="false">
+      <AppenderRef ref="query_log" />
     </Logger>
     <Logger name="org.elasticsearch" level="INFO" additivity="false">
       <AppenderRef ref="primary" />

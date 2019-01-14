@@ -11,7 +11,7 @@
   </parent>
 
   <properties>
-    <grpc.version>0.13.2</grpc.version>
+    <grpc.version>1.16.1</grpc.version>
   </properties>
 
   <groupId>com.spotify.heroic.rpc</groupId>

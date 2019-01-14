@@ -21,6 +21,13 @@
 
 package com.spotify.heroic;
 
+import static com.spotify.heroic.common.Optionals.mergeOptional;
+import static com.spotify.heroic.common.Optionals.mergeOptionalList;
+import static com.spotify.heroic.common.Optionals.pickOptional;
+import static java.util.Objects.requireNonNull;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+
 import com.fasterxml.jackson.core.JsonLocation;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -34,38 +41,35 @@ import com.spotify.heroic.cache.noop.NoopCacheModule;
 import com.spotify.heroic.cluster.ClusterManagerModule;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.FeatureSet;
+import com.spotify.heroic.conditionalfeatures.ConditionalFeatures;
 import com.spotify.heroic.consumer.ConsumerModule;
 import com.spotify.heroic.generator.CoreGeneratorModule;
 import com.spotify.heroic.ingestion.IngestionModule;
 import com.spotify.heroic.jetty.JettyServerConnector;
 import com.spotify.heroic.metadata.MetadataManagerModule;
 import com.spotify.heroic.metric.MetricManagerModule;
+import com.spotify.heroic.querylogging.QueryLoggingModule;
+import com.spotify.heroic.querylogging.noop.NoopQueryLoggingModule;
 import com.spotify.heroic.shell.ShellServerModule;
 import com.spotify.heroic.statistics.StatisticsModule;
 import com.spotify.heroic.statistics.noop.NoopStatisticsModule;
 import com.spotify.heroic.suggest.SuggestManagerModule;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-
-import static com.spotify.heroic.common.Optionals.mergeOptional;
-import static com.spotify.heroic.common.Optionals.mergeOptionalList;
-import static com.spotify.heroic.common.Optionals.pickOptional;
-import static java.util.Objects.requireNonNull;
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -112,6 +116,9 @@ public class HeroicConfig {
     private final AnalyticsModule analytics;
     private final CoreGeneratorModule generator;
     private final StatisticsModule statistics;
+    private final QueryLoggingModule queryLogging;
+    private final Optional<ConditionalFeatures> conditionalFeature;
+    private final Map<String, Object> tracing;
 
     private final String version;
     private final String service;
@@ -191,6 +198,9 @@ public class HeroicConfig {
         private Optional<AnalyticsModule.Builder> analytics = empty();
         private Optional<CoreGeneratorModule.Builder> generator = empty();
         private Optional<StatisticsModule> statistics = empty();
+        private Optional<QueryLoggingModule> queryLogging = empty();
+        private Optional<ConditionalFeatures> conditionalFeatures = empty();
+        private Optional<Map<String, Object>> tracing = empty();
 
         private Optional<String> version = empty();
         private Optional<String> service = empty();
@@ -281,6 +291,21 @@ public class HeroicConfig {
             return this;
         }
 
+        public Builder queryLogging(QueryLoggingModule queryLogging) {
+            this.queryLogging = of(queryLogging);
+            return this;
+        }
+
+        public Builder conditionalFeatures(ConditionalFeatures conditionalFeatures) {
+            this.conditionalFeatures = of(conditionalFeatures);
+            return this;
+        }
+
+        public Builder tracing(Map<String, Object> tracing) {
+            this.tracing = of(tracing);
+            return this;
+        }
+
         public Builder merge(Builder o) {
             // @formatter:off
             return new Builder(
@@ -305,6 +330,9 @@ public class HeroicConfig {
                 pickOptional(analytics, o.analytics),
                 mergeOptional(generator, o.generator, CoreGeneratorModule.Builder::merge),
                 pickOptional(statistics, o.statistics),
+                pickOptional(queryLogging, o.queryLogging),
+                pickOptional(conditionalFeatures, o.conditionalFeatures),
+                pickOptional(tracing, o.tracing),
                 pickOptional(service, o.service),
                 pickOptional(version, o.version)
             );
@@ -344,6 +372,9 @@ public class HeroicConfig {
                 analytics.map(AnalyticsModule.Builder::build).orElseGet(NullAnalyticsModule::new),
                 generator.orElseGet(CoreGeneratorModule::builder).build(),
                 statistics.orElseGet(NoopStatisticsModule::new),
+                queryLogging.orElseGet(NoopQueryLoggingModule::new),
+                conditionalFeatures,
+                tracing.orElseGet(HashMap::new),
                 version.orElse(defaultVersion),
                 service.orElse(DEFAULT_SERVICE)
             );

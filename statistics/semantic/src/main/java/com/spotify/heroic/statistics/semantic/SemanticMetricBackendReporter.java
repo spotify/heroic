@@ -22,6 +22,8 @@
 package com.spotify.heroic.statistics.semantic;
 
 import com.codahale.metrics.Counter;
+import com.codahale.metrics.Histogram;
+import com.google.common.base.Stopwatch;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.Groups;
@@ -34,6 +36,7 @@ import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricCollection;
+import com.spotify.heroic.metric.MetricReadResult;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.statistics.DataInMemoryReporter;
 import com.spotify.heroic.statistics.FutureReporter;
@@ -41,8 +44,13 @@ import com.spotify.heroic.statistics.MetricBackendReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 import eu.toolchain.async.AsyncFuture;
+import io.opencensus.trace.Span;
+import io.opencensus.trace.Tracing;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAccumulator;
+import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
@@ -51,7 +59,6 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
     private static final String COMPONENT = "metric-backend";
 
     private final FutureReporter write;
-    private final FutureReporter writeBatch;
     private final FutureReporter fetch;
     private final FutureReporter deleteKey;
     private final FutureReporter countKey;
@@ -60,25 +67,29 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
     private final FutureReporter findSeries;
     private final FutureReporter queryMetrics;
 
-    /*
-     * Incremented on readData - i.e. when we get data from backend
-     * As soon as a Slice is released, this is decremented
-     */
+    /* Total amount of data points in memory at any given time, across all queries */
     private final Counter sampleSizeLive;
 
-    /*
-     * Incremented on readData - i.e. when we get data from backend
-     * When a request finishes (Slice & aggregation done), this is decremented
-     */
+    /* Total amount of data points in memory + data points that has earlier been read in all ongoing
+     * queries. This gives an upper bound, of sorts, on amount of active data points we have. */
     private final Counter sampleSizeAccumulated;
+
+    /* Measuring on a data-node level, can be used for measuring load on metric backend */
+    private final Histogram querySamplesRead;
+    private final Histogram queryRowsAccessed;
+    /* Maximum amount of data points in memory at any time for a query */
+    private final Histogram queryMaxLiveSamples;
+    private final Histogram queryReadRate;
+    // Average milliseconds between samples
+    private final Histogram queryRowMsBetweenSamples;
+    // Average samples per mega-seconds :)
+    private final Histogram queryRowDensity;
 
     public SemanticMetricBackendReporter(SemanticMetricRegistry registry) {
         final MetricId base = MetricId.build().tagged("component", COMPONENT);
 
         this.write =
             new SemanticFutureReporter(registry, base.tagged("what", "write", "unit", Units.WRITE));
-        this.writeBatch = new SemanticFutureReporter(registry,
-            base.tagged("what", "write-batch", "unit", Units.WRITE));
         this.fetch =
             new SemanticFutureReporter(registry, base.tagged("what", "fetch", "unit", Units.QUERY));
         this.deleteKey = new SemanticFutureReporter(registry,
@@ -97,6 +108,25 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
             registry.counter(base.tagged("what", "sample-size-live", "unit", Units.SAMPLE));
         sampleSizeAccumulated =
             registry.counter(base.tagged("what", "sample-size-accumulated", "unit", Units.SAMPLE));
+
+        querySamplesRead = registry.getOrAdd(
+            base.tagged("what", "query-metrics-samples-read", "unit", Units.COUNT),
+            HistogramBuilder.HISTOGRAM);
+        queryRowsAccessed = registry.getOrAdd(
+            base.tagged("what", "query-metrics-rows-accessed", "unit", Units.COUNT),
+            HistogramBuilder.HISTOGRAM);
+        queryMaxLiveSamples = registry.getOrAdd(
+            base.tagged("what", "query-metrics-max-live-samples", "unit", Units.COUNT),
+            HistogramBuilder.HISTOGRAM);
+        queryReadRate =
+            registry.getOrAdd(base.tagged("what", "query-metrics-read-rate", "unit", Units.COUNT),
+                HistogramBuilder.HISTOGRAM);
+        queryRowMsBetweenSamples = registry.getOrAdd(
+            base.tagged("what", "query-metrics-row-metric-distance", "unit", Units.MILLISECOND),
+            HistogramBuilder.HISTOGRAM);
+        queryRowDensity =
+            registry.getOrAdd(base.tagged("what", "query-metrics-row-density", "unit", Units.COUNT),
+                HistogramBuilder.HISTOGRAM);
     }
 
     @Override
@@ -107,23 +137,60 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
     @Override
     public DataInMemoryReporter newDataInMemoryReporter() {
         return new DataInMemoryReporter() {
-            private final AtomicLong dataInMemory = new AtomicLong();
+            private final LongAccumulator dataRead = new LongAccumulator((x, y) -> x + y, 0L);
+            private final AtomicLong dataInMemory = new AtomicLong(0L);
+            private final LongAccumulator rowsAccessed = new LongAccumulator((x, y) -> x + y, 0L);
+            private final LongAccumulator maxDataInMemory = new LongAccumulator(Long::max, 0L);
+            private final Stopwatch queryWatch = Stopwatch.createStarted();
+
+            @Override
+            public void reportRowsAccessed(final long n) {
+                rowsAccessed.accumulate(n);
+            }
+
+            @Override
+            public void reportRowDensity(final double samplesPerSecond) {
+                queryRowDensity.update((long) (samplesPerSecond * 1e6));
+                queryRowMsBetweenSamples.update((long) (1000.0 / samplesPerSecond));
+            }
 
             @Override
             public void reportDataHasBeenRead(final long n) {
-                dataInMemory.addAndGet(n);
+                dataRead.accumulate(n);
+
+                final long currDataInMemory = dataInMemory.addAndGet(n);
+                maxDataInMemory.accumulate(currDataInMemory);
+
                 sampleSizeLive.inc(n);
                 sampleSizeAccumulated.inc(n);
             }
 
             @Override
             public void reportDataNoLongerNeeded(final long n) {
+                dataInMemory.addAndGet(-n);
+
                 sampleSizeLive.dec(n);
             }
 
             @Override
             public void reportOperationEnded() {
-                sampleSizeAccumulated.dec(dataInMemory.get());
+                // Decrement any remaining live memory
+                sampleSizeLive.dec(dataInMemory.get());
+
+                final long finalDataRead = dataRead.get();
+                /* The accumulated count has previously been incremented with all of the data read,
+                 * so decrease the full amount now */
+                sampleSizeAccumulated.dec(finalDataRead);
+
+                querySamplesRead.update(finalDataRead);
+                queryRowsAccessed.update(rowsAccessed.get());
+                queryMaxLiveSamples.update(maxDataInMemory.get());
+
+                final long durationNs = queryWatch.elapsed(TimeUnit.NANOSECONDS);
+                if (durationNs != 0) {
+                    // Amount of data read per second
+                    queryReadRate.update((1_000_000_000 * finalDataRead) / durationNs);
+                }
             }
         };
     }
@@ -154,14 +221,21 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
 
         @Override
         public AsyncFuture<WriteMetric> write(final WriteMetric.Request request) {
-            return delegate.write(request).onDone(write.setup());
+            return write(request, Tracing.getTracer().getCurrentSpan());
         }
 
         @Override
-        public AsyncFuture<FetchData> fetch(
-            final FetchData.Request request, final FetchQuotaWatcher watcher
+        public AsyncFuture<WriteMetric> write(
+            final WriteMetric.Request request, final Span parentSpan) {
+            return delegate.write(request, parentSpan).onDone(write.setup());
+        }
+
+        @Override
+        public AsyncFuture<FetchData.Result> fetch(
+            final FetchData.Request request, final FetchQuotaWatcher watcher,
+            final Consumer<MetricReadResult> metricsConsumer
         ) {
-            return delegate.fetch(request, watcher).onDone(fetch.setup());
+            return delegate.fetch(request, watcher, metricsConsumer).onDone(fetch.setup());
         }
 
         @Override

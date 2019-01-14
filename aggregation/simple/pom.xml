@@ -42,7 +42,7 @@
 
     <dependency>
       <groupId>com.spotify.heroic</groupId>
-      <artifactId>heroic-test-base</artifactId>
+      <artifactId>heroic-test</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

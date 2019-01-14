@@ -1,19 +1,17 @@
 package com.spotify.heroic.common;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableSet;
-import org.junit.Test;
-
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableSortedSet;
+import org.junit.Test;
 
 public class FeaturesTest {
     private final ObjectMapper m = new ObjectMapper();
 
     @Test
     public void serializationTest() throws Exception {
-        final Features f1 = new Features(ImmutableSet.of(Feature.DISTRIBUTED_AGGREGATIONS));
+        final Features f1 = new Features(ImmutableSortedSet.of(Feature.DISTRIBUTED_AGGREGATIONS));
         final String ref = "[\"com.spotify.heroic.distributed_aggregations\"]";
 
         assertEquals(ref, m.writeValueAsString(f1));

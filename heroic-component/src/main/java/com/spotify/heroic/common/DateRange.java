@@ -24,6 +24,8 @@ package com.spotify.heroic.common;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.spotify.heroic.ObjectHasher;
+import com.spotify.heroic.time.Clock;
 import eu.toolchain.serializer.AutoSerialize;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -88,7 +90,7 @@ public class DateRange implements Comparable<DateRange> {
             return this;
         }
 
-        return new DateRange(start - start % interval, end - (end  % interval));
+        return new DateRange(start - start % interval, end - (end % interval));
     }
 
     public boolean overlap(DateRange other) {
@@ -173,7 +175,14 @@ public class DateRange implements Comparable<DateRange> {
         return new DateRange(now, now);
     }
 
-    public static DateRange now() {
-        return now(System.currentTimeMillis());
+    public static DateRange now(Clock clock) {
+        return now(clock.currentTimeMillis());
+    }
+
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(getClass(), () -> {
+            hasher.putField("start", start, hasher.longValue());
+            hasher.putField("end", end, hasher.longValue());
+        });
     }
 }

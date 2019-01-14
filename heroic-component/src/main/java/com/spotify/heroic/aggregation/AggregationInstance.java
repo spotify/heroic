@@ -22,9 +22,8 @@
 package com.spotify.heroic.aggregation;
 
 import com.google.common.collect.ImmutableSet;
-
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.DateRange;
-
 import java.util.Set;
 
 /**
@@ -61,13 +60,15 @@ public interface AggregationInstance {
      * Traverse the possible aggregations and build the necessary graph out of them.
      */
     default AggregationSession session(DateRange range) {
-        return session(range, RetainQuotaWatcher.NO_QUOTA);
+        return session(range, RetainQuotaWatcher.NO_QUOTA, BucketStrategy.START);
     }
 
     /**
      * Traverse the possible aggregations and build the necessary graph out of them.
      */
-    AggregationSession session(DateRange range, RetainQuotaWatcher quotaWatcher);
+    AggregationSession session(
+        DateRange range, RetainQuotaWatcher quotaWatcher, BucketStrategy bucketStrategy
+    );
 
     /**
      * Get the distributed aggregation that is relevant for this aggregation.
@@ -118,4 +119,9 @@ public interface AggregationInstance {
     default boolean distributable() {
         return true;
     }
+
+    /**
+     * Hash the aggregation to generate a key suitable for caching.
+     */
+    void hashTo(ObjectHasher hasher);
 }

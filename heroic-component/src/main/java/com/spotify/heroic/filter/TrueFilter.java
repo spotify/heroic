@@ -21,12 +21,15 @@
 
 package com.spotify.heroic.filter;
 
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.Series;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(of = {"OPERATOR"}, doNotUseGetters = true)
+@JsonTypeName("true")
 public class TrueFilter implements Filter {
     public static final String OPERATOR = "true";
 
@@ -72,6 +75,11 @@ public class TrueFilter implements Filter {
 
     @Override
     public String toDSL() {
-        return "false";
+        return "true";
+    }
+
+    @Override
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(getClass());
     }
 }

@@ -40,20 +40,20 @@ import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
+import com.spotify.heroic.time.Clock;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
-import lombok.ToString;
-import org.kohsuke.args4j.Option;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import javax.inject.Inject;
+import javax.inject.Named;
+import lombok.ToString;
+import org.kohsuke.args4j.Option;
 
 @TaskUsage("Write a single, or a set of events")
 @TaskName("write")
@@ -62,15 +62,17 @@ public class Write implements ShellTask {
         new TypeReference<Map<String, String>>() {
         };
 
+    private final Clock clock;
     private final IngestionManager ingestion;
     private final AsyncFramework async;
     private final ObjectMapper json;
 
     @Inject
     public Write(
-        IngestionManager ingestion, AsyncFramework async,
+        Clock clock, IngestionManager ingestion, AsyncFramework async,
         @Named("application/json") ObjectMapper json
     ) {
+        this.clock = clock;
         this.ingestion = ingestion;
         this.async = async;
         this.json = json;
@@ -95,7 +97,7 @@ public class Write implements ShellTask {
 
         final IngestionGroup g = ingestion.useGroup(params.group);
 
-        final long now = System.currentTimeMillis();
+        final long now = clock.currentTimeMillis();
 
         final List<Point> points = parsePoints(params.points, now);
         final List<Event> events = parseEvents(params.events, now);

@@ -21,13 +21,13 @@
 
 package com.spotify.heroic.metric.bigtable;
 
-import com.google.appengine.repackaged.com.google.common.collect.ImmutableList;
 import com.google.cloud.bigtable.config.BigtableOptions;
 import com.google.cloud.bigtable.config.BulkOptions;
 import com.google.cloud.bigtable.config.CredentialOptions;
 import com.google.cloud.bigtable.config.RetryOptions;
 import com.google.cloud.bigtable.grpc.BigtableSession;
-import com.spotify.heroic.bigtable.grpc.Status;
+import com.google.common.collect.ImmutableList;
+import io.grpc.Status;
 import com.spotify.heroic.metric.bigtable.api.BigtableDataClient;
 import com.spotify.heroic.metric.bigtable.api.BigtableDataClientImpl;
 import com.spotify.heroic.metric.bigtable.api.BigtableMutator;
@@ -36,12 +36,10 @@ import com.spotify.heroic.metric.bigtable.api.BigtableTableAdminClient;
 import com.spotify.heroic.metric.bigtable.api.BigtableTableTableAdminClientImpl;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-
 import java.util.Optional;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
 @ToString(of = {"project", "instance", "credentials"})
 @RequiredArgsConstructor
@@ -54,7 +52,6 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
     private final CredentialsBuilder credentials;
 
     private final AsyncFramework async;
-    private final ExecutorService executorService;
 
     private final boolean disableBulkMutations;
     private final int flushIntervalSeconds;
@@ -66,6 +63,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
 
         final RetryOptions retryOptions = new RetryOptions.Builder()
             .addStatusToRetryOn(Status.Code.UNKNOWN)
+            .addStatusToRetryOn(Status.Code.UNAVAILABLE)
             .setAllowRetriesWithoutTimestamp(true)
             .build();
 
@@ -83,11 +81,11 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
             .setBulkOptions(bulkOptions)
             .build();
 
-        final BigtableSession session = new BigtableSession(options, executorService);
+        final BigtableSession session = new BigtableSession(options);
 
         final BigtableTableAdminClient adminClient =
             new BigtableTableTableAdminClientImpl(async, session.getTableAdminClient(), project,
-              instance);
+                instance);
 
         final BigtableMutator mutator =
             new BigtableMutatorImpl(async, session, disableBulkMutations, flushIntervalSeconds);
@@ -95,8 +93,8 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
         final BigtableDataClient client =
             new BigtableDataClientImpl(async, session, mutator, project, instance);
 
-        return new GrpcBigtableConnection(
-            async, project, instance, session, mutator, adminClient, client);
+        return new GrpcBigtableConnection(async, project, instance, session, mutator, adminClient,
+            client);
     }
 
     @RequiredArgsConstructor

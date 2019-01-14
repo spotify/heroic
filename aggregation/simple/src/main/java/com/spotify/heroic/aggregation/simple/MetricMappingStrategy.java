@@ -21,8 +21,11 @@
 
 package com.spotify.heroic.aggregation.simple;
 
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.metric.MetricCollection;
 
 public interface MetricMappingStrategy {
     MetricCollection apply(MetricCollection metrics);
+
+    void hashTo(ObjectHasher hasher);
 }

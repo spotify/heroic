@@ -37,15 +37,10 @@ import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestManager;
 import com.spotify.heroic.suggest.WriteSuggest;
+import com.spotify.heroic.time.Clock;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.Getter;
-import lombok.ToString;
-import org.kohsuke.args4j.Option;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -53,20 +48,28 @@ import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.zip.GZIPInputStream;
+import javax.inject.Inject;
+import javax.inject.Named;
+import lombok.Getter;
+import lombok.ToString;
+import org.kohsuke.args4j.Option;
 
 @TaskUsage("Load metadata from a file")
 @TaskName("metadata-load")
 public class MetadataLoad implements ShellTask {
     protected static final long OUTPUT_STEP = 1000;
 
+    private final Clock clock;
     private final AsyncFramework async;
     private final SuggestManager suggest;
     private final ObjectMapper mapper;
 
     @Inject
     public MetadataLoad(
-        AsyncFramework async, SuggestManager suggest, @Named("application/json") ObjectMapper mapper
+        Clock clock, AsyncFramework async, SuggestManager suggest,
+        @Named("application/json") ObjectMapper mapper
     ) {
+        this.clock = clock;
         this.async = async;
         this.suggest = suggest;
         this.mapper = mapper;
@@ -95,9 +98,9 @@ public class MetadataLoad implements ShellTask {
         long total = 0;
         long failed = 0;
         long ratePosition = 0;
-        long rateStart = System.currentTimeMillis();
+        long rateStart = clock.currentTimeMillis();
 
-        final DateRange now = DateRange.now();
+        final DateRange now = DateRange.now(clock);
 
         try (final BufferedReader input = new BufferedReader(open(io, params.file))) {
             String line;
@@ -130,7 +133,7 @@ public class MetadataLoad implements ShellTask {
                     }
 
                     if (total % (OUTPUT_STEP * 20) == 0) {
-                        long rateNow = System.currentTimeMillis();
+                        long rateNow = clock.currentTimeMillis();
                         final long rate;
 
                         if (rateNow == rateStart) {

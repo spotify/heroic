@@ -26,9 +26,8 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.ingestion.Ingestion;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
-import lombok.Data;
-
 import java.util.Optional;
+import lombok.Data;
 
 @Data
 public class WriteMetricRequest {
@@ -43,8 +42,7 @@ public class WriteMetricRequest {
         return data.map(d -> d.getDataAs(Metric.class)).orElseGet(ImmutableList::of);
     }
 
-    public Ingestion.Request toIngestionRequest() {
-        return new Ingestion.Request(series.orElseGet(Series::empty),
-            data.orElseGet(MetricCollection::empty));
+    public Optional<Ingestion.Request> toIngestionRequest() {
+        return data.map(data -> new Ingestion.Request(series.orElseGet(Series::empty), data));
     }
 }

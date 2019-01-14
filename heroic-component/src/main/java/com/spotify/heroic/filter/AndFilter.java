@@ -21,13 +21,11 @@
 
 package com.spotify.heroic.filter;
 
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.Series;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import org.apache.commons.lang3.StringUtils;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -35,17 +33,21 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Stream;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import org.apache.commons.lang3.StringUtils;
 
 @Data
-@EqualsAndHashCode(of = {"OPERATOR", "statements"}, doNotUseGetters = true)
+@EqualsAndHashCode(of = {"OPERATOR", "filters"}, doNotUseGetters = true)
+@JsonTypeName("and")
 public class AndFilter implements Filter {
     public static final String OPERATOR = "and";
 
-    private final List<Filter> statements;
+    private final List<Filter> filters;
 
     @Override
     public boolean apply(Series series) {
-        return statements.stream().allMatch(s -> s.apply(series));
+        return filters.stream().allMatch(s -> s.apply(series));
     }
 
     @Override
@@ -55,10 +57,10 @@ public class AndFilter implements Filter {
 
     @Override
     public String toString() {
-        final List<String> parts = new ArrayList<>(statements.size() + 1);
+        final List<String> parts = new ArrayList<>(filters.size() + 1);
         parts.add(OPERATOR);
 
-        for (final Filter statement : statements) {
+        for (final Filter statement : filters) {
             parts.add(statement.toString());
         }
 
@@ -67,13 +69,13 @@ public class AndFilter implements Filter {
 
     @Override
     public Filter optimize() {
-        return optimize(flatten(this.statements));
+        return optimize(flatten(this.filters));
     }
 
-    static SortedSet<Filter> flatten(final Collection<Filter> statements) {
+    static SortedSet<Filter> flatten(final Collection<Filter> filters) {
         final SortedSet<Filter> result = new TreeSet<>();
 
-        statements.stream().flatMap(f -> f.optimize().visit(new Filter.Visitor<Stream<Filter>>() {
+        filters.stream().flatMap(f -> f.optimize().visit(new Filter.Visitor<Stream<Filter>>() {
             @Override
             public Stream<Filter> visitAnd(final AndFilter and) {
                 return and.terms().stream().map(Filter::optimize);
@@ -104,22 +106,22 @@ public class AndFilter implements Filter {
         return result;
     }
 
-    static Filter optimize(final SortedSet<Filter> statements) {
+    static Filter optimize(final SortedSet<Filter> filters) {
         final SortedSet<Filter> result = new TreeSet<>();
 
-        for (final Filter f : statements) {
+        for (final Filter f : filters) {
             if (f instanceof NotFilter) {
                 // Optimize away expressions which are always false.
                 // Example: foo = bar and !(foo = bar)
 
-                if (statements.contains(((NotFilter) f).getFilter())) {
+                if (filters.contains(((NotFilter) f).getFilter())) {
                     return FalseFilter.get();
                 }
             } else if (f instanceof StartsWithFilter) {
                 // Optimize away prefixes which encompass each other.
                 // Example: foo ^ hello and foo ^ helloworld -> foo ^ helloworld
 
-                if (FilterUtils.containsPrefixedWith(statements, (StartsWithFilter) f,
+                if (FilterUtils.containsPrefixedWith(filters, (StartsWithFilter) f,
                     (inner, outer) -> FilterUtils.prefixedWith(inner.getValue(),
                         outer.getValue()))) {
                     continue;
@@ -128,14 +130,14 @@ public class AndFilter implements Filter {
                 // Optimize matchTag expressions which are always false.
                 // Example: foo = bar and foo = baz
 
-                if (FilterUtils.containsConflictingMatchTag(statements, (MatchTagFilter) f)) {
+                if (FilterUtils.containsConflictingMatchTag(filters, (MatchTagFilter) f)) {
                     return FalseFilter.get();
                 }
             } else if (f instanceof MatchKeyFilter) {
                 // Optimize matchTag expressions which are always false.
                 // Example: $key = bar and $key = baz
 
-                if (FilterUtils.containsConflictingMatchKey(statements, (MatchKeyFilter) f)) {
+                if (FilterUtils.containsConflictingMatchKey(filters, (MatchKeyFilter) f)) {
                     return FalseFilter.get();
                 }
             }
@@ -160,7 +162,7 @@ public class AndFilter implements Filter {
     }
 
     public List<Filter> terms() {
-        return statements;
+        return filters;
     }
 
     @Override
@@ -177,7 +179,14 @@ public class AndFilter implements Filter {
 
     @Override
     public String toDSL() {
-        return "(" + and.join(statements.stream().map(Filter::toDSL).iterator()) + ")";
+        return "(" + and.join(filters.stream().map(Filter::toDSL).iterator()) + ")";
+    }
+
+    @Override
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(this.getClass(), () -> {
+            hasher.putField("filters", filters, hasher.list(hasher.with(Filter::hashTo)));
+        });
     }
 
     public static Filter of(Filter... filters) {

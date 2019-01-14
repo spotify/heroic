@@ -22,10 +22,12 @@
 package com.spotify.heroic.aggregation.simple;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.AggregationOutput;
 import com.spotify.heroic.aggregation.AggregationResult;
 import com.spotify.heroic.aggregation.AggregationSession;
+import com.spotify.heroic.aggregation.BucketStrategy;
 import com.spotify.heroic.aggregation.EmptyInstance;
 import com.spotify.heroic.aggregation.RetainQuotaWatcher;
 import com.spotify.heroic.common.DateRange;
@@ -35,12 +37,10 @@ import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import lombok.Data;
 import lombok.NonNull;
 
@@ -83,8 +83,20 @@ public abstract class FilterAggregation implements AggregationInstance {
     }
 
     @Override
-    public AggregationSession session(DateRange range, RetainQuotaWatcher quotaWatcher) {
-        return new Session(filterStrategy, INNER.session(range, quotaWatcher));
+    public AggregationSession session(
+        DateRange range, RetainQuotaWatcher quotaWatcher, BucketStrategy bucketStrategy
+    ) {
+        return new Session(filterStrategy, INNER.session(range, quotaWatcher, bucketStrategy));
+    }
+
+    protected abstract void filterHashTo(final ObjectHasher hasher);
+
+    @Override
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(getClass(), () -> {
+            hasher.putField("filterStrategy", filterStrategy, hasher.with(FilterStrategy::hashTo));
+            filterHashTo(hasher);
+        });
     }
 
     private class Session implements AggregationSession {

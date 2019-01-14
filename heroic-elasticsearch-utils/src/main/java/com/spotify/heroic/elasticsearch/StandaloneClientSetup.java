@@ -23,18 +23,15 @@ package com.spotify.heroic.elasticsearch;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.elasticsearch.client.Client;
-import org.elasticsearch.common.base.Optional;
-import org.elasticsearch.common.settings.ImmutableSettings;
-import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.node.NodeBuilder;
-
+import com.google.common.base.Optional;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.node.Node;
 
 public class StandaloneClientSetup implements ClientSetup {
     public static final String DEFAULT_CLUSTER_NAME = "heroic-standalone";
@@ -80,25 +77,31 @@ public class StandaloneClientSetup implements ClientSetup {
     }
 
     @Override
-    public Client setup() throws Exception {
-        final Settings settings = ImmutableSettings
+    public ClientWrapper setup() throws Exception {
+        final Settings settings = Settings
             .builder()
-            .put("path.logs", root.resolve("logs"))
-            .put("path.data", root.resolve("data"))
+            .put("path.home", root)
             .put("node.name", InetAddress.getLocalHost().getHostName())
             .put("script.inline", "on")
             // .put("script.disable_dynamic", false)
             // .put("script.groovy.sandbox.enabled",
             // true)
-            .put("discovery.zen.ping.multicast.enabled", false)
+            .put("cluster.name", clusterName)
+            .put("transport.type", "local")
+            .put("http.enabled", false)
             .build();
+        final Node node = new Node(settings).start();
 
-        return NodeBuilder
-            .nodeBuilder()
-            .settings(settings)
-            .clusterName(clusterName)
-            .node()
-            .client();
+        return new ClientWrapper(node.client(), new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    node.close();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
     }
 
     public static Builder builder() {

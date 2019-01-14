@@ -25,4 +25,8 @@ public class Data {
     public static Points points() {
         return new Points();
     }
+
+    public static Events events() {
+        return new Events();
+    }
 }

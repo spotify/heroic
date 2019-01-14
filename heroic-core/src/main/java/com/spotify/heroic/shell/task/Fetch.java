@@ -27,10 +27,12 @@ import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.metric.FetchData;
+import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricManager;
+import com.spotify.heroic.metric.MetricReadResult;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Tracing;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
@@ -40,32 +42,37 @@ import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
+import com.spotify.heroic.time.Clock;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.ToString;
-import org.kohsuke.args4j.Option;
-
+import eu.toolchain.async.LazyTransform;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import javax.inject.Inject;
 import javax.inject.Named;
+import lombok.ToString;
+import org.kohsuke.args4j.Option;
 
 @TaskUsage("Fetch a range of data points")
 @TaskName("fetch")
 public class Fetch implements ShellTask {
+    private final Clock clock;
     private final MetricManager metrics;
     private final ObjectMapper mapper;
     private final AsyncFramework async;
 
     @Inject
     public Fetch(
-        MetricManager metrics, @Named("application/json") ObjectMapper mapper, AsyncFramework async
+        Clock clock, MetricManager metrics, @Named("application/json") ObjectMapper mapper,
+        AsyncFramework async
     ) {
+        this.clock = clock;
         this.metrics = metrics;
         this.mapper = mapper;
         this.async = async;
@@ -79,7 +86,7 @@ public class Fetch implements ShellTask {
     @Override
     public AsyncFuture<Void> run(final ShellIO io, final TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
-        final long now = System.currentTimeMillis();
+        final long now = clock.currentTimeMillis();
 
         final Series series = Tasks.parseSeries(mapper, params.series);
 
@@ -88,7 +95,6 @@ public class Fetch implements ShellTask {
             params.end.map(t -> Tasks.parseInstant(t, now)).orElseGet(() -> defaultEnd(start));
 
         final DateRange range = new DateRange(start, end);
-        final int limit = Math.max(1, params.limit);
 
         final DateFormat flip = new SimpleDateFormat("yyyy-MM-dd HH:mm");
         final DateFormat point = new SimpleDateFormat("HH:mm:ss.SSS");
@@ -96,47 +102,42 @@ public class Fetch implements ShellTask {
         final MetricBackendGroup readGroup = metrics.useOptionalGroup(params.group);
         final MetricType source = MetricType.fromIdentifier(params.source).orElse(MetricType.POINT);
 
-        final QueryOptions options =
-            QueryOptions.builder().tracing(Tracing.fromBoolean(params.tracing)).build();
+        final QueryOptions.Builder optionsBuilder =
+            QueryOptions.builder().tracing(Tracing.fromBoolean(params.tracing));
+        final QueryOptions options = optionsBuilder.build();
+
+        final Consumer<MetricReadResult> printMetricsCollection = metricsAndResources -> {
+            MetricCollection g = metricsAndResources.getMetrics();
+            Calendar current = null;
+            Calendar last = null;
+
+            for (final Metric d : g.getData()) {
+                current = Calendar.getInstance();
+                current.setTime(new Date(d.getTimestamp()));
+
+                if (flipped(last, current)) {
+                    io.out().println(flip.format(current.getTime()));
+                }
+                String fs = String.format("  %s: %s", point.format(new Date(d.getTimestamp())), d);
+                io.out().println(fs);
+
+                last = current;
+            }
+        };
+
+        final LazyTransform<FetchData.Result, Void> handleResult = result -> {
+
+            io.out().println("TRACE:");
+            result.getTrace().formatTrace(io.out());
+            io.out().flush();
+
+            return async.resolved();
+        };
 
         return readGroup
-            .fetch(new FetchData.Request(source, series, range, options))
-            .lazyTransform(result -> {
-                outer:
-                for (final MetricCollection g : result.getGroups()) {
-                    int i = 0;
-
-                    Calendar current = null;
-                    Calendar last = null;
-
-                    for (final Metric d : g.getData()) {
-                        current = Calendar.getInstance();
-                        current.setTime(new Date(d.getTimestamp()));
-
-                        if (flipped(last, current)) {
-                            io.out().println(flip.format(current.getTime()));
-                        }
-
-                        io
-                            .out()
-                            .println(
-                                String.format("  %s: %s", point.format(new Date(d.getTimestamp())),
-                                    d));
-
-                        if (i++ >= limit) {
-                            break outer;
-                        }
-
-                        last = current;
-                    }
-                }
-
-                io.out().println("TRACE:");
-                result.getTrace().formatTrace(io.out());
-                io.out().flush();
-
-                return async.resolved();
-            });
+            .fetch(new FetchData.Request(source, series, range, options),
+                FetchQuotaWatcher.NO_QUOTA, printMetricsCollection)
+            .lazyTransform(handleResult);
     }
 
     private boolean flipped(Calendar last, Calendar current) {
@@ -182,16 +183,15 @@ public class Fetch implements ShellTask {
         @Option(name = "--end", usage = "End date", metaVar = "<datetime>")
         private Optional<String> end = Optional.empty();
 
-        @Option(name = "--limit", usage = "Maximum number of datapoints to fetch",
-            metaVar = "<int>")
-        private int limit = 1000;
-
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")
         private Optional<String> group = Optional.empty();
 
         @Option(name = "--tracing", usage = "Enable extensive tracing")
         private boolean tracing = false;
+
+        @Option(name = "--sliced-data-fetch", usage = "Enable sliced data fetch")
+        private boolean slicedDataFetch = false;
     }
 
     public static Fetch setup(final CoreComponent core) {
