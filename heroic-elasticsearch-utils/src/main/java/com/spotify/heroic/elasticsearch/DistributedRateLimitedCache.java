@@ -94,7 +94,7 @@ public class DistributedRateLimitedCache<K> implements RateLimitedCache<K> {
       } catch (TimeoutException e) {
         span.setStatus(Status.INTERNAL.withDescription(e.getMessage()));
         memcachedReporter.reportMemcachedTimeout();
-        log.error("Failed to get key from memecached");
+        log.debug("Failed to get key from memecached");
       } catch (InterruptedException | ExecutionException e) {
         span.setStatus(Status.INTERNAL.withDescription(e.getMessage()));
         memcachedReporter.reportMemcachedError();

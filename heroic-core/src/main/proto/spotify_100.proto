@@ -21,3 +21,7 @@ message Metric {
   // resource "tags" associated to metric.
   map<string, string> resource = 5;
 }
+
+message Batch {
+  repeated Metric metric = 1;
+}
