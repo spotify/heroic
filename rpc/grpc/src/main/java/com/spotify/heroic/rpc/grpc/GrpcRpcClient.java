@@ -118,7 +118,12 @@ public class GrpcRpcClient {
             call.request(1);
             call.halfClose();
 
-            return future.onFailed(e -> errors.mark());
+            // Don't mark all api nodes as unhealthy if only suggest is failing.
+            return future.onFailed(e -> {
+                if (!endpoint.descriptor().getFullMethodName().contains("heroic/suggest:")) {
+                    errors.mark();
+                }
+            });
         });
     }
 
