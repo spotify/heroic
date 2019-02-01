@@ -71,7 +71,8 @@
     <junit.version>4.12</junit.version>
     <hamcrest.version>2.0.0.0</hamcrest.version>
     <folsom.version>1.2.1</folsom.version>
-    <opencensus.version>0.15.0</opencensus.version>
+    <opencensus.version>0.19.1</opencensus.version>
+    <protobuf.version>3.5.1</protobuf.version>
 
     <google-cloud-bom.version>0.74.0-alpha</google-cloud-bom.version>
   </properties>
@@ -529,6 +530,30 @@
         <artifactId>opencensus-contrib-grpc-util</artifactId>
         <version>${opencensus.version}</version>
       </dependency>
+      <dependency>
+        <groupId>io.opencensus</groupId>
+        <artifactId>opencensus-contrib-http-util</artifactId>
+        <version>${opencensus.version}</version>
+      </dependency>
+
+      <!-- opencensus exporters -->
+      <dependency>
+          <groupId>com.lightstep.tracer</groupId>
+          <artifactId>lightstep-tracer-jre</artifactId>
+          <version>0.14.8</version>
+      </dependency>
+
+      <dependency>
+          <groupId>com.lightstep.tracer</groupId>
+          <artifactId>tracer-grpc</artifactId>
+          <version>0.15.9</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.lightstep.opencensus</groupId>
+        <artifactId>lightstep-opencensus-exporter</artifactId>
+        <version>0.0.2</version>
+      </dependency>
 
       <dependency>
         <groupId>org.xerial.snappy</groupId>
@@ -554,6 +579,12 @@
         <groupId>com.google.dagger</groupId>
         <artifactId>dagger-compiler</artifactId>
         <version>${dagger.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.google.cloud</groupId>
+        <artifactId>google-cloud-core</artifactId>
+        <version>1.53.0</version>
       </dependency>
 
       <!-- used by com.spotify.heroic.http
