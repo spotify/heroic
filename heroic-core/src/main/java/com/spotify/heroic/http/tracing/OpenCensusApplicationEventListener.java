@@ -23,15 +23,18 @@ package com.spotify.heroic.http.tracing;
 
 import static java.text.MessageFormat.format;
 
+import io.opencensus.contrib.http.util.HttpPropagationUtil;
 import io.opencensus.trace.AttributeValue;
 import io.opencensus.trace.Span;
+import io.opencensus.trace.SpanBuilder;
+import io.opencensus.trace.SpanContext;
 import io.opencensus.trace.Status;
 import io.opencensus.trace.Tracer;
 import io.opencensus.trace.Tracing;
+import io.opencensus.trace.propagation.SpanContextParseException;
+import io.opencensus.trace.propagation.TextFormat;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.container.ContainerResponseFilter;
 import org.glassfish.jersey.server.ContainerRequest;
@@ -43,9 +46,13 @@ import org.glassfish.jersey.server.monitoring.RequestEvent;
 import org.glassfish.jersey.server.monitoring.RequestEventListener;
 
 
+
 class OpenCensusApplicationEventListener implements ApplicationEventListener {
     private final Tracer globalTracer = Tracing.getTracer();
+    private final TextFormat textFormat = HttpPropagationUtil.getCloudTraceFormat();
+    private TextFormatGetter<ContainerRequest> textFormatGetter = new TextFormatGetter<>();
     private final OpenCensusFeature.Verbosity verbosity;
+    private static final EnvironmentMetadata environmentMetadata = EnvironmentMetadata.create();
 
     /**
      * Creates event listener instance with given
@@ -73,18 +80,20 @@ class OpenCensusApplicationEventListener implements ApplicationEventListener {
 
     private Span handleRequestStart(ContainerRequest request) {
 
-        final Map<String, String> mappedHeaders = request
-            .getHeaders()
-            .entrySet()
-            .stream()
-            .collect(Collectors.toMap(
-                Map.Entry::getKey,
-                (entry) -> OpenCensusUtils.formatList(entry.getValue())));
+        SpanBuilder spanBuilder;
+        String spanName = request.getRequestUri().getPath();
 
-        // TODO: extract headers from the request to determine if this is a child span
-        final Span span = globalTracer
-            .spanBuilder(request.getRequestUri().getPath())
-            .startSpan();
+        try {
+            final SpanContext spanContext = textFormat.extract(request, textFormatGetter);
+            spanBuilder = globalTracer
+                .spanBuilderWithRemoteParent(spanName, spanContext);
+
+        } catch (SpanContextParseException e) {
+
+            spanBuilder = globalTracer.spanBuilder(spanName);
+        }
+
+        final Span span = spanBuilder.startSpan();
 
         span.putAttribute("span.kind", AttributeValue.stringAttributeValue("server"));
         span.putAttribute("http.method", AttributeValue.stringAttributeValue(request.getMethod()));
@@ -94,6 +103,7 @@ class OpenCensusApplicationEventListener implements ApplicationEventListener {
             OpenCensusUtils.headersAsString(request.getHeaders())));
         span.putAttribute("http.has_request_entity", AttributeValue.booleanAttributeValue(
             request.hasEntity()));
+        span.putAttributes(environmentMetadata.toAttributes());
 
         request.setProperty(OpenCensusFeature.SPAN_CONTEXT_PROPERTY, span);
         span.addAnnotation("Request started.");
@@ -185,7 +195,7 @@ class OpenCensusApplicationEventListener implements ApplicationEventListener {
                     logVerbose(format("Response filtering finished, {0} filter(s) applied.",
                         responseFilters.size()));
                     if (responseFilters.size() > 0) {
-                        log(format("Applied reqsponse filters: {0}.",
+                        log(format("Applied response filters: {0}.",
                             OpenCensusUtils.formatProviders(responseFilters)));
                     }
                     break;

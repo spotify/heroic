@@ -51,6 +51,17 @@
       <artifactId>guava</artifactId>
     </dependency>
 
+    <dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-core</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.auto.value</groupId>
+      <artifactId>auto-value</artifactId>
+    </dependency>
+
+
     <!-- used for rpc -->
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
@@ -134,7 +145,7 @@
       <artifactId>log4j-api</artifactId>
     </dependency>
 
-    <!-- memory cachhe -->
+    <!-- memory cache -->
     <dependency>
       <groupId>net.jodah</groupId>
       <artifactId>expiringmap</artifactId>
@@ -152,6 +163,51 @@
       <version>3.5.1</version>
     </dependency>
 
+    <!-- opencensus dependencies -->
+    <dependency>
+      <groupId>io.opencensus</groupId>
+      <artifactId>opencensus-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.opencensus</groupId>
+      <artifactId>opencensus-impl</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.opencensus</groupId>
+      <artifactId>opencensus-contrib-http-util</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>io.opencensus</groupId>
+      <artifactId>opencensus-contrib-zpages</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.typesafe</groupId>
+      <artifactId>config</artifactId>
+      <version>1.3.2</version>
+    </dependency>
+
+    <!-- opencensus exporters -->
+    <dependency>
+      <groupId>com.lightstep.tracer</groupId>
+      <artifactId>lightstep-tracer-jre</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.lightstep.tracer</groupId>
+      <artifactId>tracer-grpc</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.lightstep.opencensus</groupId>
+      <artifactId>lightstep-opencensus-exporter</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>io.opencensus</groupId>
+      <artifactId>opencensus-exporter-trace-jaeger</artifactId>
+    </dependency>
 
     <!-- used for testing -->
     <dependency>
