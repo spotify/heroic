@@ -236,10 +236,20 @@ metadata:
 #  # Local port to expose zpages on. Traces are accessible at http://localhost:{port}/tracez
 #  # @default empty
 #  #zpagesPort: 9090
-#  #stackdriver:
-#  #  # GCP project to send traces to. (required)
-#  #  # @default empty
-#  #  project: heroic
+#  #lightstep:
+#  #  # Collector host running the satellite. (required)
+#  #  collectorHost: "lightstep-satellite.services.heroic"
+#  #  # Lightstep access token. (required)
+#  #  accessToken: "lightstep_token"
+#  #  # Reporting interval (ms)
+#  #  # @default 1000
+#  #  reportingIntervalMs: 1_000
+#  #  # Max buffered spans
+#  #  # @default 1000
+#  #  maxBufferedSpans: 1_000
+#  #signalfx:
+#  #  # Host gateway for SignalFx with the correct region. (required)
+#  #  signalfxGateway: "http://signalfxgateway.services.guc3:8080/v1/trace"
 #  #zipkin:
 #  #  # Zipkin URL to send traces to. (required)
 #  #  # @default empty
