@@ -21,8 +21,8 @@
 
 package com.spotify.heroic.statistics.semantic;
 
+import com.codahale.metrics.Counter;
 import com.codahale.metrics.Histogram;
-import com.codahale.metrics.Meter;
 import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.QueryReporter;
 import com.spotify.metrics.core.MetricId;
@@ -38,8 +38,8 @@ public class SemanticQueryReporter implements QueryReporter {
     private final FutureReporter query;
     private final Histogram smallQueryLatency;
     private final Histogram queryReadRate;
-    private final Meter rpcError;
-    private final Meter rpcCancellation;
+    private final Counter rpcError;
+    private final Counter rpcCancellation;
 
     public SemanticQueryReporter(final SemanticMetricRegistry registry) {
         final MetricId base = MetricId.build().tagged("component", COMPONENT);
@@ -51,9 +51,9 @@ public class SemanticQueryReporter implements QueryReporter {
         queryReadRate =
             registry.histogram(base.tagged("what", "query-read-rate", "unit", Units.COUNT));
 
-        rpcError = registry.meter(base.tagged("what", "cluster-rpc-error", "unit", Units.FAILURE));
+        rpcError = registry.counter(base.tagged("what", "cluster-rpc-error", "unit", Units.COUNT));
         rpcCancellation =
-            registry.meter(base.tagged("what", "cluster-rpc-cancellation", "unit", Units.CANCEL));
+            registry.counter(base.tagged("what", "cluster-rpc-cancellation", "unit", Units.COUNT));
     }
 
     @Override
@@ -78,11 +78,11 @@ public class SemanticQueryReporter implements QueryReporter {
 
     @Override
     public void reportClusterNodeRpcError() {
-        rpcError.mark();
+        rpcError.inc();
     }
 
     @Override
     public void reportClusterNodeRpcCancellation() {
-        rpcCancellation.mark();
+        rpcCancellation.inc();
     }
 }

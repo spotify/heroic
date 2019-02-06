@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.statistics.semantic;
 
-import com.codahale.metrics.Meter;
+import com.codahale.metrics.Counter;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.statistics.FutureReporter;
@@ -55,8 +55,8 @@ public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
     private final FutureReporter write;
     private final FutureReporter backendWrite;
 
-    private final Meter writesDroppedByCacheHit;
-    private final Meter writesDroppedByDuplicate;
+    private final Counter writesDroppedByCacheHit;
+    private final Counter writesDroppedByDuplicate;
 
     public SemanticSuggestBackendReporter(SemanticMetricRegistry registry) {
         final MetricId base = MetricId.build().tagged("component", COMPONENT);
@@ -77,9 +77,9 @@ public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
             base.tagged("what", "backend-write", "unit", Units.WRITE));
 
         writesDroppedByCacheHit =
-            registry.meter(base.tagged("what", "writes-dropped-by-cache-hit", "unit", Units.DROP));
+            registry.counter(base.tagged("what", "writes-dropped-by-cache-hit", "unit", Units.COUNT));
         writesDroppedByDuplicate =
-            registry.meter(base.tagged("what", "writes-dropped-by-duplicate", "unit", Units.DROP));
+            registry.counter(base.tagged("what", "writes-dropped-by-duplicate", "unit", Units.COUNT));
     }
 
     @Override
@@ -91,12 +91,12 @@ public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
 
     @Override
     public void reportWriteDroppedByCacheHit() {
-        writesDroppedByCacheHit.mark();
+        writesDroppedByCacheHit.inc();
     }
 
     @Override
     public void reportWriteDroppedByDuplicate() {
-        writesDroppedByDuplicate.mark();
+        writesDroppedByDuplicate.inc();
     }
 
     @Override

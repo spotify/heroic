@@ -21,8 +21,8 @@
 
 package com.spotify.heroic.statistics.semantic;
 
+import com.codahale.metrics.Counter;
 import com.codahale.metrics.Histogram;
-import com.codahale.metrics.Meter;
 import com.spotify.heroic.statistics.ConsumerReporter;
 import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.HeroicTimer;
@@ -36,13 +36,12 @@ import lombok.ToString;
 public class SemanticConsumerReporter implements ConsumerReporter {
     private static final String COMPONENT = "consumer";
 
-    private final SemanticMetricRegistry registry;
     private final MetricId base;
 
-    private final Meter messageIn;
-    private final Meter messageError;
-    private final Meter messageRetry;
-    private final Meter consumerSchemaError;
+    private final Counter messageIn;
+    private final Counter messageError;
+    private final Counter messageRetry;
+    private final Counter consumerSchemaError;
     private final SemanticRatioGauge consumerThreadsLiveRatio;
     private final Histogram messageSize;
     private final Histogram messageDrift;
@@ -53,15 +52,13 @@ public class SemanticConsumerReporter implements ConsumerReporter {
     private final SemanticHeroicTimerGauge consumerCommitPhase2Timer;
 
     public SemanticConsumerReporter(SemanticMetricRegistry registry, String id) {
-        this.registry = registry;
-
         this.base = MetricId.build().tagged("component", COMPONENT, "id", id);
 
-        messageIn = registry.meter(base.tagged("what", "message-in", "unit", Units.MESSAGE));
-        messageError = registry.meter(base.tagged("what", "message-error", "unit", Units.FAILURE));
-        messageRetry = registry.meter(base.tagged("what", "message-retry", "unit", Units.COUNT));
+        messageIn = registry.counter(base.tagged("what", "message-in", "unit", Units.COUNT));
+        messageError = registry.counter(base.tagged("what", "message-error", "unit", Units.COUNT));
+        messageRetry = registry.counter(base.tagged("what", "message-retry", "unit", Units.COUNT));
         consumerSchemaError =
-            registry.meter(base.tagged("what", "consumer-schema-error", "unit", Units.FAILURE));
+            registry.counter(base.tagged("what", "consumer-schema-error", "unit", Units.COUNT));
         consumerThreadsLiveRatio = new SemanticRatioGauge();
         registry.register(base.tagged("what", "consumer-threads-live-ratio", "unit", Units.RATIO),
             consumerThreadsLiveRatio);
@@ -87,23 +84,23 @@ public class SemanticConsumerReporter implements ConsumerReporter {
 
     @Override
     public void reportMessageSize(int size) {
-        messageIn.mark();
+        messageIn.inc();
         messageSize.update(size);
     }
 
     @Override
     public void reportMessageError() {
-        messageError.mark();
+        messageError.inc();
     }
 
     @Override
     public void reportMessageRetry() {
-        messageRetry.mark();
+        messageRetry.inc();
     }
 
     @Override
     public void reportConsumerSchemaError() {
-        consumerSchemaError.mark();
+        consumerSchemaError.inc();
     }
 
     @Override
