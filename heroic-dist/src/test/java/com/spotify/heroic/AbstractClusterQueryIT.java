@@ -261,10 +261,8 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     }
 
     @Test
-    public void deltaQueryTest() throws Exception {
-        final QueryResult result = query("delta", builder -> {
-            builder.features(Optional.empty());
-        });
+    public void rateQueryTest() throws Exception {
+        final QueryResult result = query("rate");
 
         final Set<MetricCollection> m = getResults(result);
         final List<Long> cadences = getCadences(result);
@@ -274,15 +272,42 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     }
 
     @Test
-    public void distributedDeltaQueryTest() throws Exception {
-        final QueryResult result = query("max | delta");
+    public void rateSumQueryTest() throws Exception {
+        final QueryResult result = query("rate | sum");
 
         final Set<MetricCollection> m = getResults(result);
         final List<Long> cadences = getCadences(result);
 
         assertEquals(ImmutableList.of(1L), cadences);
-        assertEquals(ImmutableSet.of(points().p(20, 3D).p(30, -2D).build()), m);
+        assertEquals(ImmutableSet.of(points().p(20, 3D).p(30, 1D).build()), m);
     }
+
+    @Test
+    public void ratePerSecondQueryTest() throws Exception {
+        final QueryResult result = query("ratePerSecond");
+
+        final Set<MetricCollection> m = getResults(result);
+        final List<Long> cadences = getCadences(result);
+
+        assertEquals(ImmutableList.of(-1L, -1L), cadences);
+        assertEquals(ImmutableSet.of(points().p(30, 50D).build(), points().p(20, 300D).build()), m);
+    }
+
+
+
+    @Test
+    public void deltaQueryTest() throws Exception {
+        final QueryResult result = query("delta", builder -> {
+            builder.features(Optional.empty());
+        });
+
+        final Set<MetricCollection> m = getResults(result);
+        final List<Long> cadences = getCadences(result);
+
+        assertEquals(ImmutableList.of(-1L, -1L), cadences);
+        assertEquals(ImmutableSet.of(points().p(20, 3D).build(), points().p(30, 1D).build()), m);
+    }
+
 
     @Test
     public void deltaPerSecondQueryTest() throws Exception {
@@ -294,7 +319,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         final List<Long> cadences = getCadences(result);
 
         assertEquals(ImmutableList.of(-1L, -1L), cadences);
-        assertEquals(ImmutableSet.of(points().p(30, 50D).build(), points().p(20, 300D).build()), m);
+        assertEquals(ImmutableSet.of(points().p(20, 30D).build(), points().p(30, 500D).build()), m);
     }
 
     @Test

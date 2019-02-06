@@ -111,6 +111,11 @@ public class Module implements HeroicModule {
                     }
                 });
 
+            c.register(Rate.NAME, Rate.class, RateInstance.class, args -> new Rate());
+
+            c.register(RatePerSecond.NAME, RatePerSecond.class,
+              RatePerSecondInstance.class, args -> new RatePerSecond());
+
             c.register(Delta.NAME, Delta.class, DeltaInstance.class, args -> new Delta());
 
             c.register(DeltaPerSecond.NAME, DeltaPerSecond.class,
