@@ -25,6 +25,7 @@ import com.codahale.metrics.Clock;
 import com.codahale.metrics.ExponentiallyDecayingReservoir;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Metric;
+import com.spotify.metrics.core.HistogramWithTtl;
 import com.spotify.metrics.core.SemanticMetricBuilder;
 import java.util.concurrent.TimeUnit;
 
@@ -32,6 +33,7 @@ public class HistogramBuilder {
     public static final SemanticMetricBuilder<Histogram> HISTOGRAM =
         new SemanticMetricBuilder<Histogram>() {
             public Histogram newMetric() {
+
                 return new Histogram(
                     // A min/max value will stay around for 2 * 30 seconds
                     new MinMaxSlidingTimeReservoir(Clock.defaultClock(), 2, 30, TimeUnit.SECONDS,

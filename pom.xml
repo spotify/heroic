@@ -56,7 +56,7 @@
     <jackson.version>2.8.11</jackson.version>
     <jetty.version>9.4.12.v20180830</jetty.version>
     <lucene.version>5.5.0</lucene.version>
-    <semantic-metrics.version>0.2.3</semantic-metrics.version>
+    <semantic-metrics.version>1.0.2</semantic-metrics.version>
     <netty.version>4.1.31.Final</netty.version>
     <tiny-async.version>1.11.0</tiny-async.version>
     <tiny-serializer.version>1.4.5</tiny-serializer.version>
@@ -802,6 +802,18 @@
         <artifactId>antlr4</artifactId>
         <version>${antlr.version}</version>
         <scope>compile</scope>
+      </dependency>
+
+      <!-- metrics -->
+      <dependency>
+        <groupId>com.spotify.metrics</groupId>
+        <artifactId>semantic-metrics-core</artifactId>
+        <version>${semantic-metrics.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.spotify.metrics</groupId>
+        <artifactId>semantic-metrics-ffwd-reporter</artifactId>
+        <version>${semantic-metrics.version}</version>
       </dependency>
 
       <!-- testing -->
