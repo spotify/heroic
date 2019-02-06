@@ -39,6 +39,7 @@
     <module>rpc/jvm</module>
     <module>heroic-dist</module>
     <module>statistics/semantic</module>
+    <module>statistics/opencensus</module>
   </modules>
 
   <licenses>
