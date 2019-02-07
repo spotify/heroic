@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 
 import com.spotify.heroic.metric.Point;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.junit.Test;
 
@@ -23,6 +24,14 @@ public class RateTest {
         expected.add(new Point(1540000060000L, 80));
 
         assertEquals(expected, rateInstance.computeDiff(points));
+    }
+
+    @Test
+    public void testOneValue() throws Exception {
+        List<Point> points = new ArrayList<>();
+        points.add(new Point(1540000000000L, 10));
+
+        assertEquals(Collections.EMPTY_LIST, rateInstance.computeDiff(points));
     }
 
     @Test

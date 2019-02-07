@@ -102,7 +102,7 @@ public class RateInstance implements AggregationInstance {
         while (it.hasNext()) {
             final Point current = it.next();
 
-            // Counter reset.
+            // A monotonically increasing counter was reset.
             if (current.getValue() < previous.getValue()) {
                 result.add(new Point(current.getTimestamp(), current.getValue()));
             } else {

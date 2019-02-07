@@ -101,7 +101,7 @@ public class RatePerSecondInstance implements AggregationInstance {
         while (it.hasNext()) {
             final Point current = it.next();
 
-            // Counter reset.
+            // A monotonically increasing counter was reset.
             long timeDiff = current.getTimestamp() - previous.getTimestamp();
             if (current.getValue() < previous.getValue()) {
                 result.add(new Point(
