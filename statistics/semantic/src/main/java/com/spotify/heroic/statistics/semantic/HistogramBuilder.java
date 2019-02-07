@@ -25,7 +25,6 @@ import com.codahale.metrics.Clock;
 import com.codahale.metrics.ExponentiallyDecayingReservoir;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Metric;
-import com.spotify.metrics.core.HistogramWithTtl;
 import com.spotify.metrics.core.SemanticMetricBuilder;
 import java.util.concurrent.TimeUnit;
 
