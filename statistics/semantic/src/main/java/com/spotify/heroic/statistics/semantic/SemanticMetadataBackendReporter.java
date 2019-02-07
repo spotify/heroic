@@ -83,10 +83,10 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
             base.tagged("what", "backend-write", "unit", Units.WRITE));
         entries = registry.counter(base.tagged("what", "entries", "unit", Units.COUNT));
 
-        writesDroppedByCacheHit =
-            registry.counter(base.tagged("what", "writes-dropped-by-cache-hit", "unit", Units.COUNT));
-        writesDroppedByDuplicate =
-            registry.counter(base.tagged("what", "writes-dropped-by-duplicate", "unit", Units.COUNT));
+        writesDroppedByCacheHit = registry.counter(
+            base.tagged("what", "writes-dropped-by-cache-hit", "unit", Units.COUNT));
+        writesDroppedByDuplicate = registry.counter(
+            base.tagged("what", "writes-dropped-by-duplicate", "unit", Units.COUNT));
 
     }
 

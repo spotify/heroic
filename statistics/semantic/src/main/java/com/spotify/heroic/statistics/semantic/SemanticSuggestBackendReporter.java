@@ -76,10 +76,10 @@ public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
         backendWrite = new SemanticFutureReporter(registry,
             base.tagged("what", "backend-write", "unit", Units.WRITE));
 
-        writesDroppedByCacheHit =
-            registry.counter(base.tagged("what", "writes-dropped-by-cache-hit", "unit", Units.COUNT));
-        writesDroppedByDuplicate =
-            registry.counter(base.tagged("what", "writes-dropped-by-duplicate", "unit", Units.COUNT));
+        writesDroppedByCacheHit = registry.counter(
+            base.tagged("what", "writes-dropped-by-cache-hit", "unit", Units.COUNT));
+        writesDroppedByDuplicate = registry.counter(
+            base.tagged("what", "writes-dropped-by-duplicate", "unit", Units.COUNT));
     }
 
     @Override
