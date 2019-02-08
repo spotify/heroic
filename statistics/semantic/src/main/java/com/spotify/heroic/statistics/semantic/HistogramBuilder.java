@@ -32,6 +32,7 @@ public class HistogramBuilder {
     public static final SemanticMetricBuilder<Histogram> HISTOGRAM =
         new SemanticMetricBuilder<Histogram>() {
             public Histogram newMetric() {
+
                 return new Histogram(
                     // A min/max value will stay around for 2 * 30 seconds
                     new MinMaxSlidingTimeReservoir(Clock.defaultClock(), 2, 30, TimeUnit.SECONDS,

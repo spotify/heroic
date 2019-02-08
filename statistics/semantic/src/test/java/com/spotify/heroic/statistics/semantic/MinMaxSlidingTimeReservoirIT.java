@@ -12,6 +12,7 @@ import com.codahale.metrics.Clock;
 import com.codahale.metrics.ExponentiallyDecayingReservoir;
 import com.codahale.metrics.Reservoir;
 import com.codahale.metrics.Snapshot;
+import com.codahale.metrics.UniformSnapshot;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Random;
@@ -28,7 +29,7 @@ import org.junit.Test;
 public class MinMaxSlidingTimeReservoirIT {
     private static final int SIZE = 10;
     private static final long STEP = TimeUnit.NANOSECONDS.convert(1, TimeUnit.SECONDS);
-    private static final Snapshot DELEGATE_SNAPSHOT = new Snapshot(new long[]{0, 1, 2});
+    private static final Snapshot DELEGATE_SNAPSHOT = new UniformSnapshot(new long[]{ 0, 1, 2});
     private static final int THREAD_COUNT = 4;
     private static final int SAMPLE_SIZE = 100_000;
     private static final int CLOCK_INTERVAL = 10000;
