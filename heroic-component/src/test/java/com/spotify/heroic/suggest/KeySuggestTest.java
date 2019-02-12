@@ -3,7 +3,6 @@ package com.spotify.heroic.suggest;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.AbstractReducedResultTest;
 import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.test.LombokDataTest;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -26,11 +25,6 @@ public class KeySuggestTest extends AbstractReducedResultTest {
         s1 = new KeySuggest(ImmutableList.of(e1), ImmutableList.of(sug1));
         s2 = new KeySuggest(ImmutableList.of(e2), ImmutableList.of(sug2));
         s3 = new KeySuggest(ImmutableList.of(), ImmutableList.of(sug3));
-    }
-
-    @Test
-    public void lombokDataTest() {
-        LombokDataTest.verifyClass(KeySuggest.class);
     }
 
     @Test
