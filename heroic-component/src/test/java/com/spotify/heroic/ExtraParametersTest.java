@@ -2,7 +2,6 @@ package com.spotify.heroic;
 
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.Duration;
-import com.spotify.heroic.test.LombokDataTest;
 import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
@@ -14,11 +13,6 @@ import static org.junit.Assert.assertEquals;
 public class ExtraParametersTest {
     final ExtraParameters extra = ExtraParameters.ofList(
         ImmutableList.of("foo.bar=true", "foo.baz=42", "hello=1m", "list=42", "list=hello"));
-
-    @Test
-    public void lombokDataTest() {
-        LombokDataTest.verifyClass(ExtraParameters.class);
-    }
 
     @Test
     public void testParameters() {

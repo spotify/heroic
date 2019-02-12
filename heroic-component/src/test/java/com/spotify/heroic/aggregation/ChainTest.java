@@ -1,6 +1,5 @@
 package com.spotify.heroic.aggregation;
 
-import com.spotify.heroic.test.LombokDataTest;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -36,11 +35,6 @@ public class ChainTest {
         doReturn(true).when(c).distributable();
         doReturn(cdis).when(c).distributed();
         doReturn(cred).when(c).reducer();
-    }
-
-    @Test
-    public void lombokDataTest() {
-        LombokDataTest.verifyClass(Chain.class);
     }
 
     @Test
