@@ -72,6 +72,7 @@
     <hamcrest.version>2.0.0.0</hamcrest.version>
     <folsom.version>1.2.1</folsom.version>
     <opencensus.version>0.15.0</opencensus.version>
+    <protobuf.version>3.5.1</protobuf.version>
 
     <google-cloud-bom.version>0.74.0-alpha</google-cloud-bom.version>
   </properties>
@@ -454,6 +455,12 @@
         <groupId>eu.toolchain.serializer</groupId>
         <artifactId>tiny-serializer-processor</artifactId>
         <version>${tiny-serializer.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.google.protobuf</groupId>
+        <artifactId>protobuf-java</artifactId>
+        <version>${protobuf.version}</version>
       </dependency>
 
       <dependency>
