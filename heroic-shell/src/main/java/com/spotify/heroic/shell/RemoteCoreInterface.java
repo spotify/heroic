@@ -22,7 +22,13 @@
 package com.spotify.heroic.shell;
 
 import com.google.protobuf.ByteString;
-import com.spotify.heroic.proto.ShellMessage.*;
+import com.spotify.heroic.proto.ShellMessage.CommandEvent;
+import com.spotify.heroic.proto.ShellMessage.CommandsResponse;
+import com.spotify.heroic.proto.ShellMessage.FileEvent;
+import com.spotify.heroic.proto.ShellMessage.FileRead;
+import com.spotify.heroic.proto.ShellMessage.FileStream;
+import com.spotify.heroic.proto.ShellMessage.FileWrite;
+import com.spotify.heroic.proto.ShellMessage.Message;
 import com.spotify.heroic.shell.protocol.MessageBuilder;
 import com.spotify.heroic.shell.protocol.SimpleMessageVisitor;
 import eu.toolchain.async.AsyncFramework;

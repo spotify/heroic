@@ -22,7 +22,6 @@
 package com.spotify.heroic;
 
 import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicCore.Builder;
 import com.spotify.heroic.args4j.CmdLine;
 import com.spotify.heroic.proto.ShellMessage.CommandsResponse.CommandDefinition;
