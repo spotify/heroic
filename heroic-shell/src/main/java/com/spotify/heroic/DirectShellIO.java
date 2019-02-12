@@ -30,20 +30,18 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 
 @Data
 public class DirectShellIO implements ShellIO {
     final PrintWriter out;
 
-    public InputStream newInputStream(Path path, StandardOpenOption... options) throws IOException {
-        return Files.newInputStream(path, options);
+    public InputStream newInputStream(Path path) throws IOException {
+        return Files.newInputStream(path);
     }
 
     @Override
-    public OutputStream newOutputStream(Path path, StandardOpenOption... options)
-        throws IOException {
-        return Files.newOutputStream(path, options);
+    public OutputStream newOutputStream(Path path) throws IOException {
+        return Files.newOutputStream(path);
     }
 
     @Override

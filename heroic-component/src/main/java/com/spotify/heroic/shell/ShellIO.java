@@ -43,19 +43,17 @@ public interface ShellIO {
      * Open a file for reading.
      *
      * @param path Path of file to open.
-     * @param options Options when opening file.
      * @return An InputStream associated with the open file.
      */
-    InputStream newInputStream(Path path, StandardOpenOption... options) throws IOException;
+    InputStream newInputStream(Path path) throws IOException;
 
     /**
      * Open a file for writing.
      *
      * @param path Path of file to open.
-     * @param options Options when opening file.
      * @return An OutputStream associated with the open file.
      */
-    OutputStream newOutputStream(Path path, StandardOpenOption... options) throws IOException;
+    OutputStream newOutputStream(Path path) throws IOException;
 
     /**
      * Get the output stream for this task.

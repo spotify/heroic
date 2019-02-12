@@ -22,13 +22,10 @@
 package com.spotify.heroic.shell;
 
 import com.spotify.heroic.ShellTasks;
-import com.spotify.heroic.shell.protocol.CommandDone;
-import com.spotify.heroic.shell.protocol.CommandOutput;
-import com.spotify.heroic.shell.protocol.CommandOutputFlush;
-import com.spotify.heroic.shell.protocol.CommandsRequest;
-import com.spotify.heroic.shell.protocol.CommandsResponse;
-import com.spotify.heroic.shell.protocol.EvaluateRequest;
-import com.spotify.heroic.shell.protocol.Message;
+import com.spotify.heroic.proto.ShellMessage.CommandEvent;
+import com.spotify.heroic.proto.ShellMessage.CommandEvent.Event;
+import com.spotify.heroic.proto.ShellMessage.EvaluateRequest;
+import com.spotify.heroic.shell.protocol.MessageBuilder;
 import com.spotify.heroic.shell.protocol.SimpleMessageVisitor;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -43,7 +40,6 @@ import java.io.PrintWriter;
 import java.io.Writer;
 import java.net.Socket;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 
 @Slf4j
@@ -70,16 +66,16 @@ class ShellServerClientThread implements Runnable {
     }
 
     void doRun() throws Exception {
-        try (final ServerConnection ch = new ServerConnection(serializer, socket)) {
+        try (final ServerConnection ch = new ServerConnection(socket)) {
             try (final PrintWriter out = setupPrintWriter(ch)) {
                 final ShellIO io = setupShellIO(ch, out);
 
                 final SimpleMessageVisitor<AsyncFuture<Void>> visitor =
                     new SimpleMessageVisitor<AsyncFuture<Void>>() {
                         @Override
-                        public AsyncFuture<Void> visitCommandsRequest(CommandsRequest message)
+                        public AsyncFuture<Void> visitCommandsRequest(CommandEvent message)
                             throws Exception {
-                            ch.send(new CommandsResponse(tasks.commands()));
+                            ch.send(MessageBuilder.commandsResponse(tasks.commands()));
                             return async.resolved();
                         }
 
@@ -88,17 +84,16 @@ class ShellServerClientThread implements Runnable {
                             throws Exception {
                             log.info("Run task: {}", message);
 
-                            return tasks.evaluate(message.getCommand(), io);
+                            return tasks.evaluate(message.getCommandList(), io);
                         }
 
                         @Override
-                        protected AsyncFuture<Void> visitUnknown(Message message) throws Exception {
-                            return async.failed(
-                                new RuntimeException("Unhandled message: " + message));
+                        public AsyncFuture<Void> visitUnknown() {
+                            return async.failed(new RuntimeException("Unhandled message"));
                         }
                     };
 
-                final AsyncFuture<Void> future = ch.receive().visit(visitor);
+                final AsyncFuture<Void> future = ch.receiveAndParse(visitor);
 
                 try {
                     future.get();
@@ -109,7 +104,7 @@ class ShellServerClientThread implements Runnable {
                 }
             }
 
-            ch.send(new CommandDone());
+            ch.send(MessageBuilder.commandEvent(Event.DONE));
         }
     }
 
@@ -121,15 +116,13 @@ class ShellServerClientThread implements Runnable {
             }
 
             @Override
-            public OutputStream newOutputStream(Path path, StandardOpenOption... options)
-                throws IOException {
-                return ch.newOutputStream(path, options);
+            public OutputStream newOutputStream(Path path) throws IOException {
+                return ch.newOutputStream(path);
             }
 
             @Override
-            public InputStream newInputStream(Path path, StandardOpenOption... options)
-                throws IOException {
-                return ch.newInputStream(path, options);
+            public InputStream newInputStream(Path path) throws IOException {
+                return ch.newInputStream(path);
             }
         };
     }
@@ -143,13 +136,13 @@ class ShellServerClientThread implements Runnable {
 
             @Override
             public void flush() throws IOException {
-                ch.send(new CommandOutputFlush());
+                ch.send(MessageBuilder.commandEvent(Event.DONE));
             }
 
             @Override
             public void write(char[] b, int off, int len) throws IOException {
                 final char[] out = Arrays.copyOfRange(b, off, len);
-                ch.send(new CommandOutput(out));
+                ch.send(MessageBuilder.commandEvent(Event.OUTPUT, new String(out)));
             }
         }, true);
     }

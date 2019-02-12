@@ -37,11 +37,6 @@
     </dependency>
 
     <dependency>
-      <groupId>eu.toolchain.serializer</groupId>
-      <artifactId>tiny-serializer-api</artifactId>
-    </dependency>
-
-    <dependency>
       <groupId>javax.ws.rs</groupId>
       <artifactId>javax.ws.rs-api</artifactId>
     </dependency>

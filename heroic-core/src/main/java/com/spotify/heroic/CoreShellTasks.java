@@ -24,11 +24,11 @@ package com.spotify.heroic;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.spotify.heroic.args4j.CmdLine;
+import com.spotify.heroic.proto.ShellMessage.CommandsResponse.CommandDefinition;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.ShellTaskDefinition;
 import com.spotify.heroic.shell.TaskParameters;
-import com.spotify.heroic.shell.protocol.CommandDefinition;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.RequiredArgsConstructor;
@@ -61,7 +61,11 @@ public class CoreShellTasks implements ShellTasks {
         final List<CommandDefinition> commands = new ArrayList<>();
 
         for (final ShellTaskDefinition def : available) {
-            commands.add(new CommandDefinition(def.name(), def.aliases(), def.usage()));
+            commands.add(CommandDefinition.newBuilder()
+                    .setName(def.name())
+                    .addAllAliases(def.aliases())
+                    .setUsage(def.usage())
+                    .build());
         }
 
         return commands;
@@ -133,15 +137,15 @@ public class CoreShellTasks implements ShellTasks {
             }
 
             @Override
-            public OutputStream newOutputStream(Path path, StandardOpenOption... options)
+            public OutputStream newOutputStream(Path path)
                 throws IOException {
-                return io.newOutputStream(path, options);
+                return io.newOutputStream(path);
             }
 
             @Override
-            public InputStream newInputStream(Path path, StandardOpenOption... options)
+            public InputStream newInputStream(Path path)
                 throws IOException {
-                return io.newInputStream(path, options);
+                return io.newInputStream(path);
             }
         };
 

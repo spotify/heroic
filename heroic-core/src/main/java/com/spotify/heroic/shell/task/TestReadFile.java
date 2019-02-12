@@ -39,7 +39,6 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 
 @TaskUsage("(Test) Test to read lines from a file")
 @TaskName("test-read-file")
@@ -61,7 +60,7 @@ public class TestReadFile implements ShellTask {
         final Parameters params = (Parameters) base;
 
         try (final BufferedReader in = new BufferedReader(
-            new InputStreamReader(io.newInputStream(params.in, StandardOpenOption.READ),
+            new InputStreamReader(io.newInputStream(params.in),
                 Charsets.UTF_8))) {
 
             long i = 0;

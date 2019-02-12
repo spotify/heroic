@@ -25,18 +25,16 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicCore.Builder;
 import com.spotify.heroic.args4j.CmdLine;
+import com.spotify.heroic.proto.ShellMessage.CommandsResponse.CommandDefinition;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.CoreInterface;
 import com.spotify.heroic.shell.RemoteCoreInterface;
 import com.spotify.heroic.shell.ShellIO;
-import com.spotify.heroic.shell.ShellProtocol;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskParameters;
-import com.spotify.heroic.shell.protocol.CommandDefinition;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.TinyAsync;
-import eu.toolchain.serializer.SerializerFramework;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -66,9 +64,7 @@ public class HeroicShell {
     public static final Path[] DEFAULT_CONFIGS =
         new Path[]{Paths.get("heroic.yml"), Paths.get("/etc/heroic/heroic.yml")};
 
-    public static final SerializerFramework serializer = ShellProtocol.setupSerializer();
-
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
         HeroicLogging.configure();
 
         Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
@@ -142,9 +138,8 @@ public class HeroicShell {
         return setupLocalCore(params, async);
     }
 
-    private static CoreInterface setupRemoteCore(String connect, AsyncFramework async)
-        throws Exception {
-        return RemoteCoreInterface.fromConnectString(connect, async, serializer);
+    private static CoreInterface setupRemoteCore(String connect, AsyncFramework async) {
+        return RemoteCoreInterface.fromConnectString(connect, async);
     }
 
     private static CoreInterface setupLocalCore(Parameters params, AsyncFramework async)
@@ -168,7 +163,7 @@ public class HeroicShell {
             }
 
             @Override
-            public List<CommandDefinition> commands() throws Exception {
+            public List<CommandDefinition> commands() {
                 return tasks.commands();
             }
 
@@ -207,10 +202,18 @@ public class HeroicShell {
     static void runInteractiveShell(final CoreInterface core) throws Exception {
         final List<CommandDefinition> commands = new ArrayList<>(core.commands());
 
-        commands.add(new CommandDefinition("clear", ImmutableList.of(), "Clear the current shell"));
-        commands.add(new CommandDefinition("timeout", ImmutableList.of(),
-            "Get or set the current task timeout"));
-        commands.add(new CommandDefinition("exit", ImmutableList.of(), "Exit the shell"));
+        commands.add(CommandDefinition.newBuilder()
+            .setName("clear")
+            .setUsage("Clear the current shell")
+            .build());
+        commands.add(CommandDefinition.newBuilder()
+            .setName("timeout")
+            .setUsage("Get or set the current task timeout")
+            .build());
+        commands.add(CommandDefinition.newBuilder()
+            .setName("exit")
+            .setUsage("Exit the shell")
+            .build());
 
         try (final FileInputStream input = new FileInputStream(FileDescriptor.in)) {
             final HeroicInteractiveShell interactive =
