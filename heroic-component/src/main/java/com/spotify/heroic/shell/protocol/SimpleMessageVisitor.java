@@ -21,7 +21,15 @@
 
 package com.spotify.heroic.shell.protocol;
 
-import com.spotify.heroic.proto.ShellMessage.*;
+import com.spotify.heroic.proto.ShellMessage.CommandEvent;
+import com.spotify.heroic.proto.ShellMessage.CommandsResponse;
+import com.spotify.heroic.proto.ShellMessage.EvaluateRequest;
+import com.spotify.heroic.proto.ShellMessage.FileEvent;
+import com.spotify.heroic.proto.ShellMessage.FileRead;
+import com.spotify.heroic.proto.ShellMessage.FileReadResult;
+import com.spotify.heroic.proto.ShellMessage.FileStream;
+import com.spotify.heroic.proto.ShellMessage.FileWrite;
+import com.spotify.heroic.proto.ShellMessage.Message;
 
 public abstract class SimpleMessageVisitor<R> {
     public R visitCommandDone(CommandEvent message) throws Exception {

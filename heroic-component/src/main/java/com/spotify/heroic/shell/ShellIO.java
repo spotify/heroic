@@ -26,7 +26,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 
 /**
  * I/O indirection for shell tasks.

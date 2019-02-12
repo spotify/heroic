@@ -116,7 +116,7 @@ public class ShellConnection implements Closeable {
      */
     public void ackedRequest(Message message) throws IOException {
         final Message response = request(message);
-        if(!response.hasAcknowledge()) {
+        if (!response.hasAcknowledge()) {
             throw new IOException("Got unexpected message closing file");
         }
     }
