@@ -21,9 +21,9 @@
 
 package com.spotify.heroic;
 
+import com.spotify.heroic.proto.ShellMessage.CommandsResponse.CommandDefinition;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
-import com.spotify.heroic.shell.protocol.CommandDefinition;
 import eu.toolchain.async.AsyncFuture;
 
 import java.util.List;

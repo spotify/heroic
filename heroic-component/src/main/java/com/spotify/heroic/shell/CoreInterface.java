@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.shell;
 
-import com.spotify.heroic.shell.protocol.CommandDefinition;
+import com.spotify.heroic.proto.ShellMessage.CommandsResponse.CommandDefinition;
 import eu.toolchain.async.AsyncFuture;
 
 import java.util.List;
@@ -35,7 +35,8 @@ public interface CoreInterface {
     /**
      * Shutdown this interface.
      */
-    void shutdown() throws Exception;
+    default void shutdown() throws Exception {
+    }
 
     /**
      * Get information about available commands.

@@ -28,7 +28,6 @@
     <dependency>
       <groupId>eu.toolchain.serializer</groupId>
       <artifactId>tiny-serializer-processor</artifactId>
-      <scope>provided</scope>
     </dependency>
 
     <dependency>
@@ -37,13 +36,13 @@
     </dependency>
 
     <dependency>
-      <groupId>eu.toolchain.serializer</groupId>
-      <artifactId>tiny-serializer-api</artifactId>
+      <groupId>javax.ws.rs</groupId>
+      <artifactId>javax.ws.rs-api</artifactId>
     </dependency>
 
     <dependency>
-      <groupId>javax.ws.rs</groupId>
-      <artifactId>javax.ws.rs-api</artifactId>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java</artifactId>
     </dependency>
 
     <!-- useful collections and utilities -->
@@ -138,4 +137,23 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
+        <version>0.6.1</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>compile</goal>
+              <goal>test-compile</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
 </project>

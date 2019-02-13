@@ -22,11 +22,12 @@
 package com.spotify.heroic;
 
 import com.google.common.collect.ImmutableList;
+import com.google.protobuf.ProtocolStringList;
+import com.spotify.heroic.proto.ShellMessage.CommandsResponse.CommandDefinition;
 import com.spotify.heroic.shell.CoreInterface;
 import com.spotify.heroic.shell.QuoteParser;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.Tasks;
-import com.spotify.heroic.shell.protocol.CommandDefinition;
 import eu.toolchain.async.AsyncFuture;
 import jline.console.ConsoleReader;
 import jline.console.UserInterruptException;
@@ -145,11 +146,12 @@ public class HeroicInteractiveShell {
     void printTasksHelp(PrintWriter out) {
         out.println("Available commands:");
 
-        for (final CommandDefinition c : commands) {
-            out.println(String.format("%s - %s", c.getName(), c.getUsage()));
+        for (final CommandDefinition cmd : commands) {
+            out.println(String.format("%s - %s", cmd.getName(), cmd.getUsage()));
 
-            if (!c.getAliases().isEmpty()) {
-                out.println(String.format("  aliases: %s", StringUtils.join(", ", c.getAliases())));
+            final ProtocolStringList aliases = cmd.getAliasesList();
+            if (!aliases.isEmpty()) {
+                out.println(String.format("  aliases: %s", StringUtils.join(", ", aliases)));
             }
         }
     }
@@ -183,8 +185,7 @@ public class HeroicInteractiveShell {
         }
     }
 
-    void runTask(List<String> command, final ShellIO io, final CoreInterface core)
-        throws Exception {
+    void runTask(List<String> command, final ShellIO io, final CoreInterface core) {
         final AsyncFuture<Void> t;
 
         try {
