@@ -759,27 +759,27 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
             @Override
             public QueryBuilder visitNot(final NotFilter not) {
-                return new BoolQueryBuilder().mustNot(filter(not.getFilter()));
+                return new BoolQueryBuilder().mustNot(filter(not.filter()));
             }
 
             @Override
             public QueryBuilder visitMatchTag(final MatchTagFilter matchTag) {
-                return termQuery(TAGS, matchTag.getTag() + '\0' + matchTag.getValue());
+                return termQuery(TAGS, matchTag.tag() + '\0' + matchTag.value());
             }
 
             @Override
             public QueryBuilder visitStartsWith(final StartsWithFilter startsWith) {
-                return prefixQuery(TAGS, startsWith.getTag() + '\0' + startsWith.getValue());
+                return prefixQuery(TAGS, startsWith.tag() + '\0' + startsWith.value());
             }
 
             @Override
             public QueryBuilder visitHasTag(final HasTagFilter hasTag) {
-                return termQuery(TAG_KEYS, hasTag.getTag());
+                return termQuery(TAG_KEYS, hasTag.tag());
             }
 
             @Override
             public QueryBuilder visitMatchKey(final MatchKeyFilter matchKey) {
-                return termQuery(KEY, matchKey.getKey());
+                return termQuery(KEY, matchKey.key());
             }
 
             @Override

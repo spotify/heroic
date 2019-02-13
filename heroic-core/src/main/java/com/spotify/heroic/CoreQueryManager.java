@@ -260,7 +260,7 @@ public class CoreQueryManager implements QueryManager {
             }
 
             final FullQuery.Request request =
-                new FullQuery.Request(source, filter, range, aggregationInstance, options,
+                FullQuery.Request.create(source, filter, range, aggregationInstance, options,
                     queryContext, features);
 
             queryLogger.logOutgoingRequestToShards(queryContext, request);
@@ -418,7 +418,7 @@ public class CoreQueryManager implements QueryManager {
                  * Create new QT with queryTraces + current QT as a children */
                 final List<QueryTrace> traces = new ArrayList<>();
                 traces.addAll(queryTraces);
-                traces.add(fullQuery.getTrace());
+                traces.add(fullQuery.trace());
                 final QueryTrace newTrace = shardLocalWatch.end(traces);
                 return fullQuery.withTrace(newTrace);
             };

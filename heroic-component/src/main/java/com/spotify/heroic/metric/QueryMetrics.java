@@ -26,6 +26,7 @@ import static com.spotify.heroic.common.Optionals.firstPresent;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.auto.value.AutoValue;
 import com.spotify.heroic.QueryBuilder;
 import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.QueryOptions;
@@ -38,93 +39,91 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import lombok.Data;
 
-@Data
-public class QueryMetrics {
-    private final Optional<String> query;
-    private final Optional<Aggregation> aggregation;
-    private final Optional<MetricType> source;
-    private final Optional<QueryDateRange> range;
-    private final Optional<Filter> filter;
-    private final Optional<QueryOptions> options;
-    private final Optional<JsonNode> clientContext;
-
-    /* legacy state */
-    private final Optional<String> key;
-    private final Optional<Map<String, String>> tags;
-    private final Optional<List<String>> groupBy;
-    private final Optional<FeatureSet> features;
-
-    public QueryMetrics(
-        Optional<String> query, Optional<Aggregation> aggregation, Optional<MetricType> source,
-        Optional<QueryDateRange> range, Optional<Filter> filter, Optional<QueryOptions> options,
-        final Optional<JsonNode> clientContext
+@AutoValue
+public abstract class QueryMetrics {
+    public static QueryMetrics create(
+        Optional<String> query,
+        Optional<Aggregation> aggregation,
+        Optional<String> source,
+        Optional<QueryDateRange> range,
+        Optional<Filter> filter,
+        Optional<QueryOptions> options,
+        Optional<JsonNode> clientContext
     ) {
-        this.query = query;
-        this.aggregation = aggregation;
-        this.source = source;
-        this.range = range;
-        this.filter = filter;
-        this.options = options;
-        this.clientContext = clientContext;
-
-        this.key = Optional.empty();
-        this.tags = Optional.empty();
-        this.groupBy = Optional.empty();
-        this.features = Optional.empty();
+        return legacyCreate(query, aggregation, source, range, filter, options, clientContext,
+             Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+            Optional.empty(), false);
     }
 
     @JsonCreator
-    public QueryMetrics(
+    public static QueryMetrics legacyCreate(
         @JsonProperty("query") Optional<String> query,
         @JsonProperty("aggregation") Optional<Aggregation> aggregation,
-        @JsonProperty("aggregators") Optional<List<Aggregation>> aggregators,
         @JsonProperty("source") Optional<String> source,
         @JsonProperty("range") Optional<QueryDateRange> range,
         @JsonProperty("filter") Optional<Filter> filter,
         @JsonProperty("options") Optional<QueryOptions> options,
         @JsonProperty("clientContext") Optional<JsonNode> clientContext,
+        // legacy options
+        @JsonProperty("aggregators") Optional<List<Aggregation>> aggregators,
         @JsonProperty("key") Optional<String> key,
         @JsonProperty("tags") Optional<Map<String, String>> tags,
         @JsonProperty("groupBy") Optional<List<String>> groupBy,
         @JsonProperty("features") Optional<FeatureSet> features,
         /* ignored */ @JsonProperty("noCache") Boolean noCache
     ) {
-        this.query = query;
-        this.aggregation =
-            firstPresent(aggregation, aggregators.filter(c -> !c.isEmpty()).map(Chain::fromList));
-        this.source = source.flatMap(MetricType::fromIdentifier);
-        this.range = range;
-        this.filter = filter;
-        this.options = options;
-        this.clientContext = clientContext;
 
-        this.key = key;
-        this.tags = tags;
-        this.groupBy = groupBy;
-        this.features = features;
+        final Optional<Aggregation> legitAggregation = firstPresent(aggregation,
+            aggregators.filter(c -> !c.isEmpty()).map(Chain::fromList));
+        final Optional<MetricType> sourceMetric = source.flatMap(MetricType::fromIdentifier);
+
+        return new AutoValue_QueryMetrics(query, legitAggregation, sourceMetric, range, filter,
+            options, clientContext, key, tags, groupBy, features);
     }
 
-    public QueryBuilder toQueryBuilder(final Function<String, QueryBuilder> stringToQuery) {
-        final Supplier<? extends QueryBuilder> supplier = () -> {
-            return new QueryBuilder()
-                .key(key)
-                .tags(tags)
-                .groupBy(groupBy)
-                .filter(filter)
-                .range(range)
-                .aggregation(aggregation)
-                .source(source)
-                .options(options)
-                .clientContext(clientContext);
-        };
+    @JsonProperty("query")
+    public abstract Optional<String> query();
+    @JsonProperty("aggregation")
+    public abstract Optional<Aggregation> aggregation();
+    @JsonProperty("source")
+    public abstract Optional<MetricType> source();
+    @JsonProperty("range")
+    public abstract Optional<QueryDateRange> range();
+    @JsonProperty("filter")
+    public abstract Optional<Filter> filter();
+    @JsonProperty("options")
+    public abstract Optional<QueryOptions> options();
+    @JsonProperty("clientContext")
+    public abstract Optional<JsonNode> clientContext();
 
-        return query
+    /* legacy state */
+    @JsonProperty("key")
+    public abstract Optional<String> key();
+    @JsonProperty("tags")
+    public abstract Optional<Map<String, String>> tags();
+    @JsonProperty("groupBy")
+    public abstract Optional<List<String>> groupBy();
+    @JsonProperty("features")
+    public abstract Optional<FeatureSet> features();
+
+    public QueryBuilder toQueryBuilder(final Function<String, QueryBuilder> stringToQuery) {
+        final Supplier<? extends QueryBuilder> supplier = () -> new QueryBuilder()
+            .key(key())
+            .tags(tags())
+            .groupBy(groupBy())
+            .filter(filter())
+            .range(range())
+            .aggregation(aggregation())
+            .source(source())
+            .options(options())
+            .clientContext(clientContext());
+
+        return query()
             .map(stringToQuery)
             .orElseGet(supplier)
-            .rangeIfAbsent(range)
-            .optionsIfAbsent(options)
-            .features(features);
+            .rangeIfAbsent(range())
+            .optionsIfAbsent(options())
+            .features(features());
     }
 }

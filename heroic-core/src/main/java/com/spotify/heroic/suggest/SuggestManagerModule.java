@@ -21,6 +21,12 @@
 
 package com.spotify.heroic.suggest;
 
+import static com.spotify.heroic.common.Optionals.mergeOptionalList;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.GroupSet;
@@ -31,26 +37,24 @@ import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.SuggestBackendReporter;
 import dagger.Module;
 import dagger.Provides;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-
-import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import javax.inject.Named;
 
-import static com.spotify.heroic.common.Optionals.mergeOptionalList;
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
-
-@RequiredArgsConstructor
 @Module
 public class SuggestManagerModule {
     private final List<SuggestModule> backends;
     private final Optional<List<String>> defaultBackends;
+
+    public SuggestManagerModule(
+        List<SuggestModule> backends,
+        Optional<List<String>> defaultBackends
+    ) {
+        this.backends = backends;
+        this.defaultBackends = defaultBackends;
+    }
 
     @Provides
     @SuggestScope
@@ -107,11 +111,21 @@ public class SuggestManagerModule {
         return new Builder();
     }
 
-    @NoArgsConstructor(access = AccessLevel.PRIVATE)
-    @AllArgsConstructor
     public static class Builder {
         private Optional<List<SuggestModule>> backends = empty();
         private Optional<List<String>> defaultBackends = empty();
+
+        private Builder() {
+        }
+
+        @JsonCreator
+        public Builder(
+            @JsonProperty("backends") Optional<List<SuggestModule>> backends,
+            @JsonProperty("defaultBackends") Optional<List<String>> defaultBackends
+        ) {
+            this.backends = backends;
+            this.defaultBackends = defaultBackends;
+        }
 
         public Builder backends(List<SuggestModule> backends) {
             this.backends = of(backends);

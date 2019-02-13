@@ -21,25 +21,34 @@
 
 package com.spotify.heroic.aggregation;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import lombok.Data;
 
 import java.util.List;
 import java.util.Optional;
 
-@Data
-public class Collapse implements Aggregation {
+@AutoValue
+public abstract class Collapse implements Aggregation {
+    @JsonCreator
+    static Collapse create(
+        @JsonProperty("of") Optional<List<String>> of,
+        @JsonProperty("each") Optional<Aggregation> each
+    ) {
+        return new AutoValue_Collapse(of, each);
+    }
     public static final String NAME = "collapse";
 
-    private final Optional<List<String>> of;
-    private final Optional<Aggregation> each;
+    abstract Optional<List<String>> of();
+    abstract Optional<Aggregation> each();
 
     @Override
     public CollapseInstance apply(final AggregationContext context) {
-        final AggregationInstance instance = each.orElse(Empty.INSTANCE).apply(context);
+        final AggregationInstance instance = each().orElse(Empty.INSTANCE).apply(context);
 
-        final Optional<List<String>> of = this.of.map(o -> {
+        final Optional<List<String>> of = this.of().map(o -> {
             final ImmutableSet.Builder<String> b = ImmutableSet.builder();
             b.addAll(o).addAll(context.requiredTags());
             return ImmutableList.copyOf(b.build());

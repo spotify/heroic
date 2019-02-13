@@ -21,19 +21,23 @@
 
 package com.spotify.heroic.filter;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.auto.value.AutoValue;
 import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.Series;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
 
-@Data
-@EqualsAndHashCode(of = {"OPERATOR", "filter"}, doNotUseGetters = true)
+@AutoValue
 @JsonTypeName("raw")
-public class RawFilter implements Filter {
-    public static final String OPERATOR = "q";
+public abstract class RawFilter implements Filter {
+    @JsonCreator
+    public static RawFilter create(@JsonProperty("filter") String filter) {
+        return new AutoValue_RawFilter(filter);
+    }
 
-    private final String filter;
+    public static final String OPERATOR = "q";
+    abstract String filter();
 
     @Override
     public boolean apply(Series series) {
@@ -47,7 +51,7 @@ public class RawFilter implements Filter {
 
     @Override
     public String toString() {
-        return "[" + OPERATOR + ", " + filter + "]";
+        return "[" + OPERATOR + ", " + filter() + "]";
     }
 
     @Override
@@ -67,7 +71,7 @@ public class RawFilter implements Filter {
         }
 
         final RawFilter other = (RawFilter) o;
-        return filter.compareTo(other.getFilter());
+        return filter().compareTo(other.filter());
     }
 
     @Override
@@ -78,7 +82,7 @@ public class RawFilter implements Filter {
     @Override
     public void hashTo(final ObjectHasher hasher) {
         hasher.putObject(getClass(), () -> {
-            hasher.putField("filter", filter, hasher.string());
+            hasher.putField("filter", filter(), hasher.string());
         });
     }
 }

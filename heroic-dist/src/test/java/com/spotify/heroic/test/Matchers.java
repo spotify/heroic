@@ -33,7 +33,7 @@ public class Matchers {
         return new TypeSafeMatcher<QueryTrace>() {
             @Override
             protected boolean matchesSafely(final QueryTrace queryTrace) {
-                return inner.matches(queryTrace.getWhat());
+                return inner.matches(queryTrace.what());
             }
 
             @Override
@@ -52,7 +52,7 @@ public class Matchers {
         return new TypeSafeMatcher<QueryTrace>() {
             @Override
             protected boolean matchesSafely(final QueryTrace queryTrace) {
-                return queryTrace.getChildren().stream().anyMatch(inner::matches);
+                return queryTrace.children().stream().anyMatch(inner::matches);
             }
 
             @Override
@@ -62,7 +62,7 @@ public class Matchers {
 
             @Override
             public void describeMismatchSafely(QueryTrace item, Description mismatchDescription) {
-                inner.describeMismatch(item.getChildren(), mismatchDescription);
+                inner.describeMismatch(item.children(), mismatchDescription);
             }
         };
     }
@@ -73,7 +73,7 @@ public class Matchers {
         return new TypeSafeMatcher<QueryTrace.Identifier>() {
             @Override
             protected boolean matchesSafely(final QueryTrace.Identifier identifier) {
-                return stringMatcher.matches(identifier.getName());
+                return stringMatcher.matches(identifier.name());
             }
 
             @Override
@@ -85,7 +85,7 @@ public class Matchers {
             public void describeMismatchSafely(
                 QueryTrace.Identifier item, Description mismatchDescription
             ) {
-                stringMatcher.describeMismatch(item.getName(), mismatchDescription);
+                stringMatcher.describeMismatch(item.name(), mismatchDescription);
             }
         };
     }

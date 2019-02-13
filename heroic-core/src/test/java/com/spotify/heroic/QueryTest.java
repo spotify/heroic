@@ -35,10 +35,8 @@ public class QueryTest {
 
     private Query parse(final String name) throws Exception {
         try (final InputStream in = resource(name)) {
-            return mapper
-                .readValue(in, QueryMetrics.class)
-                .toQueryBuilder(string -> new QueryBuilder())
-                .build();
+            final QueryMetrics metrics = mapper.readValue(in, QueryMetrics.class);
+            return metrics.toQueryBuilder(string -> new QueryBuilder()).build();
         }
     }
 

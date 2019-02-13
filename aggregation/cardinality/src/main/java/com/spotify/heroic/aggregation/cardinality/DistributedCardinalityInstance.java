@@ -47,7 +47,7 @@ public class DistributedCardinalityInstance extends BucketAggregationInstance<Ca
 
     @Override
     protected Payload build(CardinalityBucket bucket) {
-        return new Payload(bucket.timestamp(), bucket.state());
+        return Payload.create(bucket.timestamp(), bucket.state());
     }
 
     @Override

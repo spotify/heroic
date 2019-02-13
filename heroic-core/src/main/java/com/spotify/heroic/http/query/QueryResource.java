@@ -103,7 +103,7 @@ public class QueryResource {
     ) {
         final HttpContext httpContext = CoreHttpContextFactory.create(servletReq);
         final QueryContext queryContext =
-            QueryContext.create(query.getClientContext(), httpContext);
+            QueryContext.create(query.clientContext(), httpContext);
         queryLogger.logHttpQueryJson(queryContext, query);
 
         final Query q = query.toQueryBuilder(this.query::newQueryFromString).build();
@@ -136,7 +136,7 @@ public class QueryResource {
                     .build();
 
                 final QueryContext queryContext =
-                    QueryContext.create(qm.getClientContext(), httpContext);
+                    QueryContext.create(qm.clientContext(), httpContext);
                 queryLogger.logHttpQueryJson(queryContext, qm);
 
                 futures.add(g

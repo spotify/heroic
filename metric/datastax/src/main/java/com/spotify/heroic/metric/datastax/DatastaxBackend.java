@@ -533,7 +533,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
                 .bind(async, c.session.executeAsync(stmt))
                 .onDone(new RowFetchHelper<>(future, p.converter(),
                     result -> traceBuilder.apply(result).directTransform(trace -> {
-                        final ImmutableList<Long> times = ImmutableList.of(trace.getElapsed());
+                        final ImmutableList<Long> times = ImmutableList.of(trace.elapsed());
                         final List<MetricCollection> groups =
                             ImmutableList.of(MetricCollection.points(result.getData()));
                         return FetchData.of(trace, times, groups);

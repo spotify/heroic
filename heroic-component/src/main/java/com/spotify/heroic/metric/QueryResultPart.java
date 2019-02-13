@@ -59,13 +59,13 @@ public class QueryResultPart {
     ) {
         return result -> {
             final ImmutableList<ShardedResultGroup> groups = ImmutableList.copyOf(result
-                .getGroups()
+                .groups()
                 .stream()
                 .map(ResultGroup.toShardedResultGroup(shard))
                 .iterator());
 
             final long preAggregationSampleSize = result
-                .getStatistics()
+                .statistics()
                 .getCounterValue(AggregationInstance.SAMPLE_SIZE)
                 .orElseGet(() -> {
                     long sum = 0;
@@ -75,8 +75,8 @@ public class QueryResultPart {
                     return sum;
                 });
 
-            return new QueryResultPart(groups, result.getErrors(), result.getTrace(),
-                result.getLimits(), preAggregationSampleSize);
+            return new QueryResultPart(groups, result.errors(), result.trace(),
+                result.limits(), preAggregationSampleSize);
         };
     }
 
