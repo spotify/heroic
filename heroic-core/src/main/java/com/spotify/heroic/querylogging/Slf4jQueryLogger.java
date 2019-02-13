@@ -117,8 +117,8 @@ public class Slf4jQueryLogger implements QueryLogger {
     ) {
         performAndCatch(() -> {
             final MessageFormat<T> message =
-                new MessageFormat<>(component, context.getQueryId(), context.getClientContext(),
-                    context.getHttpContext(), type, data);
+                new MessageFormat<>(component, context.queryId(), context.clientContext(),
+                    context.httpContext(), type, data);
 
             final String timestamp = Instant.now().toString();
             final LogFormat logFormat = new LogFormat(timestamp, message);

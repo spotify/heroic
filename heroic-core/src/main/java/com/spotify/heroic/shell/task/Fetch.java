@@ -111,7 +111,7 @@ public class Fetch implements ShellTask {
             Calendar current = null;
             Calendar last = null;
 
-            for (final Metric d : g.getData()) {
+            for (final Metric d : g.data()) {
                 current = Calendar.getInstance();
                 current.setTime(new Date(d.getTimestamp()));
 

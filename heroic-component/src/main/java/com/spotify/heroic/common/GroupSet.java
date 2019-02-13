@@ -22,7 +22,6 @@
 package com.spotify.heroic.common;
 
 import com.google.common.collect.ImmutableSet;
-import lombok.RequiredArgsConstructor;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -40,11 +39,16 @@ import java.util.Set;
  * @param <T> The type of the grouped objects.
  * @author udoprog
  */
-@RequiredArgsConstructor
 public class GroupSet<T extends Grouped> implements UsableGroupManager<SelectedGroup<T>> {
     private final Set<T> all;
     private final Map<String, Set<T>> groups;
     private final Set<T> defaults;
+
+    public GroupSet(final Set<T> all, final Map<String, Set<T>> groups, final Set<T> defaults) {
+        this.all = all;
+        this.groups = groups;
+        this.defaults = defaults;
+    }
 
     /**
      * Use all members of this set.

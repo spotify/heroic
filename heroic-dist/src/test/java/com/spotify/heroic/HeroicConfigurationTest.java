@@ -159,9 +159,9 @@ public class HeroicConfigurationTest {
         doReturn(Optional.empty()).when(httpContext2).getClientId();
 
         final QueryContext context1 = mock(QueryContext.class);
-        doReturn(Optional.of(httpContext1)).when(context1).getHttpContext();
+        doReturn(Optional.of(httpContext1)).when(context1).httpContext();
         final QueryContext context2 = mock(QueryContext.class);
-        doReturn(Optional.of(httpContext2)).when(context2).getHttpContext();
+        doReturn(Optional.of(httpContext2)).when(context2).httpContext();
 
         instance.inject(coreComponent -> {
             final ConditionalFeatures conditional = coreComponent.conditionalFeatures().get();

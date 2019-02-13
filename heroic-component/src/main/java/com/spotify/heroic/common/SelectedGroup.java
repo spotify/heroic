@@ -22,15 +22,17 @@
 package com.spotify.heroic.common;
 
 import com.google.common.collect.ImmutableSet;
-import lombok.RequiredArgsConstructor;
 
 import java.util.Iterator;
 import java.util.Set;
 import java.util.stream.Stream;
 
-@RequiredArgsConstructor
 public class SelectedGroup<T extends Grouped> implements Grouped, Iterable<T> {
     private final Set<T> members;
+
+    public SelectedGroup(final Set<T> members) {
+        this.members = members;
+    }
 
     public Set<T> getMembers() {
         return members;

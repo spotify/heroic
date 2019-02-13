@@ -22,7 +22,9 @@
 package com.spotify.heroic.common;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.spotify.heroic.ObjectHasher;
@@ -30,13 +32,20 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.function.Supplier;
-import lombok.Data;
 
 /**
  * A container for a set of features that provides convenience methods for accessing them.
  */
-@Data
-public class Features {
+@AutoValue
+public abstract class Features {
+    @JsonCreator
+    public static Features create(final Set<Feature> features) {
+        final SortedSet<Feature> featureTreeSet = new TreeSet<>(features);
+        return new AutoValue_Features(featureTreeSet);
+    }
+
+    public abstract SortedSet<Feature> features();
+
     /**
      * Default set of features.
      */
@@ -46,10 +55,8 @@ public class Features {
         .add(Feature.SLICED_DATA_FETCH)
         .build());
 
-    private final SortedSet<Feature> features;
-
     public boolean hasFeature(final Feature feature) {
-        return features.contains(feature);
+        return features().contains(feature);
     }
 
     /**
@@ -59,20 +66,15 @@ public class Features {
      * @return A new Feature with the given set applied.
      */
     public Features applySet(final FeatureSet featureSet) {
-        final SortedSet<Feature> features = new TreeSet<>(this.features);
+        final SortedSet<Feature> features = new TreeSet<>(this.features());
         features.addAll(featureSet.getEnabled());
         features.removeAll(featureSet.getDisabled());
-        return new Features(features);
-    }
-
-    @JsonCreator
-    public static Features create(final Set<Feature> features) {
-        return new Features(new TreeSet<>(features));
+        return Features.create(features);
     }
 
     @JsonValue
     public Set<Feature> value() {
-        return features;
+        return features();
     }
 
     /**
@@ -96,16 +98,16 @@ public class Features {
      * @return A new feature set.
      */
     public static Features empty() {
-        return new Features(ImmutableSortedSet.of());
+        return Features.create(ImmutableSortedSet.of());
     }
 
     public static Features of(final Feature... features) {
-        return new Features(ImmutableSortedSet.copyOf(features));
+        return Features.create(ImmutableSortedSet.copyOf(features));
     }
 
     public void hashTo(final ObjectHasher hasher) {
         hasher.putObject(this.getClass(), () -> {
-            hasher.putField("features", features, hasher.sortedSet(hasher.enumValue()));
+            hasher.putField("features", features(), hasher.sortedSet(hasher.enumValue()));
         });
     }
 }

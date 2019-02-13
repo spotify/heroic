@@ -21,36 +21,50 @@
 
 package com.spotify.heroic.aggregation;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import lombok.Data;
-import lombok.NonNull;
-
 import java.util.List;
 import java.util.Optional;
 
-@Data
-public class Group implements Aggregation {
+@AutoValue
+public abstract class Group implements Aggregation {
+
+
+    public static Group createFromAggregation(
+        Optional<List<String>> grouping, Optional<Aggregation> aggregation
+    ) {
+        return create(grouping, aggregation.map(AggregationOrList::fromAggregation));
+    }
+
+    @JsonCreator
+    public static Group create(
+        @JsonProperty("of") Optional<List<String>> grouping,
+        @JsonProperty("each") Optional<AggregationOrList> aggregation
+    ) {
+        return new AutoValue_Group(grouping, aggregation);
+    }
+
     public static final String NAME = "group";
     public static final String ALL = "*";
 
-    @NonNull
-    private final Optional<List<String>> of;
-    @NonNull
-    private final Optional<AggregationOrList> each;
+    @JsonProperty("of")
+    abstract Optional<List<String>> grouping();
 
-    public static Aggregation of(
-        final Optional<List<String>> of, final Optional<Aggregation> aggregation
-    ) {
-        return new Group(of, aggregation.map(AggregationOrList::fromAggregation));
-    }
+    @JsonProperty("each")
+    abstract Optional<AggregationOrList> aggregation();
 
     @Override
-    public GroupInstance apply(final AggregationContext context) {
+    public final GroupInstance apply(final AggregationContext context) {
         final AggregationInstance instance =
-            each.flatMap(AggregationOrList::toAggregation).orElse(Empty.INSTANCE).apply(context);
+            aggregation()
+                .flatMap(AggregationOrList::toAggregation)
+                .orElse(Empty.INSTANCE)
+                .apply(context);
 
-        final Optional<List<String>> of = this.of.map(o -> {
+        final Optional<List<String>> of = this.grouping().map(o -> {
             final ImmutableSet.Builder<String> b = ImmutableSet.builder();
             b.addAll(o).addAll(context.requiredTags());
             return ImmutableList.copyOf(b.build());

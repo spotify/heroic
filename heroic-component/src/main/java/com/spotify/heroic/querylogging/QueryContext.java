@@ -21,28 +21,42 @@
 
 package com.spotify.heroic.querylogging;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.auto.value.AutoValue;
 import java.util.Optional;
 import java.util.UUID;
-import lombok.Data;
 
-@Data
-public class QueryContext {
-    private final UUID queryId;
-    private final Optional<JsonNode> clientContext;
-    private final Optional<HttpContext> httpContext;
-
-    public static QueryContext empty() {
-        return create(Optional.empty());
-    }
-
+@AutoValue
+public abstract class QueryContext {
     public static QueryContext create(final Optional<JsonNode> clientContext) {
-        return new QueryContext(UUID.randomUUID(), clientContext, Optional.empty());
+        return create(UUID.randomUUID(), clientContext, Optional.empty());
     }
 
     public static QueryContext create(
         final Optional<JsonNode> clientContext, final HttpContext httpContext
     ) {
-        return new QueryContext(UUID.randomUUID(), clientContext, Optional.of(httpContext));
+        return create(UUID.randomUUID(), clientContext, Optional.of(httpContext));
+    }
+
+    @JsonCreator
+    public static QueryContext create(
+        @JsonProperty("queryId") final UUID queryId,
+        @JsonProperty("clientContext") Optional<JsonNode> clientContext,
+        @JsonProperty("httpContext") Optional<HttpContext> httpContext
+    ) {
+        return new AutoValue_QueryContext(queryId, clientContext, httpContext);
+    }
+
+    @JsonProperty
+    public abstract UUID queryId();
+    @JsonProperty
+    public abstract Optional<JsonNode> clientContext();
+    @JsonProperty
+    public abstract Optional<HttpContext> httpContext();
+
+    public static QueryContext empty() {
+        return create(Optional.empty());
     }
 }

@@ -104,7 +104,7 @@ public abstract class AbstractConsumerIT extends AbstractSingleNodeIT {
 
             assertFalse(data.isEmpty());
             final MetricCollection metricCollection = data.iterator().next().getMetrics();
-            List<Metric> collection = new ArrayList<>(metricCollection.getData());
+            List<Metric> collection = new ArrayList<>(metricCollection.data());
             collection.sort(Metric.comparator);
             assertEquals(consumedPoints, collection);
             return null;

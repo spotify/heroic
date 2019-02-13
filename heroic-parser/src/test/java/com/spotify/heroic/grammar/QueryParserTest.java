@@ -157,21 +157,21 @@ public class QueryParserTest {
 
     @Test
     public void testFilter() {
-        final MatchTagFilter f1 = new MatchTagFilter("a", "a");
-        final MatchTagFilter f2 = new MatchTagFilter("a", "b");
-        final MatchTagFilter f3 = new MatchTagFilter("a", "c");
-        final MatchTagFilter f4 = new MatchTagFilter("b", "b");
+        final MatchTagFilter f1 = MatchTagFilter.create("a", "a");
+        final MatchTagFilter f2 = MatchTagFilter.create("a", "b");
+        final MatchTagFilter f3 = MatchTagFilter.create("a", "c");
+        final MatchTagFilter f4 = MatchTagFilter.create("b", "b");
 
         assertEquals(f1, parseFilter("a = a"));
         assertEquals(OrFilter.of(f1, f2, f3), parseFilter("a in [a, b, c]"));
         assertEquals(AndFilter.of(f1, f4), parseFilter("a = a and b = b"));
         assertEquals(OrFilter.of(f1, f4), parseFilter("a = a or b = b"));
-        assertEquals(new RegexFilter("a", "b"), parseFilter("a ~ b"));
-        assertEquals(new NotFilter(f1), parseFilter("a != a"));
-        assertEquals(new NotFilter(f1), parseFilter("!(a = a)"));
-        assertEquals(new StartsWithFilter("a", "a"), parseFilter("a ^ a"));
-        assertEquals(new HasTagFilter("a"), parseFilter("+a"));
-        assertEquals(new MatchKeyFilter("a"), parseFilter("$key = a"));
+        assertEquals(RegexFilter.create("a", "b"), parseFilter("a ~ b"));
+        assertEquals(NotFilter.create(f1), parseFilter("a != a"));
+        assertEquals(NotFilter.create(f1), parseFilter("!(a = a)"));
+        assertEquals(StartsWithFilter.create("a", "a"), parseFilter("a ^ a"));
+        assertEquals(HasTagFilter.create("a"), parseFilter("+a"));
+        assertEquals(MatchKeyFilter.create("a"), parseFilter("$key = a"));
         assertEquals(TrueFilter.get(), parseFilter("true"));
         assertEquals(FalseFilter.get(), parseFilter("false"));
     }

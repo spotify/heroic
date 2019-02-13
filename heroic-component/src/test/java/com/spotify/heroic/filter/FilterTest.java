@@ -150,14 +150,14 @@ public class FilterTest {
 
     @Test
     public void factoryMethodTest() {
-        assertEquals(new MatchTagFilter(tag, value), matchTag(tag, value));
-        assertEquals(new StartsWithFilter(tag, value), startsWith(tag, value));
-        assertEquals(new HasTagFilter(tag), hasTag(tag));
-        assertEquals(new MatchKeyFilter(value), matchKey(value));
-        assertEquals(new RegexFilter(tag, value), regex(tag, value));
-        assertEquals(new AndFilter(ImmutableList.of(f1, f2)), and(f1, f2));
-        assertEquals(new OrFilter(ImmutableList.of(f1, f2)), or(f1, f2));
-        assertEquals(new NotFilter(f1), not(f1));
+        assertEquals(MatchTagFilter.create(tag, value), matchTag(tag, value));
+        assertEquals(StartsWithFilter.create(tag, value), startsWith(tag, value));
+        assertEquals(HasTagFilter.create(tag), hasTag(tag));
+        assertEquals(MatchKeyFilter.create(value), matchKey(value));
+        assertEquals(RegexFilter.create(tag, value), regex(tag, value));
+        assertEquals(AndFilter.create(ImmutableList.of(f1, f2)), and(f1, f2));
+        assertEquals(OrFilter.create(ImmutableList.of(f1, f2)), or(f1, f2));
+        assertEquals(NotFilter.create(f1), not(f1));
     }
 
     @Test
@@ -181,7 +181,7 @@ public class FilterTest {
 
         AndFilter andFilter = (AndFilter) filter;
 
-        assertEquals(6, andFilter.getFilters().size());
+        assertEquals(6, andFilter.filters().size());
 
         Filter optimizedFilter = filter.optimize();
 
@@ -189,7 +189,7 @@ public class FilterTest {
 
         AndFilter optimizedAndFilter = (AndFilter) optimizedFilter;
 
-        assertEquals(5, optimizedAndFilter.getFilters().size());
+        assertEquals(5, optimizedAndFilter.filters().size());
     }
 
     @Test
@@ -201,7 +201,7 @@ public class FilterTest {
 
         AndFilter andFilter = (AndFilter) filter;
 
-        assertEquals(6, andFilter.getFilters().size());
+        assertEquals(6, andFilter.filters().size());
 
         Filter optimizedFilter = filter.optimize();
 
@@ -211,7 +211,7 @@ public class FilterTest {
     @Test
     public void testFilterToString() {
         Filter filter =
-            AndFilter.of(new TrueFilter(), new FalseFilter(), matchKey(tag), matchKey(value),
+            AndFilter.of(TrueFilter.create(), FalseFilter.create(), matchKey(tag), matchKey(value),
                 startsWith(tag, value), a, b, c, OrFilter.of(a, b, c));
 
         assertEquals(
@@ -223,7 +223,7 @@ public class FilterTest {
     public void testFilterToDSL() {
 
         Filter filter =
-            AndFilter.of(new TrueFilter(), new FalseFilter(), matchKey(tag), matchKey(value),
+            AndFilter.of(TrueFilter.create(), FalseFilter.create(), matchKey(tag), matchKey(value),
                 startsWith(tag, value), a, b, c, OrFilter.of(a, b, c));
         assertEquals("(true and false and $key = tag and $key = value and " +
             "tag ^ value and +a and +b and +c and (+a or +b or +c))", filter.toDSL());

@@ -96,7 +96,7 @@ public class MemcachedQueryCache implements QueryCache {
     public AsyncFuture<QueryResult> load(
         FullQuery.Request request, Supplier<AsyncFuture<QueryResult>> loader
     ) {
-        final long cadence = request.getAggregation().cadence();
+        final long cadence = request.aggregation().cadence();
 
         // can't cache aggregation results _without_ a cadence.
         if (cadence <= 0) {
@@ -104,19 +104,19 @@ public class MemcachedQueryCache implements QueryCache {
         }
 
         // only cache if range is rounded to cadence.
-        if (!request.getFeatures().hasFeature(Feature.SHIFT_RANGE)) {
+        if (!request.features().hasFeature(Feature.SHIFT_RANGE)) {
             return loader.get();
         }
 
         // is caching permitted?
-        if (!request.getFeatures().hasFeature(Feature.CACHE_QUERY)) {
+        if (!request.features().hasFeature(Feature.CACHE_QUERY)) {
             return loader.get();
         }
 
         final String key = buildCacheKey(request);
 
         final QueryTrace.NamedWatch watch =
-            request.getOptions().tracing().watch(IDENTIFIER.extend(key));
+            request.options().tracing().watch(IDENTIFIER.extend(key));
 
         log.debug("{}: performing cache lookup", key);
 

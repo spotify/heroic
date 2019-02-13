@@ -69,7 +69,7 @@ public enum Tracing {
      */
     public QueryTrace.NamedWatch watch(final QueryTrace.Identifier what, final Tracing query) {
         if (isEnabled(query)) {
-            return new QueryTrace.ActiveNamedWatch(what, Stopwatch.createStarted());
+            return QueryTrace.ActiveNamedWatch.create(what, Stopwatch.createStarted());
         }
 
         return QueryTrace.PASSIVE_NAMED_WATCH;
