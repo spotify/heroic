@@ -144,6 +144,8 @@ index: metadata
 <pre><code class="language-yaml">
 type: transport
 clusterName: heroic
+sniff: false
+nodeSamplerInterval: 30s
 seeds:
   - localhost
 </code></pre>
@@ -151,11 +153,19 @@ seeds:
 <table class="table">
   <tr>
     <td><code>type</code></td>
-    <td><b>node</b></td>
+    <td><b>transport</b></td>
   </tr>
   <tr>
     <td><code>clusterName</code></td>
     <td>The name of the cluster to setup.</td>
+  </tr>
+  <tr>
+    <td><code><b>optional</b>sniff</code></td>
+    <td>Dynamically sniff for new Elasticsearch nodes. Useful to have masters that rarely change as seeds.</td>
+  </tr>
+  <tr>
+    <td><code><b>optional</b> nodeSamplerInterval</code></td>
+    <td>How often to poll for new Elasticsearch nodes. Must include a unit, like "s" for seconds</td>
   </tr>
   <tr>
     <td><code>seeds</code></td>

@@ -91,9 +91,10 @@ metadata:
         # Random seed, set if you want consistency.
         # @default Randomly generated.
         seed: 0
+
     ## ElasticSearch-based metadata.
-    # - backendType: kv
-    #   # deprecated but useful as a descriptor
+    # - type: elasticsearch
+    #   backendType: kv
     #   type: elasticsearch
     #   # Backend id, if not specified it will be generated.
     #   # @default null
@@ -105,6 +106,13 @@ metadata:
     #     clusterName: elasticsearch
     #     # ElasticSearch index.
     #     # @default "heroic"
+    #
+    #     # Dynamically sniff new nodes. Defaults false
+    #     sniff: false
+    #
+    #     How often to sniff for new nodes. Defaults 30 seconds
+    #     nodeSamplerInterval: 30s
+    #
     #     index:
     #       # Index mapping to use
     #       # @default "single": only operates on a single index.

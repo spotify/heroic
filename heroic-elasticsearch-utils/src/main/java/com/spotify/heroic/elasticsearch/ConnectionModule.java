@@ -46,20 +46,29 @@ public class ConnectionModule {
 
     private final String clusterName;
     private final List<String> seeds;
-    private final boolean nodeClient;
+    private final Boolean sniff;
+    private final String nodeSamplerInterval;
+    private final Boolean nodeClient;
     private final IndexMapping index;
     private final String templateName;
     private final ClientSetup clientSetup;
 
     @JsonCreator
     public ConnectionModule(
-        @JsonProperty("clusterName") String clusterName, @JsonProperty("seeds") List<String> seeds,
-        @JsonProperty("nodeClient") Boolean nodeClient, @JsonProperty("index") IndexMapping index,
+        @JsonProperty("clusterName") String clusterName,
+        @JsonProperty("seeds") List<String> seeds,
+        @JsonProperty("sniff") Boolean sniff,
+        @JsonProperty("nodeSamplerInterval") String nodeSamplerInterval,
+        @JsonProperty("nodeClient") Boolean nodeClient,
+        @JsonProperty("index") IndexMapping index,
         @JsonProperty("templateName") String templateName,
         @JsonProperty("client") ClientSetup clientSetup
     ) {
         this.clusterName = ofNullable(clusterName).orElse(DEFAULT_CLUSTER_NAME);
         this.seeds = ofNullable(seeds).orElse(DEFAULT_SEEDS);
+        this.sniff = ofNullable(sniff).orElse(TransportClientSetup.DEFAULT_SNIFF);
+        this.nodeSamplerInterval = ofNullable(nodeSamplerInterval).orElse(
+            TransportClientSetup.DEFAULT_NODE_SAMPLER_INTERVAL);
         this.nodeClient = ofNullable(nodeClient).orElse(false);
         this.index = ofNullable(index).orElseGet(RotatingIndexMapping.builder()::build);
         this.templateName = templateName;
@@ -74,11 +83,11 @@ public class ConnectionModule {
             return new NodeClientSetup(clusterName, seeds);
         }
 
-        return new TransportClientSetup(clusterName, seeds);
+        return new TransportClientSetup(clusterName, seeds, sniff, nodeSamplerInterval);
     }
 
     public static ConnectionModule buildDefault() {
-        return new ConnectionModule(null, null, null, null, null, null);
+        return new ConnectionModule(null, null, null, null, null, null, null, null);
     }
 
     @Provides
@@ -121,6 +130,8 @@ public class ConnectionModule {
     public static final class Builder {
         private String clusterName;
         private List<String> seeds;
+        private Boolean sniff;
+        private String nodeSamplerInterval;
         private Boolean nodeClient;
         private Integer concurrentBulkRequests;
         private Integer flushInterval;
@@ -136,6 +147,16 @@ public class ConnectionModule {
 
         public Builder seeds(List<String> seeds) {
             this.seeds = seeds;
+            return this;
+        }
+
+        public Builder sniff(Boolean sniff) {
+            this.sniff = sniff;
+            return this;
+        }
+
+        public Builder nodeSamplerInterval(String nodeSamplerInterval) {
+            this.nodeSamplerInterval = nodeSamplerInterval;
             return this;
         }
 
@@ -175,8 +196,8 @@ public class ConnectionModule {
         }
 
         public ConnectionModule build() {
-            return new ConnectionModule(clusterName, seeds, nodeClient, index, templateName,
-                clientSetup);
+            return new ConnectionModule(clusterName, seeds,
+              sniff, nodeSamplerInterval, nodeClient, index, templateName, clientSetup);
         }
     }
-};
+}

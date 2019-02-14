@@ -21,9 +21,10 @@
 
 package com.spotify.heroic.elasticsearch;
 
+import static java.util.Optional.ofNullable;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import java.net.UnknownHostException;
 import java.util.List;
@@ -36,21 +37,39 @@ public class TransportClientSetup implements ClientSetup {
     public static final String DEFAULT_CLUSTER_NAME = "elasticsearch";
     public static final List<String> DEFAULT_SEEDS = ImmutableList.of("localhost");
     public static final int DEFAULT_PORT = 9300;
+    public static final boolean DEFAULT_SNIFF = false;
+    public static final String DEFAULT_NODE_SAMPLER_INTERVAL = "30s";
 
     private final String clusterName;
     private final List<InetSocketTransportAddress> seeds;
+    private final Boolean sniff;
+    private final String nodeSamplerInterval;
 
     @JsonCreator
     public TransportClientSetup(
-        @JsonProperty("clusterName") String clusterName, @JsonProperty("seeds") List<String> seeds
-    ) {
-        this.clusterName = Optional.fromNullable(clusterName).or(DEFAULT_CLUSTER_NAME);
-        this.seeds = seeds(Optional.fromNullable(seeds).or(DEFAULT_SEEDS));
+        @JsonProperty("clusterName") String clusterName,
+        @JsonProperty("seeds") List<String> seeds,
+        @JsonProperty("sniff") Boolean sniff,
+        @JsonProperty("nodeSamplerInterval") String nodeSamplerInterval) {
+        this.clusterName = ofNullable(clusterName).orElse(DEFAULT_CLUSTER_NAME);
+        this.seeds = seeds(ofNullable(seeds).orElse(DEFAULT_SEEDS));
+        this.sniff = ofNullable(sniff).orElse(DEFAULT_SNIFF);
+        this.nodeSamplerInterval =
+          ofNullable(nodeSamplerInterval).orElse(DEFAULT_NODE_SAMPLER_INTERVAL);
     }
 
+    /*
+       client.transport.sniff: true allows for dynamically adding of new hosts and removal of old
+        ones. This works by first connecting to the seed nodes and using the internal cluster
+        state API to discover available nodes.
+     */
     @Override
     public ClientWrapper setup() throws Exception {
-        final Settings settings = Settings.builder().put("cluster.name", clusterName).build();
+        final Settings settings = Settings.builder()
+          .put("cluster.name", clusterName)
+          .put("client.transport.sniff", sniff)
+          .put("client.transport.nodes_sampler_interval", nodeSamplerInterval)
+          .build();
 
         final TransportClient client = new PreBuiltTransportClient(settings);
 
@@ -93,6 +112,8 @@ public class TransportClientSetup implements ClientSetup {
     public static class Builder {
         private String clusterName;
         private List<String> seeds;
+        private Boolean sniff;
+        private String nodesSamplerInterval;
 
         public Builder clusterName(String clusterName) {
             this.clusterName = clusterName;
@@ -104,8 +125,18 @@ public class TransportClientSetup implements ClientSetup {
             return this;
         }
 
+        public Builder sniff(Boolean sniff) {
+            this.sniff = sniff;
+            return this;
+        }
+
+        public Builder nodesSamplerInterval(String nodesSamplerInterval) {
+            this.nodesSamplerInterval = nodesSamplerInterval;
+            return this;
+        }
+
         public TransportClientSetup build() {
-            return new TransportClientSetup(clusterName, seeds);
+            return new TransportClientSetup(clusterName, seeds, sniff, nodesSamplerInterval);
         }
     }
 }
