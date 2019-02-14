@@ -35,11 +35,11 @@ public abstract class QueryOptions {
     @JsonCreator
     public static QueryOptions create(
         @JsonProperty("bucketStrategy") Optional<BucketStrategy> bucketStrategy,
-        @JsonProperty("tracing") Optional<Tracing> tracing, 
+        @JsonProperty("tracing") Optional<Tracing> tracing,
         @JsonProperty("fetchSize") Optional<Integer> fetchSize,
-        @JsonProperty("dataLimit") OptionalLimit dataLimit, 
+        @JsonProperty("dataLimit") OptionalLimit dataLimit,
         @JsonProperty("aggregationLimit") OptionalLimit aggregationLimit,
-        @JsonProperty("groupLimit") OptionalLimit groupLimit, 
+        @JsonProperty("groupLimit") OptionalLimit groupLimit,
         @JsonProperty("seriesLimit") OptionalLimit seriesLimit,
         @JsonProperty("failOnLimits") Optional<Boolean> failOnLimits
     ) {

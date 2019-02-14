@@ -22,7 +22,6 @@
 package com.spotify.heroic.common;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableSet;

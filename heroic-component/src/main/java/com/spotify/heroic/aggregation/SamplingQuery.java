@@ -32,7 +32,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 @Data
-@AllArgsConstructor()
+@AllArgsConstructor(suppressConstructorProperties = true)
 public class SamplingQuery {
     private final Optional<Duration> size;
     private final Optional<Duration> extent;

@@ -52,8 +52,6 @@
     <threadCount>1</threadCount>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-
-    <javax-annotation.version>1.3.2</javax-annotation.version>
     <jersey.version>2.27</jersey.version>
     <jackson.version>2.8.11</jackson.version>
     <jetty.version>9.4.12.v20180830</jetty.version>
@@ -66,8 +64,8 @@
     <log4j.version>2.6.2</log4j.version>
     <elasticsearch.version>5.3.2</elasticsearch.version>
     <joda-time.version>2.8.2</joda-time.version>
-    <lombok.version>1.18.4</lombok.version>
     <autovalue.version>1.6.3</autovalue.version>
+    <lombok.version>1.16.6</lombok.version>
     <findbugs.version>3.0.1</findbugs.version>
     <dagger.version>2.7</dagger.version>
     <slf4j.version>1.7.21</slf4j.version>
@@ -476,11 +474,6 @@
         <groupId>javax.inject</groupId>
         <artifactId>javax.inject</artifactId>
         <version>1</version>
-      </dependency>
-      <dependency>
-        <groupId>javax.annotation</groupId>
-        <artifactId>javax.annotation-api</artifactId>
-        <version>${javax-annotation.version}</version>
       </dependency>
       <dependency>
         <groupId>com.google.auto.value</groupId>
