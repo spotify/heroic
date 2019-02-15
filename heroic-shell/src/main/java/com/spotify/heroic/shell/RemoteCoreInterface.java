@@ -171,7 +171,7 @@ public class RemoteCoreInterface implements CoreInterface {
 
             @Override
             public Optional<Message> visitFileWrite(FileWrite msg) throws Exception {
-                final byte[] data = msg.getData().getBytes();
+                final byte[] data = msg.getDataBytes().toByteArray();
                 writer(msg.getHandle()).write(data, 0, data.length);
                 return empty();
             }
