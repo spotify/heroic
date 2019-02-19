@@ -24,15 +24,12 @@ package com.spotify.heroic.aggregation;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.Optionals;
 import com.spotify.heroic.common.TimeUtils;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-
 import java.beans.ConstructorProperties;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import lombok.Data;
 
 @Data
-@AllArgsConstructor(suppressConstructorProperties = true)
 public class SamplingQuery {
     private final Optional<Duration> size;
     private final Optional<Duration> extent;
@@ -49,5 +46,10 @@ public class SamplingQuery {
             this.size = Optional.ofNullable(size);
             this.extent = Optionals.firstPresent(Optional.ofNullable(extent), this.size);
         }
+    }
+
+    public SamplingQuery(final Optional<Duration> size, final Optional<Duration> extent) {
+        this.size = size;
+        this.extent = extent;
     }
 }

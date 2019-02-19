@@ -46,16 +46,18 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import javax.inject.Named;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 
 @Module
-@RequiredArgsConstructor
 public class MemcachedCacheModule implements CacheModule {
     public static final String DEFAULT_ADDRESS = "localhost:11211";
 
     private final List<String> addresses;
     private final Optional<Duration> maxTtl;
+
+    public MemcachedCacheModule(final List<String> addresses, final Optional<Duration> maxTtl) {
+        this.addresses = addresses;
+        this.maxTtl = maxTtl;
+    }
 
     @Override
     public CacheComponent module(PrimaryComponent primary) {
@@ -137,10 +139,12 @@ public class MemcachedCacheModule implements CacheModule {
         return new Builder();
     }
 
-    @NoArgsConstructor
     public static class Builder implements CacheModule.Builder {
         private Optional<List<String>> addresses = Optional.empty();
         private Optional<Duration> maxTtl = Optional.empty();
+
+        public Builder() {
+        }
 
         @JsonCreator
         public Builder(

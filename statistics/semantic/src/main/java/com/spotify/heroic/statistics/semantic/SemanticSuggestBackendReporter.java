@@ -39,7 +39,6 @@ import eu.toolchain.async.AsyncFuture;
 import io.opencensus.trace.Span;
 import io.opencensus.trace.Tracer;
 import io.opencensus.trace.Tracing;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @ToString(of = {"base"})
@@ -104,9 +103,13 @@ public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
         return backendWrite.setup();
     }
 
-    @RequiredArgsConstructor
     private class InstrumentedSuggestBackend implements SuggestBackend {
         private final SuggestBackend delegate;
+
+        @java.beans.ConstructorProperties({ "delegate" })
+        public InstrumentedSuggestBackend(final SuggestBackend delegate) {
+            this.delegate = delegate;
+        }
 
         @Override
         public AsyncFuture<Void> configure() {

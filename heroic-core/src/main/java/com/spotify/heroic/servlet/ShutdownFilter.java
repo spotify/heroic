@@ -24,7 +24,6 @@ package com.spotify.heroic.servlet;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.spotify.heroic.ws.InternalErrorMessage;
-import lombok.RequiredArgsConstructor;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -39,12 +38,16 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.function.Supplier;
 
-@RequiredArgsConstructor
 public class ShutdownFilter implements Filter {
     private static final String CONTENT_TYPE = "application/json; charset=UTF-8";
 
     private final Supplier<Boolean> stopping;
     private final ObjectMapper mapper;
+
+    public ShutdownFilter(final Supplier<Boolean> stopping, final ObjectMapper mapper) {
+        this.stopping = stopping;
+        this.mapper = mapper;
+    }
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {

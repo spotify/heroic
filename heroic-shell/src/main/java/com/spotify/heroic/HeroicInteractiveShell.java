@@ -29,14 +29,6 @@ import com.spotify.heroic.shell.QuoteParser;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.Tasks;
 import eu.toolchain.async.AsyncFuture;
-import jline.console.ConsoleReader;
-import jline.console.UserInterruptException;
-import jline.console.completer.StringsCompleter;
-import jline.console.history.FileHistory;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -45,9 +37,14 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import jline.console.ConsoleReader;
+import jline.console.UserInterruptException;
+import jline.console.completer.StringsCompleter;
+import jline.console.history.FileHistory;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 
 @Slf4j
-@RequiredArgsConstructor
 public class HeroicInteractiveShell {
     final ConsoleReader reader;
     final List<CommandDefinition> commands;
@@ -57,6 +54,15 @@ public class HeroicInteractiveShell {
 
     // mutable state, a.k.a. settings
     int timeout = 10;
+
+    @java.beans.ConstructorProperties({ "reader", "commands", "history" })
+    public HeroicInteractiveShell(final ConsoleReader reader,
+                                  final List<CommandDefinition> commands,
+                                  final FileHistory history) {
+        this.reader = reader;
+        this.commands = commands;
+        this.history = history;
+    }
 
     public void run(final CoreInterface core) throws Exception {
         final PrintWriter out = new PrintWriter(reader.getOutput());

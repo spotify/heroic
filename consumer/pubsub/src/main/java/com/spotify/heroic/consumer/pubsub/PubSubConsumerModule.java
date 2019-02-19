@@ -46,10 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import javax.inject.Named;
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -98,11 +95,16 @@ public class PubSubConsumerModule implements ConsumerModule {
         LifeCycle consumerLife();
     }
 
-    @RequiredArgsConstructor
     @Module
     class M {
         private final PrimaryComponent primary;
         private final ConsumerModule.Depends depends;
+
+        @java.beans.ConstructorProperties({ "primary", "depends" })
+        public M(final PrimaryComponent primary, final Depends depends) {
+            this.primary = primary;
+            this.depends = depends;
+        }
 
         @Provides
         @Named("consuming")
@@ -267,7 +269,6 @@ public class PubSubConsumerModule implements ConsumerModule {
         return new Builder();
     }
 
-    @NoArgsConstructor(access = AccessLevel.PRIVATE)
     public static class Builder implements ConsumerModule.Builder {
         private Optional<String> id = Optional.empty();
         private Optional<ConsumerSchema> schema = Optional.empty();
@@ -303,6 +304,9 @@ public class PubSubConsumerModule implements ConsumerModule {
             this.maxOutstandingRequestBytes = maxOutstandingRequestBytes;
             this.maxInboundMessageSize = maxInboundMessageSize;
             this.keepAlive = keepAlive;
+        }
+
+        private Builder() {
         }
 
         public Builder id(String id) {

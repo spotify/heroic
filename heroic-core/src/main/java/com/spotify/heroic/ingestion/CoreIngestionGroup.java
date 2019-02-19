@@ -49,9 +49,7 @@ import java.util.Optional;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Supplier;
-import lombok.RequiredArgsConstructor;
 
-@RequiredArgsConstructor
 public class CoreIngestionGroup implements IngestionGroup {
     private final Tracer tracer = Tracing.getTracer();
 
@@ -64,6 +62,24 @@ public class CoreIngestionGroup implements IngestionGroup {
     private final Optional<MetricBackend> metric;
     private final Optional<MetadataBackend> metadata;
     private final Optional<SuggestBackend> suggest;
+
+    public CoreIngestionGroup(final AsyncFramework async,
+                              final Supplier<Filter> filter,
+                              final Semaphore writePermits,
+                              final IngestionManagerReporter reporter,
+                              final LongAdder ingested,
+                              final Optional<MetricBackend> metric,
+                              final Optional<MetadataBackend> metadata,
+                              final Optional<SuggestBackend> suggest) {
+        this.async = async;
+        this.filter = filter;
+        this.writePermits = writePermits;
+        this.reporter = reporter;
+        this.ingested = ingested;
+        this.metric = metric;
+        this.metadata = metadata;
+        this.suggest = suggest;
+    }
 
     @Override
     public Groups groups() {

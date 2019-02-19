@@ -30,7 +30,6 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 public class MinMaxSlidingTimeReservoir implements Reservoir {
@@ -153,9 +152,13 @@ public class MinMaxSlidingTimeReservoir implements Reservoir {
     }
 
     @ToString
-    @RequiredArgsConstructor
     private static class MinMaxEntry {
         private final long min;
         private final long max;
+
+        private MinMaxEntry(final long min, final long max) {
+            this.min = min;
+            this.max = max;
+        }
     }
 }

@@ -32,7 +32,6 @@ import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 
 import java.util.Optional;
 
@@ -74,7 +73,6 @@ public final class MemorySuggestModule implements SuggestModule, DynamicModuleId
         MemoryBackend backend();
     }
 
-    @RequiredArgsConstructor
     @Module
     class M {
         @Provides

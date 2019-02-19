@@ -23,13 +23,20 @@ package com.spotify.heroic.rpc.grpc;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import io.grpc.MethodDescriptor;
-import lombok.RequiredArgsConstructor;
 
-@RequiredArgsConstructor
 public class GrpcRpcEndpointSpec<Q, R> implements GrpcDescriptor<Q, R> {
     private final TypeReference<Q> queryType;
     private final TypeReference<R> responseType;
     private final MethodDescriptor<byte[], byte[]> descriptor;
+
+    @java.beans.ConstructorProperties({ "queryType", "responseType", "descriptor" })
+    public GrpcRpcEndpointSpec(final TypeReference<Q> queryType,
+                               final TypeReference<R> responseType,
+                               final MethodDescriptor<byte[], byte[]> descriptor) {
+        this.queryType = queryType;
+        this.responseType = responseType;
+        this.descriptor = descriptor;
+    }
 
     @Override
     public TypeReference<Q> queryType() {

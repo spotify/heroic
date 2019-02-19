@@ -44,7 +44,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import lombok.RequiredArgsConstructor;
 
 /**
  * Registry of all known filters.
@@ -61,7 +60,6 @@ import lombok.RequiredArgsConstructor;
  *
  * @see com.spotify.heroic.filter.Filter
  */
-@RequiredArgsConstructor
 public class FilterRegistry {
     private final Map<String, FilterEncoding<? extends Filter>> deserializers = new HashMap<>();
 
@@ -70,6 +68,9 @@ public class FilterRegistry {
 
     private final HashMap<Class<? extends Filter>, String> typeMapping = new HashMap<>();
     private final HashMap<String, Class<? extends Filter>> typeNameMapping = new HashMap<>();
+
+    public FilterRegistry() {
+    }
 
     public <T extends Filter> void registerList(
         String id, Class<T> type, FilterEncoding<T> s
@@ -143,9 +144,13 @@ public class FilterRegistry {
         return annotation.value();
     }
 
-    @RequiredArgsConstructor
     private static final class FilterJsonSerializer extends JsonSerializer<Filter> {
         private final FilterEncoding<Filter> serializer;
+
+        @java.beans.ConstructorProperties({ "serializer" })
+        public FilterJsonSerializer(final FilterEncoding<Filter> serializer) {
+            this.serializer = serializer;
+        }
 
         @Override
         public void serialize(Filter value, JsonGenerator g, SerializerProvider provider)
@@ -158,9 +163,13 @@ public class FilterRegistry {
             g.writeEndArray();
         }
 
-        @RequiredArgsConstructor
         private static final class EncoderImpl implements FilterEncoding.Encoder {
             private final JsonGenerator generator;
+
+            @java.beans.ConstructorProperties({ "generator" })
+            public EncoderImpl(final JsonGenerator generator) {
+                this.generator = generator;
+            }
 
             @Override
             public void string(String string) throws IOException {
@@ -177,11 +186,20 @@ public class FilterRegistry {
     /**
      * Provides both array, and object based deserialization for filters.
      */
-    @RequiredArgsConstructor
     static class FilterJsonDeserializer extends JsonDeserializer<Filter> {
         final Map<String, FilterEncoding<? extends Filter>> deserializers;
         final HashMap<String, Class<? extends Filter>> typeNameMapping;
         final QueryParser parser;
+
+        @java.beans.ConstructorProperties({ "deserializers", "typeNameMapping", "parser" })
+        public FilterJsonDeserializer(
+            final Map<String, FilterEncoding<? extends Filter>> deserializers,
+            final HashMap<String, Class<? extends Filter>> typeNameMapping,
+            final QueryParser parser) {
+            this.deserializers = deserializers;
+            this.typeNameMapping = typeNameMapping;
+            this.parser = parser;
+        }
 
         @Override
         public Filter deserialize(JsonParser p, DeserializationContext c) throws IOException {
@@ -265,12 +283,17 @@ public class FilterRegistry {
             return parser.parseFilter(filter.filter());
         }
 
-        @RequiredArgsConstructor
         private static final class Decoder implements FilterEncoding.Decoder {
             private final JsonParser parser;
             private final DeserializationContext c;
 
             private int index = 0;
+
+            @java.beans.ConstructorProperties({ "parser", "c" })
+            public Decoder(final JsonParser parser, final DeserializationContext c) {
+                this.parser = parser;
+                this.c = c;
+            }
 
             @Override
             public Optional<String> string() throws IOException {

@@ -21,13 +21,15 @@
 
 package com.spotify.heroic.filter;
 
-import lombok.RequiredArgsConstructor;
-
 import javax.inject.Provider;
 
-@RequiredArgsConstructor
 public class NoArgumentFilterBase<T extends Filter> implements FilterEncoding<T> {
     private final Provider<T> provider;
+
+    @java.beans.ConstructorProperties({ "provider" })
+    public NoArgumentFilterBase(final Provider<T> provider) {
+        this.provider = provider;
+    }
 
     @Override
     public T deserialize(Decoder decoder) {

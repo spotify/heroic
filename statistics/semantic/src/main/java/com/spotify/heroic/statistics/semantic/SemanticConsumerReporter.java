@@ -28,11 +28,9 @@ import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.HeroicTimer;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @ToString(of = {"base"})
-@RequiredArgsConstructor
 public class SemanticConsumerReporter implements ConsumerReporter {
     private static final String COMPONENT = "consumer";
 
@@ -80,6 +78,39 @@ public class SemanticConsumerReporter implements ConsumerReporter {
         consumerCommitPhase2Timer =
             registry.register(base.tagged("what", "consumer-commit-phase2-latency"),
                 new SemanticHeroicTimerGauge());
+    }
+
+    @java.beans.ConstructorProperties({ "base", "messageIn", "messageError", "messageRetry",
+                                        "consumerSchemaError", "consumerThreadsLiveRatio",
+                                        "messageSize", "messageDrift", "consumer",
+                                        "consumerCommitWholeOperationTimer",
+                                        "consumerCommitPhase1Timer", "consumerCommitPhase2Timer" })
+    public SemanticConsumerReporter(
+        final MetricId base,
+        final Counter messageIn,
+        final Counter messageError,
+        final Counter messageRetry,
+        final Counter consumerSchemaError,
+        final SemanticRatioGauge consumerThreadsLiveRatio,
+        final Histogram messageSize,
+        final Histogram messageDrift,
+        final SemanticFutureReporter consumer,
+        final SemanticHeroicTimerGauge consumerCommitWholeOperationTimer,
+        final SemanticHeroicTimerGauge consumerCommitPhase1Timer,
+        final SemanticHeroicTimerGauge consumerCommitPhase2Timer
+    ) {
+        this.base = base;
+        this.messageIn = messageIn;
+        this.messageError = messageError;
+        this.messageRetry = messageRetry;
+        this.consumerSchemaError = consumerSchemaError;
+        this.consumerThreadsLiveRatio = consumerThreadsLiveRatio;
+        this.messageSize = messageSize;
+        this.messageDrift = messageDrift;
+        this.consumer = consumer;
+        this.consumerCommitWholeOperationTimer = consumerCommitWholeOperationTimer;
+        this.consumerCommitPhase1Timer = consumerCommitPhase1Timer;
+        this.consumerCommitPhase2Timer = consumerCommitPhase2Timer;
     }
 
     @Override

@@ -22,7 +22,6 @@
 package com.spotify.heroic.reflection;
 
 import eu.toolchain.async.Transform;
-import lombok.RequiredArgsConstructor;
 
 /**
  * Wraps an instance of something that have been reflectively created from a single line of a
@@ -32,10 +31,15 @@ import lombok.RequiredArgsConstructor;
  * context that declares the instance, giving the user information of where the resource that caused
  * the error came from (e.g. which line from a particular file).
  */
-@RequiredArgsConstructor
 public class ResourceInstance<T> {
     private final ResourceLineContext ctx;
     private final T instance;
+
+    @java.beans.ConstructorProperties({ "ctx", "instance" })
+    public ResourceInstance(final ResourceLineContext ctx, final T instance) {
+        this.ctx = ctx;
+        this.instance = instance;
+    }
 
     public <R> R invoke(Transform<T, R> transform) throws ResourceException {
         try {

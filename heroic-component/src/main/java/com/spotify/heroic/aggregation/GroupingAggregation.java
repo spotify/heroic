@@ -42,7 +42,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @Data
@@ -115,7 +114,6 @@ public abstract class GroupingAggregation implements AggregationInstance {
     }
 
     @ToString
-    @RequiredArgsConstructor
     private final class GroupSession implements AggregationSession {
         private final ConcurrentMap<Map<String, String>, AggregationSession> sessions =
             new ConcurrentHashMap<>();
@@ -124,6 +122,13 @@ public abstract class GroupingAggregation implements AggregationInstance {
         private final DateRange range;
         private final RetainQuotaWatcher quotaWatcher;
         private final BucketStrategy bucketStrategy;
+
+        public GroupSession(final DateRange range, final RetainQuotaWatcher quotaWatcher,
+                            final BucketStrategy bucketStrategy) {
+            this.range = range;
+            this.quotaWatcher = quotaWatcher;
+            this.bucketStrategy = bucketStrategy;
+        }
 
         @Override
         public void updatePoints(

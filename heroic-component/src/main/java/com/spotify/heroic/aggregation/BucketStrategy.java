@@ -26,7 +26,6 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.DateRange;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 
 public interface BucketStrategy {
     long MAX_BUCKET_COUNT = 100000L;
@@ -73,13 +72,23 @@ public interface BucketStrategy {
             hasher.putObject(getClass());
         }
 
-        @RequiredArgsConstructor
         private static class StartMapping implements Mapping {
             private final long start;
             private final long offset;
             private final long size;
             private final long extent;
             private final int buckets;
+
+            @java.beans.ConstructorProperties({ "start", "offset", "size", "extent", "buckets" })
+            public StartMapping(final long start, final long offset, final long size,
+                                final long extent,
+                                final int buckets) {
+                this.start = start;
+                this.offset = offset;
+                this.size = size;
+                this.extent = extent;
+                this.buckets = buckets;
+            }
 
             /**
              * Calculate the start and end index of the buckets that should be seeded for the given
@@ -137,13 +146,23 @@ public interface BucketStrategy {
             hasher.putObject(getClass());
         }
 
-        @RequiredArgsConstructor
         private static class EndMapping implements Mapping {
             private final long start;
             private final long offset;
             private final long size;
             private final long extent;
             private final int buckets;
+
+            @java.beans.ConstructorProperties({ "start", "offset", "size", "extent", "buckets" })
+            public EndMapping(final long start, final long offset, final long size,
+                              final long extent,
+                              final int buckets) {
+                this.start = start;
+                this.offset = offset;
+                this.size = size;
+                this.extent = extent;
+                this.buckets = buckets;
+            }
 
             /**
              * Calculate the start and end index of the buckets that should be seeded for the given

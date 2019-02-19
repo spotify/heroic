@@ -25,7 +25,6 @@ import com.google.protobuf.ByteString;
 import java.util.List;
 import java.util.Optional;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 
 public interface RowFilter {
     static ColumnRange.Builder newColumnRangeBuilder(String family) {
@@ -169,7 +168,6 @@ public interface RowFilter {
                 .build();
         }
 
-        @RequiredArgsConstructor
         public static class Builder {
             private final String family;
 
@@ -177,6 +175,11 @@ public interface RowFilter {
             private Optional<ByteString> startQualifierOpen = Optional.empty();
             private Optional<ByteString> endQualifierClosed = Optional.empty();
             private Optional<ByteString> endQualifierOpen = Optional.empty();
+
+            @java.beans.ConstructorProperties({ "family" })
+            public Builder(final String family) {
+                this.family = family;
+            }
 
             public Builder startQualifierClosed(final ByteString startQualifierClosed) {
                 this.startQualifierClosed = Optional.of(startQualifierClosed);

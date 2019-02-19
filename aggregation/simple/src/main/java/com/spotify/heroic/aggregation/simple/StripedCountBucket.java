@@ -23,8 +23,6 @@ package com.spotify.heroic.aggregation.simple;
 
 import com.spotify.heroic.aggregation.AnyBucket;
 import com.spotify.heroic.metric.Metric;
-import lombok.RequiredArgsConstructor;
-
 import java.util.Map;
 import java.util.concurrent.atomic.LongAdder;
 
@@ -35,11 +33,15 @@ import java.util.concurrent.atomic.LongAdder;
  *
  * @author udoprog
  */
-@RequiredArgsConstructor
 public class StripedCountBucket implements AnyBucket {
     private final long timestamp;
 
     private final LongAdder count = new LongAdder();
+
+    @java.beans.ConstructorProperties({ "timestamp" })
+    public StripedCountBucket(final long timestamp) {
+        this.timestamp = timestamp;
+    }
 
     public long timestamp() {
         return timestamp;

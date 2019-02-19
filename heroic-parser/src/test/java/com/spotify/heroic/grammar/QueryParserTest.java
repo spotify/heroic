@@ -1,5 +1,16 @@
 package com.spotify.heroic.grammar;
 
+import static com.spotify.heroic.grammar.Expression.duration;
+import static com.spotify.heroic.grammar.Expression.empty;
+import static com.spotify.heroic.grammar.Expression.function;
+import static com.spotify.heroic.grammar.Expression.integer;
+import static com.spotify.heroic.grammar.Expression.let;
+import static com.spotify.heroic.grammar.Expression.list;
+import static com.spotify.heroic.grammar.Expression.range;
+import static com.spotify.heroic.grammar.Expression.reference;
+import static com.spotify.heroic.grammar.Expression.string;
+import static org.junit.Assert.assertEquals;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.filter.AndFilter;
@@ -14,30 +25,17 @@ import com.spotify.heroic.filter.RegexFilter;
 import com.spotify.heroic.filter.StartsWithFilter;
 import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.metric.MetricType;
-import lombok.RequiredArgsConstructor;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.runners.MockitoJUnitRunner;
-
-import java.time.Instant;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
-
-import static com.spotify.heroic.grammar.Expression.duration;
-import static com.spotify.heroic.grammar.Expression.empty;
-import static com.spotify.heroic.grammar.Expression.function;
-import static com.spotify.heroic.grammar.Expression.integer;
-import static com.spotify.heroic.grammar.Expression.let;
-import static com.spotify.heroic.grammar.Expression.list;
-import static com.spotify.heroic.grammar.Expression.range;
-import static com.spotify.heroic.grammar.Expression.reference;
-import static com.spotify.heroic.grammar.Expression.string;
-import static org.junit.Assert.assertEquals;
 
 @RunWith(MockitoJUnitRunner.class)
 public class QueryParserTest {
@@ -304,7 +302,6 @@ public class QueryParserTest {
         return new QueryBuilder(ctx);
     }
 
-    @RequiredArgsConstructor
     static class QueryBuilder {
         private final Context context;
 
@@ -314,6 +311,11 @@ public class QueryParserTest {
         private Optional<Filter> filter = Optional.empty();
         private Map<String, Expression> with = ImmutableMap.of();
         private Map<String, Expression> as = ImmutableMap.of();
+
+        @java.beans.ConstructorProperties({ "context" })
+        public QueryBuilder(final Context context) {
+            this.context = context;
+        }
 
         public QueryBuilder select(final Expression select) {
             this.select = Optional.of(select);

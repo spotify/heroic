@@ -43,12 +43,9 @@ import eu.toolchain.async.ManagedSetup;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import javax.inject.Named;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @ToString
-@RequiredArgsConstructor
 @Module
 public class BigtableAnalyticsModule implements AnalyticsModule {
     public static final String DEFAULT_CLUSTER = "heroic";
@@ -64,6 +61,16 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
     private final String cluster;
     private final CredentialsBuilder credentials;
     private final int maxPendingReports;
+
+    @java.beans.ConstructorProperties({ "project", "cluster", "credentials", "maxPendingReports" })
+    public BigtableAnalyticsModule(final String project, final String cluster,
+                                   final CredentialsBuilder credentials,
+                                   final int maxPendingReports) {
+        this.project = project;
+        this.cluster = cluster;
+        this.credentials = credentials;
+        this.maxPendingReports = maxPendingReports;
+    }
 
     @Override
     public AnalyticsComponent module(final PrimaryComponent primary) {
@@ -137,7 +144,6 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
         return new Builder();
     }
 
-    @NoArgsConstructor
     public static class Builder implements AnalyticsModule.Builder {
         private Optional<String> project = Optional.empty();
         private Optional<String> instance = Optional.empty();
@@ -155,6 +161,9 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
             this.instance = instance;
             this.credentials = credentials;
             this.maxPendingReports = maxPendingReports;
+        }
+
+        public Builder() {
         }
 
         public Builder project(String project) {

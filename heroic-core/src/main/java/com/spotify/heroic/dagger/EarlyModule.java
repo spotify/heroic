@@ -29,19 +29,21 @@ import com.spotify.heroic.lifecycle.CoreLifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import dagger.Module;
 import dagger.Provides;
-import lombok.RequiredArgsConstructor;
-
-import javax.inject.Named;
 import java.util.Optional;
 import java.util.function.Supplier;
+import javax.inject.Named;
 
-@RequiredArgsConstructor
 @Module
 public class EarlyModule {
     private final HeroicConfig config;
     private final Optional<String> id;
 
     private volatile boolean stopping = false;
+
+    public EarlyModule(final HeroicConfig config, final Optional<String> id) {
+        this.config = config;
+        this.id = id;
+    }
 
     @Provides
     @EarlyScope

@@ -44,11 +44,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Supplier;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @ToString(of = {})
-@RequiredArgsConstructor
 public class SemanticHeroicReporter implements HeroicReporter {
     private final SemanticMetricRegistry registry;
 
@@ -56,6 +54,11 @@ public class SemanticHeroicReporter implements HeroicReporter {
     private final ConcurrentMap<String, List<Supplier<Long>>> cacheSizes =
         new ConcurrentHashMap<>();
     private final Set<ClusteredManager> clusteredManagers = new HashSet<>();
+
+    @java.beans.ConstructorProperties({ "registry" })
+    public SemanticHeroicReporter(final SemanticMetricRegistry registry) {
+        this.registry = registry;
+    }
 
     @Override
     public ConsumerReporter newConsumer(String id) {

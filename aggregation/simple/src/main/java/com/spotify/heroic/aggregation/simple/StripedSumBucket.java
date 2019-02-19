@@ -25,8 +25,6 @@ import com.spotify.heroic.aggregation.AbstractBucket;
 import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
-import lombok.RequiredArgsConstructor;
-
 import java.util.Map;
 import java.util.concurrent.atomic.DoubleAdder;
 
@@ -37,7 +35,6 @@ import java.util.concurrent.atomic.DoubleAdder;
  *
  * @author udoprog
  */
-@RequiredArgsConstructor
 public class StripedSumBucket extends AbstractBucket implements DoubleBucket {
     private final long timestamp;
 
@@ -45,6 +42,11 @@ public class StripedSumBucket extends AbstractBucket implements DoubleBucket {
     private final DoubleAdder sum = new DoubleAdder();
     /* if the sum is valid (e.g. has at least one value) */
     private volatile boolean valid = false;
+
+    @java.beans.ConstructorProperties({ "timestamp" })
+    public StripedSumBucket(final long timestamp) {
+        this.timestamp = timestamp;
+    }
 
     public long timestamp() {
         return timestamp;

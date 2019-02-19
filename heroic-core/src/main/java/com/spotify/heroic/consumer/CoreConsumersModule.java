@@ -28,22 +28,29 @@ import com.spotify.heroic.statistics.ConsumerReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
 import dagger.Module;
 import dagger.Provides;
-import lombok.RequiredArgsConstructor;
-
-import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.inject.Named;
 
-@RequiredArgsConstructor
 @Module
 public class CoreConsumersModule {
     private final HeroicReporter reporter;
     private final List<ConsumerModule> consumers;
     private final CorePrimaryComponent primary;
     private final IngestionComponent ingestion;
+
+    @java.beans.ConstructorProperties({ "reporter", "consumers", "primary", "ingestion" })
+    public CoreConsumersModule(final HeroicReporter reporter, final List<ConsumerModule> consumers,
+                               final CorePrimaryComponent primary,
+                               final IngestionComponent ingestion) {
+        this.reporter = reporter;
+        this.consumers = consumers;
+        this.primary = primary;
+        this.ingestion = ingestion;
+    }
 
     @Provides
     @ConsumersScope
@@ -63,9 +70,13 @@ public class CoreConsumersModule {
         return consumers;
     }
 
-    @RequiredArgsConstructor
     public static class Depends implements ConsumerModule.Depends {
         private final ConsumerReporter consumerReporter;
+
+        @java.beans.ConstructorProperties({ "consumerReporter" })
+        public Depends(final ConsumerReporter consumerReporter) {
+            this.consumerReporter = consumerReporter;
+        }
 
         @Override
         public ConsumerReporter consumerReporter() {

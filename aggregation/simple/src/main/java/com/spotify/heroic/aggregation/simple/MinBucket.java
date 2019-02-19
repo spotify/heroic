@@ -26,8 +26,6 @@ import com.spotify.heroic.aggregation.AbstractBucket;
 import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
-import lombok.RequiredArgsConstructor;
-
 import java.util.Map;
 
 /**
@@ -35,11 +33,15 @@ import java.util.Map;
  *
  * @author udoprog
  */
-@RequiredArgsConstructor
 public class MinBucket extends AbstractBucket implements DoubleBucket {
     private final long timestamp;
 
     private final AtomicDouble value = new AtomicDouble(Double.POSITIVE_INFINITY);
+
+    @java.beans.ConstructorProperties({ "timestamp" })
+    public MinBucket(final long timestamp) {
+        this.timestamp = timestamp;
+    }
 
     public long timestamp() {
         return timestamp;

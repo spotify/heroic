@@ -21,18 +21,11 @@
 
 package com.spotify.heroic.ws;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-
 import javax.ws.rs.core.Response;
 
-@RequiredArgsConstructor
 public class ErrorMessage {
-    @Getter
     private final String message;
-    @Getter
     private final String reason;
-    @Getter
     private final int status;
 
     public ErrorMessage(final String message, final Response.Status status) {
@@ -41,7 +34,26 @@ public class ErrorMessage {
         this.status = status.getStatusCode();
     }
 
+    @java.beans.ConstructorProperties({ "message", "reason", "status" })
+    public ErrorMessage(final String message, final String reason, final int status) {
+        this.message = message;
+        this.reason = reason;
+        this.status = status;
+    }
+
     public String getType() {
         return "error";
+    }
+
+    public String getMessage() {
+        return this.message;
+    }
+
+    public String getReason() {
+        return this.reason;
+    }
+
+    public int getStatus() {
+        return this.status;
     }
 }

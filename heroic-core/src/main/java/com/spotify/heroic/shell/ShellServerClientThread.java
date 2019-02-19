@@ -30,9 +30,6 @@ import com.spotify.heroic.shell.protocol.SimpleMessageVisitor;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.serializer.SerializerFramework;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -41,14 +38,24 @@ import java.io.Writer;
 import java.net.Socket;
 import java.nio.file.Path;
 import java.util.Arrays;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@RequiredArgsConstructor
 class ShellServerClientThread implements Runnable {
     final Socket socket;
     final ShellTasks tasks;
     final SerializerFramework serializer;
     final AsyncFramework async;
+
+    @java.beans.ConstructorProperties({ "socket", "tasks", "serializer", "async" })
+    public ShellServerClientThread(final Socket socket, final ShellTasks tasks,
+                                   final SerializerFramework serializer,
+                                   final AsyncFramework async) {
+        this.socket = socket;
+        this.tasks = tasks;
+        this.serializer = serializer;
+        this.async = async;
+    }
 
     @Override
     public void run() {

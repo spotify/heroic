@@ -42,11 +42,9 @@ import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-
-import javax.inject.Inject;
 import java.util.Optional;
+import javax.inject.Inject;
+import lombok.ToString;
 
 @ClusterScope
 @ToString(exclude = {"async", "metrics", "metadata", "suggest"})
@@ -89,9 +87,13 @@ public class LocalClusterNode implements ClusterNode {
         return new LocalGroup(group);
     }
 
-    @RequiredArgsConstructor
     private final class LocalGroup implements Group {
         private final Optional<String> group;
+
+        @java.beans.ConstructorProperties({ "group" })
+        public LocalGroup(final Optional<String> group) {
+            this.group = group;
+        }
 
         @Override
         public ClusterNode node() {

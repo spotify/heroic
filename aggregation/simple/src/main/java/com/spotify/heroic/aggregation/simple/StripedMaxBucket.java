@@ -25,8 +25,6 @@ import com.spotify.heroic.aggregation.AbstractBucket;
 import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
-import lombok.RequiredArgsConstructor;
-
 import java.util.Map;
 import java.util.concurrent.atomic.DoubleAccumulator;
 import java.util.function.DoubleBinaryOperator;
@@ -38,13 +36,17 @@ import java.util.function.DoubleBinaryOperator;
  *
  * @author udoprog
  */
-@RequiredArgsConstructor
 public class StripedMaxBucket extends AbstractBucket implements DoubleBucket {
     private static final DoubleBinaryOperator maxFn = (left, right) -> Math.max(left, right);
 
     private final long timestamp;
 
     private final DoubleAccumulator max = new DoubleAccumulator(maxFn, Double.NEGATIVE_INFINITY);
+
+    @java.beans.ConstructorProperties({ "timestamp" })
+    public StripedMaxBucket(final long timestamp) {
+        this.timestamp = timestamp;
+    }
 
     public long timestamp() {
         return timestamp;

@@ -24,12 +24,12 @@ package com.spotify.heroic.metric.bigtable;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.cloud.bigtable.grpc.scanner.FlatRow;
+import com.google.cloud.bigtable.util.RowKeyUtil;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
-import com.google.cloud.bigtable.grpc.scanner.FlatRow;
-import com.google.cloud.bigtable.util.RowKeyUtil;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.RequestTimer;
@@ -86,7 +86,6 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.inject.Inject;
 import javax.inject.Named;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
@@ -577,7 +576,6 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         // @formatter:on
     }
 
-    @RequiredArgsConstructor
     private static final class PreparedQuery {
         private final ByteString rowKeyStart;
         private final ByteString rowKeyEnd;
@@ -586,6 +584,24 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         private final ByteString endQualifierClosed;
         private final BiFunction<Long, ByteString, Metric> deserializer;
         private final long base;
+
+        @java.beans.ConstructorProperties({ "rowKeyStart", "rowKeyEnd", "columnFamily",
+                                            "startQualifierOpen", "endQualifierClosed",
+                                            "deserializer",
+                                            "base" })
+        public PreparedQuery(final ByteString rowKeyStart, final ByteString rowKeyEnd,
+                             final String columnFamily, final ByteString startQualifierOpen,
+                             final ByteString endQualifierClosed,
+                             final BiFunction<Long, ByteString, Metric> deserializer,
+                             final long base) {
+            this.rowKeyStart = rowKeyStart;
+            this.rowKeyEnd = rowKeyEnd;
+            this.columnFamily = columnFamily;
+            this.startQualifierOpen = startQualifierOpen;
+            this.endQualifierClosed = endQualifierClosed;
+            this.deserializer = deserializer;
+            this.base = base;
+        }
 
         private Metric deserialize(final ByteString qualifier, final ByteString value) {
             final long timestamp = base + deserializeOffset(qualifier);

@@ -30,13 +30,11 @@ import com.spotify.heroic.lifecycle.LifeCycleManager;
 import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-
-import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import javax.inject.Named;
+import lombok.Data;
 
 @Data
 public class JvmRpcProtocolModule implements RpcProtocolModule {
@@ -72,7 +70,6 @@ public class JvmRpcProtocolModule implements RpcProtocolModule {
         LifeCycle life();
     }
 
-    @RequiredArgsConstructor
     @Module
     class M {
         @Provides

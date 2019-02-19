@@ -60,10 +60,7 @@ import javax.inject.Named;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
 import kafka.javaapi.consumer.ConsumerConnector;
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -109,11 +106,16 @@ public class KafkaConsumerModule implements ConsumerModule {
         LifeCycle consumerLife();
     }
 
-    @RequiredArgsConstructor
     @Module
     class M {
         private final PrimaryComponent primary;
         private final ConsumerModule.Depends depends;
+
+        @java.beans.ConstructorProperties({ "primary", "depends" })
+        public M(final PrimaryComponent primary, final Depends depends) {
+            this.primary = primary;
+            this.depends = depends;
+        }
 
         @Provides
         @Named("consuming")
@@ -349,7 +351,6 @@ public class KafkaConsumerModule implements ConsumerModule {
         return new Builder();
     }
 
-    @NoArgsConstructor(access = AccessLevel.PRIVATE)
     public static class Builder implements ConsumerModule.Builder {
         private Optional<String> id = Optional.empty();
         private Optional<List<String>> topics = Optional.empty();
@@ -377,6 +378,9 @@ public class KafkaConsumerModule implements ConsumerModule {
             this.schema = schema.map(s -> ReflectionUtils.buildInstance(s, ConsumerSchema.class));
             this.transactional = transactional;
             this.transactionCommitInterval = transactionCommitInterval;
+        }
+
+        private Builder() {
         }
 
         public Builder id(String id) {

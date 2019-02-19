@@ -41,7 +41,6 @@ import com.spotify.heroic.statistics.MetadataBackendReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 import eu.toolchain.async.AsyncFuture;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @ToString(of = {"base"})
@@ -112,9 +111,13 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
         writesDroppedByDuplicate.inc();
     }
 
-    @RequiredArgsConstructor
     class InstrumentedMetadataBackend implements MetadataBackend {
         private final MetadataBackend delegate;
+
+        @java.beans.ConstructorProperties({ "delegate" })
+        public InstrumentedMetadataBackend(final MetadataBackend delegate) {
+            this.delegate = delegate;
+        }
 
         @Override
         public AsyncFuture<Void> configure() {

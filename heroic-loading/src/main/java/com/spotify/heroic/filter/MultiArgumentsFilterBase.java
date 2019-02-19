@@ -24,14 +24,11 @@ package com.spotify.heroic.filter;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.BiConsumerIO;
 import com.spotify.heroic.common.FunctionIO;
-import lombok.RequiredArgsConstructor;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 
-@RequiredArgsConstructor
 public class MultiArgumentsFilterBase<T extends Filter, A> implements FilterEncoding<T> {
     private final Function<List<A>, T> builder;
     private final Function<T, List<A>> argument;
@@ -48,6 +45,17 @@ public class MultiArgumentsFilterBase<T extends Filter, A> implements FilterEnco
 
         this.decode = encoding.getDecoder();
         this.encode = encoding.getEncoder();
+    }
+
+    @java.beans.ConstructorProperties({ "builder", "argument", "decode", "encode" })
+    public MultiArgumentsFilterBase(final Function<List<A>, T> builder,
+                                    final Function<T, List<A>> argument,
+                                    final FunctionIO<Decoder, Optional<A>> decode,
+                                    final BiConsumerIO<Encoder, A> encode) {
+        this.builder = builder;
+        this.argument = argument;
+        this.decode = decode;
+        this.encode = encode;
     }
 
     @Override

@@ -39,9 +39,6 @@ package com.spotify.heroic.aggregation.simple;
 
 import com.spotify.heroic.aggregation.AbstractBucket;
 import com.spotify.heroic.metric.Point;
-import lombok.AllArgsConstructor;
-import lombok.RequiredArgsConstructor;
-
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.ListIterator;
@@ -60,7 +57,6 @@ import java.util.Map;
  * <p>
  * Greenwald and Khanna, "Space-efficient online computation of quantile summaries" in SIGMOD 2001
  */
-@RequiredArgsConstructor
 public class QuantileBucket extends AbstractBucket {
     private final long timestamp;
     private final double quantile;
@@ -81,6 +77,13 @@ public class QuantileBucket extends AbstractBucket {
      */
     private double[] batch = new double[500];
     private int index = 0;
+
+    @java.beans.ConstructorProperties({ "timestamp", "quantile", "error" })
+    public QuantileBucket(final long timestamp, final double quantile, final double error) {
+        this.timestamp = timestamp;
+        this.quantile = quantile;
+        this.error = error;
+    }
 
     /**
      * Add a new data point from the stream.
@@ -274,10 +277,16 @@ public class QuantileBucket extends AbstractBucket {
         return samples.get(samples.size() - 1).value;
     }
 
-    @AllArgsConstructor
     private static class SampleItem {
         public final double value;
         public final int delta;
         public int g;
+
+        @java.beans.ConstructorProperties({ "value", "delta", "g" })
+        public SampleItem(final double value, final int delta, final int g) {
+            this.value = value;
+            this.delta = delta;
+            this.g = g;
+        }
     }
 }

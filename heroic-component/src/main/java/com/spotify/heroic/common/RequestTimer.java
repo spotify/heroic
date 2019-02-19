@@ -22,15 +22,17 @@
 package com.spotify.heroic.common;
 
 import com.google.common.base.Stopwatch;
-import lombok.RequiredArgsConstructor;
-
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-@RequiredArgsConstructor
 public class RequestTimer<T> {
     private final Stopwatch watch = Stopwatch.createStarted();
     private final Function<Long, T> builder;
+
+    @java.beans.ConstructorProperties({ "builder" })
+    public RequestTimer(final Function<Long, T> builder) {
+        this.builder = builder;
+    }
 
     public T end() {
         return builder.apply(watch.elapsed(TimeUnit.MICROSECONDS));
