@@ -29,6 +29,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.lightstep.opencensus.exporter.LightStepTraceExporter;
+import com.lightstep.tracer.jre.JRETracer;
+import com.lightstep.tracer.shared.Options;
 import com.spotify.heroic.analytics.AnalyticsComponent;
 import com.spotify.heroic.cache.CacheComponent;
 import com.spotify.heroic.cluster.CoreClusterComponent;
@@ -82,8 +85,6 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
 import io.opencensus.contrib.zpages.ZPageHandlers;
 import io.opencensus.exporter.trace.jaeger.JaegerTraceExporter;
-import io.opencensus.exporter.trace.stackdriver.StackdriverTraceConfiguration;
-import io.opencensus.exporter.trace.stackdriver.StackdriverTraceExporter;
 import io.opencensus.exporter.trace.zipkin.ZipkinTraceExporter;
 import io.opencensus.trace.Tracing;
 import io.opencensus.trace.config.TraceConfig;
@@ -92,6 +93,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -134,6 +136,9 @@ public class HeroicCore implements HeroicConfiguration {
     static final boolean DEFAULT_ONESHOT = false;
     static final boolean DEFAULT_DISABLE_BACKENDS = false;
     static final boolean DEFAULT_SETUP_SHELL_SERVER = true;
+
+    private static final int DEFAULT_LIGHTSTEP_REPORTING_MS = 1_000;
+    private static final int DEFAULT_LIGHTSTEP_MAX_SPANS = 1_000;
 
     static final UncaughtExceptionHandler uncaughtExceptionHandler = (Thread t, Throwable e) -> {
         try {
@@ -298,21 +303,55 @@ public class HeroicCore implements HeroicConfiguration {
 
     @SuppressWarnings("unchecked")
     private void enableTracing(Map<String, Object> config) throws IOException {
-        final Object stackdriverConfig = config.get("stackdriver");
-        if (stackdriverConfig != null) {
-            final Map<String, String> configMap = (Map) stackdriverConfig;
-            final String projectId = configMap.get("project");
+        final Object lightstepConfig = config.get("lightstep");
+        if (lightstepConfig != null) {
+            final Map<String, String> configMap = (Map) lightstepConfig;
+            final String collectorHost = configMap.get("collectorHost");
+            final String accessToken = configMap.get("accessToken");
+            final Integer reportingIntervalMs = (Integer) config.getOrDefault("reportingIntervalMs",
+                DEFAULT_LIGHTSTEP_REPORTING_MS);
+            final Integer maxBufferedSpans = (Integer) config.getOrDefault("maxBufferedSpans",
+                DEFAULT_LIGHTSTEP_MAX_SPANS);
 
-            if (projectId == null) {
-                throw new IllegalArgumentException("Configuration for stackdriver is incomplete");
+
+            if (collectorHost == null || accessToken == null) {
+                throw new IllegalArgumentException("Configuration for Lightstep is incomplete");
             }
 
-            log.info("Setting up StackDriver tracing for {}", projectId);
-            // Create and register the Stackdriver Tracing exporter
-            StackdriverTraceExporter.createAndRegister(
-                StackdriverTraceConfiguration.builder()
-                    .setProjectId(projectId)
-                    .build());
+            final Options.OptionsBuilder optionsBuilder = new Options.OptionsBuilder()
+                .withAccessToken(accessToken)
+                .withMaxReportingIntervalMillis(reportingIntervalMs)
+                .withMaxBufferedSpans(maxBufferedSpans)
+                .withCollectorHost(collectorHost)
+                .withCollectorProtocol("http")
+                .withCollectorPort(8282)
+                .withComponentName("heroic");
+
+            final Options options;
+            try {
+                options = optionsBuilder.build();
+            } catch (MalformedURLException e) {
+                throw new IllegalArgumentException("Malformed configuration for lightstep.", e);
+            }
+
+            log.info("Setting up Lightstep tracing");
+            LightStepTraceExporter.createAndRegister(new JRETracer(options));
+
+        }
+
+        final Object signalfxConfig = config.get("signalfx");
+        if (signalfxConfig != null) {
+            final Map<String, String> configMap = (Map) signalfxConfig;
+            final String signalfxGateway = configMap.get("signalfxGateway");
+
+            if (signalfxGateway == null) {
+                throw new IllegalArgumentException("Gateway for SignalFx gateway is not set and "
+                                                   + "the correct region"
+                                                   + "could not be determined.");
+            }
+
+            log.info("Setting up SignalFx tracing");
+            JaegerTraceExporter.createAndRegister(signalfxGateway, "heroic");
         }
 
         final Object jaegerConfig = config.get("jaeger");
