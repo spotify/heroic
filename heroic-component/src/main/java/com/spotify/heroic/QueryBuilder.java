@@ -37,9 +37,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import lombok.RequiredArgsConstructor;
 
-@RequiredArgsConstructor
 public class QueryBuilder {
     private Optional<MetricType> source = Optional.empty();
     private Optional<Map<String, String>> tags = Optional.empty();
@@ -165,7 +163,7 @@ public class QueryBuilder {
      */
     Optional<Aggregation> legacyAggregation() {
         if (groupBy.isPresent()) {
-            return Optional.of(Group.of(groupBy, aggregation));
+            return Optional.of(Group.createFromAggregation(groupBy, aggregation));
         }
 
         return aggregation;
@@ -186,12 +184,12 @@ public class QueryBuilder {
 
         if (tags.isPresent()) {
             for (final Map.Entry<String, String> entry : tags.get().entrySet()) {
-                statements.add(new MatchTagFilter(entry.getKey(), entry.getValue()));
+                statements.add(MatchTagFilter.create(entry.getKey(), entry.getValue()));
             }
         }
 
         if (key.isPresent()) {
-            statements.add(new MatchKeyFilter(key.get()));
+            statements.add(MatchKeyFilter.create(key.get()));
         }
 
         if (statements.isEmpty()) {
@@ -202,6 +200,6 @@ public class QueryBuilder {
             return Optional.of(statements.get(0).optimize());
         }
 
-        return Optional.of(new AndFilter(statements).optimize());
+        return Optional.of(AndFilter.create(statements).optimize());
     }
 }

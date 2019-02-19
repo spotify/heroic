@@ -2,7 +2,6 @@ package com.spotify.heroic.metadata;
 
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.AbstractReducedResultTest;
-import com.spotify.heroic.test.LombokDataTest;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -17,11 +16,6 @@ public class DeleteSeriesTest extends AbstractReducedResultTest {
     public void setup() {
         s1 = new DeleteSeries(errors, 3, 0);
         s2 = new DeleteSeries(ImmutableList.of(), 0, 4);
-    }
-
-    @Test
-    public void lombokDataTest() {
-        LombokDataTest.verifyClass(DeleteSeries.class);
     }
 
     @Test

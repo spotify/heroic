@@ -64,6 +64,7 @@
     <log4j.version>2.6.2</log4j.version>
     <elasticsearch.version>5.3.2</elasticsearch.version>
     <joda-time.version>2.8.2</joda-time.version>
+    <autovalue.version>1.6.3</autovalue.version>
     <lombok.version>1.16.6</lombok.version>
     <findbugs.version>3.0.1</findbugs.version>
     <dagger.version>2.7</dagger.version>
@@ -474,6 +475,17 @@
         <artifactId>javax.inject</artifactId>
         <version>1</version>
       </dependency>
+      <dependency>
+        <groupId>com.google.auto.value</groupId>
+        <artifactId>auto-value</artifactId>
+        <version>${autovalue.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.auto.value</groupId>
+        <artifactId>auto-value-annotations</artifactId>
+        <version>${autovalue.version}</version>
+      </dependency>
+
       <dependency>
         <groupId>com.google.code.findbugs</groupId>
         <artifactId>jsr305</artifactId>

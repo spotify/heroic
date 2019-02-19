@@ -45,36 +45,36 @@ public class RequestConditionTest {
         doReturn(Optional.empty()).when(httpContext2).getClientId();
         doReturn(Optional.of("foobar")).when(httpContext1).getUserAgent();
         doReturn(Optional.empty()).when(httpContext2).getUserAgent();
-        doReturn(Optional.of(httpContext1)).when(queryContext1).getHttpContext();
-        doReturn(Optional.of(httpContext2)).when(queryContext2).getHttpContext();
+        doReturn(Optional.of(httpContext1)).when(queryContext1).httpContext();
+        doReturn(Optional.of(httpContext2)).when(queryContext2).httpContext();
     }
 
     @Test
     public void testAll() {
-        final All all = new All(ImmutableList.of(a, b));
+        final All all = All.create(ImmutableList.of(a, b));
         assertFalse(all.matches(queryContext1));
         assertTrue(all.matches(queryContext2));
-        assertTrue(new All(ImmutableList.of()).matches(queryContext1));
+        assertTrue(All.create(ImmutableList.of()).matches(queryContext1));
     }
 
     @Test
     public void testAny() {
-        final Any any = new Any(ImmutableList.of(a, b));
+        final Any any = Any.create(ImmutableList.of(a, b));
         assertTrue(any.matches(queryContext1));
         assertTrue(any.matches(queryContext2));
-        assertFalse(new Any(ImmutableList.of()).matches(queryContext1));
+        assertFalse(Any.create(ImmutableList.of()).matches(queryContext1));
     }
 
     @Test
     public void testClientId() {
-        final ClientId clientId = new ClientId("foobar");
+        final ClientId clientId = ClientId.create("foobar");
         assertTrue(clientId.matches(queryContext1));
         assertFalse(clientId.matches(queryContext2));
     }
 
     @Test
     public void testUserAgent() {
-        final UserAgent userAgent = new UserAgent("foobar");
+        final UserAgent userAgent = UserAgent.create("foobar");
         assertTrue(userAgent.matches(queryContext1));
         assertFalse(userAgent.matches(queryContext2));
     }

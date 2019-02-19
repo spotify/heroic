@@ -203,7 +203,7 @@ public class QueryMetricsResponse {
                 g.writeStringField("hash", Integer.toHexString(group.hashGroup()));
                 g.writeObjectField("shard", group.getShard());
                 g.writeNumberField("cadence", group.getCadence());
-                g.writeObjectField("values", collection.getData());
+                g.writeObjectField("values", collection.data());
 
                 writeKey(g, series.getKeys());
 

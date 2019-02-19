@@ -3,7 +3,6 @@ package com.spotify.heroic.suggest;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.AbstractReducedResultTest;
 import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.test.LombokDataTest;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -28,11 +27,6 @@ public class TagKeyCountTest extends AbstractReducedResultTest {
         s1 = new TagKeyCount(ImmutableList.of(e1), ImmutableList.of(sug1), false);
         s2 = new TagKeyCount(ImmutableList.of(e2), ImmutableList.of(sug2), false);
         s3 = new TagKeyCount(ImmutableList.of(), ImmutableList.of(sug3), false);
-    }
-
-    @Test
-    public void lombokDataTest() {
-        LombokDataTest.verifyClass(TagKeyCount.class);
     }
 
     @Test

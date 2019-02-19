@@ -172,7 +172,7 @@ public class MemoryBackend extends AbstractMetricBackend {
                 k -> new MemoryEntry(new ConcurrentSkipListMap<>()))
             .getMetrics();
 
-        for (final Metric d : g.getData()) {
+        for (final Metric d : g.data()) {
             metrics.put(d.getTimestamp(), d);
         }
     }

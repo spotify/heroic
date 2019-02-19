@@ -88,11 +88,11 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import javax.inject.Inject;
 import javax.inject.Named;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Slf4j
 public class CoreQueryManager implements QueryManager {
+    private static final Logger log = LoggerFactory.getLogger(CoreQueryManager.class);
     public static final long SHIFT_TOLERANCE = TimeUnit.MILLISECONDS.convert(10, TimeUnit.SECONDS);
     public static final QueryTrace.Identifier QUERY_SHARD =
         QueryTrace.identifier(CoreQueryManager.class, "query_shard");
@@ -194,9 +194,12 @@ public class CoreQueryManager implements QueryManager {
         });
     }
 
-    @RequiredArgsConstructor
     public class Group implements QueryManager.Group {
         private final List<ClusterShard> shards;
+
+        public Group(List<ClusterShard> shards) {
+            this.shards = shards;
+        }
 
         @Override
         public AsyncFuture<QueryResult> query(final Query q, final QueryContext queryContext) {
@@ -247,7 +250,7 @@ public class CoreQueryManager implements QueryManager {
             }
 
             final BucketStrategy bucketStrategy = options
-                .getBucketStrategy()
+                .bucketStrategy()
                 .orElseGet(() -> features.withFeature(Feature.END_BUCKET, () -> BucketStrategy.END,
                     () -> BucketStrategy.START));
 
@@ -260,7 +263,7 @@ public class CoreQueryManager implements QueryManager {
             }
 
             final FullQuery.Request request =
-                new FullQuery.Request(source, filter, range, aggregationInstance, options,
+                FullQuery.Request.create(source, filter, range, aggregationInstance, options,
                     queryContext, features);
 
             queryLogger.logOutgoingRequestToShards(queryContext, request);
@@ -285,7 +288,7 @@ public class CoreQueryManager implements QueryManager {
                     }
                 }
 
-                final OptionalLimit limit = options.getGroupLimit().orElse(groupLimit);
+                final OptionalLimit limit = options.groupLimit().orElse(groupLimit);
 
                 return async.collect(futures,
                     QueryResult.collectParts(QUERY, range, combiner, limit));
@@ -418,7 +421,7 @@ public class CoreQueryManager implements QueryManager {
                  * Create new QT with queryTraces + current QT as a children */
                 final List<QueryTrace> traces = new ArrayList<>();
                 traces.addAll(queryTraces);
-                traces.add(fullQuery.getTrace());
+                traces.add(fullQuery.trace());
                 final QueryTrace newTrace = shardLocalWatch.end(traces);
                 return fullQuery.withTrace(newTrace);
             };

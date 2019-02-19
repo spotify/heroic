@@ -45,7 +45,7 @@ import lombok.extern.slf4j.Slf4j;
 @Data
 public class ClusterShard {
     private static final QueryTrace.Identifier RETRY_BACKOFF =
-        new QueryTrace.Identifier("retry-backoff");
+        QueryTrace.Identifier.create("retry-backoff");
     private static final String DARKLOAD = "darkload";
 
     private final AsyncFramework async;
@@ -133,7 +133,7 @@ public class ClusterShard {
             final long microTS =
                 TimeUnit.MICROSECONDS.convert(re.getOffsetMillis(), TimeUnit.MILLISECONDS);
             long elapsed = microTS - lastTS;
-            traces.add(QueryTrace.of(new QueryTrace.Identifier(getMessageFrom(re)), elapsed));
+            traces.add(QueryTrace.of(QueryTrace.Identifier.create(getMessageFrom(re)), elapsed));
             lastTS = microTS;
 
             /* After each retry, a backoff pause is inserted before trying the next node.

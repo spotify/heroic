@@ -571,28 +571,28 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
             @Override
             public QueryBuilder visitNot(final NotFilter not) {
-                return new BoolQueryBuilder().mustNot(not.getFilter().visit(this));
+                return new BoolQueryBuilder().mustNot(not.filter().visit(this));
             }
 
             @Override
             public QueryBuilder visitMatchTag(final MatchTagFilter matchTag) {
-                return termQuery(TAGS, matchTag.getTag() + TAG_DELIMITER + matchTag.getValue());
+                return termQuery(TAGS, matchTag.tag() + TAG_DELIMITER + matchTag.value());
             }
 
             @Override
             public QueryBuilder visitStartsWith(final StartsWithFilter startsWith) {
                 return prefixQuery(TAGS,
-                    startsWith.getTag() + TAG_DELIMITER + startsWith.getValue());
+                    startsWith.tag() + TAG_DELIMITER + startsWith.value());
             }
 
             @Override
             public QueryBuilder visitHasTag(final HasTagFilter hasTag) {
-                return termQuery(TAG_KEYS, hasTag.getTag());
+                return termQuery(TAG_KEYS, hasTag.tag());
             }
 
             @Override
             public QueryBuilder visitMatchKey(final MatchKeyFilter matchKey) {
-                return termQuery(KEY, matchKey.getKey());
+                return termQuery(KEY, matchKey.key());
             }
 
             @Override

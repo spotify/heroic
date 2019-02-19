@@ -1,6 +1,5 @@
 package com.spotify.heroic.aggregation.simple;
 
-import static com.spotify.heroic.test.LombokDataTest.verifyClassBuilder;
 import static org.junit.Assert.assertEquals;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,14 +11,6 @@ import org.junit.Test;
 
 public class BelowKTest {
     private final FakeModuleLoader m = FakeModuleLoader.builder().module(Module.class).build();
-
-    @Test
-    public void lombokDataTest() {
-        verifyClassBuilder(BelowK.class)
-            .ignoreGetter("of")
-            .valueSupplier(new OfSupplier())
-            .verify();
-    }
 
     @Test
     public void serialization() throws Exception {
