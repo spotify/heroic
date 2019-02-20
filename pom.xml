@@ -760,6 +760,11 @@
         <artifactId>jackson-datatype-jdk8</artifactId>
         <version>${jackson.version}</version>
       </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.module</groupId>
+        <artifactId>jackson-module-kotlin</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
       <!-- Jersey auto-initializes this for some reason. -->
       <dependency>
         <groupId>org.apache.onami</groupId>

@@ -31,15 +31,12 @@ import com.spotify.heroic.HeroicMappers;
 import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.cache.CacheScope;
 import com.spotify.heroic.cache.QueryCache;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.Feature;
 import com.spotify.heroic.metric.CacheInfo;
 import com.spotify.heroic.metric.FullQuery;
 import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.QueryTrace;
-import com.spotify.heroic.metric.ResultLimits;
-import com.spotify.heroic.metric.ShardedResultGroup;
 import com.spotify.heroic.time.Clock;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -50,7 +47,6 @@ import eu.toolchain.async.ResolvableFuture;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -58,7 +54,6 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 import javax.inject.Inject;
 import javax.inject.Named;
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -252,16 +247,5 @@ public class MemcachedQueryCache implements QueryCache {
         final Hasher hasher = HASH_FUNCTION.newHasher();
         request.hashTo(new ObjectHasher(hasher));
         return PREFIX + hasher.hash().toString();
-    }
-
-    /**
-     * Only cache the relevant parts of the result.
-     */
-    @Data
-    public static class CachedResult {
-        private final DateRange range;
-        private final List<ShardedResultGroup> groups;
-        private final long preAggregationSampleSize;
-        private final ResultLimits limits;
     }
 }
