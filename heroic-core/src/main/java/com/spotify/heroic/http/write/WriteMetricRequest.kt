@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,13 +19,23 @@
  * under the License.
  */
 
-package com.spotify.heroic.shell;
+package com.spotify.heroic.http.write
 
-import lombok.Data;
+import com.google.common.collect.ImmutableList
+import com.spotify.heroic.common.Series
+import com.spotify.heroic.ingestion.Ingestion
+import com.spotify.heroic.metric.Metric
+import com.spotify.heroic.metric.MetricCollection
+import java.util.Optional
 
-import java.net.ServerSocket;
+data class WriteMetricRequest(val series: Optional<Series>, val data: Optional<MetricCollection>) {
+    val isEmpty: Boolean = data.map { it.isEmpty }.orElse(true)
 
-@Data
-class ShellServerState {
-    final ServerSocket serverSocket;
+    fun all(): Iterable<Metric> {
+        return data.map { d -> d.getDataAs(Metric::class.java) }.orElseGet { ImmutableList.of() }
+    }
+
+    fun toIngestionRequest(): Optional<Ingestion.Request> {
+        return data.map { data -> Ingestion.Request(series.orElseGet { Series.empty() }, data) }
+    }
 }

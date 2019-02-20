@@ -91,7 +91,7 @@ public class ShellServer implements LifeCycles {
             final Socket socket;
 
             try {
-                socket = state.serverSocket.accept();
+                socket = state.getServerSocket().accept();
             } catch (IOException e) {
                 log.info("Shutting down...", e);
                 break;

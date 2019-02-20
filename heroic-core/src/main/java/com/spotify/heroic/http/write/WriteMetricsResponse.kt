@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,11 +19,6 @@
  * under the License.
  */
 
-package com.spotify.heroic.http.write;
+package com.spotify.heroic.http.write
 
-import lombok.Data;
-
-@Data
-public class WriteMetricsResponse {
-    private final boolean ok;
-}
+data class WriteMetricsResponse(val isOk: Boolean)
