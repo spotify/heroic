@@ -105,7 +105,6 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
 
     static {
         backendTypes.put("kv", defaultSetup);
-        backendTypes.put("v1", MetadataBackendV1::backendType);
     }
 
     public static List<String> types() {
@@ -253,23 +252,13 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
 
         @Provides
         @ElasticsearchScope
-        MetadataBackend backend(Lazy<MetadataBackendKV> kv, Lazy<MetadataBackendV1> v1) {
-            if (backendType.getType().equals(MetadataBackendV1.class)) {
-                return v1.get();
-            }
-
+        MetadataBackend backend(Lazy<MetadataBackendKV> kv) {
             return kv.get();
         }
 
         @Provides
         @ElasticsearchScope
-        LifeCycle life(
-            LifeCycleManager manager, Lazy<MetadataBackendKV> kv, Lazy<MetadataBackendV1> v1
-        ) {
-            if (backendType.getType().equals(MetadataBackendV1.class)) {
-                return manager.build(v1.get());
-            }
-
+        LifeCycle life(LifeCycleManager manager, Lazy<MetadataBackendKV> kv) {
             return manager.build(kv.get());
         }
     }
