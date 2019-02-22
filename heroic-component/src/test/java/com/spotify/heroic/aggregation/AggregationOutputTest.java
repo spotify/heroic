@@ -8,15 +8,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.metric.MetricCollection;
-import com.spotify.heroic.test.LombokDataTest;
 import java.util.Map;
 import org.junit.Test;
 
 public class AggregationOutputTest {
-    @Test
-    public void lombokDataTest() {
-        LombokDataTest.verifyClass(AggregationOutput.class);
-    }
 
     @Test
     public void isEmpty() {

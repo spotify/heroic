@@ -29,6 +29,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.lightstep.opencensus.exporter.LightStepTraceExporter;
+import com.lightstep.tracer.jre.JRETracer;
+import com.lightstep.tracer.shared.Options;
 import com.spotify.heroic.analytics.AnalyticsComponent;
 import com.spotify.heroic.cache.CacheComponent;
 import com.spotify.heroic.cluster.CoreClusterComponent;
@@ -82,8 +85,6 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
 import io.opencensus.contrib.zpages.ZPageHandlers;
 import io.opencensus.exporter.trace.jaeger.JaegerTraceExporter;
-import io.opencensus.exporter.trace.stackdriver.StackdriverTraceConfiguration;
-import io.opencensus.exporter.trace.stackdriver.StackdriverTraceExporter;
 import io.opencensus.exporter.trace.zipkin.ZipkinTraceExporter;
 import io.opencensus.trace.Tracing;
 import io.opencensus.trace.config.TraceConfig;
@@ -92,6 +93,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -112,10 +114,9 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import lombok.AccessLevel;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Configure and bootstrap a Heroic application.
@@ -126,9 +127,8 @@ import org.apache.commons.lang3.tuple.Pair;
  *
  * @author udoprog
  */
-@Slf4j
-@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public class HeroicCore implements HeroicConfiguration {
+    private static final Logger log = LoggerFactory.getLogger(HeroicCore.class);
     static final String DEFAULT_HOST = "0.0.0.0";
     static final int DEFAULT_PORT = 8080;
 
@@ -136,6 +136,9 @@ public class HeroicCore implements HeroicConfiguration {
     static final boolean DEFAULT_ONESHOT = false;
     static final boolean DEFAULT_DISABLE_BACKENDS = false;
     static final boolean DEFAULT_SETUP_SHELL_SERVER = true;
+
+    private static final int DEFAULT_LIGHTSTEP_REPORTING_MS = 1_000;
+    private static final int DEFAULT_LIGHTSTEP_MAX_SPANS = 1_000;
 
     static final UncaughtExceptionHandler uncaughtExceptionHandler = (Thread t, Throwable e) -> {
         try {
@@ -191,6 +194,46 @@ public class HeroicCore implements HeroicConfiguration {
 
     private final Optional<ExecutorService> executor;
 
+    protected HeroicCore(
+        Optional<String> id,
+        Optional<String> host,
+        Optional<Integer> port,
+        Optional<Supplier<InputStream>> configStream,
+        Optional<Path> configPath,
+        Optional<URI> startupPing,
+        Optional<String> startupId,
+        ExtraParameters params,
+        boolean setupService,
+        boolean oneshot,
+        boolean disableBackends,
+        boolean setupShellServer,
+        List<HeroicModule> modules,
+        List<HeroicProfile> profiles,
+        List<HeroicBootstrap> early,
+        List<HeroicBootstrap> late,
+        List<HeroicConfig.Builder> configFragments,
+        Optional<ExecutorService> executor
+    ) {
+        this.id = id;
+        this.host = host;
+        this.port = port;
+        this.configStream = configStream;
+        this.configPath = configPath;
+        this.startupPing = startupPing;
+        this.startupId = startupId;
+        this.params = params;
+        this.setupService = setupService;
+        this.oneshot = oneshot;
+        this.disableBackends = disableBackends;
+        this.setupShellServer = setupShellServer;
+        this.modules = modules;
+        this.profiles = profiles;
+        this.early = early;
+        this.late = late;
+        this.configFragments = configFragments;
+        this.executor = executor;
+    }
+
     @Override
     public boolean isDisableLocal() {
         return disableBackends;
@@ -230,7 +273,7 @@ public class HeroicCore implements HeroicConfiguration {
 
         final HeroicConfig config = config(loading);
 
-        enableTracing(config.getTracing());
+        enableTracing(config.tracing());
 
         final CoreEarlyComponent early = earlyInjector(loading, config);
         runBootstrappers(early, this.early);
@@ -260,21 +303,55 @@ public class HeroicCore implements HeroicConfiguration {
 
     @SuppressWarnings("unchecked")
     private void enableTracing(Map<String, Object> config) throws IOException {
-        final Object stackdriverConfig = config.get("stackdriver");
-        if (stackdriverConfig != null) {
-            final Map<String, String> configMap = (Map) stackdriverConfig;
-            final String projectId = configMap.get("project");
+        final Object lightstepConfig = config.get("lightstep");
+        if (lightstepConfig != null) {
+            final Map<String, String> configMap = (Map) lightstepConfig;
+            final String collectorHost = configMap.get("collectorHost");
+            final String accessToken = configMap.get("accessToken");
+            final Integer reportingIntervalMs = (Integer) config.getOrDefault("reportingIntervalMs",
+                DEFAULT_LIGHTSTEP_REPORTING_MS);
+            final Integer maxBufferedSpans = (Integer) config.getOrDefault("maxBufferedSpans",
+                DEFAULT_LIGHTSTEP_MAX_SPANS);
 
-            if (projectId == null) {
-                throw new IllegalArgumentException("Configuration for stackdriver is incomplete");
+
+            if (collectorHost == null || accessToken == null) {
+                throw new IllegalArgumentException("Configuration for Lightstep is incomplete");
             }
 
-            log.info("Setting up StackDriver tracing for {}", projectId);
-            // Create and register the Stackdriver Tracing exporter
-            StackdriverTraceExporter.createAndRegister(
-                StackdriverTraceConfiguration.builder()
-                    .setProjectId(projectId)
-                    .build());
+            final Options.OptionsBuilder optionsBuilder = new Options.OptionsBuilder()
+                .withAccessToken(accessToken)
+                .withMaxReportingIntervalMillis(reportingIntervalMs)
+                .withMaxBufferedSpans(maxBufferedSpans)
+                .withCollectorHost(collectorHost)
+                .withCollectorProtocol("http")
+                .withCollectorPort(8282)
+                .withComponentName("heroic");
+
+            final Options options;
+            try {
+                options = optionsBuilder.build();
+            } catch (MalformedURLException e) {
+                throw new IllegalArgumentException("Malformed configuration for lightstep.", e);
+            }
+
+            log.info("Setting up Lightstep tracing");
+            LightStepTraceExporter.createAndRegister(new JRETracer(options));
+
+        }
+
+        final Object signalfxConfig = config.get("signalfx");
+        if (signalfxConfig != null) {
+            final Map<String, String> configMap = (Map) signalfxConfig;
+            final String signalfxGateway = configMap.get("signalfxGateway");
+
+            if (signalfxGateway == null) {
+                throw new IllegalArgumentException("Gateway for SignalFx gateway is not set and "
+                                                   + "the correct region"
+                                                   + "could not be determined.");
+            }
+
+            log.info("Setting up SignalFx tracing");
+            JaegerTraceExporter.createAndRegister(signalfxGateway, "heroic");
         }
 
         final Object jaegerConfig = config.get("jaeger");
@@ -364,7 +441,7 @@ public class HeroicCore implements HeroicConfiguration {
     private CoreEarlyComponent earlyInjector(
         final CoreLoadingComponent loading, final HeroicConfig config
     ) {
-        final Optional<String> id = Optionals.firstPresent(this.id, config.getId());
+        final Optional<String> id = Optionals.firstPresent(this.id, config.id());
 
         return DaggerCoreEarlyComponent
             .builder()
@@ -430,7 +507,7 @@ public class HeroicCore implements HeroicConfiguration {
         log.info("Building Primary Injector");
         final List<LifeCycle> life = new ArrayList<>();
 
-        final StatisticsComponent statistics = config.getStatistics().module(early);
+        final StatisticsComponent statistics = config.statistics().module(early);
         life.add(statistics.life());
 
         final HeroicReporter reporter = statistics.reporter();
@@ -439,24 +516,24 @@ public class HeroicCore implements HeroicConfiguration {
         final CorePrimaryComponent primary = DaggerCorePrimaryComponent
             .builder()
             .coreEarlyComponent(early)
-            .primaryModule(new PrimaryModule(instance, config.getFeatures(), reporter,
-                config.getConditionalFeature()))
+            .primaryModule(new PrimaryModule(instance, config.features(), reporter,
+                config.conditionalFeature()))
             .build();
 
-        final QueryLoggingComponent queryLogging = config.getQueryLogging().component(primary);
+        final QueryLoggingComponent queryLogging = config.queryLogging().component(primary);
 
         final Optional<HttpServer> server = setupServer(config, life, primary);
 
-        final CacheComponent cache = config.getCache().module(primary);
+        final CacheComponent cache = config.cache().module(primary);
         life.add(cache.cacheLife());
 
-        final AnalyticsComponent analytics = config.getAnalytics().module(primary);
+        final AnalyticsComponent analytics = config.analytics().module(primary);
         life.add(analytics.analyticsLife());
 
         final CoreMetadataComponent metadata = DaggerCoreMetadataComponent
             .builder()
             .primaryComponent(primary)
-            .metadataManagerModule(config.getMetadata())
+            .metadataManagerModule(config.metadata())
             .build();
 
         life.add(metadata.metadataLife());
@@ -464,7 +541,7 @@ public class HeroicCore implements HeroicConfiguration {
         final CoreSuggestComponent suggest = DaggerCoreSuggestComponent
             .builder()
             .primaryComponent(primary)
-            .suggestManagerModule(config.getSuggest())
+            .suggestManagerModule(config.suggest())
             .build();
 
         life.add(suggest.suggestLife());
@@ -474,14 +551,14 @@ public class HeroicCore implements HeroicConfiguration {
             .corePrimaryComponent(primary)
             .metadataComponent(metadata)
             .analyticsComponent(analytics)
-            .metricManagerModule(config.getMetric())
+            .metricManagerModule(config.metric())
             .queryLoggingComponent(queryLogging)
             .build();
 
         life.add(metric.metricLife());
 
         final IngestionComponent ingestion =
-            config.getIngestion().module(primary, suggest, metadata, metric);
+            config.ingestion().module(primary, suggest, metadata, metric);
         life.add(ingestion.ingestionLife());
 
         buildShellServer(config).ifPresent(shellServerModule -> {
@@ -500,8 +577,8 @@ public class HeroicCore implements HeroicConfiguration {
             .metricComponent(metric)
             .metadataComponent(metadata)
             .suggestComponent(suggest)
-            .clusterManagerModule(config.getCluster())
-            .clusterDiscoveryComponent(config.getCluster().getDiscovery().module(primary))
+            .clusterManagerModule(config.cluster())
+            .clusterDiscoveryComponent(config.cluster().getDiscovery().module(primary))
             .build();
 
         life.add(cluster.clusterLife());
@@ -521,15 +598,15 @@ public class HeroicCore implements HeroicConfiguration {
         final ConsumersComponent consumer = DaggerCoreConsumersComponent
             .builder()
             .coreConsumersModule(
-                new CoreConsumersModule(reporter, config.getConsumers(), primary, ingestion))
+                new CoreConsumersModule(reporter, config.consumers(), primary, ingestion))
             .corePrimaryComponent(primary)
             .build();
         life.add(consumer.consumersLife());
 
         final QueryComponent query = DaggerCoreQueryComponent
             .builder()
-            .queryModule(new QueryModule(config.getMetric().getGroupLimit(),
-                config.getMetric().getSmallQueryThreshold()))
+            .queryModule(new QueryModule(config.metric().groupLimit(),
+                config.metric().smallQueryThreshold()))
             .corePrimaryComponent(primary)
             .clusterComponent(cluster)
             .cacheComponent(cache)
@@ -537,7 +614,7 @@ public class HeroicCore implements HeroicConfiguration {
             .build();
         life.add(query.queryLife());
 
-        final GeneratorComponent generator = config.getGenerator().module(primary);
+        final GeneratorComponent generator = config.generator().module(primary);
         life.add(generator.generatorLife());
 
         // install all lifecycles
@@ -573,8 +650,8 @@ public class HeroicCore implements HeroicConfiguration {
         final HttpServerComponent serverComponent = DaggerHttpServerComponent
             .builder()
             .primaryComponent(primary)
-            .httpServerModule(new HttpServerModule(bindAddress, config.isEnableCors(),
-                config.getCorsAllowOrigin(), config.getConnectors()))
+            .httpServerModule(new HttpServerModule(bindAddress, config.enableCors(),
+                config.corsAllowOrigin(), config.connectors()))
             .build();
 
         // Trigger life cycle registration
@@ -584,7 +661,7 @@ public class HeroicCore implements HeroicConfiguration {
     }
 
     private Optional<ShellServerModule> buildShellServer(final HeroicConfig config) {
-        final Optional<ShellServerModule> shellServer = config.getShellServer();
+        final Optional<ShellServerModule> shellServer = config.shellServer();
 
         // a shell server is configured.
         if (shellServer.isPresent()) {
@@ -601,15 +678,15 @@ public class HeroicCore implements HeroicConfiguration {
 
     private InetSocketAddress setupBindAddress(HeroicConfig config) {
         final String host =
-            Optionals.pickOptional(config.getHost(), this.host).orElse(DEFAULT_HOST);
-        final int port = Optionals.pickOptional(config.getPort(), this.port).orElse(DEFAULT_PORT);
+            Optionals.pickOptional(config.host(), this.host).orElse(DEFAULT_HOST);
+        final int port = Optionals.pickOptional(config.port(), this.port).orElse(DEFAULT_PORT);
         return new InetSocketAddress(host, port);
     }
 
     static void startLifeCycles(
         CoreLifeCycleRegistry registry, CoreComponent primary, HeroicConfig config
     ) throws Exception {
-        if (!awaitLifeCycles("start", primary, config.getStartTimeout(), registry.starters())) {
+        if (!awaitLifeCycles("start", primary, config.startTimeout(), registry.starters())) {
             throw new Exception("Failed to start all life cycles");
         }
     }
@@ -617,7 +694,7 @@ public class HeroicCore implements HeroicConfiguration {
     static void stopLifeCycles(
         CoreLifeCycleRegistry registry, CoreComponent primary, HeroicConfig config
     ) throws Exception {
-        if (!awaitLifeCycles("stop", primary, config.getStopTimeout(), registry.stoppers())) {
+        if (!awaitLifeCycles("stop", primary, config.stopTimeout(), registry.stoppers())) {
             log.warn("Failed to stop all life cycles");
         }
     }

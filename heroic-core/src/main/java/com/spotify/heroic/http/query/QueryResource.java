@@ -103,7 +103,7 @@ public class QueryResource {
     ) {
         final HttpContext httpContext = CoreHttpContextFactory.create(servletReq);
         final QueryContext queryContext =
-            QueryContext.create(query.getClientContext(), httpContext);
+            QueryContext.create(query.clientContext(), httpContext);
         queryLogger.logHttpQueryJson(queryContext, query);
 
         final Query q = query.toQueryBuilder(this.query::newQueryFromString).build();
@@ -136,7 +136,7 @@ public class QueryResource {
                     .build();
 
                 final QueryContext queryContext =
-                    QueryContext.create(qm.getClientContext(), httpContext);
+                    QueryContext.create(qm.clientContext(), httpContext);
                 queryLogger.logHttpQueryJson(queryContext, qm);
 
                 futures.add(g
@@ -155,7 +155,7 @@ public class QueryResource {
                     final QueryContext queryContext = e.getMiddle();
                     final QueryResult r = e.getRight();
                     final QueryMetricsResponse qmr =
-                        new QueryMetricsResponse(queryContext.getQueryId(), r.getRange(),
+                        new QueryMetricsResponse(queryContext.queryId(), r.getRange(),
                             r.getGroups(), r.getErrors(), r.getTrace(), r.getLimits(),
                             Optional.of(r.getPreAggregationSampleSize()), r.getCache());
 
@@ -180,7 +180,7 @@ public class QueryResource {
 
         httpAsync.bind(response, callback, r -> {
             final QueryMetricsResponse qmr =
-                new QueryMetricsResponse(queryContext.getQueryId(), r.getRange(), r.getGroups(),
+                new QueryMetricsResponse(queryContext.queryId(), r.getRange(), r.getGroups(),
                     r.getErrors(), r.getTrace(), r.getLimits(),
                     Optional.of(r.getPreAggregationSampleSize()), r.getCache());
             queryLogger.logFinalResponse(queryContext, qmr);

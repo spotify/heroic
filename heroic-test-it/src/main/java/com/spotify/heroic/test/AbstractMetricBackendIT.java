@@ -240,9 +240,9 @@ public abstract class AbstractMetricBackendIT {
         final SortedSet<Metric> metricsExpected = new TreeSet<>(comparator);
         final SortedSet<Metric> metricsActual = new TreeSet<>(comparator);
         metricsExpected.addAll(
-            expected.stream().flatMap(mc -> mc.getData().stream()).collect(Collectors.toList()));
+            expected.stream().flatMap(mc -> mc.data().stream()).collect(Collectors.toList()));
         metricsActual.addAll(
-            actual.stream().flatMap(mc -> mc.getData().stream()).collect(Collectors.toList()));
+            actual.stream().flatMap(mc -> mc.data().stream()).collect(Collectors.toList()));
 
         assertEquals(metricsExpected, metricsActual);
     }
@@ -415,14 +415,14 @@ public abstract class AbstractMetricBackendIT {
         assertEquals(ImmutableSet.of(expected.getType()), types.collect(Collectors.toSet()));
         actual
             .stream()
-            .flatMap(mc -> mc.getData().stream())
+            .flatMap(mc -> mc.data().stream())
             .sorted(Metric.comparator())
             .forEach(new Consumer<Metric>() {
                 int i;
 
                 @Override
                 public void accept(final Metric metric) {
-                    assertEquals(expected.getData().get(i), metric);
+                    assertEquals(expected.data().get(i), metric);
                     i++;
                 }
             });

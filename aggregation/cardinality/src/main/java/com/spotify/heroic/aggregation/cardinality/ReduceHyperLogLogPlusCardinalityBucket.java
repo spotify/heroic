@@ -54,7 +54,7 @@ public class ReduceHyperLogLogPlusCardinalityBucket implements CardinalityBucket
         final Map<String, String> key, final Payload sample
     ) {
         try {
-            states.add(HyperLogLogPlus.Builder.build(sample.getState()));
+            states.add(HyperLogLogPlus.Builder.build(sample.state()));
         } catch (final IOException e) {
             throw new RuntimeException("Failed to deserialize state", e);
         }

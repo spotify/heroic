@@ -90,7 +90,7 @@ public class Ingestion {
         private final MetricCollection data;
 
         public Iterator<? extends Metric> all() {
-            return data.getData().iterator();
+            return data.data().iterator();
         }
     }
 }

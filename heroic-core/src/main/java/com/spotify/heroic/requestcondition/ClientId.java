@@ -21,15 +21,22 @@
 
 package com.spotify.heroic.requestcondition;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.auto.value.AutoValue;
 import com.spotify.heroic.querylogging.QueryContext;
-import lombok.Data;
 
 /**
  * A request condition that match a given client id.
  */
-@Data
-public class ClientId implements RequestCondition {
-    private final String clientId;
+@AutoValue
+public abstract class ClientId implements RequestCondition {
+    @JsonCreator
+    public static ClientId create(@JsonProperty("clientId") String clientId) {
+        return new AutoValue_ClientId(clientId);
+    }
+
+    abstract String clientId();
 
     /**
      * Match the HttpContext and optionally provide a feature set to apply to a request.
@@ -37,8 +44,8 @@ public class ClientId implements RequestCondition {
     @Override
     public boolean matches(final QueryContext context) {
         return context
-            .getHttpContext()
-            .flatMap(httpContext -> httpContext.getClientId().map(this.clientId::equals))
+            .httpContext()
+            .flatMap(httpContext -> httpContext.getClientId().map(clientId()::equals))
             .orElse(false);
     }
 }

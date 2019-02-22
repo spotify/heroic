@@ -294,7 +294,7 @@ public abstract class AbstractMetadataBackendIT {
         final MetadataBackend metadata, final Series s, final DateRange range
     ) throws Exception {
         final FindSeries.Request f =
-            new FindSeries.Request(new MatchKeyFilter(s.getKey()), range, OptionalLimit.empty());
+            new FindSeries.Request(MatchKeyFilter.create(s.getKey()), range, OptionalLimit.empty());
 
         return metadata.write(new WriteMetadata.Request(s, range)).lazyTransform(ignore -> async
                 .retryUntilResolved(() -> metadata.findSeries(f).directTransform(result -> {

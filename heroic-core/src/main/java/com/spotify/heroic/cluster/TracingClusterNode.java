@@ -37,7 +37,6 @@ import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
 import eu.toolchain.async.AsyncFuture;
 import java.util.Optional;
-import lombok.RequiredArgsConstructor;
 
 public class TracingClusterNode implements ClusterNode {
     private final ClusterNode delegateNode;
@@ -72,9 +71,12 @@ public class TracingClusterNode implements ClusterNode {
         return delegateNode.toString();
     }
 
-    @RequiredArgsConstructor
     public class Group implements ClusterNode.Group {
         private final ClusterNode.Group delegateGroup;
+
+        public Group(final ClusterNode.Group delegateGroup) {
+            this.delegateGroup = delegateGroup;
+        }
 
         @Override
         public ClusterNode node() {

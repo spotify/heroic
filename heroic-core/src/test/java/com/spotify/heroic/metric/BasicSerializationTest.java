@@ -58,7 +58,7 @@ public class BasicSerializationTest {
         final byte[] bar = "bar\n".getBytes(StandardCharsets.UTF_8);
 
         final MetricCollection expected = MetricCollection.cardinality(
-            ImmutableList.of(new Payload(1000, foo), new Payload(2000, bar)));
+            ImmutableList.of(Payload.create(1000, foo), Payload.create(2000, bar)));
         assertSerialization("MetricCollection.Payload.json", expected, MetricCollection.class);
     }
 
@@ -76,8 +76,8 @@ public class BasicSerializationTest {
         final List<ResultGroup> groups = new ArrayList<>();
         final List<RequestError> errors = new ArrayList<>();
         final FullQuery expected =
-            new FullQuery(QueryTrace.of(QueryTrace.identifier("test"), 0L), errors, groups,
-                Statistics.empty(), ResultLimits.of(), Optional.empty());
+            FullQuery.create(QueryTrace.of(QueryTrace.identifier("test"), 0L),
+                errors, groups, Statistics.empty(), ResultLimits.of(), Optional.empty());
 
         assertSerialization("FullQuery.json", expected, FullQuery.class);
     }

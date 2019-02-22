@@ -77,7 +77,7 @@ public class FilterUtils {
             .filter(inner -> inner instanceof StartsWithFilter)
             .map(StartsWithFilter.class::cast)
             .filter(statements::contains)
-            .filter(inner -> outer.getTag().equals(inner.getTag()))
+            .filter(inner -> outer.tag().equals(inner.tag()))
             .filter(inner -> check.apply(inner, outer))
             .findFirst()
             .isPresent();
@@ -94,12 +94,12 @@ public class FilterUtils {
             if (inner instanceof MatchTagFilter) {
                 final MatchTagFilter matchTag = (MatchTagFilter) inner;
 
-                if (!outer.getTag().equals(matchTag.getTag())) {
+                if (!outer.tag().equals(matchTag.tag())) {
                     continue;
                 }
 
                 // always false
-                if (!outer.getValue().equals(matchTag.getValue())) {
+                if (!outer.value().equals(matchTag.value())) {
                     return true;
                 }
             }
@@ -119,7 +119,7 @@ public class FilterUtils {
             if (inner instanceof MatchKeyFilter) {
                 final MatchKeyFilter matchKey = (MatchKeyFilter) inner;
 
-                if (!outer.getKey().equals(matchKey.getKey())) {
+                if (!outer.key().equals(matchKey.key())) {
                     return true;
                 }
             }

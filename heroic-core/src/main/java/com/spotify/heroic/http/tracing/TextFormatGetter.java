@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Spotify AB.
+ * Copyright (c) 2018 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,28 +19,26 @@
  * under the License.
  */
 
-package com.spotify.heroic.requestcondition;
+package com.spotify.heroic.http.tracing;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.auto.value.AutoValue;
-import com.spotify.heroic.querylogging.QueryContext;
+import io.opencensus.trace.propagation.TextFormat;
 import java.util.List;
+import javax.annotation.Nullable;
+import org.glassfish.jersey.server.ContainerRequest;
 
-/**
- * A request condition that match if all child conditions match.
- */
-@AutoValue
-public abstract class All implements RequestCondition {
-    @JsonCreator
-    public static All create(@JsonProperty("conditions") List<RequestCondition> conditions) {
-        return new AutoValue_All(conditions);
+public class TextFormatGetter <C> extends TextFormat.Getter {
+
+  @Nullable
+  @Override
+  public String get(final Object o, final String s) {
+
+    final ContainerRequest request = (ContainerRequest) o;
+    final List<String> requestHeader = request.getRequestHeader(s);
+
+    if (requestHeader.size() > 0) {
+      return requestHeader.get(0);
     }
 
-    abstract List<RequestCondition> conditions();
-
-    @Override
-    public boolean matches(QueryContext context) {
-        return conditions().stream().allMatch(c -> c.matches(context));
-    }
+    return null;
+  }
 }

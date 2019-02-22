@@ -97,7 +97,7 @@ public class BucketAggregationTest {
         final AggregationResult result = session.result();
 
         assertEquals(build().add(20, 14.0).add(30, 7.0).result(),
-            result.getResult().get(0).getMetrics().getData());
+            result.getResult().get(0).getMetrics().data());
     }
 
     @Test
@@ -117,7 +117,7 @@ public class BucketAggregationTest {
         final AggregationResult result = session.result();
 
         assertEquals(build().add(20, 14.0).add(30, 7.0).result(),
-            result.getResult().get(0).getMetrics().getData());
+            result.getResult().get(0).getMetrics().data());
     }
 
     @Test
@@ -139,7 +139,7 @@ public class BucketAggregationTest {
         final AggregationResult result = session.result();
 
         assertEquals(build().add(20, 7.0).add(30, 7.0).result(),
-            result.getResult().get(0).getMetrics().getData());
+            result.getResult().get(0).getMetrics().data());
     }
 
     @Test
@@ -160,7 +160,7 @@ public class BucketAggregationTest {
         final AggregationResult result = session.result();
 
         assertEquals(build().add(20, 14.0).add(30, 7.0).add(40, 1.0).result(),
-            result.getResult().get(0).getMetrics().getData());
+            result.getResult().get(0).getMetrics().data());
     }
 
     private AggregationSession setupSession(

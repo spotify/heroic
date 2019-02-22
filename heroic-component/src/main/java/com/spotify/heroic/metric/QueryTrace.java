@@ -22,21 +22,19 @@
 package com.spotify.heroic.metric;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.google.auto.value.AutoValue;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
-import lombok.Data;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -46,10 +44,9 @@ import java.util.concurrent.TimeUnit;
 @JsonSerialize(using = QueryTrace.Serializer.class)
 @JsonDeserialize(using = QueryTrace.Deserializer.class)
 public interface QueryTrace {
-    Identifier PASSIVE_IDENTIFIER = new Identifier("NO TRACE");
-    PassiveTrace PASSIVE = new PassiveTrace();
-    Watch PASSIVE_WATCH = new PassiveWatch();
-    NamedWatch PASSIVE_NAMED_WATCH = new PassiveNamedWatch();
+    Identifier PASSIVE_IDENTIFIER = Identifier.create("NO TRACE");
+    PassiveTrace PASSIVE = PassiveTrace.create();
+    NamedWatch PASSIVE_NAMED_WATCH = PassiveNamedWatch.create();
     Joiner PASSIVE_JOINER = new PassiveJoiner();
 
     /**
@@ -60,7 +57,7 @@ public interface QueryTrace {
      * @deprecated use {@link #watch(com.spotify.heroic.metric.QueryTrace.Identifier)}
      */
     static QueryTrace of(final Identifier what) {
-        return new ActiveTrace(what, 0L, ImmutableList.of());
+        return ActiveTrace.create(what, 0L, ImmutableList.of());
     }
 
     /**
@@ -72,7 +69,7 @@ public interface QueryTrace {
      * @deprecated use {@link #watch(com.spotify.heroic.metric.QueryTrace.Identifier)}
      */
     static QueryTrace of(final Identifier what, final long elapsed) {
-        return new ActiveTrace(what, elapsed, ImmutableList.of());
+        return ActiveTrace.create(what, elapsed, ImmutableList.of());
     }
 
     /**
@@ -87,7 +84,7 @@ public interface QueryTrace {
     static QueryTrace of(
         final Identifier what, final long elapsed, final List<QueryTrace> children
     ) {
-        return new ActiveTrace(what, elapsed, children);
+        return ActiveTrace.create(what, elapsed, children);
     }
 
     /**
@@ -97,7 +94,7 @@ public interface QueryTrace {
      * @return an {@link com.spotify.heroic.metric.QueryTrace.Identifier}
      */
     static Identifier identifier(Class<?> where) {
-        return new Identifier(where.getName());
+        return Identifier.create(where.getName());
     }
 
     /**
@@ -108,7 +105,7 @@ public interface QueryTrace {
      * @return an {@link com.spotify.heroic.metric.QueryTrace.Identifier}
      */
     static Identifier identifier(Class<?> where, String what) {
-        return new Identifier(where.getName() + "#" + what);
+        return Identifier.create(where.getName() + "#" + what);
     }
 
     /**
@@ -118,7 +115,7 @@ public interface QueryTrace {
      * @return an {@link com.spotify.heroic.metric.QueryTrace.Identifier}
      */
     static Identifier identifier(String description) {
-        return new Identifier(description);
+        return Identifier.create(description);
     }
 
     /**
@@ -128,7 +125,7 @@ public interface QueryTrace {
      * @deprecated use {@link Tracing#watch()}
      */
     static Watch watch() {
-        return new ActiveWatch(Stopwatch.createStarted());
+        return ActiveWatch.create(Stopwatch.createStarted());
     }
 
     /**
@@ -138,7 +135,7 @@ public interface QueryTrace {
      * @deprecated use {@link Tracing#watch(Identifier)}
      */
     static NamedWatch watch(final Identifier what) {
-        return new ActiveNamedWatch(what, Stopwatch.createStarted());
+        return ActiveNamedWatch.create(what, Stopwatch.createStarted());
     }
 
     /**
@@ -155,24 +152,6 @@ public interface QueryTrace {
      * @param prefix prefix to prepend
      */
     void formatTrace(PrintWriter out, String prefix);
-
-    /**
-     * @deprecated use {@link #elapsed()}
-     */
-    @Deprecated
-    long getElapsed();
-
-    /**
-     * @deprecated use {@link #what()}
-     */
-    @Deprecated
-    Identifier getWhat();
-
-    /**
-     * @deprecated use {@link #children()}
-     */
-    @Deprecated
-    List<QueryTrace> getChildren();
 
     /**
      * How long the trace elapsed for.
@@ -196,15 +175,16 @@ public interface QueryTrace {
     List<QueryTrace> children();
 
     @JsonTypeName("passive")
-    @Data
-    class PassiveTrace implements QueryTrace {
-        PassiveTrace() {
+    @AutoValue
+    abstract class PassiveTrace implements QueryTrace {
+        public static PassiveTrace create() {
+            return new AutoValue_QueryTrace_PassiveTrace(
+                PASSIVE_IDENTIFIER, 0L, ImmutableList.of());
         }
 
-        @JsonCreator
-        public static PassiveTrace create() {
-            return PASSIVE;
-        }
+        public abstract Identifier what();
+        public abstract long elapsed();
+        public abstract List<QueryTrace> children();
 
         @Override
         public void formatTrace(final PrintWriter out) {
@@ -215,47 +195,18 @@ public interface QueryTrace {
         public void formatTrace(final PrintWriter out, final String prefix) {
             out.println(prefix + "NO TRACE");
         }
-
-        @JsonIgnore
-        @Override
-        public long getElapsed() {
-            return elapsed();
-        }
-
-        @JsonIgnore
-        @Override
-        public Identifier getWhat() {
-            return what();
-        }
-
-        @JsonIgnore
-        @Override
-        public List<QueryTrace> getChildren() {
-            return children();
-        }
-
-        @Override
-        public long elapsed() {
-            return 0L;
-        }
-
-        @Override
-        public Identifier what() {
-            return PASSIVE_IDENTIFIER;
-        }
-
-        @Override
-        public List<QueryTrace> children() {
-            return ImmutableList.of();
-        }
     }
 
     @JsonTypeName("active")
-    @Data
-    class ActiveTrace implements QueryTrace {
-        private final Identifier what;
-        private final long elapsed;
-        private final List<QueryTrace> children;
+    @AutoValue
+    abstract class ActiveTrace implements QueryTrace {
+        public static ActiveTrace create(Identifier what, long elapsed, List<QueryTrace> children) {
+            return new AutoValue_QueryTrace_ActiveTrace(what, elapsed, children);
+        }
+
+        public abstract Identifier what();
+        public abstract long elapsed();
+        public abstract List<QueryTrace> children();
 
         @Override
         public void formatTrace(PrintWriter out) {
@@ -264,26 +215,11 @@ public interface QueryTrace {
 
         @Override
         public void formatTrace(PrintWriter out, String prefix) {
-            out.println(prefix + what + " (in " + readableTime(elapsed) + ")");
+            out.println(prefix + what() + " (in " + readableTime(elapsed()) + ")");
 
-            for (final QueryTrace child : children) {
+            for (final QueryTrace child : children()) {
                 child.formatTrace(out, prefix + "  ");
             }
-        }
-
-        @Override
-        public long elapsed() {
-            return elapsed;
-        }
-
-        @Override
-        public Identifier what() {
-            return what;
-        }
-
-        @Override
-        public List<QueryTrace> children() {
-            return children;
         }
 
         private String readableTime(long elapsed) {
@@ -308,7 +244,7 @@ public interface QueryTrace {
          * @return a new json model
          */
         ActiveJsonModel toModel() {
-            return new ActiveJsonModel(what, elapsed, children);
+            return ActiveJsonModel.create(what(), elapsed(), children());
         }
     }
 
@@ -357,53 +293,61 @@ public interface QueryTrace {
     /**
      * A watch that is measuring.
      */
-    @Data
-    class ActiveWatch implements Watch {
-        private final Stopwatch w;
+    @AutoValue
+    abstract class ActiveWatch implements Watch {
+        static ActiveWatch create(Stopwatch watch) {
+            return new AutoValue_QueryTrace_ActiveWatch(watch);
+        }
+
+        abstract Stopwatch watch();
 
         @Override
-        public QueryTrace end(final Identifier what) {
-            return new ActiveTrace(what, elapsed(), ImmutableList.of());
+        public final QueryTrace end(final Identifier what) {
+            return ActiveTrace.create(what, elapsed(), ImmutableList.of());
         }
 
         @Override
-        public QueryTrace end(final Identifier what, final QueryTrace child) {
-            return new ActiveTrace(what, elapsed(), ImmutableList.of(child));
+        public final QueryTrace end(final Identifier what, final QueryTrace child) {
+            return ActiveTrace.create(what, elapsed(), ImmutableList.of(child));
         }
 
         @Override
-        public QueryTrace end(final Identifier what, final List<QueryTrace> children) {
-            return new ActiveTrace(what, elapsed(), children);
+        public final QueryTrace end(final Identifier what, final List<QueryTrace> children) {
+            return ActiveTrace.create(what, elapsed(), children);
         }
 
         @Override
-        public long elapsed() {
-            return w.elapsed(TimeUnit.MICROSECONDS);
+        public final long elapsed() {
+            return watch().elapsed(TimeUnit.MICROSECONDS);
         }
     }
 
     /**
      * A watch that is not measuring.
      */
-    @Data
-    class PassiveWatch implements Watch {
+    @AutoValue
+    abstract class PassiveWatch implements Watch {
+        static PassiveWatch create() {
+            return new AutoValue_QueryTrace_PassiveWatch();
+        }
+
         @Override
-        public QueryTrace end(final Identifier what) {
+        public final QueryTrace end(final Identifier what) {
             return PASSIVE;
         }
 
         @Override
-        public QueryTrace end(final Identifier what, final QueryTrace child) {
+        public final QueryTrace end(final Identifier what, final QueryTrace child) {
             return PASSIVE;
         }
 
         @Override
-        public QueryTrace end(final Identifier what, final List<QueryTrace> children) {
+        public final QueryTrace end(final Identifier what, final List<QueryTrace> children) {
             return PASSIVE;
         }
 
         @Override
-        public long elapsed() {
+        public final long elapsed() {
             return 0L;
         }
     }
@@ -470,101 +414,109 @@ public interface QueryTrace {
         long elapsed();
     }
 
-    @Data
-    class ActiveNamedWatch implements NamedWatch {
-        private final Identifier what;
-        private final Stopwatch w;
+    @AutoValue
+    abstract class ActiveNamedWatch implements NamedWatch {
+        static ActiveNamedWatch create(Identifier what, Stopwatch watch) {
+            return new AutoValue_QueryTrace_ActiveNamedWatch(what, watch);
+        }
+
+        abstract Identifier what();
+        abstract Stopwatch watch();
 
         @Override
-        public QueryTrace end() {
-            return new ActiveTrace(what, elapsed(), ImmutableList.of());
+        public final QueryTrace end() {
+            return ActiveTrace.create(what(), elapsed(), ImmutableList.of());
         }
 
         @Override
-        public QueryTrace end(final QueryTrace child) {
-            return new ActiveTrace(what, elapsed(), ImmutableList.of(child));
+        public final QueryTrace end(final QueryTrace child) {
+            return ActiveTrace.create(what(), elapsed(), ImmutableList.of(child));
         }
 
         @Override
-        public QueryTrace end(final List<QueryTrace> children) {
-            return new ActiveTrace(what, elapsed(), children);
+        public final QueryTrace end(final List<QueryTrace> children) {
+            return ActiveTrace.create(what(), elapsed(), children);
         }
 
         @Override
-        public Joiner joiner() {
-            return new ActiveJoiner(this);
+        public final Joiner joiner() {
+            return ActiveJoiner.create(this);
         }
 
         @Override
-        public NamedWatch watch(final Identifier what) {
-            return new ActiveNamedWatch(what, Stopwatch.createStarted());
+        public final NamedWatch watch(final Identifier what) {
+            return ActiveNamedWatch.create(what, Stopwatch.createStarted());
         }
 
         @Override
-        public NamedWatch extendIdentifier(String appendName) {
-            return new ActiveNamedWatch(what.extend(appendName), w);
+        public final NamedWatch extendIdentifier(String appendName) {
+            return ActiveNamedWatch.create(what().extend(appendName), watch());
         }
 
         @Override
-        public long elapsed() {
-            return w.elapsed(TimeUnit.MICROSECONDS);
+        public final long elapsed() {
+            return watch().elapsed(TimeUnit.MICROSECONDS);
         }
     }
 
-    @Data
-    class PassiveNamedWatch implements NamedWatch {
+    @AutoValue
+    abstract class PassiveNamedWatch implements NamedWatch {
+        static PassiveNamedWatch create() {
+            return new AutoValue_QueryTrace_PassiveNamedWatch();
+        }
+
         @Override
-        public QueryTrace end() {
+        public final QueryTrace end() {
             return PASSIVE;
         }
 
         @Override
-        public QueryTrace end(final QueryTrace child) {
+        public final QueryTrace end(final QueryTrace child) {
             return PASSIVE;
         }
 
         @Override
-        public QueryTrace end(final List<QueryTrace> children) {
+        public final QueryTrace end(final List<QueryTrace> children) {
             return PASSIVE;
         }
 
         @Override
-        public Joiner joiner() {
+        public final Joiner joiner() {
             return PASSIVE_JOINER;
         }
 
         @Override
-        public NamedWatch watch(final Identifier what) {
+        public final NamedWatch watch(final Identifier what) {
             return PASSIVE_NAMED_WATCH;
         }
 
         @Override
-        public NamedWatch extendIdentifier(String appendName) {
+        public final NamedWatch extendIdentifier(String appendName) {
             return PASSIVE_NAMED_WATCH;
         }
 
         @Override
-        public long elapsed() {
+        public final long elapsed() {
             return 0L;
         }
     }
 
-    @Data
-    class Identifier {
-        private final String name;
-
+    @AutoValue
+    abstract class Identifier {
         @JsonCreator
-        public Identifier(@JsonProperty("name") String name) {
-            this.name = name;
+        public static Identifier create(@JsonProperty("name") String name) {
+            return new AutoValue_QueryTrace_Identifier(name);
         }
 
-        public Identifier extend(String key) {
-            return new Identifier(name + "[" + key + "]");
+        @JsonProperty
+        public abstract String name();
+
+        public final Identifier extend(String key) {
+            return Identifier.create(name() + "[" + key + "]");
         }
 
-        @Override
-        public String toString() {
-            return name;
+        public final String toString() {
+            return name();
         }
     }
 
@@ -590,20 +542,24 @@ public interface QueryTrace {
     /**
      * A joiner that joins the given children into a single trace.
      */
-    @Data
-    class ActiveJoiner implements Joiner {
-        private final QueryTrace.NamedWatch watch;
+    @AutoValue
+    abstract class ActiveJoiner implements Joiner {
+        static ActiveJoiner create(QueryTrace.NamedWatch watch) {
+            return new AutoValue_QueryTrace_ActiveJoiner(watch);
+        }
+
+        abstract QueryTrace.NamedWatch watch();
 
         private final ImmutableList.Builder<QueryTrace> children = ImmutableList.builder();
 
         @Override
-        public void addChild(final QueryTrace trace) {
+        public final void addChild(final QueryTrace trace) {
             children.add(trace);
         }
 
         @Override
-        public QueryTrace result() {
-            return watch.end(children.build());
+        public final QueryTrace result() {
+            return watch().end(children.build());
         }
     }
 
@@ -641,8 +597,7 @@ public interface QueryTrace {
 
     class Deserializer extends JsonDeserializer<QueryTrace> {
         @Override
-        public QueryTrace getNullValue(final DeserializationContext ctxt)
-            throws JsonMappingException {
+        public QueryTrace getNullValue(final DeserializationContext ctxt) {
             return PASSIVE;
         }
 
@@ -661,19 +616,34 @@ public interface QueryTrace {
      * {@link com.spotify.heroic.metric.QueryTrace} would cause infinite recursion since the same
      * serializer would be called over and over. This model breaks that.
      */
-    @Data
-    class ActiveJsonModel {
-        private final Identifier what;
-        private final long elapsed;
-        private final List<QueryTrace> children;
+    @AutoValue
+    abstract class ActiveJsonModel {
+
+        @JsonCreator
+        public static ActiveJsonModel create(
+            @JsonProperty("what") Identifier what,
+            @JsonProperty("elapsed") long elapsed,
+            @JsonProperty("children") List<QueryTrace> children
+        ) {
+            return new AutoValue_QueryTrace_ActiveJsonModel(what, elapsed, children);
+        }
+
+        @JsonProperty
+        public abstract Identifier what();
+
+        @JsonProperty
+        public abstract long elapsed();
+
+        @JsonProperty
+        public abstract List<QueryTrace> children();
 
         /**
          * Convert to active instance.
          *
          * @return a new active instance
          */
-        QueryTrace toActive() {
-            return new ActiveTrace(what, elapsed, children);
+        final QueryTrace toActive() {
+            return ActiveTrace.create(what(), elapsed(), children());
         }
     }
 }
