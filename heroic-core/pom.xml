@@ -61,7 +61,6 @@
       <artifactId>auto-value</artifactId>
     </dependency>
 
-
     <!-- used for rpc -->
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
