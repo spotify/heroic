@@ -587,6 +587,13 @@
         <version>1.53.0</version>
       </dependency>
 
+      <dependency>
+        <groupId>com.google.auto.value</groupId>
+        <artifactId>auto-value</artifactId>
+        <version>1.5</version>
+        <scope>provided</scope>
+      </dependency>
+
       <!-- used by com.spotify.heroic.http
            This provides the core query API.
            We are using these later versions to support AsyncResponse and SSE. -->

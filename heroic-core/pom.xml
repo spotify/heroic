@@ -56,6 +56,10 @@
       <artifactId>google-cloud-core</artifactId>
     </dependency>
 
+    <dependency>
+      <groupId>com.google.auto.value</groupId>
+      <artifactId>auto-value</artifactId>
+    </dependency>
 
     <!-- used for rpc -->
     <dependency>
