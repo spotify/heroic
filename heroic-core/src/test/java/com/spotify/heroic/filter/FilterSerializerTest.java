@@ -35,6 +35,9 @@ public class FilterSerializerTest {
 
         checkFilter(or(matchTag("a", "b"), matchTag("c", "d")),
             "[\"or\",[\"=\",\"a\",\"b\"],[\"=\",\"c\",\"d\"]]");
+
+        checkFilter(TrueFilter.create(), "[\"true\"]");
+        checkFilter(FalseFilter.create(), "[\"false\"]");
     }
 
     /**
