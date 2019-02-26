@@ -34,14 +34,6 @@ import com.spotify.heroic.shell.TaskParameters;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.TinyAsync;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
-import org.kohsuke.args4j.CmdLineException;
-import org.kohsuke.args4j.CmdLineParser;
-import org.kohsuke.args4j.Option;
-
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -57,6 +49,12 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Executors;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
+import org.kohsuke.args4j.Option;
 
 @Slf4j
 public class HeroicShell {
@@ -394,10 +392,15 @@ public class HeroicShell {
         private List<String> parameters = new ArrayList<>();
     }
 
-    @RequiredArgsConstructor
     static class ParsedArguments {
         final List<String> primary;
         final List<String> child;
+
+        @java.beans.ConstructorProperties({ "primary", "child" })
+        public ParsedArguments(final List<String> primary, final List<String> child) {
+            this.primary = primary;
+            this.child = child;
+        }
 
         public static ParsedArguments parse(String[] args) {
             final List<String> primary = new ArrayList<>();

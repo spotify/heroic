@@ -24,8 +24,6 @@ package com.spotify.heroic.metric.bigtable;
 import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.SerialWriter;
 import eu.toolchain.serializer.Serializer;
-import lombok.RequiredArgsConstructor;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
@@ -36,11 +34,15 @@ import java.nio.charset.CharsetEncoder;
 /**
  * Custom string serializer to be backwards compatible with our previous serialization.
  */
-@RequiredArgsConstructor
 public class CustomStringSerializer implements Serializer<String> {
     private final Serializer<Integer> size;
 
     private static final Charset UTF_8 = Charset.forName("utf8");
+
+    @java.beans.ConstructorProperties({ "size" })
+    public CustomStringSerializer(final Serializer<Integer> size) {
+        this.size = size;
+    }
 
     @Override
     public void serialize(SerialWriter buffer, String value) throws IOException {

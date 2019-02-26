@@ -45,8 +45,8 @@ import com.spotify.heroic.metric.BackendKeySet;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.MetricCollection;
-import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.MetricReadResult;
+import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.QueryError;
 import com.spotify.heroic.metric.QueryTrace;
@@ -80,9 +80,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.inject.Inject;
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Marker;
@@ -545,13 +543,21 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
         return fetches;
     }
 
-    @RequiredArgsConstructor
     private final class RowFetchHelper<R, T> implements FutureDone<ResultSet> {
         private final List<R> data = new ArrayList<>();
 
         private final ResolvableFuture<T> future;
         private final Transform<Row, R> rowConverter;
         private final Transform<RowFetchResult<R>, AsyncFuture<T>> converter;
+
+        @java.beans.ConstructorProperties({ "future", "rowConverter", "converter" })
+        public RowFetchHelper(final ResolvableFuture<T> future,
+                              final Transform<Row, R> rowConverter,
+                              final Transform<RowFetchResult<R>, AsyncFuture<T>> converter) {
+            this.future = future;
+            this.rowConverter = rowConverter;
+            this.converter = converter;
+        }
 
         @Override
         public void failed(Throwable cause) throws Exception {
@@ -640,7 +646,6 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
         }
     }
 
-    @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
     private final class RowStreamHelper<R> implements FutureDone<ResultSet> {
         private final AsyncObserver<List<R>> observer;
         private final Transform<Row, R> rowConverter;
@@ -655,6 +660,15 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
 
         public RowStreamHelper(AsyncObserver<List<R>> observer, Transform<Row, R> rowConverter) {
             this(observer, rowConverter, Optional.empty());
+        }
+
+        @java.beans.ConstructorProperties({ "observer", "rowConverter", "errorHandler" })
+        private RowStreamHelper(final AsyncObserver<List<R>> observer,
+                                final Transform<Row, R> rowConverter,
+                                final Optional<Consumer<Throwable>> errorHandler) {
+            this.observer = observer;
+            this.rowConverter = rowConverter;
+            this.errorHandler = errorHandler;
         }
 
         @Override

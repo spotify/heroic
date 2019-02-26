@@ -23,9 +23,7 @@ package com.spotify.heroic.statistics.semantic;
 
 import com.codahale.metrics.RatioGauge;
 import java.util.concurrent.atomic.AtomicLong;
-import lombok.RequiredArgsConstructor;
 
-@RequiredArgsConstructor
 public class SemanticRatioGauge extends RatioGauge {
     private final AtomicLong numerator = new AtomicLong();
     private final AtomicLong denominator = new AtomicLong();
@@ -33,6 +31,9 @@ public class SemanticRatioGauge extends RatioGauge {
     public SemanticRatioGauge(final long numerator, final long denominator) {
         this.numerator.set(numerator);
         this.denominator.set(denominator);
+    }
+
+    public SemanticRatioGauge() {
     }
 
     public void setNumerator(final long value) {

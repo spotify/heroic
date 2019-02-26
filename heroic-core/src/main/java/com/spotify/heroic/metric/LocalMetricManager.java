@@ -72,7 +72,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.inject.Inject;
 import javax.inject.Named;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.NotImplementedException;
@@ -471,7 +470,6 @@ public class LocalMetricManager implements MetricManager {
         }
     }
 
-    @RequiredArgsConstructor
     private abstract static class ResultCollector
         implements StreamCollector<FetchData.Result, FullQuery> {
         private static final String ROWS_ACCESSED = "rowsAccessed";
@@ -488,6 +486,24 @@ public class LocalMetricManager implements MetricManager {
         final boolean failOnLimits;
 
         private final ConcurrentHashMultiset<Long> rowDensityData = ConcurrentHashMultiset.create();
+
+        private ResultCollector(
+            final QuotaWatcher watcher,
+            final DataInMemoryReporter dataInMemoryReporter,
+            final AggregationInstance aggregation,
+            final AggregationSession session,
+            final ResultLimits limits,
+            final OptionalLimit groupLimit,
+            final boolean failOnLimits
+        ) {
+            this.watcher = watcher;
+            this.dataInMemoryReporter = dataInMemoryReporter;
+            this.aggregation = aggregation;
+            this.session = session;
+            this.limits = limits;
+            this.groupLimit = groupLimit;
+            this.failOnLimits = failOnLimits;
+        }
 
         @Override
         public void resolved(final FetchData.Result result) throws Exception {
@@ -628,7 +644,6 @@ public class LocalMetricManager implements MetricManager {
         }
     }
 
-    @RequiredArgsConstructor
     private static class QuotaWatcher implements FetchQuotaWatcher, RetainQuotaWatcher {
         private final long dataLimit;
         private final long retainLimit;
@@ -638,6 +653,13 @@ public class LocalMetricManager implements MetricManager {
         private final AtomicLong retained = new AtomicLong();
 
         private final LongAdder rowsAccessed = new LongAdder();
+
+        private QuotaWatcher(final long dataLimit, final long retainLimit,
+                             final DataInMemoryReporter dataInMemoryReporter) {
+            this.dataLimit = dataLimit;
+            this.retainLimit = retainLimit;
+            this.dataInMemoryReporter = dataInMemoryReporter;
+        }
 
         @Override
         public void readData(long n) {

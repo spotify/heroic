@@ -23,13 +23,10 @@ package com.spotify.heroic.filter;
 
 import com.spotify.heroic.common.BiConsumerIO;
 import com.spotify.heroic.common.FunctionIO;
-import lombok.RequiredArgsConstructor;
-
 import java.io.IOException;
 import java.util.Optional;
 import java.util.function.Function;
 
-@RequiredArgsConstructor
 public class OneArgumentFilterEncoding<T extends Filter, A> implements FilterEncoding<T> {
     private final Function<A, T> builder;
     private final Function<T, A> firstArgument;
@@ -46,6 +43,17 @@ public class OneArgumentFilterEncoding<T extends Filter, A> implements FilterEnc
 
         this.decodeFirst = first.getDecoder();
         this.encodeFirst = first.getEncoder();
+    }
+
+    @java.beans.ConstructorProperties({ "builder", "firstArgument", "decodeFirst", "encodeFirst" })
+    public OneArgumentFilterEncoding(final Function<A, T> builder,
+                                     final Function<T, A> firstArgument,
+                                     final FunctionIO<Decoder, Optional<A>> decodeFirst,
+                                     final BiConsumerIO<Encoder, A> encodeFirst) {
+        this.builder = builder;
+        this.firstArgument = firstArgument;
+        this.decodeFirst = decodeFirst;
+        this.encodeFirst = encodeFirst;
     }
 
     @Override

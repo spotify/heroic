@@ -23,8 +23,6 @@ package com.spotify.heroic.lifecycle;
 
 import com.google.common.collect.ImmutableList;
 import eu.toolchain.async.AsyncFuture;
-import lombok.RequiredArgsConstructor;
-
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -81,10 +79,15 @@ public class CoreLifeCycleRegistry implements LifeCycleRegistry {
         stoppers.add(new Hook(id, stopper));
     }
 
-    @RequiredArgsConstructor
     static class Hook implements LifeCycleNamedHook<AsyncFuture<Void>> {
         private final String id;
         private final LifeCycleHook<AsyncFuture<Void>> parent;
+
+        @java.beans.ConstructorProperties({ "id", "parent" })
+        public Hook(final String id, final LifeCycleHook<AsyncFuture<Void>> parent) {
+            this.id = id;
+            this.parent = parent;
+        }
 
         @Override
         public AsyncFuture<Void> get() throws Exception {

@@ -45,12 +45,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ForkJoinPool;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 
-@RequiredArgsConstructor
 public class FakeModuleLoader {
     private final LoadingComponent loading;
     private final ObjectMapper json;
+
+    @java.beans.ConstructorProperties({ "loading", "json" })
+    public FakeModuleLoader(final LoadingComponent loading, final ObjectMapper json) {
+        this.loading = loading;
+        this.json = json;
+    }
 
     public FakeModuleLoader load(final Class<? extends HeroicModule> module) {
         final HeroicModule instance = ReflectionUtils.buildInstance(module);

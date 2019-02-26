@@ -38,7 +38,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 
 /**
  * A special aggregation method that is a chain of other aggregation methods.
@@ -203,10 +202,15 @@ public class ChainInstance implements AggregationInstance {
         return child.build();
     }
 
-    @RequiredArgsConstructor
     private static final class Session implements AggregationSession {
         private final AggregationSession first;
         private final Iterable<AggregationSession> rest;
+
+        @java.beans.ConstructorProperties({ "first", "rest" })
+        public Session(final AggregationSession first, final Iterable<AggregationSession> rest) {
+            this.first = first;
+            this.rest = rest;
+        }
 
         @Override
         public void updatePoints(

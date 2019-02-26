@@ -21,11 +21,13 @@
 
 package com.spotify.heroic.reflection;
 
-import lombok.RequiredArgsConstructor;
-
-@RequiredArgsConstructor
 class ResourcePathContext {
     private final String context;
+
+    @java.beans.ConstructorProperties({ "context" })
+    public ResourcePathContext(final String context) {
+        this.context = context;
+    }
 
     public String context() {
         return context;

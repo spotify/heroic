@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.action.ActionListener;
@@ -47,7 +46,6 @@ import org.elasticsearch.client.IndicesAdminClient;
  * Common connection abstraction between Node and TransportClient.
  */
 @Slf4j
-@RequiredArgsConstructor
 @ToString(of = {"index", "client"})
 public class Connection {
     private final AsyncFramework async;
@@ -56,6 +54,17 @@ public class Connection {
 
     private final String templateName;
     private final BackendType type;
+
+    @java.beans.ConstructorProperties({ "async", "index", "client", "templateName", "type" })
+    public Connection(final AsyncFramework async, final IndexMapping index,
+                      final ClientSetup.ClientWrapper client, final String templateName,
+                      final BackendType type) {
+        this.async = async;
+        this.index = index;
+        this.client = client;
+        this.templateName = templateName;
+        this.type = type;
+    }
 
     public AsyncFuture<Void> close() {
         final List<AsyncFuture<Void>> futures = new ArrayList<>();

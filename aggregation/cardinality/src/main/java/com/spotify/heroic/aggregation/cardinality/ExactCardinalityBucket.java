@@ -28,8 +28,6 @@ import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import com.spotify.heroic.metric.Metric;
-import lombok.RequiredArgsConstructor;
-
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -41,7 +39,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * @author udoprog
  */
-@RequiredArgsConstructor
 public class ExactCardinalityBucket implements CardinalityBucket {
     private static final HashFunction HASH_FUNCTION = Hashing.goodFastHash(128);
     private static final Ordering<String> KEY_ORDER = Ordering.from(String::compareTo);
@@ -51,6 +48,12 @@ public class ExactCardinalityBucket implements CardinalityBucket {
 
     private final AtomicInteger count = new AtomicInteger(0);
     private final Set<HashCode> seen = Collections.newSetFromMap(new ConcurrentHashMap<>());
+
+    @java.beans.ConstructorProperties({ "timestamp", "includeKey" })
+    public ExactCardinalityBucket(final long timestamp, final boolean includeKey) {
+        this.timestamp = timestamp;
+        this.includeKey = includeKey;
+    }
 
     public long timestamp() {
         return timestamp;

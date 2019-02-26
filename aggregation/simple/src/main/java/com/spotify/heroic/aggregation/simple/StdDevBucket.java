@@ -24,8 +24,6 @@ package com.spotify.heroic.aggregation.simple;
 import com.spotify.heroic.aggregation.AbstractBucket;
 import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.metric.Point;
-import lombok.RequiredArgsConstructor;
-
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -36,12 +34,16 @@ import java.util.concurrent.atomic.AtomicReference;
  *
  * @author udoprog
  */
-@RequiredArgsConstructor
 public class StdDevBucket extends AbstractBucket implements DoubleBucket {
     private static final Cell ZERO = new Cell(0.0, 0.0, 0);
 
     private final long timestamp;
     private AtomicReference<Cell> cell = new AtomicReference<>(ZERO);
+
+    @java.beans.ConstructorProperties({ "timestamp" })
+    public StdDevBucket(final long timestamp) {
+        this.timestamp = timestamp;
+    }
 
     @Override
     public void updatePoint(Map<String, String> key, Point d) {
@@ -79,10 +81,16 @@ public class StdDevBucket extends AbstractBucket implements DoubleBucket {
         return Math.sqrt(c.s / (c.count - 1));
     }
 
-    @RequiredArgsConstructor
     private static class Cell {
         private final double mean;
         private final double s;
         private final long count;
+
+        @java.beans.ConstructorProperties({ "mean", "s", "count" })
+        public Cell(final double mean, final double s, final long count) {
+            this.mean = mean;
+            this.s = s;
+            this.count = count;
+        }
     }
 }

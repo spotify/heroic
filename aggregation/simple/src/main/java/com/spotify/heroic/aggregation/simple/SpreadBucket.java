@@ -25,8 +25,6 @@ import com.spotify.heroic.aggregation.AbstractBucket;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
-import lombok.RequiredArgsConstructor;
-
 import java.util.Map;
 import java.util.concurrent.atomic.DoubleAccumulator;
 import java.util.concurrent.atomic.DoubleAdder;
@@ -42,7 +40,6 @@ import java.util.function.DoubleBinaryOperator;
  *
  * @author udoprog
  */
-@RequiredArgsConstructor
 public class SpreadBucket extends AbstractBucket {
     static final DoubleBinaryOperator minFn = (left, right) -> Math.min(left, right);
     static final DoubleBinaryOperator maxFn = (left, right) -> Math.max(left, right);
@@ -54,6 +51,11 @@ public class SpreadBucket extends AbstractBucket {
     final DoubleAdder sum2 = new DoubleAdder();
     final DoubleAccumulator max = new DoubleAccumulator(maxFn, Double.NEGATIVE_INFINITY);
     final DoubleAccumulator min = new DoubleAccumulator(minFn, Double.POSITIVE_INFINITY);
+
+    @java.beans.ConstructorProperties({ "timestamp" })
+    public SpreadBucket(final long timestamp) {
+        this.timestamp = timestamp;
+    }
 
     public long timestamp() {
         return timestamp;

@@ -26,7 +26,6 @@ import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.HeroicTimer;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @ToString(of = {})
@@ -61,9 +60,13 @@ public class SemanticFutureReporter implements FutureReporter {
         return new SemanticContext(timer.time());
     }
 
-    @RequiredArgsConstructor
     private class SemanticContext implements FutureReporter.Context {
         private final HeroicTimer.Context context;
+
+        @java.beans.ConstructorProperties({ "context" })
+        public SemanticContext(final HeroicTimer.Context context) {
+            this.context = context;
+        }
 
         @Override
         public void failed(Throwable e) throws Exception {

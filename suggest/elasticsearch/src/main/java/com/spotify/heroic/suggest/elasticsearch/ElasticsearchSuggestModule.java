@@ -67,7 +67,6 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import javax.inject.Named;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.Pair;
 
 @Data
@@ -185,10 +184,13 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
         LifeCycle life();
     }
 
-    @RequiredArgsConstructor
     @Module
     class M {
         private final BackendType backendType;
+
+        public M(final BackendType backendType) {
+            this.backendType = backendType;
+        }
 
         @Provides
         @ElasticsearchScope

@@ -1,13 +1,10 @@
 package com.spotify.heroic.aggregation.simple;
 
+import static org.junit.Assert.assertEquals;
+
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.metric.Point;
-import lombok.RequiredArgsConstructor;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -19,10 +16,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.function.DoubleBinaryOperator;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-
-@RequiredArgsConstructor
 public abstract class ValueBucketIntegrationTest {
     private static final int NCPU = Runtime.getRuntime().availableProcessors();
 
@@ -40,6 +37,19 @@ public abstract class ValueBucketIntegrationTest {
     }
 
     private ExecutorService service;
+
+    @java.beans.ConstructorProperties({ "initial", "fn", "threadCount", "count", "range",
+                                        "iterations" })
+    public ValueBucketIntegrationTest(final double initial, final DoubleBinaryOperator fn,
+                                      final int threadCount, final long count, final double range,
+                                      final int iterations) {
+        this.initial = initial;
+        this.fn = fn;
+        this.threadCount = threadCount;
+        this.count = count;
+        this.range = range;
+        this.iterations = iterations;
+    }
 
     @Before
     public void setup() {

@@ -30,14 +30,12 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.ingestion.Ingestion;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.Point;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class CollectdTypes {
@@ -250,10 +248,15 @@ public class CollectdTypes {
         }
     }
 
-    @RequiredArgsConstructor
     static class Field {
         private final double lower;
         private final double upper;
+
+        @java.beans.ConstructorProperties({ "lower", "upper" })
+        public Field(final double lower, final double upper) {
+            this.lower = lower;
+            this.upper = upper;
+        }
 
         public double convertCounter(long counter) {
             return Long.valueOf(counter).doubleValue();

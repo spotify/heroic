@@ -23,10 +23,14 @@ package com.spotify.heroic.metric.datastax;
 
 import com.datastax.driver.core.Session;
 import com.spotify.heroic.metric.datastax.schema.SchemaInstance;
-import lombok.RequiredArgsConstructor;
 
-@RequiredArgsConstructor
 public final class Connection {
     protected final Session session;
     protected final SchemaInstance schema;
+
+    @java.beans.ConstructorProperties({ "session", "schema" })
+    public Connection(final Session session, final SchemaInstance schema) {
+        this.session = session;
+        this.schema = schema;
+    }
 }

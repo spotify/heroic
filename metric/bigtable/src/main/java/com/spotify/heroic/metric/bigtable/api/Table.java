@@ -27,10 +27,8 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 
 @Data
-@RequiredArgsConstructor
 public class Table {
     final String clusterUri;
     final String name;
@@ -44,6 +42,14 @@ public class Table {
         Pattern.compile("^(.+)\\/tables\\/([_a-zA-Z0-9][-_.a-zA-Z0-9]*)$");
 
     private static final String TABLE_NAME_FORMAT = "%s/tables/%s";
+
+    @java.beans.ConstructorProperties({ "clusterUri", "name", "columnFamilies" })
+    public Table(final String clusterUri, final String name,
+                 final Map<String, ColumnFamily> columnFamilies) {
+        this.clusterUri = clusterUri;
+        this.name = name;
+        this.columnFamilies = columnFamilies;
+    }
 
     public String getName() {
         return name;

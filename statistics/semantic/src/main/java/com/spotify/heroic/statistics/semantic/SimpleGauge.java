@@ -23,14 +23,15 @@ package com.spotify.heroic.statistics.semantic;
 
 import com.codahale.metrics.Gauge;
 import java.util.concurrent.atomic.AtomicLong;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @ToString(of = {})
-@RequiredArgsConstructor
 public class SimpleGauge implements Gauge<Long> {
 
     private final AtomicLong value = new AtomicLong(0);
+
+    public SimpleGauge() {
+    }
 
     public void setValue(final long value) {
         this.value.set(value);

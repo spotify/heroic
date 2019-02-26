@@ -21,19 +21,15 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.aggregation.AggregationContext;
-import lombok.AccessLevel;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-
-import java.beans.ConstructorProperties;
-import java.util.Optional;
-
 import static com.spotify.heroic.aggregation.simple.Aggregations.verifyNoChild;
 
+import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationContext;
+import java.beans.ConstructorProperties;
+import java.util.Optional;
+import lombok.Data;
+
 @Data
-@RequiredArgsConstructor(access = AccessLevel.NONE)
 public class BottomK implements Aggregation {
     public static final String NAME = "bottomk";
 

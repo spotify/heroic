@@ -24,9 +24,9 @@ package com.spotify.heroic.metric.bigtable.api;
 import static com.spotify.heroic.metric.bigtable.api.RowFilter.compareByteStrings;
 
 import com.google.bigtable.v2.Mutation;
+import com.google.cloud.bigtable.grpc.scanner.FlatRow;
 import com.google.protobuf.ByteString;
 import com.spotify.heroic.async.AsyncObservable;
-import com.google.cloud.bigtable.grpc.scanner.FlatRow;
 import com.spotify.heroic.metric.bigtable.BigtableConnection;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -39,7 +39,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -166,7 +165,6 @@ public class FakeBigtableConnection implements BigtableConnection {
     }
 
     @Data
-    @AllArgsConstructor
     class TableStorage {
         private Table table;
 
@@ -174,6 +172,11 @@ public class FakeBigtableConnection implements BigtableConnection {
             new ConcurrentHashMap<>();
 
         private final Object lock = new Object();
+
+        @java.beans.ConstructorProperties({ "table" })
+        public TableStorage(final Table table) {
+            this.table = table;
+        }
 
         public AsyncFuture<Void> mutateRow(final ByteString rowKey, final Mutations mutations) {
             return async.call(() -> {

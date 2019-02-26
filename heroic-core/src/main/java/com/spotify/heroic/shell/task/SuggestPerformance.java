@@ -67,7 +67,6 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import lombok.Data;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.kohsuke.args4j.Option;
@@ -347,10 +346,15 @@ public class SuggestPerformance implements ShellTask {
     }
 
     @Data
-    @RequiredArgsConstructor
     public static class Suggestion {
         private final Optional<String> key;
         private final Optional<String> value;
+
+        @java.beans.ConstructorProperties({ "key", "value" })
+        public Suggestion(final Optional<String> key, final Optional<String> value) {
+            this.key = key;
+            this.value = value;
+        }
     }
 
     public static SuggestPerformance setup(final CoreComponent core) {

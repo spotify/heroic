@@ -21,15 +21,16 @@
 
 package com.spotify.heroic.test;
 
-import lombok.AccessLevel;
-import lombok.RequiredArgsConstructor;
-
 import java.util.Optional;
 import java.util.function.Supplier;
 
-@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public class TestProperties {
     private final String prefix;
+
+    @java.beans.ConstructorProperties({ "prefix" })
+    private TestProperties(final String prefix) {
+        this.prefix = prefix;
+    }
 
     public Optional<String> getOptionalString(final String key) {
         final String property = property(key);

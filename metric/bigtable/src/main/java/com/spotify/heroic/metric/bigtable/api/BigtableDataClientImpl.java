@@ -22,6 +22,9 @@
 package com.spotify.heroic.metric.bigtable.api;
 
 import com.google.bigtable.v2.ReadModifyWriteRowRequest;
+import com.google.cloud.bigtable.grpc.BigtableSession;
+import com.google.cloud.bigtable.grpc.scanner.FlatRow;
+import com.google.cloud.bigtable.grpc.scanner.ResultScanner;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -29,17 +32,13 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.protobuf.ByteString;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.async.AsyncObserver;
-import com.google.cloud.bigtable.grpc.scanner.FlatRow;
-import com.google.cloud.bigtable.grpc.scanner.ResultScanner;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
 import java.io.IOException;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
-@RequiredArgsConstructor
 @ToString
 public class BigtableDataClientImpl implements BigtableDataClient {
     private final AsyncFramework async;
@@ -59,6 +58,15 @@ public class BigtableDataClientImpl implements BigtableDataClient {
         this.session = session;
         this.mutator = mutator;
         this.clusterUri = String.format("projects/%s/instances/%s", project, cluster);
+    }
+
+    @java.beans.ConstructorProperties({ "async", "session", "mutator", "clusterUri" })
+    public BigtableDataClientImpl(final AsyncFramework async, final BigtableSession session,
+                                  final BigtableMutator mutator, final String clusterUri) {
+        this.async = async;
+        this.session = session;
+        this.mutator = mutator;
+        this.clusterUri = clusterUri;
     }
 
     @Override

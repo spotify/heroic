@@ -33,14 +33,12 @@ import dagger.Provides;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.ResolvableFuture;
 import io.netty.channel.nio.NioEventLoopGroup;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-
-import javax.inject.Named;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import javax.inject.Named;
+import lombok.Data;
 
 @Data
 public class GrpcRpcProtocolModule implements RpcProtocolModule {
@@ -91,7 +89,6 @@ public class GrpcRpcProtocolModule implements RpcProtocolModule {
         LifeCycle life();
     }
 
-    @RequiredArgsConstructor
     @Module
     class M {
         @Provides

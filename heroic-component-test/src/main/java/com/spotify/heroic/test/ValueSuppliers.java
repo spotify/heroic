@@ -22,16 +22,19 @@
 package com.spotify.heroic.test;
 
 import com.google.common.collect.ImmutableList;
-import lombok.RequiredArgsConstructor;
-
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-@RequiredArgsConstructor
 public class ValueSuppliers {
     private final List<ValueSupplier> suppliers;
+
+    @java.beans.ConstructorProperties({ "suppliers" })
+    public ValueSuppliers(
+        final List<ValueSupplier> suppliers) {
+        this.suppliers = suppliers;
+    }
 
     public Optional<Object> lookup(
         final Type type, final boolean secondary, final String name

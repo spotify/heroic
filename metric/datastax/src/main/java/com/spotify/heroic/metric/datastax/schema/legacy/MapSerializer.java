@@ -22,20 +22,23 @@
 package com.spotify.heroic.metric.datastax.schema.legacy;
 
 import com.spotify.heroic.metric.datastax.TypeSerializer;
-import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.tuple.Pair;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.lang3.tuple.Pair;
 
-@RequiredArgsConstructor
 public class MapSerializer<A, B> implements TypeSerializer<Map<A, B>> {
     private final TypeSerializer<A> a;
     private final TypeSerializer<B> b;
+
+    @java.beans.ConstructorProperties({ "a", "b" })
+    public MapSerializer(final TypeSerializer<A> a, final TypeSerializer<B> b) {
+        this.a = a;
+        this.b = b;
+    }
 
     @Override
     public ByteBuffer serialize(final Map<A, B> value) throws IOException {

@@ -67,12 +67,6 @@ import com.spotify.heroic.grammar.HeroicQueryParser.SourceRangeRelativeContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.StringContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.WhereContext;
 import com.spotify.heroic.metric.MetricType;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-import org.antlr.v4.runtime.CommonToken;
-import org.antlr.v4.runtime.ParserRuleContext;
-import org.antlr.v4.runtime.tree.ParseTree;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -80,9 +74,12 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Stack;
 import java.util.concurrent.TimeUnit;
+import lombok.Data;
+import org.antlr.v4.runtime.CommonToken;
+import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.tree.ParseTree;
 
 @SuppressWarnings("unchecked")
-@RequiredArgsConstructor
 public class QueryListener extends HeroicQueryBaseListener {
     private static final Object KEY_VALUES_MARK = new ObjectMark("KEY_VALUES_MARK");
     private static final Object LIST_MARK = new ObjectMark("LIST_MARK");
@@ -90,6 +87,9 @@ public class QueryListener extends HeroicQueryBaseListener {
 
     public static final Object EMPTY = new ObjectMark("EMPTY");
     public static final Object NOT_EMPTY = new ObjectMark("NOT_EMPTY");
+
+    public QueryListener() {
+    }
 
     enum QueryMark {
         QUERY, SELECT, WHERE, FROM, WITH, AS
@@ -825,9 +825,13 @@ public class QueryListener extends HeroicQueryBaseListener {
         private final Map<String, Expression> map;
     }
 
-    @RequiredArgsConstructor
     static class ObjectMark {
         private final String name;
+
+        @java.beans.ConstructorProperties({ "name" })
+        public ObjectMark(final String name) {
+            this.name = name;
+        }
 
         @Override
         public String toString() {

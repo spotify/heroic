@@ -31,7 +31,6 @@ import com.spotify.heroic.shell.ShellTaskDefinition;
 import com.spotify.heroic.shell.TaskParameters;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.RequiredArgsConstructor;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 
@@ -47,13 +46,22 @@ import java.util.List;
 import java.util.SortedMap;
 import java.util.zip.GZIPOutputStream;
 
-@RequiredArgsConstructor
 public class CoreShellTasks implements ShellTasks {
     public static final Joiner joiner = Joiner.on(", ");
 
     final List<ShellTaskDefinition> available;
     final SortedMap<String, ShellTask> tasks;
     final AsyncFramework async;
+
+    public CoreShellTasks(
+        final List<ShellTaskDefinition> available,
+        final SortedMap<String, ShellTask> tasks,
+        final AsyncFramework async
+    ) {
+        this.available = available;
+        this.tasks = tasks;
+        this.async = async;
+    }
 
     @Override
     public List<CommandDefinition> commands() {

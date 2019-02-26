@@ -26,8 +26,6 @@ import com.spotify.heroic.aggregation.AbstractBucket;
 import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
-import lombok.RequiredArgsConstructor;
-
 import java.util.Map;
 
 /**
@@ -39,7 +37,6 @@ import java.util.Map;
  *
  * @author udoprog
  */
-@RequiredArgsConstructor
 public class SumBucket extends AbstractBucket implements DoubleBucket {
     private final long timestamp;
 
@@ -47,6 +44,11 @@ public class SumBucket extends AbstractBucket implements DoubleBucket {
     private final AtomicDouble sum = new AtomicDouble();
     /* if the sum is valid (e.g. has at least one value) */
     private volatile boolean valid = false;
+
+    @java.beans.ConstructorProperties({ "timestamp" })
+    public SumBucket(final long timestamp) {
+        this.timestamp = timestamp;
+    }
 
     public long timestamp() {
         return timestamp;

@@ -22,13 +22,15 @@
 package com.spotify.heroic.jetty;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import lombok.RequiredArgsConstructor;
 import org.eclipse.jetty.http2.server.HTTP2CServerConnectionFactory;
 import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.HttpConfiguration;
 
-@RequiredArgsConstructor
 public class Http2CJettyConnectionFactory implements JettyConnectionFactory {
+
+    public Http2CJettyConnectionFactory() {
+    }
+
     @Override
     public ConnectionFactory setup(final HttpConfiguration config) {
         return new HTTP2CServerConnectionFactory(config);

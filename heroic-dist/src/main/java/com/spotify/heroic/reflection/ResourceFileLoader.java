@@ -23,8 +23,6 @@ package com.spotify.heroic.reflection;
 
 import com.google.common.base.Charsets;
 import com.spotify.heroic.HeroicService.Configuration;
-import lombok.RequiredArgsConstructor;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -35,8 +33,11 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
-@RequiredArgsConstructor
 public final class ResourceFileLoader {
+
+    public ResourceFileLoader() {
+    }
+
     public static <T> List<ResourceInstance<T>> loadInstances(
         String path, ClassLoader loader, Class<T> expected
     ) throws ResourceException {

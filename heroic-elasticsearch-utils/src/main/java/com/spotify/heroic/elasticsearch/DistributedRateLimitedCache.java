@@ -37,7 +37,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -50,7 +49,6 @@ import lombok.extern.slf4j.Slf4j;
  * @author dmichel
  */
 @Slf4j
-@RequiredArgsConstructor
 public class DistributedRateLimitedCache<K> implements RateLimitedCache<K> {
 
   private final ConcurrentMap<K, Boolean> cache;
@@ -61,6 +59,20 @@ public class DistributedRateLimitedCache<K> implements RateLimitedCache<K> {
 
   private static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
   private final Tracer tracer = Tracing.getTracer();
+
+  @java.beans.ConstructorProperties({ "cache", "rateLimiter", "memcachedClient",
+                                      "memcachedTtlSeconds", "memcachedReporter" })
+  public DistributedRateLimitedCache(final ConcurrentMap<K, Boolean> cache,
+                                     final RateLimiter rateLimiter,
+                                     final MemcacheClient memcachedClient,
+                                     final int memcachedTtlSeconds,
+                                     final MemcachedReporter memcachedReporter) {
+    this.cache = cache;
+    this.rateLimiter = rateLimiter;
+    this.memcachedClient = memcachedClient;
+    this.memcachedTtlSeconds = memcachedTtlSeconds;
+    this.memcachedReporter = memcachedReporter;
+  }
 
 
   /**
