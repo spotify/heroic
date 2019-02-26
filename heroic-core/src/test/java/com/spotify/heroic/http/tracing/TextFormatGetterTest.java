@@ -68,4 +68,14 @@ public class TextFormatGetterTest {
     }
   }
 
+  @Test(expected = SpanContextParseException.class)
+  public void testNullRequestHeader () throws Exception {
+
+    final List<String> headers = new ArrayList<>();
+
+    doReturn(headers).when(request).getRequestHeader("X-Cloud-Trace-Context");
+
+    textFormat.extract(request, textFormatGetter);
+  }
+
 }

@@ -35,6 +35,10 @@ public class TextFormatGetter <C> extends TextFormat.Getter {
     final ContainerRequest request = (ContainerRequest) o;
     final List<String> requestHeader = request.getRequestHeader(s);
 
+    if (requestHeader == null) {
+      return null;
+    }
+
     if (requestHeader.size() > 0) {
       return requestHeader.get(0);
     }
