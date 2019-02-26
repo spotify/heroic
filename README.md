@@ -57,11 +57,9 @@ Heroic has been tested with the following services:
 * Cassandra (`2.1.x`, `3.5`) when using [metric/datastax](/metric/datastax).
 * [Cloud Bigtable](https://cloud.google.com/bigtable/docs/) when using
   [metric/bigtable](/metric/bigtable).
-* Elasticsearch (`1.7.x`) when using
+* Elasticsearch (`5.x`) when using
   [metadata/elasticsearch](/metadata/elasticsearch) or
   [suggest/elasticsearch](/suggest/elasticsearch).
-    * Support for `2.x` is in progress, but is being delayed by
-      [elastic/elasticsearch#13273](https://github.com/elastic/elasticsearch/issues/13273)
 * Kafka (`0.8.x`) when using [consumer/kafka](/consumer/kafka).
 
 ### Building/Running via docker
@@ -150,7 +148,7 @@ The following is an example Elasticsearch remote integration test:
 
 ```
 $> mvn -P integration-tests \
-    -D elasticsearch.version=1.7.5 \
+    -D elasticsearch.version=5.6.0 \
     -D it.elasticsearch.remote=true \
     clean verify
 ```
