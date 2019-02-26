@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.fasterxml.jackson.module.kotlin.KotlinModule;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.analytics.AnalyticsModule;
@@ -100,6 +101,9 @@ public final class HeroicMappers {
         /* support Optional */
         m.registerModule(new Jdk8Module());
 
+        // Support Kotlin data classes
+        m.registerModule(new KotlinModule());
+
         return m;
     }
 
@@ -112,6 +116,7 @@ public final class HeroicMappers {
         mapper.registerModule(new Jdk8Module().configureAbsentsAsNulls(true));
         mapper.registerModule(commonSerializers());
         mapper.registerModule(jsonSerializers());
+        mapper.registerModule(new KotlinModule());
 
         mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);

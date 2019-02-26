@@ -39,7 +39,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
@@ -52,7 +51,6 @@ import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
-import lombok.Data;
 import org.apache.commons.lang3.tuple.Triple;
 
 @Path("query")
@@ -186,17 +184,5 @@ public class QueryResource {
             queryLogger.logFinalResponse(queryContext, qmr);
             return qmr;
         });
-    }
-
-    @Data
-    public static final class StreamId {
-        private final Map<String, String> tags;
-        private final UUID id;
-    }
-
-    @Data
-    private static final class StreamQuery {
-        private final QueryManager.Group group;
-        private final Query query;
     }
 }

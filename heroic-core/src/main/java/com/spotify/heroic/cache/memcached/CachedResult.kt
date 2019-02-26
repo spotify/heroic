@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,13 +19,18 @@
  * under the License.
  */
 
-package com.spotify.heroic.shell;
+package com.spotify.heroic.cache.memcached
 
-import lombok.Data;
+import com.spotify.heroic.common.DateRange
+import com.spotify.heroic.metric.ResultLimits
+import com.spotify.heroic.metric.ShardedResultGroup
 
-import java.net.ServerSocket;
-
-@Data
-class ShellServerState {
-    final ServerSocket serverSocket;
-}
+/**
+ * Only cache the relevant parts of the result.
+ */
+data class CachedResult(
+        val range: DateRange?,
+        val groups: List<ShardedResultGroup>?,
+        val preAggregationSampleSize: Long,
+        val limits: ResultLimits?
+)
