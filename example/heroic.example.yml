@@ -226,20 +226,13 @@ metadata:
 #  # Probability, between 0.0 and 1.0, of sampling each trace.
 #  # @default 0.01
 #  #probability: 0.01
-#  #jaeger:
-#  #  # Name of the service to report to Jaeger.
-#  #  # @default "heroic"
-#  #  service: heroic
-#  #  # Endpoint for storing Jaeger traces. (required)
-#  #  # @default empty
-#  #  thriftEndpoint: http://127.0.0.1:14268/api/traces
 #  # Local port to expose zpages on. Traces are accessible at http://localhost:{port}/tracez
 #  # @default empty
 #  #zpagesPort: 9090
 #  #lightstep:
-#  #  # Collector host running the satellite. (required)
+#  #  # Collector host running the satellite (required)
 #  #  collectorHost: "lightstep-satellite.services.heroic"
-#  #  # Lightstep access token. (required)
+#  #  # Lightstep access token (required)
 #  #  accessToken: "lightstep_token"
 #  #  # Reporting interval (ms)
 #  #  # @default 1000
@@ -247,13 +240,11 @@ metadata:
 #  #  # Max buffered spans
 #  #  # @default 1000
 #  #  maxBufferedSpans: 1_000
-#  #signalfx:
-#  #  # Host gateway for SignalFx with the correct region. (required)
-#  #  signalfxGateway: "http://signalfxgateway.services.guc3:8080/v1/trace"
-#  #zipkin:
-#  #  # Zipkin URL to send traces to. (required)
-#  #  # @default empty
-#  #  url: http://localhost:9411/api/v2/spans
-#  #  # Name of the service to report to Zipkin.
-#  #  # @default "heroic"
-#  #  service: heroic
+#  #  GRPC round robin
+#  #  # @default true
+#  #  #grpcRoundRobin: true
+#  #  GRPC reset client
+#  #  # @default false
+#  #  #grpcResetClient: false
+#  #  GRPC Collector Target (required)
+#  #  #grpcCollectorTarget: "dns:///foo.googleapis:8282"

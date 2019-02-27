@@ -68,4 +68,13 @@ public class TextFormatGetterTest {
     }
   }
 
+  @Test(expected = SpanContextParseException.class)
+  public void testNullRequestHeader () throws Exception {
+
+    doReturn(null).when(request).getRequestHeader(Mockito.anyString());
+
+    textFormat.extract(request, textFormatGetter);
+
+  }
+
 }
