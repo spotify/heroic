@@ -27,12 +27,12 @@ import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
+
 
 import java.beans.ConstructorProperties;
 
 @Data
-@EqualsAndHashCode(callSuper = true)
+
 public class StdDevInstance extends BucketAggregationInstance<StripedStdDevBucket> {
     @ConstructorProperties({"size", "extent"})
     public StdDevInstance(final long size, final long extent) {

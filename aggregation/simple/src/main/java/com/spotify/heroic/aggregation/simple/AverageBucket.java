@@ -27,13 +27,13 @@ import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
+
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Data
-@EqualsAndHashCode(callSuper = true)
+
 public class AverageBucket extends AbstractBucket implements DoubleBucket {
     private final long timestamp;
     private final AtomicDouble value = new AtomicDouble();

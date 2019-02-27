@@ -29,12 +29,12 @@ import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import java.beans.ConstructorProperties;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
+
 import lombok.ToString;
 
 @Data
 @ToString(callSuper = true)
-@EqualsAndHashCode(callSuper = true)
+
 public class QuantileInstance extends BucketAggregationInstance<QuantileBucket> {
     private final double q;
     private final double error;

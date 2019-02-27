@@ -26,12 +26,12 @@ import com.spotify.heroic.aggregation.BucketAggregationInstance;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
+
 
 import java.beans.ConstructorProperties;
 
 @Data
-@EqualsAndHashCode(callSuper = true)
+
 public class CardinalityInstance extends BucketAggregationInstance<CardinalityBucket> {
     private final CardinalityMethod method;
 

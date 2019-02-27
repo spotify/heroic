@@ -26,14 +26,11 @@ import com.spotify.heroic.aggregation.SamplingAggregation;
 import com.spotify.heroic.aggregation.SamplingQuery;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.Optionals;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-
 import java.beans.ConstructorProperties;
 import java.util.Optional;
+import lombok.Data;
 
 @Data
-@EqualsAndHashCode(callSuper = true)
 public class Average extends SamplingAggregation {
     public static final String NAME = "average";
 
