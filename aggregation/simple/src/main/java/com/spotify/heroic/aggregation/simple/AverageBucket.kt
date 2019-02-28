@@ -21,28 +21,33 @@
 
 package com.spotify.heroic.aggregation.simple
 
-import com.spotify.heroic.aggregation.AggregationInstance
-import com.spotify.heroic.aggregation.BucketAggregationInstance
-import com.spotify.heroic.metric.MetricType
+import com.google.common.util.concurrent.AtomicDouble
+import com.spotify.heroic.aggregation.AbstractBucket
+import com.spotify.heroic.aggregation.DoubleBucket
 import com.spotify.heroic.metric.Point
+import com.spotify.heroic.metric.Spread
+import java.util.concurrent.atomic.AtomicLong
 
-data class CountInstance(
-    override val size: Long, override val extent: Long
-) : DistributedBucketInstance<StripedCountBucket>(size, extent, BucketAggregationInstance.ALL_TYPES, MetricType.POINT) {
+data class AverageBucket(override val timestamp: Long = 0) : AbstractBucket(), DoubleBucket {
+    val value = AtomicDouble()
+    val count = AtomicLong()
 
-    override fun buildBucket(timestamp: Long): StripedCountBucket {
-        return StripedCountBucket(timestamp)
+    override fun updatePoint(key: Map<String, String>, sample: Point) {
+        value.addAndGet(sample.value)
+        count.incrementAndGet()
     }
 
-    override fun build(bucket: StripedCountBucket): Point {
-        return Point(bucket.timestamp, bucket.count().toDouble())
+    override fun updateSpread(key: Map<String, String>, sample: Spread) {
+        value.addAndGet(sample.sum)
+        count.addAndGet(sample.count)
     }
 
-    override fun distributed(): AggregationInstance {
-        return this
-    }
+    override fun value(): Double {
+        val count = this.count.get()
 
-    override fun reducer(): AggregationInstance {
-        return SumInstance(size, extent)
+        return if (count == 0L) {
+            java.lang.Double.NaN
+        } else value.get() / count
+
     }
 }

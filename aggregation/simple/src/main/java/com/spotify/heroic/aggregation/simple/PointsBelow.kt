@@ -21,28 +21,16 @@
 
 package com.spotify.heroic.aggregation.simple
 
+import com.spotify.heroic.aggregation.Aggregation
+import com.spotify.heroic.aggregation.AggregationContext
 import com.spotify.heroic.aggregation.AggregationInstance
-import com.spotify.heroic.aggregation.BucketAggregationInstance
-import com.spotify.heroic.metric.MetricType
-import com.spotify.heroic.metric.Point
 
-data class CountInstance(
-    override val size: Long, override val extent: Long
-) : DistributedBucketInstance<StripedCountBucket>(size, extent, BucketAggregationInstance.ALL_TYPES, MetricType.POINT) {
-
-    override fun buildBucket(timestamp: Long): StripedCountBucket {
-        return StripedCountBucket(timestamp)
+data class PointsBelow(val threshold: Double) : Aggregation {
+    override fun apply(aggregationContext: AggregationContext): AggregationInstance {
+        return PointsBelowInstance(threshold)
     }
 
-    override fun build(bucket: StripedCountBucket): Point {
-        return Point(bucket.timestamp, bucket.count().toDouble())
-    }
-
-    override fun distributed(): AggregationInstance {
-        return this
-    }
-
-    override fun reducer(): AggregationInstance {
-        return SumInstance(size, extent)
+    companion object {
+        const val NAME = "pointsbelow"
     }
 }

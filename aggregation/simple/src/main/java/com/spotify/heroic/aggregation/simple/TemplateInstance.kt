@@ -21,28 +21,21 @@
 
 package com.spotify.heroic.aggregation.simple
 
-import com.spotify.heroic.aggregation.AggregationInstance
+import com.google.common.collect.ImmutableSet
 import com.spotify.heroic.aggregation.BucketAggregationInstance
 import com.spotify.heroic.metric.MetricType
 import com.spotify.heroic.metric.Point
 
-data class CountInstance(
-    override val size: Long, override val extent: Long
-) : DistributedBucketInstance<StripedCountBucket>(size, extent, BucketAggregationInstance.ALL_TYPES, MetricType.POINT) {
+data class TemplateInstance(
+        override val size: Long,
+        override val extent: Long
+) : BucketAggregationInstance<SumBucket>(size, extent, ImmutableSet.of(MetricType.POINT), MetricType.POINT) {
 
-    override fun buildBucket(timestamp: Long): StripedCountBucket {
-        return StripedCountBucket(timestamp)
+    override fun buildBucket(timestamp: Long): SumBucket {
+        return SumBucket(timestamp)
     }
 
-    override fun build(bucket: StripedCountBucket): Point {
-        return Point(bucket.timestamp, bucket.count().toDouble())
-    }
-
-    override fun distributed(): AggregationInstance {
-        return this
-    }
-
-    override fun reducer(): AggregationInstance {
-        return SumInstance(size, extent)
+    override fun build(bucket: SumBucket): Point {
+        return Point(bucket.timestamp, 0.0)
     }
 }

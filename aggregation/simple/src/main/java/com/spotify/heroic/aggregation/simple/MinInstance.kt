@@ -40,7 +40,7 @@ data class MinInstance(
 
         return if (java.lang.Double.isNaN(value)) {
             Metric.invalid()
-        } else Point(bucket.timestamp(), value)
+        } else Point(bucket.timestamp, value)
 
     }
 }

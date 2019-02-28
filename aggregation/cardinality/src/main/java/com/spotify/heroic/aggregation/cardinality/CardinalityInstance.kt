@@ -50,6 +50,6 @@ data class CardinalityInstance(
     }
 
     override fun build(bucket: CardinalityBucket): Metric {
-        return Point(bucket.timestamp(), bucket.count().toDouble())
+        return Point(bucket.timestamp, bucket.count().toDouble())
     }
 }

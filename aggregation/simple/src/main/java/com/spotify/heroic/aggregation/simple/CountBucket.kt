@@ -21,28 +21,23 @@
 
 package com.spotify.heroic.aggregation.simple
 
-import com.spotify.heroic.aggregation.AggregationInstance
-import com.spotify.heroic.aggregation.BucketAggregationInstance
-import com.spotify.heroic.metric.MetricType
-import com.spotify.heroic.metric.Point
+import com.spotify.heroic.aggregation.AnyBucket
+import com.spotify.heroic.metric.Metric
+import java.util.concurrent.atomic.AtomicLong
 
-data class CountInstance(
-    override val size: Long, override val extent: Long
-) : DistributedBucketInstance<StripedCountBucket>(size, extent, BucketAggregationInstance.ALL_TYPES, MetricType.POINT) {
+/**
+ * Bucket that counts the number of seen samples.
+ *
+ * @author udoprog
+ */
+data class CountBucket(override val timestamp: Long) : AnyBucket {
+    private val count = AtomicLong()
 
-    override fun buildBucket(timestamp: Long): StripedCountBucket {
-        return StripedCountBucket(timestamp)
+    override fun update(key: Map<String, String>, d: Metric) {
+        count.incrementAndGet()
     }
 
-    override fun build(bucket: StripedCountBucket): Point {
-        return Point(bucket.timestamp, bucket.count().toDouble())
-    }
-
-    override fun distributed(): AggregationInstance {
-        return this
-    }
-
-    override fun reducer(): AggregationInstance {
-        return SumInstance(size, extent)
+    fun count(): Long {
+        return count.get()
     }
 }

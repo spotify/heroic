@@ -21,28 +21,35 @@
 
 package com.spotify.heroic.aggregation.simple
 
-import com.spotify.heroic.aggregation.AggregationInstance
+import com.google.common.collect.ImmutableSet
+import com.spotify.heroic.ObjectHasher
 import com.spotify.heroic.aggregation.BucketAggregationInstance
+import com.spotify.heroic.metric.Metric
 import com.spotify.heroic.metric.MetricType
 import com.spotify.heroic.metric.Point
 
-data class CountInstance(
-    override val size: Long, override val extent: Long
-) : DistributedBucketInstance<StripedCountBucket>(size, extent, BucketAggregationInstance.ALL_TYPES, MetricType.POINT) {
+data class QuantileInstance(
+    override val size: Long,
+    override val extent: Long,
+    val q: Double,
+    val error: Double
+) : BucketAggregationInstance<QuantileBucket>(size, extent, ImmutableSet.of(MetricType.POINT), MetricType.POINT) {
 
-    override fun buildBucket(timestamp: Long): StripedCountBucket {
-        return StripedCountBucket(timestamp)
+    override fun buildBucket(timestamp: Long): QuantileBucket {
+        return QuantileBucket(timestamp, q, error)
     }
 
-    override fun build(bucket: StripedCountBucket): Point {
-        return Point(bucket.timestamp, bucket.count().toDouble())
+    override fun build(bucket: QuantileBucket): Metric {
+        val value = bucket.value()
+
+        return if (java.lang.Double.isNaN(value)) {
+            Metric.invalid()
+        } else Point(bucket.timestamp, value)
+
     }
 
-    override fun distributed(): AggregationInstance {
-        return this
-    }
-
-    override fun reducer(): AggregationInstance {
-        return SumInstance(size, extent)
+    override fun bucketHashTo(hasher: ObjectHasher) {
+        hasher.putField("q", q, hasher.doubleValue())
+        hasher.putField("error", error, hasher.doubleValue())
     }
 }

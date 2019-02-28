@@ -19,30 +19,29 @@
  * under the License.
  */
 
-package com.spotify.heroic.aggregation.simple
+package com.spotify.heroic.aggregation
 
-import com.spotify.heroic.aggregation.AggregationInstance
-import com.spotify.heroic.aggregation.BucketAggregationInstance
-import com.spotify.heroic.metric.MetricType
+import com.spotify.heroic.metric.Payload
+import com.spotify.heroic.metric.Event
+import com.spotify.heroic.metric.MetricGroup
 import com.spotify.heroic.metric.Point
+import com.spotify.heroic.metric.Spread
 
-data class CountInstance(
-    override val size: Long, override val extent: Long
-) : DistributedBucketInstance<StripedCountBucket>(size, extent, BucketAggregationInstance.ALL_TYPES, MetricType.POINT) {
+interface Bucket {
+    fun updatePoint(key: Map<String, String>, sample: Point)
 
-    override fun buildBucket(timestamp: Long): StripedCountBucket {
-        return StripedCountBucket(timestamp)
-    }
+    fun updateEvent(key: Map<String, String>, sample: Event)
 
-    override fun build(bucket: StripedCountBucket): Point {
-        return Point(bucket.timestamp, bucket.count().toDouble())
-    }
+    fun updateSpread(key: Map<String, String>, sample: Spread)
 
-    override fun distributed(): AggregationInstance {
-        return this
-    }
+    fun updateGroup(key: Map<String, String>, sample: MetricGroup)
 
-    override fun reducer(): AggregationInstance {
-        return SumInstance(size, extent)
-    }
+    fun updatePayload(key: Map<String, String>, sample: Payload)
+
+    /**
+     * Get the timestamp for the bucket.
+     *
+     * @return The timestamp for the bucket.
+     */
+    val timestamp: Long
 }

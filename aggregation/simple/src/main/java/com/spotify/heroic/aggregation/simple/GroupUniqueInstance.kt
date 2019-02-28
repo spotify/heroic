@@ -40,7 +40,7 @@ data class GroupUniqueInstance(
 
         return if (groups.isEmpty()) {
             Metric.invalid()
-        } else MetricGroup(bucket.timestamp(), groups)
+        } else MetricGroup(bucket.timestamp, groups)
 
     }
 }

@@ -28,7 +28,7 @@ import com.spotify.heroic.metric.Point
 
 data class AverageInstance(
     override val size: Long,
-    override  val extent: Long
+    override val extent: Long
 ) : DistributedBucketInstance<StripedAverageBucket>(size, extent, ImmutableSet.of(MetricType.POINT), MetricType.POINT) {
 
     override fun buildBucket(timestamp: Long): StripedAverageBucket {
@@ -40,7 +40,7 @@ data class AverageInstance(
 
         return if (!java.lang.Double.isFinite(value)) {
             Metric.invalid()
-        } else Point(bucket.timestamp(), bucket.value())
+        } else Point(bucket.timestamp, bucket.value())
 
     }
 }

@@ -12,7 +12,7 @@ import static org.junit.Assert.assertEquals;
 
 public class NotNegativeTest {
 
-    final private NotNegativeInstance notNegativeInstance = new NotNegativeInstance();
+    final private NotNegativeInstance notNegativeInstance = NotNegativeInstance.INSTANCE;
     final private AggregationSession session = notNegativeInstance.session(new DateRange(0, 10000));
 
     @Test

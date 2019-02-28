@@ -36,7 +36,7 @@ data class SumInstance(
     }
 
     override fun build(bucket: StripedSumBucket): Point {
-        return Point(bucket.timestamp(), bucket.value())
+        return Point(bucket.timestamp, bucket.value())
     }
 
     override fun distributed(): AggregationInstance {

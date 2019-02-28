@@ -12,7 +12,7 @@ import static org.junit.Assert.assertEquals;
 
 public class DeltaPerSecondTest {
 
-    final private DeltaPerSecondInstance deltaInstance = new DeltaPerSecondInstance();
+    final private DeltaPerSecondInstance deltaInstance = DeltaPerSecondInstance.INSTANCE;
     final private AggregationSession session = deltaInstance.session(new DateRange(0, 10000));
 
     @Test

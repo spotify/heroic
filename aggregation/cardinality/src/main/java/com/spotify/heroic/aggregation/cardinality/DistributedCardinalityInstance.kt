@@ -39,7 +39,7 @@ data class DistributedCardinalityInstance(
     }
 
     override fun build(bucket: CardinalityBucket): Payload {
-        return Payload.create(bucket.timestamp(), bucket.state())
+        return Payload.create(bucket.timestamp, bucket.state())
     }
 
     override fun bucketHashTo(hasher: ObjectHasher) {

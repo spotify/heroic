@@ -21,28 +21,33 @@
 
 package com.spotify.heroic.aggregation.simple
 
-import com.spotify.heroic.aggregation.AggregationInstance
-import com.spotify.heroic.aggregation.BucketAggregationInstance
+import com.spotify.heroic.ObjectHasher
+import com.spotify.heroic.metric.MetricCollection
 import com.spotify.heroic.metric.MetricType
 import com.spotify.heroic.metric.Point
 
-data class CountInstance(
-    override val size: Long, override val extent: Long
-) : DistributedBucketInstance<StripedCountBucket>(size, extent, BucketAggregationInstance.ALL_TYPES, MetricType.POINT) {
+data class FilterPointsThresholdStrategy(
+    val filterType: FilterKThresholdType,
+    val threshold: Double
+) : MetricMappingStrategy {
 
-    override fun buildBucket(timestamp: Long): StripedCountBucket {
-        return StripedCountBucket(timestamp)
+    override fun apply(metrics: MetricCollection): MetricCollection {
+        return if (metrics.type == MetricType.POINT) {
+            MetricCollection.build(MetricType.POINT,
+                    filterWithThreshold(metrics.getDataAs(Point::class.java)))
+        } else {
+            metrics
+        }
     }
 
-    override fun build(bucket: StripedCountBucket): Point {
-        return Point(bucket.timestamp, bucket.count().toDouble())
+    override fun hashTo(hasher: ObjectHasher) {
+        hasher.putObject(javaClass) {
+            hasher.putField("filterType", filterType, hasher.enumValue<FilterKThresholdType>())
+            hasher.putField("threshold", threshold, hasher.doubleValue())
+        }
     }
 
-    override fun distributed(): AggregationInstance {
-        return this
-    }
-
-    override fun reducer(): AggregationInstance {
-        return SumInstance(size, extent)
+    private fun filterWithThreshold(points: List<Point>): List<Point> {
+        return points.filter { point -> filterType.predicate(point.value, threshold) }
     }
 }
