@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,26 +19,28 @@
  * under the License.
  */
 
-package com.spotify.heroic.aggregation;
+package com.spotify.heroic.aggregation.simple
 
-import com.spotify.heroic.common.Series;
-import com.spotify.heroic.metric.MetricCollection;
-import lombok.Data;
 
-import java.util.Map;
-import java.util.Set;
+import com.fasterxml.jackson.annotation.JsonCreator
+import com.spotify.heroic.aggregation.AggregationContext
+import com.spotify.heroic.aggregation.SamplingAggregation
+import com.spotify.heroic.aggregation.SamplingQuery
+import com.spotify.heroic.common.Duration
 
-@Data
-public final class AggregationOutput {
-    private final Map<String, String> key;
-    private final Set<Series> series;
-    private final MetricCollection metrics;
+data class Min(override var size: Duration?, override var extent: Duration?)
+    : SamplingAggregation {
 
-    public boolean isEmpty() {
-        return metrics.isEmpty();
+    @JsonCreator
+    constructor(sampling: SamplingQuery?, size: Duration?, extent: Duration?) :
+        this(size ?: sampling?.size, extent ?: sampling?.extent)
+
+    override fun apply(context: AggregationContext?, size: Long, extent: Long): MinInstance {
+        return MinInstance(size, extent)
     }
 
-    public AggregationOutput withKey(final Map<String, String> key) {
-        return new AggregationOutput(key, series, metrics);
+    companion object {
+        const val NAME = "min"
     }
 }
+

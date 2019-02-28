@@ -5,7 +5,6 @@ import static org.junit.Assert.assertEquals;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.test.FakeModuleLoader;
-import java.util.Optional;
 import org.junit.Test;
 
 public class SerializationTest {
@@ -16,7 +15,7 @@ public class SerializationTest {
     public void testCardinalityInstance() throws Exception {
         final String json = "{\"type\":\"cardinality\",\"size\":1,\"extent\":2,\"method\":{\"type\":\"exact\",\"includeKey\":false}}";
         final CardinalityInstance aggregation = new CardinalityInstance(1, 2,
-            new CardinalityMethod.ExactCardinalityMethod(Optional.of(false)));
+            new CardinalityMethod.ExactCardinalityMethod(false));
 
         assertEquals(json, mapper.writeValueAsString(aggregation));
         assertEquals(aggregation, mapper.readValue(json, AggregationInstance.class));

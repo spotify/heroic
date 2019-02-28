@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,27 +19,27 @@
  * under the License.
  */
 
-package com.spotify.heroic.aggregation;
+package com.spotify.heroic.aggregation
 
-import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.spotify.heroic.common.Duration
+import com.spotify.heroic.common.TimeUtils
 
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class SamplingQuery(var size: Duration?, var extent: Duration?) {
 
-@Data
-public class Options implements Aggregation {
-    public static final String NAME = "opts";
+    @JsonCreator
+    constructor(unit: String, @JsonProperty("value") size: Duration?, extent: Duration?) :
+        this(size, extent ?: size)
+    {
+        val u = TimeUtils.parseTimeUnit(unit)
 
-    public static final long DEFAULT_SIZE = TimeUnit.MILLISECONDS.convert(60, TimeUnit.MINUTES);
-
-    private final Optional<SamplingQuery> sampling;
-    private final Optional<Aggregation> aggregation;
-
-    @Override
-    public AggregationInstance apply(final AggregationContext context) {
-        return aggregation
-            .orElse(Empty.INSTANCE)
-            .apply(context.withOptions(sampling.flatMap(SamplingQuery::getSize),
-                sampling.flatMap(SamplingQuery::getExtent)));
+        // XXX: prefer proper durations over unit override.
+        if (u.isPresent) {
+            this.size = size?.withUnit(u.get())
+            this.extent = extent?.withUnit(u.get())
+        }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,15 +19,27 @@
  * under the License.
  */
 
-package com.spotify.heroic.aggregation;
+package com.spotify.heroic.aggregation.simple
 
-import com.spotify.heroic.common.Statistics;
-import lombok.Data;
+import com.google.common.collect.ImmutableSet
+import com.spotify.heroic.aggregation.AggregationInstance
+import com.spotify.heroic.metric.Metric
+import com.spotify.heroic.metric.MetricType
 
-import java.util.List;
+data class SpreadInstance(
+    override val size: Long,
+    override val extent: Long
+) : DistributedBucketInstance<SpreadBucket>(size, extent, ImmutableSet.of(MetricType.POINT, MetricType.SPREAD), MetricType.SPREAD) {
 
-@Data
-public class AggregationResult {
-    private final List<AggregationOutput> result;
-    private final Statistics statistics;
+    override fun buildBucket(timestamp: Long): SpreadBucket {
+        return SpreadBucket(timestamp)
+    }
+
+    override fun build(bucket: SpreadBucket): Metric {
+        return bucket.newSpread()
+    }
+
+    override fun distributed(): AggregationInstance {
+        return this
+    }
 }

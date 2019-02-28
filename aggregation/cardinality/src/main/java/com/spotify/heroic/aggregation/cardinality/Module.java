@@ -44,14 +44,17 @@ public class Module implements HeroicModule {
                 new SamplingAggregationDSL<CardinalityAggregation>(factory) {
                     @Override
                     protected CardinalityAggregation buildWith(
-                        final AggregationArguments args, final Optional<Duration> size,
+                        final AggregationArguments args,
+                        final Optional<Duration> size,
                         final Optional<Duration> extent
                     ) {
-                        final Optional<CardinalityMethod> method = args
+                        final CardinalityMethod method = args
                             .positionalOrKeyword("method", Expression.class)
-                            .map(CardinalityMethod::fromExpression);
+                            .map(CardinalityMethod.Companion::fromExpression)
+                            .orElse(null);
 
-                        return new CardinalityAggregation(Optional.empty(), size, extent, method);
+                        return new CardinalityAggregation(
+                            null, size.orElse(null), extent.orElse(null), method);
                     }
                 });
 

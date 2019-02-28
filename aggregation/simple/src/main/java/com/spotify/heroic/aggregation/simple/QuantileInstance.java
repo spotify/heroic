@@ -34,7 +34,6 @@ import lombok.ToString;
 
 @Data
 @ToString(callSuper = true)
-
 public class QuantileInstance extends BucketAggregationInstance<QuantileBucket> {
     private final double q;
     private final double error;
