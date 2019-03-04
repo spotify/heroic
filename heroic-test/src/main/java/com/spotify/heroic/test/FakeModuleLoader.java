@@ -44,7 +44,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ForkJoinPool;
-import lombok.Data;
 
 public class FakeModuleLoader {
     private final LoadingComponent loading;
@@ -133,7 +132,6 @@ public class FakeModuleLoader {
     /**
      * Helper for building Json Objects in test cases.
      */
-    @Data
     public class JsonBuilder {
         private final Map<String, JsonNode> fields = new HashMap<>();
 
