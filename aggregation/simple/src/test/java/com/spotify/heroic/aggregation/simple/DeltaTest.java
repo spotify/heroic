@@ -11,7 +11,7 @@ import static org.junit.Assert.assertEquals;
 
 public class DeltaTest {
 
-    final private DeltaInstance deltaInstance = new DeltaInstance();
+    final private DeltaInstance deltaInstance = DeltaInstance.INSTANCE;
     final private AggregationSession session = deltaInstance.session(new DateRange(0, 10000));
 
     @Test

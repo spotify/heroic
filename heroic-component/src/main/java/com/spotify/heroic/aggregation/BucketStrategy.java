@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.DateRange;
-import lombok.Data;
 
 public interface BucketStrategy {
     long MAX_BUCKET_COUNT = 100000L;
@@ -108,7 +107,7 @@ public interface BucketStrategy {
                 final int start = Math.max((int) ((adjusted + (size - extent)) / size), 0);
                 final int end = Math.min((int) ((adjusted + size) / size), buckets);
 
-                return new BucketStrategy.StartEnd(start, end);
+                return new StartEnd(start, end);
             }
 
             @Override
@@ -203,14 +202,5 @@ public interface BucketStrategy {
         long start();
 
         int buckets();
-    }
-
-    /**
-     * A start, and an end bucket (exclusive) selected.
-     */
-    @Data
-    class StartEnd {
-        private final int start;
-        private final int end;
     }
 }

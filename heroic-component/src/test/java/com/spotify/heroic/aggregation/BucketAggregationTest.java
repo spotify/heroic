@@ -12,8 +12,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -35,19 +33,21 @@ public class BucketAggregationTest {
         return new IterableBuilder();
     }
 
-    @Data
-    @EqualsAndHashCode(callSuper = true)
     public static class TestBucket extends AbstractBucket {
         private final long timestamp;
-        private double sum;
+        private double sum = 0;
 
-        public void updatePoint(Map<String, String> key, Point d) {
-            sum += d.getValue();
+        TestBucket(long timestamp) {
+            this.timestamp = timestamp;
         }
 
         @Override
-        public long timestamp() {
+        public long getTimestamp() {
             return timestamp;
+        }
+
+        public void updatePoint(Map<String, String> key, Point d) {
+            sum += d.getValue();
         }
     }
 
