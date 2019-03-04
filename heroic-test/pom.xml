@@ -20,12 +20,6 @@
 
   <dependencies>
     <dependency>
-      <groupId>org.projectlombok</groupId>
-      <artifactId>lombok</artifactId>
-      <scope>provided</scope>
-    </dependency>
-
-    <dependency>
       <groupId>com.spotify.heroic</groupId>
       <artifactId>heroic-component-test</artifactId>
     </dependency>

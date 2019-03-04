@@ -60,15 +60,17 @@ import java.util.TreeSet;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
 import org.junit.runners.model.Statement;
+import org.slf4j.Logger;
 
-@Slf4j
 public abstract class AbstractMetricBackendIT {
+    private static final Logger log = org.slf4j.LoggerFactory
+        .getLogger(AbstractMetricBackendIT.class);
+
     protected final Series s1 =
         new Series("s1", ImmutableSortedMap.of("id", "s1"), ImmutableSortedMap.of("resource", "a"));
     protected final Series s2 =
@@ -251,7 +253,6 @@ public abstract class AbstractMetricBackendIT {
         return new TestCase();
     }
 
-    @lombok.Data
     private class TestCase {
         private Optional<Integer> denseStart = Optional.empty();
         private Optional<Integer> dense = Optional.empty();
