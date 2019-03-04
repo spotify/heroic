@@ -21,6 +21,9 @@
 
 package com.spotify.heroic.shell;
 
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+
 import com.google.protobuf.ByteString;
 import com.spotify.heroic.proto.ShellMessage.CommandEvent;
 import com.spotify.heroic.proto.ShellMessage.CommandsResponse;
@@ -33,8 +36,6 @@ import com.spotify.heroic.shell.protocol.MessageBuilder;
 import com.spotify.heroic.shell.protocol.SimpleMessageVisitor;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.extern.slf4j.Slf4j;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -49,13 +50,10 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
-
-@Slf4j
 public class RemoteCoreInterface implements CoreInterface {
     private static final int DEFAULT_PORT = 9190;
     private static final int MAX_READ = 4096;
+
 
     private final InetSocketAddress address;
     private final AsyncFramework async;
