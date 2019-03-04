@@ -44,6 +44,8 @@ interface CardinalityMethod {
     @JsonTypeName("exact")
     data class ExactCardinalityMethod(var includeKey: Boolean) : CardinalityMethod {
 
+        constructor(includeKey: Boolean?) : this(includeKey ?: false)
+
         override fun build(timestamp: Long): CardinalityBucket {
             return ExactCardinalityBucket(timestamp, includeKey)
         }
@@ -52,17 +54,15 @@ interface CardinalityMethod {
             hasher.putObject(javaClass,
                 { hasher.putField("includeKey", includeKey, hasher.bool()) })
         }
-
-        companion object {
-            operator fun invoke(includeKey: Boolean? = null) =
-                ExactCardinalityMethod(includeKey ?: false)
-        }
     }
 
     @JsonTypeName("hll")
     data class HyperLogLogCardinalityMethod(
         val precision: Double, val includeKey: Boolean
     ) : CardinalityMethod {
+
+        constructor(precision: Double?, includeKey: Boolean?)
+                : this(precision ?: 0.01, includeKey ?: false)
 
         override fun build(timestamp: Long): CardinalityBucket {
             return HyperLogLogCardinalityBucket(timestamp, includeKey, precision)
@@ -78,11 +78,6 @@ interface CardinalityMethod {
                 hasher.putField("includeKey", includeKey, hasher.bool())
             }
         }
-
-        companion object {
-            operator fun invoke(precision: Double?, includeKey: Boolean?) =
-                HyperLogLogCardinalityMethod(precision ?: 0.01, includeKey ?: false)
-        }
     }
 
     @JsonTypeName("hllp")
@@ -90,12 +85,15 @@ interface CardinalityMethod {
         val precision: Int, val includeKey: Boolean
     ) : CardinalityMethod {
 
+        constructor(precision: Int?, includeKey: Boolean?)
+                : this(precision ?: 16, includeKey ?: false)
+
         override fun build(timestamp: Long): CardinalityBucket {
             return HyperLogLogPlusCardinalityBucket(timestamp, includeKey, precision)
         }
 
         override fun reducer(): CardinalityMethod {
-            return ReduceHyperLogLogCardinalityMethod
+            return ReduceHyperLogLogPlusCardinalityMethod
         }
 
         override fun hashTo(hasher: ObjectHasher) {
@@ -103,11 +101,6 @@ interface CardinalityMethod {
                 hasher.putField("precision", precision, hasher.integer())
                 hasher.putField("includeKey", includeKey, hasher.bool())
             }
-        }
-
-        companion object {
-            operator fun invoke(precision: Int?, includeKey: Boolean?) =
-                HyperLogLogPlusCardinalityMethod(precision ?: 16, includeKey ?: false)
         }
     }
 
@@ -153,7 +146,7 @@ interface CardinalityMethod {
                 }
 
                 private fun buildExact(e: FunctionExpression): CardinalityMethod {
-                    val includeKey = e
+                    val includeKey: Boolean? = e
                         .keyword("includeKey")
                         .map { i -> "true" == i.cast(StringExpression::class.java).string }
                         .orElse(null)
@@ -162,12 +155,12 @@ interface CardinalityMethod {
                 }
 
                 private fun buildHyperLogLog(e: FunctionExpression): CardinalityMethod {
-                    val precision = e
+                    val precision: Double? = e
                         .keyword("precision")
                         .map { i -> i.cast(DoubleExpression::class.java).value }
                         .orElse(null)
 
-                    val includeKey = e
+                    val includeKey: Boolean? = e
                         .keyword("includeKey")
                         .map { i -> "true" == i.cast(StringExpression::class.java).string }
                         .orElse(null)
@@ -176,12 +169,12 @@ interface CardinalityMethod {
                 }
 
                 private fun buildHyperLogLogPlus(e: FunctionExpression): CardinalityMethod {
-                    val precision = e
+                    val precision: Int? = e
                         .keyword("precision")
                         .map { i -> i.cast(IntegerExpression::class.java).valueAsInteger }
                         .orElse(null)
 
-                    val includeKey = e
+                    val includeKey: Boolean? = e
                         .keyword("includeKey")
                         .map { i -> "true" == i.cast(StringExpression::class.java).string }
                         .orElse(null)

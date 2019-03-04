@@ -42,7 +42,7 @@ data class CardinalityInstance(
     }
 
     override fun distributed(): AggregationInstance {
-        return DistributedCardinalityInstance(size, extent, method.reducer())
+        return DistributedCardinalityInstance(size, extent, method)
     }
 
     override fun buildBucket(timestamp: Long): CardinalityBucket {

@@ -30,24 +30,22 @@ data class CardinalityAggregation(
         val sampling: SamplingQuery?,
         override var size: Duration?,
         override var extent: Duration?,
-        var method: CardinalityMethod
+        var method: CardinalityMethod?
 ) : SamplingAggregation {
+
+    init {
+        size = size ?: sampling?.size
+        extent = extent ?: sampling?.extent
+        method = method ?: emptyMethod
+    }
 
     override fun apply(context: AggregationContext?, size: Long, extent: Long)
             : CardinalityInstance {
-        return CardinalityInstance(size, extent, method)
+        return CardinalityInstance(size, extent, method!!)
     }
 
     companion object {
         const val NAME = "cardinality"
-
         private val emptyMethod = CardinalityMethod.HyperLogLogPlusCardinalityMethod(null, null)
-
-        operator fun invoke(
-                sampling: SamplingQuery?,
-                size: Duration?,
-                extent: Duration?,
-                method: CardinalityMethod?
-        ) = CardinalityAggregation(sampling, size ?: sampling?.size, extent ?: sampling?.extent, method ?: emptyMethod)
     }
 }
