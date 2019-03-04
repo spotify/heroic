@@ -19,10 +19,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
 
-@Slf4j
 public class CoreClusterManagerIT extends AbstractLocalClusterIT {
     private final ControlledNodeMetadataFactory metadata1 = new ControlledNodeMetadataFactory();
     private final ControlledNodeMetadataFactory metadata2 = new ControlledNodeMetadataFactory();
@@ -127,7 +125,7 @@ public class CoreClusterManagerIT extends AbstractLocalClusterIT {
         private final AtomicBoolean shutdown = new AtomicBoolean(false);
 
         @java.beans.ConstructorProperties({ "clusterManager", "iterations" })
-        public ClusterRefreshThread(final ClusterManager clusterManager, final int iterations) {
+        ClusterRefreshThread(final ClusterManager clusterManager, final int iterations) {
             this.clusterManager = clusterManager;
             this.iterations = iterations;
         }
@@ -194,11 +192,11 @@ public class CoreClusterManagerIT extends AbstractLocalClusterIT {
         private Optional<UUID> id = Optional.empty();
         private boolean fail = false;
 
-        public void setId(UUID id) {
+        void setId(UUID id) {
             this.id = Optional.of(id);
         }
 
-        public void setFail(boolean fail) {
+        void setFail(boolean fail) {
             this.fail = fail;
         }
 
