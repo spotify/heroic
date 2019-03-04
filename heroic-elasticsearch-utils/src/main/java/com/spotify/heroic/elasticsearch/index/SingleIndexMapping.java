@@ -26,13 +26,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import java.util.List;
 import java.util.Optional;
-import lombok.ToString;
 import org.elasticsearch.action.delete.DeleteRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 
-@ToString
 public class SingleIndexMapping implements IndexMapping {
     public static final String DEFAULT_INDEX = "heroic";
 
@@ -86,6 +84,11 @@ public class SingleIndexMapping implements IndexMapping {
 
     public static Builder builder() {
         return new Builder();
+    }
+
+    public String toString() {
+        return "SingleIndexMapping(index=" + this.index + ", indices=" + java.util.Arrays
+            .deepToString(this.indices) + ")";
     }
 
     public static class Builder {

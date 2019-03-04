@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.elasticsearch;
 
-import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.async.AsyncObserver;
 import com.spotify.heroic.common.OptionalLimit;
@@ -43,7 +42,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import lombok.Data;
 import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
@@ -293,15 +291,5 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
                 }
             });
         };
-    }
-
-    @Data
-    public static class LimitedSet<T> {
-        private final Set<T> set;
-        private final boolean limited;
-
-        public static <T> LimitedSet<T> of() {
-            return new LimitedSet<>(ImmutableSet.of(), false);
-        }
     }
 }
