@@ -49,7 +49,7 @@
   </licenses>
 
   <properties>
-    <threadCount>1</threadCount>
+    <threadCount>2</threadCount>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <jvm-target>1.8</jvm-target>
@@ -148,6 +148,7 @@
               <argLine>${failsafeArgLine}</argLine>
               <parallel>all</parallel>
               <threadCount>${threadCount}</threadCount>
+              <perCoreThreadCount>false</perCoreThreadCount>
             </configuration>
             <executions>
               <execution>
@@ -950,6 +951,7 @@
           <argLine>${surefireArgLine}</argLine>
           <parallel>all</parallel>
           <threadCount>${threadCount}</threadCount>
+          <perCoreThreadCount>false</perCoreThreadCount>
         </configuration>
       </plugin>
     </plugins>
