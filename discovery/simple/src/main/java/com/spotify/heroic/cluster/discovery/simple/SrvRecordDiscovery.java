@@ -25,25 +25,23 @@ import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.cluster.ClusterDiscovery;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
+import java.net.URI;
+import java.util.List;
+import java.util.Optional;
+import javax.inject.Inject;
+import javax.inject.Named;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xbill.DNS.DClass;
 import org.xbill.DNS.Lookup;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.SRVRecord;
 import org.xbill.DNS.Type;
 
-import javax.inject.Inject;
-import javax.inject.Named;
-import java.net.URI;
-import java.util.List;
-import java.util.Optional;
-
-@ToString
-@Slf4j
 public class SrvRecordDiscovery implements ClusterDiscovery {
     public static final String DEFAULT_PROTOCOL = "nativerpc";
     public static final int DEFAULT_PORT = 1394;
+    private static final Logger log = LoggerFactory.getLogger(SrvRecordDiscovery.class);
 
     private final AsyncFramework async;
     private final List<String> records;
@@ -99,5 +97,10 @@ public class SrvRecordDiscovery implements ClusterDiscovery {
             all.forEach(results::addAll);
             return results.build();
         });
+    }
+
+    public String toString() {
+        return "SrvRecordDiscovery(async=" + this.async + ", records=" + this.records
+            + ", protocol=" + this.protocol + ", port=" + this.port + ")";
     }
 }
