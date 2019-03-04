@@ -97,6 +97,16 @@
   </profiles>
 
   <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <configuration>
+          <parallel>methods</parallel>
+        </configuration>
+      </plugin>
+    </plugins>
+
     <resources>
       <resource>
         <directory>src/main/resources</directory>
