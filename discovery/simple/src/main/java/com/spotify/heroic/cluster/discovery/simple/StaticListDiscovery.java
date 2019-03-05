@@ -28,9 +28,7 @@ import java.net.URI;
 import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Named;
-import lombok.ToString;
 
-@ToString
 public class StaticListDiscovery implements ClusterDiscovery {
     private final AsyncFramework async;
     private final List<URI> nodes;
@@ -46,5 +44,9 @@ public class StaticListDiscovery implements ClusterDiscovery {
     @Override
     public AsyncFuture<List<URI>> find() {
         return async.resolved(nodes);
+    }
+
+    public String toString() {
+        return "StaticListDiscovery(async=" + this.async + ", nodes=" + this.nodes + ")";
     }
 }

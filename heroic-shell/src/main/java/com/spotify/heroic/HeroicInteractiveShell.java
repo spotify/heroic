@@ -41,11 +41,13 @@ import jline.console.ConsoleReader;
 import jline.console.UserInterruptException;
 import jline.console.completer.StringsCompleter;
 import jline.console.history.FileHistory;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Slf4j
 public class HeroicInteractiveShell {
+    private static final Logger log = LoggerFactory.getLogger(HeroicInteractiveShell.class);
+
     final ConsoleReader reader;
     final List<CommandDefinition> commands;
     final FileHistory history;
