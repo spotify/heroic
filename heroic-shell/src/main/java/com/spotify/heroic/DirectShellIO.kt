@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,25 +19,29 @@
  * under the License.
  */
 
-package com.spotify.heroic.elasticsearch;
+package com.spotify.heroic
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import lombok.Data;
-import org.elasticsearch.client.Client;
+import com.spotify.heroic.shell.ShellIO
+import java.io.IOException
+import java.io.InputStream
+import java.io.OutputStream
+import java.io.PrintWriter
+import java.nio.file.Files
+import java.nio.file.Path
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
-@JsonSubTypes({
-    @JsonSubTypes.Type(value = StandaloneClientSetup.class,
-        name = "standalone"), @JsonSubTypes.Type(value = NodeClientSetup.class,
-    name = "node"), @JsonSubTypes.Type(value = TransportClientSetup.class, name = "transport")
-})
-public interface ClientSetup {
-    ClientWrapper setup() throws Exception;
+data class DirectShellIO(val out: PrintWriter?) : ShellIO {
 
-    @Data
-    class ClientWrapper {
-        private final Client client;
-        private final Runnable shutdown;
+    @Throws(IOException::class)
+    override fun newInputStream(path: Path): InputStream {
+        return Files.newInputStream(path)
+    }
+
+    @Throws(IOException::class)
+    override fun newOutputStream(path: Path): OutputStream {
+        return Files.newOutputStream(path)
+    }
+
+    override fun out(): PrintWriter? {
+        return out
     }
 }

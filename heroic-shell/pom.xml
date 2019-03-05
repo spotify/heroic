@@ -38,12 +38,6 @@
       <version>2.12</version>
     </dependency>
 
-    <dependency>
-      <groupId>org.projectlombok</groupId>
-      <artifactId>lombok</artifactId>
-      <scope>provided</scope>
-    </dependency>
-
     <!-- all -->
     <dependency>
       <groupId>com.spotify.heroic</groupId>

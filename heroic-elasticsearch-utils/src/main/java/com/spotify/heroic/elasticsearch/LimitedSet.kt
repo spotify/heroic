@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,33 +19,14 @@
  * under the License.
  */
 
-package com.spotify.heroic;
+package com.spotify.heroic.elasticsearch
 
-import com.spotify.heroic.shell.ShellIO;
-import lombok.Data;
+import com.google.common.collect.ImmutableSet
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PrintWriter;
-import java.nio.file.Files;
-import java.nio.file.Path;
-
-@Data
-public class DirectShellIO implements ShellIO {
-    final PrintWriter out;
-
-    public InputStream newInputStream(Path path) throws IOException {
-        return Files.newInputStream(path);
-    }
-
-    @Override
-    public OutputStream newOutputStream(Path path) throws IOException {
-        return Files.newOutputStream(path);
-    }
-
-    @Override
-    public PrintWriter out() {
-        return out;
+data class LimitedSet<T>(val set: Set<T>?, val isLimited: Boolean) {
+    companion object {
+        @JvmStatic fun <T> of(): LimitedSet<T> {
+            return LimitedSet(ImmutableSet.of<T>(), false)
+        }
     }
 }
