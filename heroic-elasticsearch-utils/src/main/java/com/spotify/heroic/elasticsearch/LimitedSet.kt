@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,15 +19,14 @@
  * under the License.
  */
 
-package com.spotify.heroic.elasticsearch;
+package com.spotify.heroic.elasticsearch
 
-import lombok.Data;
+import com.google.common.collect.ImmutableSet
 
-import java.util.Map;
-
-@Data
-public class BackendType {
-    private final Map<String, Map<String, Object>> mappings;
-    private final Map<String, Object> settings;
-    private final Class<?> type;
+data class LimitedSet<T>(val set: Set<T>?, val isLimited: Boolean) {
+    companion object {
+        @JvmStatic fun <T> of(): LimitedSet<T> {
+            return LimitedSet(ImmutableSet.of<T>(), false)
+        }
+    }
 }

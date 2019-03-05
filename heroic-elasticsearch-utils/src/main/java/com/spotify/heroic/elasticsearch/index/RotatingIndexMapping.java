@@ -30,14 +30,12 @@ import com.spotify.heroic.common.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import lombok.ToString;
 import org.elasticsearch.action.delete.DeleteRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 
-@ToString
 public class RotatingIndexMapping implements IndexMapping {
     public static final Duration DEFAULT_INTERVAL = Duration.of(7, TimeUnit.DAYS);
     public static final int DEFAULT_MAX_READ_INDICES = 2;
@@ -166,6 +164,12 @@ public class RotatingIndexMapping implements IndexMapping {
 
     public static Builder builder() {
         return new Builder();
+    }
+
+    public String toString() {
+        return "RotatingIndexMapping(interval=" + this.interval + ", maxReadIndices="
+            + this.maxReadIndices + ", maxWriteIndices=" + this.maxWriteIndices + ", pattern="
+            + this.pattern + ")";
     }
 
     public static final class Builder {

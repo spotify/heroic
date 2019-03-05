@@ -10,7 +10,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.elasticsearch.AbstractElasticsearchMetadataBackend.LimitedSet;
 import com.spotify.heroic.elasticsearch.AbstractElasticsearchMetadataBackend.ScrollTransformStream;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;

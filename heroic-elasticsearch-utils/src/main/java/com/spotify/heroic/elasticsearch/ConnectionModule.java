@@ -37,10 +37,8 @@ import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
 import java.util.List;
 import java.util.Map;
-import lombok.extern.slf4j.Slf4j;
 
 @Module
-@Slf4j
 public class ConnectionModule {
     public static final String DEFAULT_CLUSTER_NAME = "elasticsearch";
     public static final List<String> DEFAULT_SEEDS = ImmutableList.of("localhost");

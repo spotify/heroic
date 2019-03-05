@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,25 +19,21 @@
  * under the License.
  */
 
-package com.spotify.heroic.elasticsearch;
+package com.spotify.heroic.elasticsearch
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import lombok.Data;
-import org.elasticsearch.client.Client;
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+import org.elasticsearch.client.Client
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
-@JsonSubTypes({
-    @JsonSubTypes.Type(value = StandaloneClientSetup.class,
-        name = "standalone"), @JsonSubTypes.Type(value = NodeClientSetup.class,
-    name = "node"), @JsonSubTypes.Type(value = TransportClientSetup.class, name = "transport")
-})
-public interface ClientSetup {
-    ClientWrapper setup() throws Exception;
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(
+    JsonSubTypes.Type(value = StandaloneClientSetup::class, name = "standalone"),
+    JsonSubTypes.Type(value = NodeClientSetup::class, name = "node"),
+    JsonSubTypes.Type(value = TransportClientSetup::class, name = "transport")
+)
+interface ClientSetup {
+    @Throws(Exception::class)
+    fun setup(): ClientWrapper
 
-    @Data
-    class ClientWrapper {
-        private final Client client;
-        private final Runnable shutdown;
-    }
+    data class ClientWrapper(val client: Client, val shutdown: Runnable)
 }
