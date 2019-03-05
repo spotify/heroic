@@ -31,7 +31,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.mockito.Mockito;
 
 public abstract class AbstractLocalClusterIT {
@@ -112,7 +114,7 @@ public abstract class AbstractLocalClusterIT {
         }
     }
 
-    @Before
+    @BeforeClass
     public final void abstractSetup() throws Exception {
         final JvmRpcContext context = new JvmRpcContext();
 
@@ -183,7 +185,7 @@ public abstract class AbstractLocalClusterIT {
         });
     }
 
-    @After
+    @AfterClass
     public final void abstractTeardown() throws Exception {
         async
             .collectAndDiscard(
