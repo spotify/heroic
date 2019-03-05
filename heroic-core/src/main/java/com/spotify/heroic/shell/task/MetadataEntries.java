@@ -23,7 +23,6 @@ package com.spotify.heroic.shell.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.async.AsyncObserver;
-import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.Filter;
@@ -38,28 +37,21 @@ import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
+import com.spotify.heroic.shell.task.parameters.MetadataEntriesParameters;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
-import lombok.Data;
-import lombok.Getter;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.Option;
-
+import java.util.function.Consumer;
 import javax.inject.Inject;
 import javax.inject.Named;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.function.Consumer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @TaskUsage("Fetch series matching the given query")
 @TaskName("metadata-entries")
-@Slf4j
 public class MetadataEntries implements ShellTask {
+    private static final Logger log = LoggerFactory.getLogger(MetadataEntries.class);
     private final MetadataManager metadata;
     private final QueryParser parser;
     private final ObjectMapper mapper;
@@ -78,20 +70,20 @@ public class MetadataEntries implements ShellTask {
 
     @Override
     public TaskParameters params() {
-        return new Parameters();
+        return new MetadataEntriesParameters();
     }
 
     @Override
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
-        final Parameters params = (Parameters) base;
+        final MetadataEntriesParameters params = (MetadataEntriesParameters) base;
 
         final Filter filter = Tasks.setupFilter(parser, params);
 
-        final MetadataBackend group = metadata.useOptionalGroup(params.group);
+        final MetadataBackend group = metadata.useOptionalGroup(params.getGroup());
 
         final Consumer<Series> printer;
 
-        if (!params.analytics) {
+        if (!params.getAnalytics()) {
             printer = series -> {
                 try {
                     io.out().println(mapper.writeValueAsString(series));
@@ -129,37 +121,12 @@ public class MetadataEntries implements ShellTask {
             });
     }
 
-    @ToString
-    private static class Parameters extends Tasks.QueryParamsBase {
-        @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
-            metaVar = "<group>")
-        private Optional<String> group = Optional.empty();
-
-        @Option(name = "--limit", aliases = {"--limit"},
-            usage = "Limit the number of printed entries")
-        @Getter
-        private OptionalLimit limit = OptionalLimit.empty();
-
-        @Argument
-        @Getter
-        private List<String> query = new ArrayList<>();
-
-        @Option(name = "--analytics", usage = "Format the output according to the analytics schema")
-        private boolean analytics = false;
-    }
-
-    @Data
-    public static class AnalyticsSeries {
-        private final String id;
-        private final String series;
-    }
-
     public static MetadataEntries setup(final CoreComponent core) {
         return DaggerMetadataEntries_C.builder().coreComponent(core).build().task();
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         MetadataEntries task();
     }
 }

@@ -38,13 +38,11 @@ import com.spotify.heroic.suggest.SuggestManager;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.ToString;
-import org.kohsuke.args4j.Option;
-
-import javax.inject.Inject;
 import java.io.PrintWriter;
 import java.util.Optional;
 import java.util.Set;
+import javax.inject.Inject;
+import org.kohsuke.args4j.Option;
 
 @TaskUsage("List available backend groups")
 @TaskName("backends")
@@ -116,7 +114,6 @@ public class ListBackends implements ShellTask {
         }
     }
 
-    @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")

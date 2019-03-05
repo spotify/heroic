@@ -23,7 +23,6 @@ package com.spotify.heroic.shell.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.async.AsyncObserver;
-import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.Filter;
@@ -38,27 +37,17 @@ import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
+import com.spotify.heroic.shell.task.parameters.MetadataFindSeriesParameters;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
-import lombok.Data;
-import lombok.Getter;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.Option;
-
+import java.util.function.Consumer;
 import javax.inject.Inject;
 import javax.inject.Named;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.function.Consumer;
 
 @TaskUsage("Find series using the given filters")
 @TaskName("metadata-find-series")
-@Slf4j
 public class MetadataFindSeries implements ShellTask {
     private final MetadataManager metadata;
     private final QueryParser parser;
@@ -78,20 +67,20 @@ public class MetadataFindSeries implements ShellTask {
 
     @Override
     public TaskParameters params() {
-        return new Parameters();
+        return new MetadataFindSeriesParameters();
     }
 
     @Override
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
-        final Parameters params = (Parameters) base;
+        final MetadataFindSeriesParameters params = (MetadataFindSeriesParameters) base;
 
         final Filter filter = Tasks.setupFilter(parser, params);
 
-        final MetadataBackend group = metadata.useOptionalGroup(params.group);
+        final MetadataBackend group = metadata.useOptionalGroup(params.getGroup());
 
         final Consumer<Series> printer;
 
-        switch (params.format) {
+        switch (params.getFormat()) {
             case "dsl":
                 printer = series -> io.out().println(series.toDSL());
                 break;
@@ -118,7 +107,7 @@ public class MetadataFindSeries implements ShellTask {
                 };
                 break;
             default:
-                throw new IllegalArgumentException("bad format: " + params.format);
+                throw new IllegalArgumentException("bad format: " + params.getFormat());
         }
 
         final ResolvableFuture<Void> future = async.future();
@@ -150,32 +139,6 @@ public class MetadataFindSeries implements ShellTask {
             });
 
         return future;
-    }
-
-    @ToString
-    private static class Parameters extends Tasks.QueryParamsBase {
-        @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
-            metaVar = "<group>")
-        private Optional<String> group = Optional.empty();
-
-        @Option(name = "--limit", aliases = {"--limit"},
-            usage = "Limit the number of printed entries")
-        @Getter
-        private OptionalLimit limit = OptionalLimit.empty();
-
-        @Argument
-        @Getter
-        private List<String> query = new ArrayList<>();
-
-        @Option(name = "-F", aliases = {"--format"},
-            usage = "Format of the output (available: json, analytics, dsl) (default: dsl)")
-        private String format = "dsl";
-    }
-
-    @Data
-    public static class AnalyticsSeries {
-        private final String id;
-        private final String series;
     }
 
     public static MetadataFindSeries setup(final CoreComponent core) {

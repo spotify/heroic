@@ -24,8 +24,6 @@ package com.spotify.heroic.shell;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.spotify.heroic.HeroicCoreInstance;
-import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.Filter;
@@ -37,7 +35,6 @@ import com.spotify.heroic.shell.task.AnalyticsReportFetchSeries;
 import com.spotify.heroic.shell.task.BackendKeyArgument;
 import com.spotify.heroic.shell.task.Configure;
 import com.spotify.heroic.shell.task.CountData;
-import com.spotify.heroic.shell.task.DataMigrate;
 import com.spotify.heroic.shell.task.DeleteKeys;
 import com.spotify.heroic.shell.task.DeserializeKey;
 import com.spotify.heroic.shell.task.Fetch;
@@ -73,6 +70,9 @@ import com.spotify.heroic.shell.task.TestPrint;
 import com.spotify.heroic.shell.task.TestReadFile;
 import com.spotify.heroic.shell.task.Write;
 import com.spotify.heroic.shell.task.WritePerformance;
+import com.spotify.heroic.shell.task.datamigrate.DataMigrate;
+import com.spotify.heroic.shell.task.parameters.KeyspaceBase;
+import com.spotify.heroic.shell.task.parameters.TaskQueryParameters;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -82,10 +82,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Stream;
-import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
@@ -93,7 +91,6 @@ import org.joda.time.chrono.ISOChronology;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeParser;
 import org.joda.time.format.DateTimeParserBucket;
-import org.kohsuke.args4j.Option;
 
 public final class Tasks {
     static final List<ShellTaskDefinition> available = new ArrayList<>();
@@ -245,9 +242,7 @@ public final class Tasks {
         return names;
     }
 
-    public static Filter setupFilter(
-        QueryParser parser, TaskQueryParameters params
-    ) {
+    public static Filter setupFilter(QueryParser parser, TaskQueryParameters params) {
         final List<String> query = params.getQuery();
 
         if (query.isEmpty()) {
@@ -261,40 +256,41 @@ public final class Tasks {
         throws Exception {
         BackendKeyFilter filter = BackendKeyFilter.of();
 
-        if (params.start != null) {
+        if (params.getStart() != null) {
             filter = filter.withStart(BackendKeyFilter.gte(
-                mapper.readValue(params.start, BackendKeyArgument.class).toBackendKey()));
+                mapper.readValue(params.getStart(), BackendKeyArgument.class).toBackendKey()));
         }
 
-        if (params.startPercentage >= 0) {
+        if (params.getStartPercentage() >= 0) {
             filter = filter.withStart(
-                BackendKeyFilter.gtePercentage((float) params.startPercentage / 100f));
+                BackendKeyFilter.gtePercentage((float) params.getStartPercentage() / 100f));
         }
 
-        if (params.startToken != null) {
-            filter = filter.withStart(BackendKeyFilter.gteToken(params.startToken));
+        if (params.getStartToken() != null) {
+            filter = filter.withStart(BackendKeyFilter.gteToken(params.getStartToken()));
         }
 
-        if (params.end != null) {
+        if (params.getEnd() != null) {
             filter = filter.withEnd(BackendKeyFilter.lt(
-                mapper.readValue(params.end, BackendKeyArgument.class).toBackendKey()));
+                mapper.readValue(params.getEnd(), BackendKeyArgument.class).toBackendKey()));
         }
 
-        if (params.endPercentage >= 0) {
+        if (params.getEndPercentage() >= 0) {
             filter =
-                filter.withEnd(BackendKeyFilter.ltPercentage((float) params.endPercentage / 100f));
+                filter.withEnd(BackendKeyFilter.ltPercentage((float) params.getEndPercentage()
+                                                             / 100f));
         }
 
-        if (params.endToken != null) {
-            filter = filter.withEnd(BackendKeyFilter.ltToken(params.endToken));
+        if (params.getEndToken() != null) {
+            filter = filter.withEnd(BackendKeyFilter.ltToken(params.getEndToken()));
         }
 
-        filter = filter.withLimit(params.limit);
+        filter = filter.withLimit(params.getLimit());
         return filter;
     }
 
     public static Series parseSeries(final ObjectMapper mapper, final Optional<String> series) {
-        return series.<Series>map(s -> {
+        return series.map(s -> {
             try {
                 return mapper.readValue(s, Series.class);
             } catch (IOException e) {
@@ -306,7 +302,7 @@ public final class Tasks {
     public static <T> Stream<T> parseJsonLines(
         final ObjectMapper mapper, final Optional<Path> file, final ShellIO io, final Class<T> type
     ) {
-        return file.<Stream<T>>map(f -> {
+        return file.map(f -> {
             try {
                 final BufferedReader reader =
                     new BufferedReader(new InputStreamReader(io.newInputStream(f), Charsets.UTF_8));
@@ -329,49 +325,6 @@ public final class Tasks {
                 throw new RuntimeException("Failed to open file: " + f, e);
             }
         }).orElseGet(Stream::empty);
-    }
-
-    public abstract static class QueryParamsBase extends AbstractShellTaskParams
-        implements TaskQueryParameters {
-        private final DateRange defaultDateRange;
-
-        public QueryParamsBase() {
-            final long now = System.currentTimeMillis();
-            final long start = now - TimeUnit.MILLISECONDS.convert(7, TimeUnit.DAYS);
-            this.defaultDateRange = new DateRange(start, now);
-        }
-
-        @Override
-        public DateRange getRange() {
-            return defaultDateRange;
-        }
-    }
-
-    public abstract static class KeyspaceBase extends QueryParamsBase {
-        @Option(name = "--start", usage = "First key to operate on", metaVar = "<json>")
-        protected String start;
-
-        @Option(name = "--end", usage = "Last key to operate on (exclusive)", metaVar = "<json>")
-        protected String end;
-
-        @Option(name = "--start-percentage", usage = "First key to operate on in percentage",
-            metaVar = "<int>")
-        protected int startPercentage = -1;
-
-        @Option(name = "--end-percentage",
-            usage = "Last key to operate on (exclusive) in percentage", metaVar = "<int>")
-        protected int endPercentage = -1;
-
-        @Option(name = "--start-token", usage = "First token to operate on", metaVar = "<long>")
-        protected Long startToken = null;
-
-        @Option(name = "--end-token", usage = "Last token to operate on (exclusive)",
-            metaVar = "<int>")
-        protected Long endToken = null;
-
-        @Option(name = "--limit", usage = "Limit the number keys to operate on", metaVar = "<int>")
-        @Getter
-        protected OptionalLimit limit = OptionalLimit.empty();
     }
 
     private static final List<DateTimeParser> today = new ArrayList<>();
