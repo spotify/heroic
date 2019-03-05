@@ -103,6 +103,8 @@
         <artifactId>maven-failsafe-plugin</artifactId>
         <configuration>
           <parallel>methods</parallel>
+          <forkCount>1C</forkCount>
+          <reuseForks>false</reuseForks>
         </configuration>
       </plugin>
     </plugins>
