@@ -25,7 +25,6 @@ import com.google.common.base.Charsets;
 import com.spotify.heroic.HeroicCore.Builder;
 import com.spotify.heroic.args4j.CmdLine;
 import com.spotify.heroic.proto.ShellMessage.CommandsResponse.CommandDefinition;
-import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.CoreInterface;
 import com.spotify.heroic.shell.RemoteCoreInterface;
 import com.spotify.heroic.shell.ShellIO;
@@ -49,15 +48,15 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Executors;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
-import org.kohsuke.args4j.Option;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Slf4j
 public class HeroicShell {
+    private static final Logger log = LoggerFactory.getLogger(HeroicShell.class);
+
     public static final Path[] DEFAULT_CONFIGS =
         new Path[]{Paths.get("heroic.yml"), Paths.get("/etc/heroic/heroic.yml")};
 
@@ -128,8 +127,9 @@ public class HeroicShell {
 
     private static CoreInterface setupCoreBridge(Parameters params, AsyncFramework async)
         throws Exception {
-        if (params.connect != null) {
-            return setupRemoteCore(params.connect, async);
+        final String connect = params.getConnect();
+        if (connect != null) {
+            return setupRemoteCore(connect, async);
         }
 
         return setupLocalCore(params, async);
@@ -337,8 +337,8 @@ public class HeroicShell {
     static HeroicCore.Builder setupBuilder(Parameters params) {
         HeroicCore.Builder builder = HeroicCore
             .builder()
-            .setupService(params.server)
-            .disableBackends(params.disableBackends)
+            .setupService(params.getServer())
+            .disableBackends(params.getDisableBackends())
             .modules(HeroicModules.ALL_MODULES)
             .oneshot(true);
 
@@ -346,7 +346,7 @@ public class HeroicShell {
             builder.configPath(parseConfigPath(params.config()));
         }
 
-        builder.parameters(ExtraParameters.ofList(params.parameters));
+        builder.parameters(ExtraParameters.ofList(params.getParameters()));
 
         for (final String profile : params.profiles()) {
             final HeroicProfile p = HeroicModules.PROFILES.get(profile);
@@ -359,7 +359,7 @@ public class HeroicShell {
             builder.profile(p);
         }
 
-        builder.setupShellServer(params.shellServer);
+        builder.setupShellServer(params.getShellServer());
 
         return builder;
     }
@@ -370,26 +370,6 @@ public class HeroicShell {
      */
     private static CmdLineParser setupParser(final TaskParameters params) {
         return CmdLine.createParser(params);
-    }
-
-    @ToString
-    public static class Parameters extends AbstractShellTaskParams {
-        @Option(name = "--server", usage = "Start shell as server (enables listen port)")
-        private boolean server = false;
-
-        @Option(name = "--shell-server",
-            usage = "Start shell with shell server (enables remote connections)")
-        private boolean shellServer = false;
-
-        @Option(name = "--disable-backends", usage = "Start core without configuring backends")
-        private boolean disableBackends = false;
-
-        @Option(name = "--connect", usage = "Connect to a remote heroic server",
-            metaVar = "<host>[:<port>]")
-        private String connect = null;
-
-        @Option(name = "-X", usage = "Define an extra parameter", metaVar = "<key>=<value>")
-        private List<String> parameters = new ArrayList<>();
     }
 
     static class ParsedArguments {

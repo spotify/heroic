@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,33 +19,29 @@
  * under the License.
  */
 
-package com.spotify.heroic;
+package com.spotify.heroic
 
-import com.spotify.heroic.shell.ShellIO;
-import lombok.Data;
+import com.spotify.heroic.shell.ShellIO
+import java.io.IOException
+import java.io.InputStream
+import java.io.OutputStream
+import java.io.PrintWriter
+import java.nio.file.Files
+import java.nio.file.Path
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PrintWriter;
-import java.nio.file.Files;
-import java.nio.file.Path;
+data class DirectShellIO(val out: PrintWriter?) : ShellIO {
 
-@Data
-public class DirectShellIO implements ShellIO {
-    final PrintWriter out;
-
-    public InputStream newInputStream(Path path) throws IOException {
-        return Files.newInputStream(path);
+    @Throws(IOException::class)
+    override fun newInputStream(path: Path): InputStream {
+        return Files.newInputStream(path)
     }
 
-    @Override
-    public OutputStream newOutputStream(Path path) throws IOException {
-        return Files.newOutputStream(path);
+    @Throws(IOException::class)
+    override fun newOutputStream(path: Path): OutputStream {
+        return Files.newOutputStream(path)
     }
 
-    @Override
-    public PrintWriter out() {
-        return out;
+    override fun out(): PrintWriter? {
+        return out
     }
 }
