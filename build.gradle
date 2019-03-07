@@ -138,11 +138,19 @@ subprojects {
 
             dependency 'javax.servlet:javax.servlet-api:3.1.0'
             dependencySet(group: 'org.glassfish.jersey.containers', version: '2.27') {
-                entry 'jersey-container-servlet-core'
-                entry 'jersey-container-servlet'
-                entry 'jersey-container-jetty-http'
+                entry('jersey-container-servlet-core') {
+                    exclude 'org.glassfish.hk2.external:javax.inject'
+                }
+                entry('jersey-container-servlet') {
+                    exclude 'org.glassfish.hk2.external:javax.inject'
+                }
+                entry('jersey-container-jetty-http') {
+                    exclude 'org.glassfish.hk2.external:javax.inject'
+                }
             }
-            dependency 'org.glassfish.jersey.core:jersey-server:2.27'
+            dependency('org.glassfish.jersey.core:jersey-server:2.27') {
+                exclude 'org.glassfish.hk2.external:javax.inject'
+            }
             dependency 'org.glassfish.jersey.inject:jersey-hk2:2.27'
 
             // can't use a dependencySet for jackson since the groups are all different
@@ -155,7 +163,10 @@ subprojects {
             dependency 'junit:junit:4.12'
             dependency 'org.hamcrest:java-hamcrest:2.0.0.0'
             dependency 'org.mockito:mockito-core:2.0.31-beta'
-            dependency 'com.google.code.findbugs:annotations:3.0.1'
+            dependencySet(group: 'com.google.code.findbugs', version: '3.0.1') {
+                entry 'annotations'
+                entry 'jsr305'
+            }
         }
     }
 
