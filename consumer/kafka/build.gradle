@@ -1,0 +1,13 @@
+dependencies {
+    implementation project(':heroic-component')
+    implementation 'org.apache.kafka:kafka_2.10:0.8.1.1'
+
+    // override the version of the transitive dependency from kafka, which
+    // in turn depends on a jar that does not exist in maven central
+    implementation 'log4j:log4j:1.2.17'
+
+    compileOnly 'org.projectlombok:lombok'
+}
+
+group = 'com.spotify.heroic.consumer'
+description = 'Heroic: Kafka Consumer'

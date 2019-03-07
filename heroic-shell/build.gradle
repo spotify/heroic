@@ -1,0 +1,18 @@
+apply plugin: 'com.google.protobuf'
+
+dependencies {
+    implementation 'org.apache.logging.log4j:log4j-core'
+    implementation 'org.apache.logging.log4j:log4j-slf4j-impl'
+    implementation project(':heroic-all')
+    implementation project(':heroic-component')
+    implementation project(':heroic-core')
+    implementation 'args4j:args4j'
+    implementation 'eu.toolchain.async:tiny-async-core'
+    implementation 'jline:jline:2.12'
+    implementation 'com.google.protobuf:protobuf-java'
+
+    testImplementation 'junit:junit'
+    testImplementation 'org.mockito:mockito-core'
+}
+
+description = 'Heroic: Interactive Shell'

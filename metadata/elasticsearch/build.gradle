@@ -1,0 +1,14 @@
+dependencies {
+    implementation project(':heroic-component')
+    implementation project(':heroic-elasticsearch-utils')
+    implementation 'com.spotify.heroic.repackaged:folsom'
+    testImplementation project(':heroic-elasticsearch-test')
+    testImplementation 'eu.toolchain.async:tiny-async-core'
+    testImplementation 'org.apache.logging.log4j:log4j-api'
+    testImplementation 'org.apache.logging.log4j:log4j-core'
+
+    compileOnly 'org.projectlombok:lombok'
+}
+
+group = 'com.spotify.heroic.metadata'
+description = 'Heroic: Elasticsearch Metadata'

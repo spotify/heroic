@@ -1,0 +1,9 @@
+dependencies {
+    implementation project(':heroic-component')
+    testImplementation 'junit:junit'
+    testImplementation 'org.mockito:mockito-core'
+    testImplementation project(':heroic-test')
+}
+
+group = 'com.spotify.heroic.aggregation'
+description = 'Heroic: Simple Aggregations'

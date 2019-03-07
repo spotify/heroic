@@ -1,0 +1,26 @@
+dependencies {
+    implementation project(':heroic-core')
+    implementation project(':heroic-component')
+    implementation 'org.slf4j:jul-to-slf4j'
+    implementation 'com.spotify.heroic.repackaged:datastax-driver-core'
+    implementation 'com.google.guava:guava'
+    implementation project(':heroic-metric-datastax')
+    implementation project(':heroic-metric-bigtable')
+    implementation project(':heroic-metric-memory')
+    implementation project(':heroic-metadata-elasticsearch')
+    implementation project(':heroic-metadata-memory')
+    implementation project(':heroic-suggest-elasticsearch')
+    implementation project(':heroic-suggest-memory')
+    implementation project(':heroic-discovery-simple')
+    implementation project(':heroic-aggregation-simple')
+    implementation project(':heroic-aggregation-cardinality')
+    implementation project(':heroic-consumer-kafka')
+    implementation project(':heroic-consumer-collectd')
+    implementation project(':heroic-consumer-pubsub')
+    implementation project(':heroic-rpc-grpc')
+    implementation project(':heroic-rpc-jvm')
+    implementation project(':heroic-statistics-semantic')
+    implementation project(':heroic-elasticsearch-utils')
+}
+
+description = 'Heroic: Dependencies to All Components'

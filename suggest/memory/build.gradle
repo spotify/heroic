@@ -1,0 +1,8 @@
+dependencies {
+    implementation project(':heroic-component')
+    testImplementation project(':heroic-test-it')
+    compileOnly 'org.projectlombok:lombok'
+}
+
+group = 'com.spotify.heroic.suggest'
+description = 'Heroic: In-Memory Suggest'

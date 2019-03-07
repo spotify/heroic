@@ -1,0 +1,9 @@
+dependencies {
+    implementation project(':heroic-component')
+    implementation 'com.spotify.heroic.repackaged:folsom'
+    api 'org.elasticsearch.client:transport:5.3.2'
+    testImplementation 'junit:junit'
+    testImplementation 'org.mockito:mockito-core'
+}
+
+description = 'Heroic: Elasticsearch Utilities'

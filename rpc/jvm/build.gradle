@@ -1,0 +1,9 @@
+dependencies {
+    implementation project(':heroic-component')
+    testImplementation 'junit:junit'
+    testImplementation 'org.mockito:mockito-core'
+    compileOnly 'org.projectlombok:lombok'
+}
+
+group = 'com.spotify.heroic.rpc'
+description = 'Heroic: JVM RPC Protocol'

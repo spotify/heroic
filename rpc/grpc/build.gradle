@@ -1,0 +1,12 @@
+dependencies {
+    implementation 'com.google.auto.value:auto-value-annotations'
+    implementation project(':heroic-component')
+    implementation 'io.grpc:grpc-stub'
+    implementation 'io.grpc:grpc-netty'
+    testImplementation 'junit:junit'
+    testImplementation 'org.mockito:mockito-core'
+    compileOnly 'org.projectlombok:lombok'
+}
+
+group = 'com.spotify.heroic.rpc'
+description = 'Heroic: GRPC RPC Protocol'

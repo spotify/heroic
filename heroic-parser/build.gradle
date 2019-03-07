@@ -1,0 +1,14 @@
+apply plugin: 'antlr'
+
+dependencies {
+    implementation project(':heroic-component')
+    antlr 'org.antlr:antlr4:4.5'
+    implementation 'org.slf4j:slf4j-api'
+    implementation 'org.apache.logging.log4j:log4j-api'
+    testImplementation 'junit:junit'
+    testImplementation 'org.mockito:mockito-core'
+
+    compileOnly 'org.projectlombok:lombok'
+}
+
+description = 'Heroic: Custom Query Parser'

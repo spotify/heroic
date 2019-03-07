@@ -1,0 +1,12 @@
+dependencies {
+    implementation project(':heroic-component')
+    implementation 'com.spotify.metrics:semantic-metrics-core'
+    implementation 'com.spotify.metrics:semantic-metrics-ffwd-reporter'
+    testImplementation 'org.hamcrest:java-hamcrest'
+    testImplementation 'junit:junit'
+    testImplementation 'org.mockito:mockito-core'
+    compileOnly 'org.projectlombok:lombok'
+}
+
+group = 'com.spotify.heroic.statistics'
+description = 'Heroic: Semantic Metrics Statistics'

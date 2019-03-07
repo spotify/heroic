@@ -1,0 +1,188 @@
+buildscript {
+    ext.kotlin_version = '1.3.21'
+
+    repositories {
+        mavenCentral()
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.8'
+        classpath 'io.spring.gradle:dependency-management-plugin:1.0.7.RELEASE'
+    }
+}
+
+allprojects {
+    group = 'com.spotify.heroic'
+    version = '0.0.1-SNAPSHOT'
+}
+
+subprojects {
+    apply plugin: "io.spring.dependency-management"
+    apply plugin: 'com.google.protobuf'
+    apply plugin: 'kotlin'
+    apply plugin: 'java'
+    apply plugin: 'maven-publish'
+
+    compileKotlin {
+        kotlinOptions {
+            jvmTarget = '1.8'
+        }
+    }
+
+    protobuf {
+        protoc {
+            // Download from repositories
+            artifact = 'com.google.protobuf:protoc:3.5.1'
+        }
+    }
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+
+    // Dependency management defines shared versions across all submodules
+    dependencyManagement {
+        dependencies {
+            dependency 'com.spotify.heroic.repackaged:datastax-driver-core:3.2.0'
+            dependency 'com.spotify.heroic.repackaged:folsom:1.2.1'
+
+            dependencySet(group: 'com.spotify.metrics', version: '1.0.2') {
+                entry 'semantic-metrics-core'
+                entry 'semantic-metrics-ffwd-reporter'
+            }
+
+            dependency 'com.google.protobuf:protobuf-java:3.5.1'
+
+            dependencySet(group: 'org.jetbrains.kotlin', version: '1.3.21') {
+                entry 'kotlin-stdlib-jdk-8'
+                entry 'kotlin-test'
+            }
+            dependency 'org.projectlombok:lombok:1.16.6'
+            dependencySet(group: 'com.google.auto.value', version: '1.6.3') {
+                entry 'auto-value-annotations'
+                entry 'auto-value'
+            }
+
+            dependencySet(group: 'com.google.dagger', version: '2.7') {
+                entry 'dagger'
+                entry 'dagger-compiler'
+            }
+
+            dependencySet(group: 'eu.toolchain.async', version: '1.11.0') {
+                entry 'tiny-async-api'
+                entry 'tiny-async-core'
+            }
+            dependencySet(group: 'eu.toolchain.serializer', version: '1.4.5') {
+                entry 'tiny-serializer-core'
+                entry 'tiny-serializer-api'
+                entry 'tiny-serializer-processor'
+            }
+
+            dependency 'io.netty:netty-transport:4.1.31.Final'
+
+            dependencySet(group: 'io.grpc', version: '1.16.1') {
+                entry 'grpc-stub'
+                entry 'grpc-netty'
+            }
+
+            dependencySet(group: 'io.opencensus', version: '0.19.1') {
+                entry 'opencensus-api'
+                entry 'opencensus-impl'
+                entry 'opencensus-exporter-trace-stackdriver'
+                entry 'opencensus-exporter-trace-jaeger'
+                entry 'opencensus-exporter-trace-zipkin'
+                entry 'opencensus-contrib-zpages'
+                entry 'opencensus-contrib-grpc-util'
+                entry 'opencensus-contrib-http-util'
+            }
+            dependency 'com.lightstep.opencensus:lightstep-opencensus-exporter:0.0.2'
+            dependency 'com.lightstep.tracer:tracer-grpc:0.15.9'
+            dependency 'com.lightstep.tracer:lightstep-tracer-jre:0.14.8'
+
+            dependency 'com.google.cloud:google-cloud-core:1.53.0'
+            dependency 'org.xerial.snappy:snappy-java:1.1.7.2'
+            dependency 'javax.ws.rs:javax.ws.rs-api:2.1'
+            dependency 'javax.mail:mail:1.4.7'
+            dependency 'args4j:args4j:2.33'
+            dependency 'org.apache.commons:commons-lang3:3.3.2'
+            dependency 'com.google.guava:guava:20.0'
+            dependency 'io.thekraken:grok:0.1.1'
+            dependency 'org.jfree:jfreechart:1.0.19'
+            dependency 'joda-time:joda-time:2.8.2'
+
+            dependencySet(group: 'org.apache.logging.log4j', version: '2.6.2') {
+                entry 'log4j-core'
+                entry 'log4j-slf4j-impl'
+                entry 'log4j-1.2-api'
+                entry 'log4j-api'
+            }
+            dependencySet(group: 'org.slf4j', version: '1.7.21') {
+                entry 'jul-to-slf4j'
+                entry 'sl4j-simple'
+                entry 'jcl-over-slf4j'
+                entry 'slf4j-api'
+            }
+
+            dependencySet(group: 'org.eclipse.jetty', version: '9.4.12.v20180830') {
+                entry 'jetty-webapp'
+                entry 'jetty-server'
+                entry 'jetty-rewrite'
+                entry 'jetty-util'
+            }
+            dependency 'org.eclipse.jetty.http2:http2-server:9.4.12.v20180830'
+
+            dependency 'javax.servlet:javax.servlet-api:3.1.0'
+            dependencySet(group: 'org.glassfish.jersey.containers', version: '2.27') {
+                entry 'jersey-container-servlet-core'
+                entry 'jersey-container-servlet'
+                entry 'jersey-container-jetty-http'
+            }
+            dependency 'org.glassfish.jersey.core:jersey-server:2.27'
+            dependency 'org.glassfish.jersey.inject:jersey-hk2:2.27'
+
+            // can't use a dependencySet for jackson since the groups are all different
+            dependency 'com.fasterxml.jackson.core:jackson-annotations:2.8.11'
+            dependency 'com.fasterxml.jackson.core:jackson-databind:2.8.11.3'
+            dependency 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.8.11'
+            dependency 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.8.11'
+            dependency 'com.fasterxml.jackson.module:jackson-module-kotlin:2.8.11'
+
+            dependency 'junit:junit:4.12'
+            dependency 'org.hamcrest:java-hamcrest:2.0.0.0'
+            dependency 'org.mockito:mockito-core:2.0.31-beta'
+            dependency 'com.google.code.findbugs:annotations:3.0.1'
+        }
+    }
+
+    dependencies {
+        compileOnly 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+        compileOnly 'com.google.dagger:dagger'
+
+        annotationProcessor 'org.projectlombok:lombok'
+        annotationProcessor "com.google.auto.value:auto-value"
+        annotationProcessor 'eu.toolchain.serializer:tiny-serializer-processor'
+        annotationProcessor 'com.google.dagger:dagger-compiler'
+
+        //testImplementation 'org.slf4j:slf4j-simple'
+        testImplementation 'org.jetbrains.kotlin:kotlin-test'
+    }
+
+    sourceCompatibility = '1.8'
+
+    publishing {
+        publications {
+            maven(MavenPublication) {
+                from(components.java)
+            }
+        }
+    }
+
+    tasks.withType(JavaCompile) {
+        options.encoding = 'UTF-8'
+    }
+}
