@@ -23,6 +23,7 @@ dependencies {
     testImplementation project(':heroic-component-test')
 
     compileOnly 'org.projectlombok:lombok'
+    testCompileOnly 'org.projectlombok:lombok'
 }
 
 description = 'Heroic: Component Project'

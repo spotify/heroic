@@ -43,7 +43,11 @@ dependencies {
     implementation 'io.opencensus:opencensus-exporter-trace-zipkin'
     implementation 'com.typesafe:config:1.3.2'
     implementation 'net.jodah:expiringmap:0.5.1'
+
     testImplementation project(':heroic-test')
+    testImplementation project(':heroic-component-test')
+    testImplementation 'junit:junit'
+    testImplementation 'org.mockito:mockito-core'
 
     compileOnly 'org.projectlombok:lombok'
     compileOnly 'com.google.auto.value:auto-value'

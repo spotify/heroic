@@ -23,5 +23,6 @@ output
 
 # gradle
 build/
+out/
 gradle-app.setting
 .gradle

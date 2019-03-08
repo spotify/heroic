@@ -7,14 +7,16 @@ dependencies {
         exclude group: 'io.opencensus', module: 'opencensus-contrib-grpc-util'
         exclude group: 'io.dropwizard.metrics', module: 'metrics-core'
     }
-    
     implementation 'io.grpc:grpc-netty'
     implementation 'io.netty:netty-tcnative-boringssl-static:2.0.7.Final'
     implementation project(':heroic-component')
     implementation 'eu.toolchain.serializer:tiny-serializer-core'
-    testImplementation project(':heroic-test-it')
-    
     compileOnly 'org.projectlombok:lombok'
+
+    testImplementation project(':heroic-test-it')
+    testImplementation project(':heroic-component-test')
+    testImplementation 'junit:junit'
+    testImplementation 'org.mockito:mockito-core'
 }
 
 group = 'com.spotify.heroic.metric'

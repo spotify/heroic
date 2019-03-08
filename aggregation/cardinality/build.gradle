@@ -1,6 +1,6 @@
 dependencies {
     implementation project(':heroic-component')
-    implementation 'com.addthis:stream-lib:3.0.0'
+    implementation 'com.addthis:stream-lib'
     implementation 'com.google.guava:guava'
 
     testImplementation 'junit:junit'

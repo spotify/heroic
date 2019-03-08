@@ -1,7 +1,5 @@
 dependencies {
-    implementation('com.google.cloud:google-cloud-pubsub:1.56.0') {
-        exclude group: 'io.grpc', module: 'grpc-netty-shaded'
-    }
+    implementation 'com.google.cloud:google-cloud-pubsub'
     implementation 'io.grpc:grpc-netty'
     implementation project(':heroic-component')
     implementation 'com.fasterxml.jackson.core:jackson-annotations'

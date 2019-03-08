@@ -2,10 +2,12 @@ dependencies {
     implementation project(':heroic-component')
     implementation project(':heroic-elasticsearch-utils')
     implementation 'com.spotify.heroic.repackaged:folsom'
+    compileOnly 'org.projectlombok:lombok'
+    
     testImplementation project(':heroic-elasticsearch-test')
+    implementation project(':heroic-test-it')
     testImplementation 'org.apache.logging.log4j:log4j-api'
     testImplementation 'org.apache.logging.log4j:log4j-core'
-    compileOnly 'org.projectlombok:lombok'
 }
 
 group = 'com.spotify.heroic.suggest'

@@ -12,6 +12,7 @@ buildscript {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.8'
         classpath 'io.spring.gradle:dependency-management-plugin:1.0.7.RELEASE'
+        classpath 'net.ltgt.gradle:gradle-apt-plugin:0.21'
     }
 }
 
@@ -24,7 +25,9 @@ subprojects {
     apply plugin: "io.spring.dependency-management"
     apply plugin: 'com.google.protobuf'
     apply plugin: 'kotlin'
+    apply plugin: 'net.ltgt.apt'
     apply plugin: 'java'
+    apply plugin: 'idea'
     apply plugin: 'maven-publish'
 
     compileKotlin {
@@ -45,7 +48,7 @@ subprojects {
         mavenCentral()
     }
 
-    // Dependency management defines shared versions across all submodules
+    // Dependency management defines shared versions across all submodules to ensure consistency
     dependencyManagement {
         dependencies {
             dependency 'com.spotify.heroic.repackaged:datastax-driver-core:3.2.0'
@@ -88,6 +91,10 @@ subprojects {
             dependencySet(group: 'io.grpc', version: '1.16.1') {
                 entry 'grpc-stub'
                 entry 'grpc-netty'
+                entry 'grpc-netty-shaded'
+                entry 'grpc-auth'
+                entry 'grpc-protobuf'
+                entry 'grpc-core'
             }
 
             dependencySet(group: 'io.opencensus', version: '0.19.1') {
@@ -104,8 +111,18 @@ subprojects {
             dependency 'com.lightstep.tracer:tracer-grpc:0.15.9'
             dependency 'com.lightstep.tracer:lightstep-tracer-jre:0.14.8'
 
-            dependency 'com.google.cloud:google-cloud-core:1.53.0'
+            //dependency 'com.google.cloud:google-cloud-core:1.53.0'
+            dependencySet(group: 'com.google.cloud', version: '1.56.0') {
+                entry('google-cloud-pubsub') {
+                    exclude 'io.grpc:grpc-netty-shaded'
+                }
+                entry 'google-cloud-core'
+                entry 'google-cloud-core-grpc'
+            }
+            
+            dependency 'com.addthis:stream-lib:3.0.0'
             dependency 'org.xerial.snappy:snappy-java:1.1.7.2'
+            dependency 'javax.inject:javax.inject:1'
             dependency 'javax.ws.rs:javax.ws.rs-api:2.1'
             dependency 'javax.mail:mail:1.4.7'
             dependency 'args4j:args4j:2.33'
@@ -171,11 +188,14 @@ subprojects {
     }
 
     dependencies {
-        compileOnly 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
-        compileOnly 'com.google.dagger:dagger'
+        implementation 'javax.inject:javax.inject'
+        implementation 'com.google.dagger:dagger'
 
+        compileOnly 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
         annotationProcessor 'org.projectlombok:lombok'
+        testAnnotationProcessor 'org.projectlombok:lombok'
         annotationProcessor "com.google.auto.value:auto-value"
+        testAnnotationProcessor "com.google.auto.value:auto-value"
         annotationProcessor 'eu.toolchain.serializer:tiny-serializer-processor'
         annotationProcessor 'com.google.dagger:dagger-compiler'
 
