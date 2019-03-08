@@ -20,15 +20,13 @@ import eu.toolchain.async.RetryPolicy;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
-import lombok.Data;
 import org.junit.Before;
 import org.junit.Test;
 
 public abstract class AbstractConsumerIT extends AbstractSingleNodeIT {
-    public static final RetryPolicy RETRY_POLICY =
+    private static final RetryPolicy RETRY_POLICY =
         RetryPolicy.timed(1000, RetryPolicy.exponential(10, 100));
 
     protected boolean expectAtLeastOneCommit = false;
@@ -111,7 +109,7 @@ public abstract class AbstractConsumerIT extends AbstractSingleNodeIT {
         });
     }
 
-    public void tryUntil(Callable<Void> callable) throws Exception {
+    private void tryUntil(Callable<Void> callable) throws Exception {
         RetryPolicy.Instance instance = RETRY_POLICY.apply(ClockSource.SYSTEM);
         List<Throwable> supressed = new ArrayList<>();
 
@@ -132,16 +130,5 @@ public abstract class AbstractConsumerIT extends AbstractSingleNodeIT {
 
             break;
         }
-    }
-
-    @Data
-    public static class Version1 {
-        private final String version;
-        private final String key;
-        private final String host;
-        private final Long time;
-        private final Map<String, String> attributes;
-        private final Map<String, String> resource;
-        private final double value;
     }
 }
