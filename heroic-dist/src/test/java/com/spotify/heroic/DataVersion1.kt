@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,30 +19,14 @@
  * under the License.
  */
 
-package com.spotify.heroic.instrumentation;
+package com.spotify.heroic
 
-import java.util.concurrent.ConcurrentLinkedQueue;
-import lombok.Data;
-
-@Data
-public class OperationsLogImpl implements OperationsLog {
-    public enum OpType {
-        WRITE_REQUEST, WRITE_COMPLETE, OFFSETS_COMMIT
-    }
-
-    private final ConcurrentLinkedQueue<OpType> log = new ConcurrentLinkedQueue<>();
-
-    @Override
-    public void registerWriteRequest() {
-        log.add(OpType.WRITE_REQUEST);
-    }
-
-    public void registerWriteComplete() {
-        log.add(OpType.WRITE_COMPLETE);
-    }
-
-    public void registerConsumerOffsetsCommit() {
-        log.add(OpType.OFFSETS_COMMIT);
-    }
-}
-
+internal data class DataVersion1(
+    val version: String?,
+    val key: String?,
+    val host: String?,
+    val time: Long?,
+    val attributes: Map<String, String>?,
+    val resource: Map<String, String>?,
+    val value: Double
+)
