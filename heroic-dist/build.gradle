@@ -4,6 +4,10 @@ shadowJar {
     zip64 true
 }
 
+processResources {
+    expand heroicVersion: project.version
+} 
+
 dependencies {
     implementation 'org.apache.logging.log4j:log4j-core'
     implementation 'org.apache.logging.log4j:log4j-1.2-api'
