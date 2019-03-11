@@ -38,7 +38,7 @@ before_script:
     PUBSUB_PID=$!
 
 script:
-  - mvn -nsu -T 1C -D environment=test -P '!findbugs,codecov' verify
+  - ./gradlew check jacocoRootReport
 
 after_script:
   - kill -9 $PUBSUB_PID
