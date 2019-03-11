@@ -56,7 +56,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import javax.inject.Inject;
 import javax.inject.Named;
-import lombok.ToString;
 import org.kohsuke.args4j.Option;
 
 @TaskUsage("Fetch a range of data points")
@@ -168,7 +167,6 @@ public class Fetch implements ShellTask {
         return start + TimeUnit.MILLISECONDS.convert(1, TimeUnit.HOURS);
     }
 
-    @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-s", aliases = {"--series"}, usage = "Series to fetch", metaVar = "<json>")
         private Optional<String> series = Optional.empty();

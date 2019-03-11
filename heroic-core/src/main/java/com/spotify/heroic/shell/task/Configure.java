@@ -35,13 +35,11 @@ import com.spotify.heroic.suggest.SuggestManager;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.ToString;
-import org.kohsuke.args4j.Option;
-
-import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import javax.inject.Inject;
+import org.kohsuke.args4j.Option;
 
 @TaskUsage("Configure the given group of metric backends")
 @TaskName("configure")
@@ -86,7 +84,6 @@ public class Configure implements ShellTask {
         return async.collectAndDiscard(futures);
     }
 
-    @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")
@@ -94,6 +91,10 @@ public class Configure implements ShellTask {
 
         @Option(name = "--no-data", usage = "Do not configure data backends")
         private boolean noData = false;
+
+        public String toString() {
+            return "Configure.Parameters(group=" + this.group + ", noData=" + this.noData + ")";
+        }
     }
 
     public static Configure setup(final CoreComponent core) {

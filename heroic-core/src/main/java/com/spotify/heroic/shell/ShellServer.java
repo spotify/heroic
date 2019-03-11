@@ -29,17 +29,15 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.serializer.SerializerFramework;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.io.IOException;
 import java.net.Socket;
+import javax.inject.Inject;
+import javax.inject.Named;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@ToString(of = {"state"})
-@Slf4j
 public class ShellServer implements LifeCycles {
+    private static final Logger log = LoggerFactory.getLogger(ShellServer.class);
     private final Managed<ShellServerState> state;
     private final AsyncFramework async;
     private final SerializerFramework serializer;
@@ -104,5 +102,9 @@ public class ShellServer implements LifeCycles {
                 String.format("remote-shell-thread[%s]", socket.getRemoteSocketAddress()));
             clientThread.start();
         }
+    }
+
+    public String toString() {
+        return "ShellServer(state=" + this.state + ")";
     }
 }

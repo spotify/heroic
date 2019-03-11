@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.shell.task;
 
-import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
@@ -31,19 +30,12 @@ import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
+import com.spotify.heroic.shell.task.parameters.SuggestTagValuesParameters;
 import com.spotify.heroic.suggest.SuggestManager;
 import com.spotify.heroic.suggest.TagValuesSuggest;
 import dagger.Component;
 import eu.toolchain.async.AsyncFuture;
-import lombok.Getter;
-import lombok.ToString;
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.Option;
-
 import javax.inject.Inject;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 
 @TaskUsage("Get a list of value suggestions for a given key")
 @TaskName("suggest-tag-values")
@@ -59,20 +51,20 @@ public class SuggestTagValues implements ShellTask {
 
     @Override
     public TaskParameters params() {
-        return new Parameters();
+        return new SuggestTagValuesParameters();
     }
 
     @Override
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
-        final Parameters params = (Parameters) base;
+        final SuggestTagValuesParameters params = (SuggestTagValuesParameters) base;
 
         final Filter filter = Tasks.setupFilter(parser, params);
 
         return suggest
-            .useOptionalGroup(params.group)
+            .useOptionalGroup(params.getGroup())
             .tagValuesSuggest(
                 new TagValuesSuggest.Request(filter, params.getRange(), params.getLimit(),
-                    params.groupLimit, params.exclude))
+                    params.getGroupLimit(), params.getExclude()))
             .directTransform(result -> {
                 int i = 0;
 
@@ -82,28 +74,6 @@ public class SuggestTagValues implements ShellTask {
 
                 return null;
             });
-    }
-
-    @ToString
-    private static class Parameters extends Tasks.QueryParamsBase {
-        @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
-            metaVar = "<group>")
-        private Optional<String> group = Optional.empty();
-
-        @Option(name = "-e", aliases = {"--exclude"}, usage = "Exclude the given tags")
-        private List<String> exclude = new ArrayList<>();
-
-        @Option(name = "--group-limit", usage = "Maximum cardinality to pull")
-        private OptionalLimit groupLimit = OptionalLimit.empty();
-
-        @Option(name = "--limit", aliases = {"--limit"},
-            usage = "Limit the number of printed entries")
-        @Getter
-        private OptionalLimit limit = OptionalLimit.empty();
-
-        @Argument
-        @Getter
-        private List<String> query = new ArrayList<String>();
     }
 
     public static SuggestTagValues setup(final CoreComponent core) {

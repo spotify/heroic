@@ -38,10 +38,11 @@ import java.io.Writer;
 import java.net.Socket;
 import java.nio.file.Path;
 import java.util.Arrays;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Slf4j
 class ShellServerClientThread implements Runnable {
+    private static final Logger log = LoggerFactory.getLogger(ShellServerClientThread.class);
     final Socket socket;
     final ShellTasks tasks;
     final SerializerFramework serializer;

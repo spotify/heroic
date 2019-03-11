@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,17 +19,20 @@
  * under the License.
  */
 
-package com.spotify.heroic.shell;
+package com.spotify.heroic.shell.task.parameters
 
-import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.OptionalLimit;
+import com.spotify.heroic.shell.AbstractShellTaskParams
+import org.kohsuke.args4j.Option
+import java.nio.file.Path
+import java.nio.file.Paths
 
-import java.util.List;
+internal class MetadataLoadParameters : AbstractShellTaskParams() {
+    @Option(name = "-t", aliases = ["--target"], usage = "Backend group to migrate to", metaVar = "<metadata-group>")
+    val target: String? = null
 
-public interface TaskQueryParameters {
-    List<String> getQuery();
+    @Option(name = "-f", usage = "File to load from", required = true)
+    val file: Path = Paths.get("series")
 
-    DateRange getRange();
-
-    OptionalLimit getLimit();
+    @Option(name = "-r", usage = "Rate-limit for writing to ES. 0 means disabled")
+    val rate = 0
 }

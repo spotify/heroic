@@ -52,7 +52,6 @@ import java.util.List;
 import java.util.Map;
 import javax.inject.Inject;
 import javax.inject.Named;
-import lombok.ToString;
 import org.kohsuke.args4j.Option;
 
 @TaskUsage("Write a single, or a set of events")
@@ -207,7 +206,6 @@ public class Write implements ShellTask {
         return output;
     }
 
-    @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-s", aliases = {"--series"}, usage = "Series to fetch", metaVar = "<json>")
         private String series;
@@ -230,7 +228,7 @@ public class Write implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         Write task();
     }
 }
