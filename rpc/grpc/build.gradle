@@ -3,8 +3,6 @@ dependencies {
     implementation project(':heroic-component')
     implementation 'io.grpc:grpc-stub'
     implementation 'io.grpc:grpc-netty'
-    testImplementation 'junit:junit'
-    testImplementation 'org.mockito:mockito-core'
     compileOnly 'org.projectlombok:lombok'
 }
 

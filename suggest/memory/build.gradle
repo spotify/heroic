@@ -3,7 +3,6 @@ dependencies {
     compileOnly 'org.projectlombok:lombok'
 
     testImplementation project(':heroic-test-it')
-    testImplementation 'junit:junit'
 }
 
 group = 'com.spotify.heroic.suggest'

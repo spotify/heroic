@@ -9,8 +9,6 @@ dependencies {
 
     testImplementation project(':heroic-test-it')
     testImplementation project(':heroic-component-test')
-    testImplementation 'junit:junit'
-    testImplementation 'org.mockito:mockito-core'
 }
 
 group = 'com.spotify.heroic.metric'

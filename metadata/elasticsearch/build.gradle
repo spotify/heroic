@@ -9,8 +9,6 @@ dependencies {
     testImplementation 'eu.toolchain.async:tiny-async-core'
     testImplementation 'org.apache.logging.log4j:log4j-api'
     testImplementation 'org.apache.logging.log4j:log4j-core'
-    testImplementation 'junit:junit'
-    testImplementation 'org.mockito:mockito-core'
 }
 
 group = 'com.spotify.heroic.metadata'

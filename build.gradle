@@ -20,21 +20,28 @@ buildscript {
 allprojects {
     group = 'com.spotify.heroic'
     version = '0.0.1-SNAPSHOT'
-}
 
-subprojects {
     apply plugin: "io.spring.dependency-management"
     apply plugin: 'com.google.protobuf'
     apply plugin: 'kotlin'
     apply plugin: 'net.ltgt.apt'
     apply plugin: 'java'
     apply plugin: 'idea'
+    apply plugin: 'jacoco'
     apply plugin: 'maven-publish'
+    
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
 
     compileKotlin {
         kotlinOptions {
             jvmTarget = '1.8'
         }
+    }
+    compileTestKotlin {
+        kotlinOptions.jvmTarget = "1.8"
     }
 
     protobuf {
@@ -43,12 +50,21 @@ subprojects {
             artifact = 'com.google.protobuf:protoc:3.5.1'
         }
     }
-
-    repositories {
-        mavenLocal()
-        mavenCentral()
+    
+    jacoco {
+        toolVersion = '0.7.7.201606060606'
     }
+    
+    sourceCompatibility = '1.8'
 
+    publishing {
+        publications {
+            maven(MavenPublication) {
+                from(components.java)
+            }
+        }
+    }
+    
     // Dependency management defines shared versions across all submodules to ensure consistency
     dependencyManagement {
         dependencies {
@@ -187,7 +203,9 @@ subprojects {
             }
         }
     }
+}
 
+subprojects {
     dependencies {
         implementation 'javax.inject:javax.inject'
         implementation 'com.google.dagger:dagger'
@@ -200,21 +218,51 @@ subprojects {
         annotationProcessor 'eu.toolchain.serializer:tiny-serializer-processor'
         annotationProcessor 'com.google.dagger:dagger-compiler'
 
-        //testImplementation 'org.slf4j:slf4j-simple'
         testImplementation 'org.jetbrains.kotlin:kotlin-test'
-    }
-
-    sourceCompatibility = '1.8'
-
-    publishing {
-        publications {
-            maven(MavenPublication) {
-                from(components.java)
-            }
-        }
+        testImplementation 'junit:junit'
+        testImplementation 'org.mockito:mockito-core'
     }
 
     tasks.withType(JavaCompile) {
         options.encoding = 'UTF-8'
+    }
+
+    jacocoTestReport {
+        sourceDirectories = files(sourceSets.main.allSource.srcDirs)
+        afterEvaluate {
+            classDirectories = files(sourceSets.main.output.files.collect {
+                fileTree(dir: it, exclude: [
+                        '**/Dagger*.class',
+                        '**/*_Factory.class',
+                        '**/*_Serializer.class'
+                ])
+            })
+        }
+        reports {
+            html.enabled = false
+            xml.enabled = true
+            csv.enabled = false
+        }
+    }
+}
+
+task jacocoRootReport(type: JacocoReport) {
+    description = 'Generates an aggregate report from all subprojects'
+    dependsOn(subprojects.test)
+
+    additionalSourceDirs = files(subprojects.sourceSets.main.allSource.srcDirs)
+    sourceDirectories = files(subprojects.sourceSets.main.allSource.srcDirs)
+    classDirectories = files(subprojects.sourceSets.main.output)
+    executionData = files(subprojects.jacocoTestReport.executionData)
+
+    reports {
+        xml.enabled = true
+        xml.destination file("${buildDir}/reports/jacoco/report.xml")
+        csv.enabled = false
+        html.enabled = false
+    }
+
+    doFirst {
+        executionData = files(executionData.findAll { it.exists() })
     }
 }

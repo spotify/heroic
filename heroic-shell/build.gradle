@@ -10,9 +10,6 @@ dependencies {
     implementation 'eu.toolchain.async:tiny-async-core'
     implementation 'jline:jline:2.12'
     implementation 'com.google.protobuf:protobuf-java'
-
-    testImplementation 'junit:junit'
-    testImplementation 'org.mockito:mockito-core'
 }
 
 description = 'Heroic: Interactive Shell'

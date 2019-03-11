@@ -21,8 +21,6 @@ dependencies {
     testCompileOnly 'org.projectlombok:lombok'
     testImplementation project(':heroic-test-it')
     testImplementation project(':heroic-loading')
-    testImplementation 'junit:junit'
-    testImplementation 'org.mockito:mockito-core'
     testImplementation 'org.hamcrest:java-hamcrest'
     testImplementation 'com.google.cloud:google-cloud-pubsub'
     testImplementation 'io.grpc:grpc-netty'

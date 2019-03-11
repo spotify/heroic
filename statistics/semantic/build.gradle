@@ -3,8 +3,6 @@ dependencies {
     implementation 'com.spotify.metrics:semantic-metrics-core'
     implementation 'com.spotify.metrics:semantic-metrics-ffwd-reporter'
     testImplementation 'org.hamcrest:java-hamcrest'
-    testImplementation 'junit:junit'
-    testImplementation 'org.mockito:mockito-core'
     compileOnly 'org.projectlombok:lombok'
 }
 
