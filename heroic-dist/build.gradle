@@ -1,3 +1,9 @@
+apply plugin: 'com.github.johnrengelman.shadow'
+
+shadowJar {
+    zip64 true
+}
+
 dependencies {
     implementation 'org.apache.logging.log4j:log4j-core'
     implementation 'org.apache.logging.log4j:log4j-1.2-api'
@@ -23,9 +29,6 @@ dependencies {
     testImplementation 'com.addthis:stream-lib'
     testImplementation 'net.jcip:jcip-annotations:1.0'
     testAnnotationProcessor 'net.jcip:jcip-annotations:1.0'
-
-    
-    // TODO: this should create a shaded jar
 }
 
 description = 'Heroic: Self-Contained Distribution Project'
