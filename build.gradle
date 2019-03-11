@@ -25,6 +25,7 @@ allprojects {
     apply plugin: 'com.google.protobuf'
     apply plugin: 'kotlin'
     apply plugin: 'net.ltgt.apt'
+    apply plugin: 'net.ltgt.apt-idea'
     apply plugin: 'java'
     apply plugin: 'idea'
     apply plugin: 'jacoco'
