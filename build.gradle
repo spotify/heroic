@@ -55,7 +55,7 @@ allprojects {
     jacoco {
         toolVersion = '0.7.7.201606060606'
     }
-    
+
     sourceCompatibility = '1.8'
 
     publishing {
