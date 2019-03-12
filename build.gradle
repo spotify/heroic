@@ -28,9 +28,10 @@ allprojects {
     apply plugin: 'net.ltgt.apt-idea'
     apply plugin: 'java'
     apply plugin: 'idea'
+    apply plugin: 'checkstyle'
     apply plugin: 'jacoco'
     apply plugin: 'maven-publish'
-    
+
     repositories {
         mavenLocal()
         mavenCentral()
@@ -51,7 +52,7 @@ allprojects {
             artifact = 'com.google.protobuf:protoc:3.5.1'
         }
     }
-    
+
     jacoco {
         toolVersion = '0.7.7.201606060606'
     }
@@ -65,7 +66,7 @@ allprojects {
             }
         }
     }
-    
+
     // Dependency management defines shared versions across all submodules to ensure consistency
     dependencyManagement {
         dependencies {
@@ -137,7 +138,7 @@ allprojects {
                 entry 'google-cloud-core'
                 entry 'google-cloud-core-grpc'
             }
-            
+
             dependency 'com.addthis:stream-lib:3.0.0'
             dependency 'org.xerial.snappy:snappy-java:1.1.7.2'
             dependency 'javax.inject:javax.inject:1'
@@ -226,6 +227,15 @@ subprojects {
 
     tasks.withType(JavaCompile) {
         options.encoding = 'UTF-8'
+    }
+
+    checkstyle {
+        toolVersion = '6.13'
+        configFile = rootProject.file('checkstyle.xml')
+        configProperties = [ 'basedir': rootProject.rootDir ]
+        showViolations = true
+        ignoreFailures = false
+        maxWarnings = 0
     }
 
     jacocoTestReport {
