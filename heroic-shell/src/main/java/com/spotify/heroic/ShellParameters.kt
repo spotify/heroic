@@ -25,7 +25,7 @@ import com.spotify.heroic.shell.AbstractShellTaskParams
 import java.util.ArrayList
 import org.kohsuke.args4j.Option
 
-class Parameters : AbstractShellTaskParams() {
+class ShellParameters : AbstractShellTaskParams() {
     @Option(name = "--server", usage = "Start shell as server (enables listen port)")
     val server = false
 
