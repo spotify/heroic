@@ -1,10 +1,14 @@
+apply plugin: 'application'
 apply plugin: 'com.github.johnrengelman.shadow'
+
+mainClassName = 'com.spotify.heroic.HeroicService'
 
 processResources {
     expand heroicVersion: project.version
 }
 
 shadowJar {
+    classifier 'shaded'
     zip64 true
 
     // required for lucene

@@ -42,8 +42,11 @@ After this, the project is built using Gradle:
 ./gradlew heroic-metric-bigtable:build
 ```
 
-The full build will cause the `heroic-dist` module to produce a shaded jar that contains
-all required dependencies.
+The `heroic-dist` module can be used to produce a shaded jar that contains all required dependencies:
+
+```
+./gradlew heroic-dist:shadowJar
+```
 
 ## Running
 
@@ -52,7 +55,13 @@ After building, the entry point of the service is
 The following is an example of how this can be run:
 
 ```
-$ java -cp $PWD/heroic-dist/target/heroic-dist-0.0.1-SNAPSHOT-shaded.jar com.spotify.heroic.HeroicService <config>
+./gradlew heroic-dist:runShadow <config>
+```
+
+which is the equivalant of doing:
+
+```
+java -jar $PWD/heroic-dist/build/libs/heroic-dist-0.0.1-SNAPSHOT-shaded.jar <config>
 ```
 
 For help on how to write a configuration file, see the [Configuration Section][configuration] of the official documentation.
