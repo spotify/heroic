@@ -30,7 +30,6 @@ import com.spotify.heroic.metric.BackendKeySet
 import com.spotify.heroic.metric.MetricBackend
 import com.spotify.heroic.shell.ShellIO
 import com.spotify.heroic.shell.task.parameters.DataMigrateParameters
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import eu.toolchain.async.AsyncFramework
 import eu.toolchain.async.AsyncFuture
 import eu.toolchain.async.ResolvableFuture
@@ -142,7 +141,6 @@ internal class KeyObserver(
 
     }
 
-    @SuppressFBWarnings(value = ["RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE"])
     private fun endOne(key: BackendKey) {
         streamDot(io, key, total.incrementAndGet())
 
