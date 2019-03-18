@@ -35,6 +35,9 @@ import com.spotify.heroic.querylogging.QueryLogger;
 import com.spotify.heroic.querylogging.QueryLoggerFactory;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import io.opencensus.trace.Span;
+import io.opencensus.trace.Tracer;
+import io.opencensus.trace.Tracing;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -61,6 +64,8 @@ public class QueryResource {
     private final QueryManager query;
     private final AsyncFramework async;
     private final QueryLogger queryLogger;
+    private static final Tracer tracer = Tracing.getTracer();
+
 
     @Inject
     public QueryResource(
@@ -124,8 +129,15 @@ public class QueryResource {
         final List<AsyncFuture<Triple<String, QueryContext, QueryResult>>> futures =
             new ArrayList<>();
 
+        final Span currentSpan = tracer.getCurrentSpan();
+
         query.getQueries().ifPresent(queries -> {
             for (final Map.Entry<String, QueryMetrics> e : queries.entrySet()) {
+
+                final Span span = tracer
+                    .spanBuilderWithExplicitParent("batch.query", currentSpan)
+                    .startSpan();
+
                 final String queryKey = e.getKey();
                 final QueryMetrics qm = e.getValue();
                 final Query q = qm
@@ -139,7 +151,8 @@ public class QueryResource {
 
                 futures.add(g
                     .query(q, queryContext)
-                    .directTransform(r -> Triple.of(queryKey, queryContext, r)));
+                    .directTransform(r -> Triple.of(queryKey, queryContext, r))
+                    .onFinished(span::end));
             }
         });
 

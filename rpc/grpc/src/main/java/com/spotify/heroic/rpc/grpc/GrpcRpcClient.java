@@ -33,6 +33,9 @@ import io.grpc.ClientCall;
 import io.grpc.ManagedChannel;
 import io.grpc.Metadata;
 import io.grpc.Status;
+import io.opencensus.common.Scope;
+import io.opencensus.trace.Span;
+import io.opencensus.trace.Tracer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import lombok.extern.slf4j.Slf4j;
@@ -46,6 +49,9 @@ public class GrpcRpcClient {
     private final Meter errors = new Meter();
 
     private static final GrpcRpcEmptyBody EMPTY = new GrpcRpcEmptyBody();
+
+    private static final Tracer tracer = io.opencensus.trace.Tracing.getTracer();
+
 
     public GrpcRpcClient(
         final AsyncFramework async,
@@ -72,6 +78,9 @@ public class GrpcRpcClient {
     public <Q, R> AsyncFuture<R> request(
         final GrpcDescriptor<Q, R> endpoint, final Q entity, final CallOptions options
     ) {
+
+        final Span rootSpan = tracer.getCurrentSpan();
+
         return channel.doto(channel -> {
             final byte[] body;
 
@@ -86,6 +95,8 @@ public class GrpcRpcClient {
             final Metadata metadata = new Metadata();
 
             final ResolvableFuture<R> future = async.future();
+
+
 
             call.start(new ClientCall.Listener<byte[]>() {
                 @Override
@@ -123,6 +134,8 @@ public class GrpcRpcClient {
                 }
             }, metadata);
 
+            final Scope scope = tracer.withSpan(rootSpan);
+
             call.sendMessage(body);
             call.setMessageCompression(true);
             call.request(1);
@@ -133,7 +146,7 @@ public class GrpcRpcClient {
                 if (!endpoint.descriptor().getFullMethodName().contains("heroic/suggest:")) {
                     errors.mark();
                 }
-            });
+            }).onFinished(scope::close);
         });
     }
 

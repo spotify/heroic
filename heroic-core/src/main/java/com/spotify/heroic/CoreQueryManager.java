@@ -79,6 +79,9 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.Transform;
+import io.opencensus.trace.AttributeValue;
+import io.opencensus.trace.Span;
+import io.opencensus.trace.Tracer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -113,6 +116,9 @@ public class CoreQueryManager implements QueryManager {
     private final Optional<ConditionalFeatures> conditionalFeatures;
 
     private final long smallQueryThreshold;
+
+    private static final Tracer tracer = io.opencensus.trace.Tracing.getTracer();
+
 
     @Inject
     public CoreQueryManager(
@@ -396,9 +402,17 @@ public class CoreQueryManager implements QueryManager {
             final List<AsyncFuture<T>> futures = new ArrayList<>(shards.size());
 
             for (final ClusterShard shard : shards) {
+
+                final Span span = tracer
+                    .spanBuilder("CoreQueryManager.run")
+                    .startSpan();
+
+                span.putAttribute("shard", AttributeValue.stringAttributeValue(shard.toString()));
+
                 futures.add(shard
                     .apply(function::apply, CoreQueryManager::retryTraceHandlerNoop)
-                    .catchFailed(catcher.apply(shard)));
+                    .catchFailed(catcher.apply(shard))
+                    .onFinished(span::end));
             }
 
             return async.collect(futures, collector);

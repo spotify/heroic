@@ -1,3 +1,5 @@
+apply plugin: 'com.google.protobuf'
+
 dependencies {
     implementation 'com.google.auto.value:auto-value-annotations'
     api 'eu.toolchain.serializer:tiny-serializer-processor'
@@ -12,11 +14,9 @@ dependencies {
     implementation 'io.thekraken:grok'
     api 'io.opencensus:opencensus-api'
     api 'io.opencensus:opencensus-impl'
-    implementation 'io.opencensus:opencensus-exporter-trace-stackdriver'
-    implementation 'io.opencensus:opencensus-exporter-trace-jaeger'
-    implementation 'io.opencensus:opencensus-exporter-trace-zipkin'
     implementation 'io.opencensus:opencensus-contrib-zpages'
     implementation 'io.opencensus:opencensus-contrib-grpc-util'
+    implementation 'com.google.protobuf:protobuf-java'
 
     testImplementation project(':heroic-component-test')
 

@@ -354,7 +354,7 @@ public class HeroicCore implements HeroicConfiguration {
         }
 
         final double probability = (double) config.getOrDefault("probability", 0.01);
-        log.info("Setting tracing to sample with a probability of {}", String.valueOf(probability));
+        log.info("Setting tracing to sample with a probability of {}", probability);
         TraceConfig traceConfig = Tracing.getTraceConfig();
         traceConfig.updateActiveTraceParams(
             traceConfig
