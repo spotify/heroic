@@ -256,6 +256,22 @@ subprojects {
         options.encoding = 'UTF-8'
     }
 
+    task integrationTest(type: Test) {
+        description = 'Runs integration tests.'
+        group = 'verification'
+
+        testClassesDirs = sourceSets.integrationTest.output.classesDirs
+        classpath = sourceSets.integrationTest.runtimeClasspath
+        shouldRunAfter test
+
+        jacoco {
+            destinationFile = file("$buildDir/jacoco/integrationTest.exec")
+
+        }
+    }
+
+    check.dependsOn integrationTest
+
     checkstyle {
         toolVersion = '6.13'
         configFile = rootProject.file('checkstyle.xml')
@@ -266,6 +282,7 @@ subprojects {
     }
 
     jacocoTestReport {
+        executionData test, integrationTest
         sourceDirectories = files(sourceSets.main.allSource.srcDirs)
         afterEvaluate {
             classDirectories = files(sourceSets.main.output.files.collect {
@@ -281,23 +298,13 @@ subprojects {
             xml.enabled = true
             csv.enabled = false
         }
+        dependsOn test, integrationTest
     }
-
-    task integrationTest(type: Test) {
-        description = 'Runs integration tests.'
-        group = 'verification'
-
-        testClassesDirs = sourceSets.integrationTest.output.classesDirs
-        classpath = sourceSets.integrationTest.runtimeClasspath
-        shouldRunAfter test
-    }
-
-    check.dependsOn integrationTest
 }
 
 task jacocoRootReport(type: JacocoReport) {
     description = 'Generates an aggregate report from all subprojects'
-    dependsOn(subprojects.test)
+    dependsOn subprojects.test, subprojects.integrationTest
 
     additionalSourceDirs = files(subprojects.sourceSets.main.allSource.srcDirs)
     sourceDirectories = files(subprojects.sourceSets.main.allSource.srcDirs)
