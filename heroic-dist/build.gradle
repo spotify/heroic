@@ -1,0 +1,48 @@
+apply plugin: 'application'
+apply plugin: 'com.github.johnrengelman.shadow'
+
+mainClassName = 'com.spotify.heroic.HeroicService'
+
+processResources {
+    expand heroicVersion: project.version
+}
+
+shadowJar {
+    classifier 'shaded'
+    zip64 true
+
+    // required for lucene
+    append 'META-INF/services/org.apache.lucene.codecs.Codec'
+    append 'META-INF/services/org.apache.lucene.codecs.DocValuesFormat'
+    append 'META-INF/services/org.apache.lucene.codecs.PostingsFormat'
+    append 'META-INF/services/org.apache.lucene.analysis.util.CharFilterFactory'
+    append 'META-INF/services/org.apache.lucene.analysis.util.TokenFilterFactory'
+    append 'META-INF/services/org.apache.lucene.analysis.util.TokenizerFactory'
+}
+
+dependencies {
+    implementation 'org.apache.logging.log4j:log4j-core'
+    implementation 'org.apache.logging.log4j:log4j-1.2-api'
+    implementation 'org.apache.logging.log4j:log4j-slf4j-impl'
+    implementation 'org.slf4j:jcl-over-slf4j'
+    implementation 'args4j:args4j'
+    implementation 'com.google.guava:guava'
+    implementation 'eu.toolchain.async:tiny-async-core'
+    api project(':heroic-all')
+    api project(':heroic-shell')
+    api project(':heroic-core')
+    api project(':heroic-component')
+    compileOnly 'org.projectlombok:lombok'
+
+    testCompileOnly 'org.projectlombok:lombok'
+    testImplementation project(':heroic-test-it')
+    testImplementation project(':heroic-loading')
+    testImplementation 'org.hamcrest:java-hamcrest'
+    testImplementation 'com.google.cloud:google-cloud-pubsub'
+    testImplementation 'io.grpc:grpc-netty'
+    testImplementation 'com.addthis:stream-lib'
+    testImplementation 'net.jcip:jcip-annotations:1.0'
+    testAnnotationProcessor 'net.jcip:jcip-annotations:1.0'
+}
+
+description = 'Heroic: Self-Contained Distribution Project'

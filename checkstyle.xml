@@ -16,7 +16,7 @@
         <property name="message" value="Line has trailing spaces." />
     </module>
 
-    <!-- use eclipse-style supression comments -->
+    <!-- use eclipse-style suppression comments -->
     <module name="SuppressionCommentFilter">
         <property name="offCommentFormat" value="@formatter:off"/>
         <property name="onCommentFormat" value="@formatter:on"/>

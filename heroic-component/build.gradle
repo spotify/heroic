@@ -1,0 +1,27 @@
+dependencies {
+    implementation 'com.google.auto.value:auto-value-annotations'
+    api 'eu.toolchain.serializer:tiny-serializer-processor'
+    api 'eu.toolchain.async:tiny-async-api'
+    implementation 'javax.ws.rs:javax.ws.rs-api'
+    implementation 'com.google.guava:guava'
+    api 'org.slf4j:slf4j-api'
+    api 'com.fasterxml.jackson.core:jackson-annotations'
+    api 'com.fasterxml.jackson.core:jackson-databind'
+    api 'org.apache.commons:commons-lang3'
+    implementation 'com.google.code.findbugs:annotations'
+    implementation 'io.thekraken:grok'
+    api 'io.opencensus:opencensus-api'
+    api 'io.opencensus:opencensus-impl'
+    implementation 'io.opencensus:opencensus-exporter-trace-stackdriver'
+    implementation 'io.opencensus:opencensus-exporter-trace-jaeger'
+    implementation 'io.opencensus:opencensus-exporter-trace-zipkin'
+    implementation 'io.opencensus:opencensus-contrib-zpages'
+    implementation 'io.opencensus:opencensus-contrib-grpc-util'
+
+    testImplementation project(':heroic-component-test')
+
+    compileOnly 'org.projectlombok:lombok'
+    testCompileOnly 'org.projectlombok:lombok'
+}
+
+description = 'Heroic: Component Project'

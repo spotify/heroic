@@ -1,0 +1,9 @@
+dependencies {
+    implementation project(':heroic-component')
+    implementation 'dnsjava:dnsjava:2.1.7'
+
+    compileOnly 'org.projectlombok:lombok'
+}
+
+group = 'com.spotify.heroic.discovery'
+description = 'Heroic: Simple Discovery'

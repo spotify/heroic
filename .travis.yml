@@ -25,10 +25,7 @@ env:
 before_install:
   - curl https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-214.0.0-linux-x86_64.tar.gz | tar xzf -
   - ./google-cloud-sdk/install.sh --quiet --usage-reporting false --additional-components pubsub-emulator beta
-  - wget https://github.com/protocolbuffers/protobuf/releases/download/v3.6.1/protoc-3.6.1-linux-x86_64.zip
-  - sudo unzip protoc-3.6.1-linux-x86_64.zip -d /usr/local
 
-# override default command since it doesn't skip checkstyle
 install:
   - tools/install-repackaged
 
@@ -38,7 +35,7 @@ before_script:
     PUBSUB_PID=$!
 
 script:
-  - mvn -nsu -T 1C -D environment=test -P '!findbugs,codecov' verify
+  - ./gradlew check jacocoRootReport
 
 after_script:
   - kill -9 $PUBSUB_PID

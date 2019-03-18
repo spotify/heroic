@@ -71,7 +71,7 @@ public class HeroicShell {
             }
         });
 
-        final Parameters params = new Parameters();
+        final ShellParameters params = new ShellParameters();
         final CmdLineParser parser = setupParser(params);
         final ParsedArguments parsed = ParsedArguments.parse(args);
 
@@ -125,7 +125,7 @@ public class HeroicShell {
         System.exit(0);
     }
 
-    private static CoreInterface setupCoreBridge(Parameters params, AsyncFramework async)
+    private static CoreInterface setupCoreBridge(ShellParameters params, AsyncFramework async)
         throws Exception {
         final String connect = params.getConnect();
         if (connect != null) {
@@ -139,7 +139,7 @@ public class HeroicShell {
         return RemoteCoreInterface.fromConnectString(connect, async);
     }
 
-    private static CoreInterface setupLocalCore(Parameters params, AsyncFramework async)
+    private static CoreInterface setupLocalCore(ShellParameters params, AsyncFramework async)
         throws Exception {
         final HeroicCore.Builder builder = setupBuilder(params);
 
@@ -171,7 +171,7 @@ public class HeroicShell {
         });
     }
 
-    static void interactive(Parameters params, CoreInterface core) throws Exception {
+    static void interactive(ShellParameters params, CoreInterface core) throws Exception {
         log.info("Setting up interactive shell...");
 
         Exception e = null;
@@ -334,7 +334,7 @@ public class HeroicShell {
         return StringUtils.join(alternatives, ", ");
     }
 
-    static HeroicCore.Builder setupBuilder(Parameters params) {
+    static HeroicCore.Builder setupBuilder(ShellParameters params) {
         HeroicCore.Builder builder = HeroicCore
             .builder()
             .setupService(params.getServer())

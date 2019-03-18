@@ -1,0 +1,11 @@
+dependencies {
+    implementation project(':heroic-test')
+    implementation project(':heroic-core')
+    implementation project(':heroic-component')
+    implementation 'com.google.guava:guava'
+    implementation 'junit:junit'
+    implementation 'org.mockito:mockito-core'
+    implementation 'org.hamcrest:java-hamcrest'
+}
+
+description = 'Heroic: Integration Testing Project'

@@ -1,0 +1,55 @@
+apply plugin: 'com.google.protobuf'
+
+dependencies {
+    implementation project(':heroic-component')
+    implementation project(':heroic-parser')
+    implementation project(':heroic-loading')
+    implementation 'com.google.auto.value:auto-value-annotations'
+    implementation 'org.xerial.snappy:snappy-java'
+    implementation 'eu.toolchain.async:tiny-async-core'
+    implementation 'eu.toolchain.async:tiny-async-api'
+    implementation 'eu.toolchain.serializer:tiny-serializer-core'
+    implementation 'com.google.guava:guava'
+    implementation 'com.google.cloud:google-cloud-core'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
+    implementation 'org.eclipse.jetty:jetty-webapp'
+    implementation 'org.eclipse.jetty:jetty-server'
+    implementation 'org.eclipse.jetty.http2:http2-server'
+    implementation 'javax.mail:mail'
+    implementation 'org.eclipse.jetty:jetty-rewrite'
+    implementation 'org.eclipse.jetty:jetty-util'
+    implementation 'org.glassfish.jersey.containers:jersey-container-servlet-core'
+    implementation 'org.glassfish.jersey.containers:jersey-container-servlet'
+    implementation 'org.glassfish.jersey.containers:jersey-container-jetty-http'
+    implementation 'org.glassfish.jersey.core:jersey-server'
+    implementation 'org.glassfish.jersey.inject:jersey-hk2'
+    implementation 'javax.servlet:javax.servlet-api'
+    implementation 'javax.ws.rs:javax.ws.rs-api'
+    implementation 'org.jfree:jfreechart'
+    implementation 'joda-time:joda-time'
+    implementation 'args4j:args4j'
+    implementation 'org.slf4j:slf4j-api'
+    implementation 'org.apache.logging.log4j:log4j-api'
+    implementation 'com.spotify.heroic.repackaged:folsom'
+    implementation 'io.opencensus:opencensus-api'
+    implementation 'io.opencensus:opencensus-impl'
+    implementation 'io.opencensus:opencensus-contrib-http-util'
+    implementation 'io.opencensus:opencensus-contrib-zpages'
+    implementation 'com.lightstep.tracer:lightstep-tracer-jre'
+    implementation 'com.lightstep.tracer:tracer-grpc'
+    implementation 'com.lightstep.opencensus:lightstep-opencensus-exporter'
+    implementation 'io.opencensus:opencensus-exporter-trace-jaeger'
+    implementation 'io.opencensus:opencensus-exporter-trace-zipkin'
+    implementation 'com.typesafe:config:1.3.2'
+    implementation 'net.jodah:expiringmap:0.5.1'
+
+    testImplementation project(':heroic-test')
+    testImplementation project(':heroic-component-test')
+
+    compileOnly 'org.projectlombok:lombok'
+    compileOnly 'com.google.auto.value:auto-value'
+    
+}
+
+description = 'Heroic: Core Project'

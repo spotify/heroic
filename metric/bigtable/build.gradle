@@ -1,0 +1,21 @@
+dependencies {
+    implementation('com.google.cloud.bigtable:bigtable-client-core:1.4.0') {
+        exclude group: 'io.grpc', module: 'grpc-netty-shaded'
+        exclude group: 'io.grpc', module: 'grpc-core'
+        exclude group: 'io.opencensus', module: 'opencensus-api'
+        exclude group: 'io.opencensus', module: 'opencensus-contrib-grpc-metrics'
+        exclude group: 'io.opencensus', module: 'opencensus-contrib-grpc-util'
+        exclude group: 'io.dropwizard.metrics', module: 'metrics-core'
+    }
+    implementation 'io.grpc:grpc-netty'
+    implementation 'io.netty:netty-tcnative-boringssl-static:2.0.7.Final'
+    implementation project(':heroic-component')
+    implementation 'eu.toolchain.serializer:tiny-serializer-core'
+    compileOnly 'org.projectlombok:lombok'
+
+    testImplementation project(':heroic-test-it')
+    testImplementation project(':heroic-component-test')
+}
+
+group = 'com.spotify.heroic.metric'
+description = 'Heroic: Bigtable Backend'

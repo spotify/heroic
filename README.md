@@ -29,14 +29,24 @@ Installing repackaged/x
 ...
 ```
 
-After this, the project is built using Maven:
+After this, the project is built using Gradle:
 
 ```bash
-$ mvn package
+# full build, runs all tests and builds the shaded jar
+./gradlew build
+
+# only compile
+./gradlew assemble
+
+# build a single module
+./gradlew heroic-metric-bigtable:build
 ```
 
-This will cause the `heroic-dist` module to produce a shaded jar that contains
-all required dependencies.
+The `heroic-dist` module can be used to produce a shaded jar that contains all required dependencies:
+
+```
+./gradlew heroic-dist:shadowJar
+```
 
 ## Running
 
@@ -45,7 +55,13 @@ After building, the entry point of the service is
 The following is an example of how this can be run:
 
 ```
-$ java -cp $PWD/heroic-dist/target/heroic-dist-0.0.1-SNAPSHOT-shaded.jar com.spotify.heroic.HeroicService <config>
+./gradlew heroic-dist:runShadow <config>
+```
+
+which is the equivalant of doing:
+
+```
+java -jar $PWD/heroic-dist/build/libs/heroic-dist-0.0.1-SNAPSHOT-shaded.jar <config>
 ```
 
 For help on how to write a configuration file, see the [Configuration Section][configuration] of the official documentation.
@@ -70,7 +86,7 @@ A docker container with the shaded jar is now available. To build the container:
 $ docker build -t heroic:latest .
 ```
 
-This is a multi-stage build and will first build Heroic via a `mvn clean package` and then copy the resulting shaded jar into the runtime container.
+This is a multi-stage build and will first build Heroic via a `./gradlew clean build` and then copy the resulting shaded jar into the runtime container.
 
 Running heroic via docker can be done:
 
@@ -88,24 +104,27 @@ parameter. You can use [docs/log4j2-file.xml](/docs/log4j2-file.xml) as a base.
 
 ## Testing
 
-We run unit tests with Maven:
+We run tests with Gradle:
 
 ```
-$ mvn test
+# run unit tests
+./gradlew test
+
+# run integration tests
+./gradlew integrationTest
 ```
 
-A more comprehensive test suite is enabled with the `environment=test`
-property.
+or to run a more comprehensive set of checks:
 
 ```
-$ mvn -D environment=test verify
+./gradlew check
 ```
 
-This adds:
+This will run:
 
+* unit tests
+* integration tests
 * [Checkstyle](http://checkstyle.sourceforge.net/)
-* [FindBugs](http://findbugs.sourceforge.net/)
-* [Integration Tests with Maven Failsafe Plugin](http://maven.apache.org/surefire/maven-failsafe-plugin/)
 * [Coverage Reporting with Jacoco](http://eclemma.org/jacoco/)
 
 It is strongly recommended that you run the full test suite before setting up a
@@ -177,14 +196,6 @@ communicate with each other in the same JVM instance.
 
 There's an ongoing project to improve test coverage.
 Clicking the above graph will bring you to [codecov.io](https://codecov.io/gh/spotify/heroic/branches/master), where you can find areas to focus on.
-
-#### Speedy Building
-
-For a speedy build without tests and checks, you can run:
-
-```bash
-$ mvn -D maven.test.skip=true package
-```
 
 #### Building a Debian Package
 
@@ -350,7 +361,7 @@ The easiest way to do this, is to build the project and look at the warnings
 for the shaded jar.
 
 ```
-$> mvn clean package -D maven.test.skip=true
+$> ./gradlew clean assemble
 ...
 [WARNING] foo-3.5.jar, foo-4.5.jar define 10 overlapping classes:
 [WARNING]   - com.foo.ConflictingClass
@@ -360,8 +371,8 @@ $> mvn clean package -D maven.test.skip=true
 This would indicate that there is a package called foo with overlapping
 classes.
 
-You can find the culprit using the `dependency` plugin.
+You can find the culprit using the `dependencies` task.
 
 ```
-$> mvn package dependency:tree
+$> ./gradlew <module>:dependencies
 ```
