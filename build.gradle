@@ -37,13 +37,40 @@ allprojects {
         mavenCentral()
     }
 
-    compileKotlin {
-        kotlinOptions {
-            jvmTarget = '1.8'
+    sourceSets {
+        test {
+            // Exclude integration tests
+            java {
+                exclude '**/*IT.java'
+            }
+
+        }
+
+        integrationTest {
+            compileClasspath += test.compileClasspath
+            runtimeClasspath += test.runtimeClasspath
+            resources.srcDir 'src/test/resources'
+            // Exclude unit tests
+            java {
+                srcDirs = test.java.srcDirs
+                exclude '**/*Test.java'
+            }
+
         }
     }
-    compileTestKotlin {
-        kotlinOptions.jvmTarget = "1.8"
+
+    configurations {
+        integrationTestCompile.extendsFrom testCompile
+        integrationTestRuntime.extendsFrom testRuntime
+    }
+
+    // Set options for kotlin tasks regardless of sourceset
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+        kotlinOptions {
+            jvmTarget = '1.8'
+            languageVersion = '1.3'
+            apiVersion = '1.3'
+        }
     }
 
     protobuf {
@@ -255,6 +282,17 @@ subprojects {
             csv.enabled = false
         }
     }
+
+    task integrationTest(type: Test) {
+        description = 'Runs integration tests.'
+        group = 'verification'
+
+        testClassesDirs = sourceSets.integrationTest.output.classesDirs
+        classpath = sourceSets.integrationTest.runtimeClasspath
+        shouldRunAfter test
+    }
+
+    check.dependsOn integrationTest
 }
 
 task jacocoRootReport(type: JacocoReport) {
@@ -277,3 +315,5 @@ task jacocoRootReport(type: JacocoReport) {
         executionData = files(executionData.findAll { it.exists() })
     }
 }
+
+

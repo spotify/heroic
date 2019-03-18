@@ -32,10 +32,10 @@ Installing repackaged/x
 After this, the project is built using Gradle:
 
 ```bash
-# full build
+# full build, runs all tests and builds the shaded jar
 ./gradlew build
 
-# compile without running tests
+# only compile
 ./gradlew assemble
 
 # build a single module
@@ -104,10 +104,14 @@ parameter. You can use [docs/log4j2-file.xml](/docs/log4j2-file.xml) as a base.
 
 ## Testing
 
-We run unit tests with Gradle:
+We run tests with Gradle:
 
 ```
+# run unit tests
 ./gradlew test
+
+# run integration tests
+./gradlew integrationTest
 ```
 
 or to run a more comprehensive set of checks:
@@ -116,8 +120,10 @@ or to run a more comprehensive set of checks:
 ./gradlew check
 ```
 
-This adds:
+This will run:
 
+* unit tests
+* integration tests
 * [Checkstyle](http://checkstyle.sourceforge.net/)
 * [Coverage Reporting with Jacoco](http://eclemma.org/jacoco/)
 
