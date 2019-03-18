@@ -21,37 +21,37 @@
 
 package com.spotify.heroic
 
-import java.util.ArrayList
 import org.kohsuke.args4j.Argument
 import org.kohsuke.args4j.Option
+import java.util.*
 
 class Parameters {
     @Option(name = "-P", aliases = ["--profile"], usage = "Activate a pre-defined profile instead of a configuration file. Profiles" +
             " are pre-defined configurations, useful for messing around with the " +
             "system.")
-    val profiles = ArrayList<String>()
+    var profiles = ArrayList<String>()
 
     @Option(name = "--port", usage = "Port number to bind to")
-    val port: Int? = null
+    var port: Int? = null
 
     @Option(name = "--host", usage = "Host to bind to")
-    val host: String? = null
+    var host: String? = null
 
     @Option(name = "--id", usage = "Heroic identifier")
-    val id: String? = null
+    var id: String? = null
 
     @Option(name = "-h", aliases = ["--help"], help = true, usage = "Display help.")
-    val help: Boolean = false
+    var help: Boolean = false
 
     @Option(name = "--startup-ping", usage = "Send a JSON frame to the given URI containing information about this " + "host after it has started.")
-    val startupPing: String? = null
+    var startupPing: String? = null
 
     @Option(name = "--startup-id", usage = "Explicit id of a specific startup instance.")
-    val startupId: String? = null
+    var startupId: String? = null
 
     @Option(name = "-X", usage = "Define an extra parameter", metaVar = "<key>=<value>")
-    val parameters = ArrayList<String>()
+    var parameters = ArrayList<String>()
 
     @Argument
-    val extra = ArrayList<String>()
+    var extra = ArrayList<String>()
 }
