@@ -25,7 +25,10 @@ import static junit.framework.TestCase.assertEquals;
 import static org.junit.Assume.assumeNotNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.cloud.pubsub.v1.Publisher;
 import com.google.common.collect.ImmutableList;
+import com.google.protobuf.ByteString;
+import com.google.pubsub.v1.PubsubMessage;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.consumer.pubsub.EmulatorHelper;
@@ -40,9 +43,6 @@ import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.memory.MemoryMetricModule;
-import com.google.cloud.pubsub.v1.Publisher;
-import com.google.protobuf.ByteString;
-import com.google.pubsub.v1.PubsubMessage;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -117,8 +117,9 @@ public class PubSubConsumerIT extends AbstractConsumerIT {
         };
     }
 
-    @After
-    public void tearDownSubscription() throws IOException {
+    @Override
+    public void abstractTeardown() throws Exception {
+        super.abstractTeardown();
         EmulatorHelper.deleteSubscription(project, subscription);
     }
 
