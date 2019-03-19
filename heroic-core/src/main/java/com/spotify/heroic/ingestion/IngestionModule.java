@@ -25,6 +25,8 @@ import static com.spotify.heroic.common.Optionals.pickOptional;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.common.Optionals;
 import com.spotify.heroic.dagger.PrimaryComponent;
@@ -157,12 +159,13 @@ public class IngestionModule {
         private Builder() {
         }
 
+        @JsonCreator
         public Builder(
-            final Optional<Boolean> updateMetrics,
-            final Optional<Boolean> updateMetadata,
-            final Optional<Boolean> updateSuggestions,
-            final Optional<Integer> maxConcurrentWrites,
-            final Optional<String> filter
+            @JsonProperty("updateMetrics") final Optional<Boolean> updateMetrics,
+            @JsonProperty("updateMetadata") final Optional<Boolean> updateMetadata,
+            @JsonProperty("updateSuggestions") final Optional<Boolean> updateSuggestions,
+            @JsonProperty("maxConcurrentWrites") final Optional<Integer> maxConcurrentWrites,
+            @JsonProperty("filter") final Optional<String> filter
         ) {
             this.updateMetrics = updateMetrics;
             this.updateMetadata = updateMetadata;
