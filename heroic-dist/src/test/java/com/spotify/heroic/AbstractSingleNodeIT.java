@@ -24,13 +24,13 @@ public abstract class AbstractSingleNodeIT {
     }
 
     @Before
-    public final void abstractSetup() throws Exception {
+    public void abstractSetup() throws Exception {
         instance = setupCore();
         instance.start().lazyTransform(ignore -> prepareEnvironment()).get(10, TimeUnit.SECONDS);
     }
 
     @After
-    public final void abstractTeardown() throws Exception {
+    public void abstractTeardown() throws Exception {
         instance.shutdown().get(10, TimeUnit.SECONDS);
     }
 
