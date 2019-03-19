@@ -35,7 +35,7 @@ before_script:
     PUBSUB_PID=$!
 
 script:
-  - ./gradlew check jacocoRootReport
+  - ./gradlew --info check jacocoRootReport
 
 after_script:
   - kill -9 $PUBSUB_PID
