@@ -14,6 +14,7 @@ import com.spotify.heroic.test.FakeModuleLoader;
 import com.spotify.heroic.test.Resources;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -44,6 +45,24 @@ public class BasicSerializationTest {
     }
 
     @Test
+    public void testMetricCollection2() throws Exception {
+        final MetricCollection expected = MetricCollection.events(
+            ImmutableList.of(new Event(1000, ImmutableMap.of("foo", "bar")),
+                new Event(2000, ImmutableMap.of("bar", "baz"))));
+        assertSerialization("MetricCollection.Event.json", expected, MetricCollection.class);
+    }
+
+    @Test
+    public void testMetricCollection3() throws Exception {
+        final byte[] foo = "foo\n".getBytes(StandardCharsets.UTF_8);
+        final byte[] bar = "bar\n".getBytes(StandardCharsets.UTF_8);
+
+        final MetricCollection expected = MetricCollection.cardinality(
+            ImmutableList.of(Payload.create(1000, foo), Payload.create(2000, bar)));
+        assertSerialization("MetricCollection.Payload.json", expected, MetricCollection.class);
+    }
+
+    @Test
     public void testResultGroup() throws Exception {
         final Set<Series> series = ImmutableSet.of();
         final ResultGroup expected =
@@ -57,8 +76,8 @@ public class BasicSerializationTest {
         final List<ResultGroup> groups = new ArrayList<>();
         final List<RequestError> errors = new ArrayList<>();
         final FullQuery expected =
-            new FullQuery(QueryTrace.of(QueryTrace.identifier("test"), 0L), errors, groups,
-                Statistics.empty(), ResultLimits.of());
+            FullQuery.create(QueryTrace.of(QueryTrace.identifier("test"), 0L),
+                errors, groups, Statistics.empty(), ResultLimits.of(), Optional.empty());
 
         assertSerialization("FullQuery.json", expected, FullQuery.class);
     }
@@ -79,7 +98,7 @@ public class BasicSerializationTest {
 
         final QueryMetricsResponse toVerify =
             new QueryMetricsResponse(queryId, range, result, errors, trace, limits,
-                Optional.empty());
+                Optional.empty(), Optional.empty());
 
         assertSerialization("QueryMetricsResponse.json", toVerify);
     }
@@ -104,11 +123,11 @@ public class BasicSerializationTest {
     ) throws IOException {
         // verify that it is equal to the local file.
         try (final InputStream in = Resources.openResource(getClass(), expectedFile)) {
-            assertEquals(mapper.readValue(in, type), toVerify);
+            assertEquals(toVerify, mapper.readValue(in, type));
         }
 
         // roundtrip
         final String string = mapper.writeValueAsString(toVerify);
-        assertEquals(mapper.readValue(string, type), toVerify);
+        assertEquals(toVerify, mapper.readValue(string, type));
     }
 }

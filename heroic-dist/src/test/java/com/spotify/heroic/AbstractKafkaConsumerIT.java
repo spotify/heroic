@@ -72,11 +72,12 @@ public abstract class AbstractKafkaConsumerIT extends AbstractConsumerIT {
 
             final Series series = request.getSeries();
             for (final Point p : mc.getDataAs(Point.class)) {
-                final Spotify100.JsonMetric src =
-                    new Spotify100.JsonMetric(Spotify100.SCHEMA_VERSION, series.getKey(),
-                        "localhost", p.getTimestamp(), series.getTags(), p.getValue());
+                final DataVersion1 src =
+                    new DataVersion1("1.1.0", series.getKey(), "localhost", p.getTimestamp(),
+                        series.getTags(), series.getResource(), p.getValue());
 
                 final byte[] message;
+
                 try {
                     message = objectMapper.writeValueAsBytes(src);
                 } catch (Exception e) {

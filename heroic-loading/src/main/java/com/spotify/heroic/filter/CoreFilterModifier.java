@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.filter;
 
-import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
+import javax.inject.Inject;
 
 public final class CoreFilterModifier implements FilterModifier {
     @Inject
@@ -45,14 +45,14 @@ public final class CoreFilterModifier implements FilterModifier {
                     return TrueFilter.get();
                 }
 
-                return new AndFilter(statements).optimize();
+                return AndFilter.create(statements).optimize();
             }
 
             @Override
             public Filter visitOr(final OrFilter or) {
                 final List<Filter> statements = new ArrayList<Filter>();
 
-                for (final Filter f : or.getStatements()) {
+                for (final Filter f : or.filters()) {
                     statements.add(removeTag(f, tag));
                 }
 
@@ -60,12 +60,12 @@ public final class CoreFilterModifier implements FilterModifier {
                     return TrueFilter.get();
                 }
 
-                return new OrFilter(statements).optimize();
+                return OrFilter.create(statements).optimize();
             }
 
             @Override
             public Filter visitMatchTag(final MatchTagFilter matchTag) {
-                if (matchTag.getTag().equals(tag)) {
+                if (matchTag.tag().equals(tag)) {
                     return TrueFilter.get();
                 }
 
@@ -74,7 +74,7 @@ public final class CoreFilterModifier implements FilterModifier {
 
             @Override
             public Filter visitHasTag(final HasTagFilter hasTag) {
-                if (hasTag.getTag().equals(tag)) {
+                if (hasTag.tag().equals(tag)) {
                     return TrueFilter.get();
                 }
 

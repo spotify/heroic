@@ -21,17 +21,28 @@
 
 package com.spotify.heroic.elasticsearch;
 
-import lombok.RequiredArgsConstructor;
-
 import java.util.concurrent.ConcurrentMap;
 
-@RequiredArgsConstructor
+/**
+ * A cache to reduce writes to Elasticsearch.
+ *
+ * Main difference from {@link DefaultRateLimitedCache} is there is no rate limiting enforced.
+ */
 public class DisabledRateLimitedCache<K> implements RateLimitedCache<K> {
     private final ConcurrentMap<K, Boolean> cache;
 
+    @java.beans.ConstructorProperties({ "cache" })
+    public DisabledRateLimitedCache(final ConcurrentMap<K, Boolean> cache) {
+        this.cache = cache;
+    }
+
     @Override
-    public boolean acquire(K key) {
-        return cache.putIfAbsent(key, true) == null;
+    public boolean acquire(K key, final Runnable cacheHit) {
+        if (cache.putIfAbsent(key, true) != null) {
+            cacheHit.run();
+            return false;
+        }
+        return true;
     }
 
     @Override

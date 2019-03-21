@@ -21,8 +21,7 @@
 
 package com.spotify.heroic.statistics.semantic;
 
-import com.codahale.metrics.Histogram;
-import com.codahale.metrics.Meter;
+import com.codahale.metrics.Counter;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.Statistics;
@@ -42,7 +41,6 @@ import com.spotify.heroic.statistics.MetadataBackendReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 import eu.toolchain.async.AsyncFuture;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @ToString(of = {"base"})
@@ -56,14 +54,12 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
     private final FutureReporter deleteSeries;
     private final FutureReporter findKeys;
     private final FutureReporter write;
+    private final FutureReporter backendWrite;
 
-    private final Meter writeSuccess;
-    private final Meter writeFailure;
-    private final Meter entries;
+    private final Counter entries;
+    private final Counter writesDroppedByCacheHit;
+    private final Counter writesDroppedByDuplicate;
 
-    private final Meter writesDroppedByRateLimit;
-
-    private final Histogram writeBatchDuration;
 
     public SemanticMetadataBackendReporter(SemanticMetricRegistry registry) {
         final MetricId base = MetricId.build().tagged("component", COMPONENT);
@@ -82,15 +78,15 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
             base.tagged("what", "find-keys", "unit", Units.QUERY));
         write =
             new SemanticFutureReporter(registry, base.tagged("what", "write", "unit", Units.WRITE));
-        writeSuccess = registry.meter(base.tagged("what", "write-success", "unit", Units.WRITE));
-        writeFailure = registry.meter(base.tagged("what", "write-failure", "unit", Units.FAILURE));
-        entries = registry.meter(base.tagged("what", "entries", "unit", Units.QUERY));
+        backendWrite = new SemanticFutureReporter(registry,
+            base.tagged("what", "backend-write", "unit", Units.WRITE));
+        entries = registry.counter(base.tagged("what", "entries", "unit", Units.COUNT));
 
-        writesDroppedByRateLimit =
-            registry.meter(base.tagged("what", "writes-dropped-by-rate-limit", "unit", Units.DROP));
+        writesDroppedByCacheHit = registry.counter(
+            base.tagged("what", "writes-dropped-by-cache-hit", "unit", Units.COUNT));
+        writesDroppedByDuplicate = registry.counter(
+            base.tagged("what", "writes-dropped-by-duplicate", "unit", Units.COUNT));
 
-        writeBatchDuration = registry.histogram(
-            base.tagged("what", "write-bulk-duration", "unit", Units.MILLISECOND));
     }
 
     @Override
@@ -101,28 +97,27 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
     }
 
     @Override
-    public void reportWriteDroppedByRateLimit() {
-        writesDroppedByRateLimit.mark();
+    public FutureReporter.Context setupBackendWriteReporter() {
+        return backendWrite.setup();
     }
 
     @Override
-    public void reportWriteSuccess(long n) {
-        writeSuccess.mark(n);
+    public void reportWriteDroppedByCacheHit() {
+        writesDroppedByCacheHit.inc();
     }
 
     @Override
-    public void reportWriteFailure(long n) {
-        writeFailure.mark(n);
+    public void reportWriteDroppedByDuplicate() {
+        writesDroppedByDuplicate.inc();
     }
 
-    @Override
-    public void reportWriteBatchDuration(long millis) {
-        writeBatchDuration.update(millis);
-    }
-
-    @RequiredArgsConstructor
     class InstrumentedMetadataBackend implements MetadataBackend {
         private final MetadataBackend delegate;
+
+        @java.beans.ConstructorProperties({ "delegate" })
+        public InstrumentedMetadataBackend(final MetadataBackend delegate) {
+            this.delegate = delegate;
+        }
 
         @Override
         public AsyncFuture<Void> configure() {
@@ -136,7 +131,7 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
 
         @Override
         public AsyncObservable<Entries> entries(final Entries.Request request) {
-            entries.mark();
+            entries.inc();
             return delegate.entries(request);
         }
 

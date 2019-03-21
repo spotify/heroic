@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.statistics.semantic;
 
-import com.codahale.metrics.Meter;
+import com.codahale.metrics.Counter;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.statistics.FutureReporter;
@@ -36,12 +36,15 @@ import com.spotify.heroic.suggest.WriteSuggest;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 import eu.toolchain.async.AsyncFuture;
-import lombok.RequiredArgsConstructor;
+import io.opencensus.trace.Span;
+import io.opencensus.trace.Tracer;
+import io.opencensus.trace.Tracing;
 import lombok.ToString;
 
 @ToString(of = {"base"})
 public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
     private static final String COMPONENT = "suggest-backend";
+    private static final Tracer tracer = Tracing.getTracer();
 
     private final FutureReporter tagValuesSuggest;
     private final FutureReporter tagKeyCount;
@@ -49,8 +52,10 @@ public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
     private final FutureReporter keySuggest;
     private final FutureReporter tagValueSuggest;
     private final FutureReporter write;
+    private final FutureReporter backendWrite;
 
-    private final Meter writeDroppedByCacheHit;
+    private final Counter writesDroppedByCacheHit;
+    private final Counter writesDroppedByDuplicate;
 
     public SemanticSuggestBackendReporter(SemanticMetricRegistry registry) {
         final MetricId base = MetricId.build().tagged("component", COMPONENT);
@@ -67,9 +72,13 @@ public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
             base.tagged("what", "tag-value-suggest", "unit", Units.QUERY));
         write =
             new SemanticFutureReporter(registry, base.tagged("what", "write", "unit", Units.WRITE));
+        backendWrite = new SemanticFutureReporter(registry,
+            base.tagged("what", "backend-write", "unit", Units.WRITE));
 
-        writeDroppedByCacheHit =
-            registry.meter(base.tagged("what", "write-dropped-by-cache-hit", "unit", Units.DROP));
+        writesDroppedByCacheHit = registry.counter(
+            base.tagged("what", "writes-dropped-by-cache-hit", "unit", Units.COUNT));
+        writesDroppedByDuplicate = registry.counter(
+            base.tagged("what", "writes-dropped-by-duplicate", "unit", Units.COUNT));
     }
 
     @Override
@@ -80,13 +89,27 @@ public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
     }
 
     @Override
-    public void reportWriteDroppedByRateLimit() {
-        writeDroppedByCacheHit.mark();
+    public void reportWriteDroppedByCacheHit() {
+        writesDroppedByCacheHit.inc();
     }
 
-    @RequiredArgsConstructor
+    @Override
+    public void reportWriteDroppedByDuplicate() {
+        writesDroppedByDuplicate.inc();
+    }
+
+    @Override
+    public FutureReporter.Context setupWriteReporter() {
+        return backendWrite.setup();
+    }
+
     private class InstrumentedSuggestBackend implements SuggestBackend {
         private final SuggestBackend delegate;
+
+        @java.beans.ConstructorProperties({ "delegate" })
+        public InstrumentedSuggestBackend(final SuggestBackend delegate) {
+            this.delegate = delegate;
+        }
 
         @Override
         public AsyncFuture<Void> configure() {
@@ -122,7 +145,14 @@ public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
 
         @Override
         public AsyncFuture<WriteSuggest> write(final WriteSuggest.Request request) {
-            return delegate.write(request).onDone(write.setup());
+            return write(request, tracer.getCurrentSpan());
+        }
+
+        @Override
+        public AsyncFuture<WriteSuggest> write(
+            final WriteSuggest.Request request, final Span parentSpan
+        ) {
+            return delegate.write(request, parentSpan).onDone(write.setup());
         }
 
         @Override

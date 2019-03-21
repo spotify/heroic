@@ -5,7 +5,6 @@ import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Ordering;
 import com.spotify.heroic.AbstractReducedResultTest;
 import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.test.LombokDataTest;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -33,11 +32,6 @@ public class TagValuesSuggestTest extends AbstractReducedResultTest {
         s1 = new TagValuesSuggest(ImmutableList.of(e1), ImmutableList.of(site), false);
         s2 = new TagValuesSuggest(ImmutableList.of(e2), ImmutableList.of(host), false);
         s3 = new TagValuesSuggest(ImmutableList.of(), ImmutableList.of(role), false);
-    }
-
-    @Test
-    public void lombokDataTest() {
-        LombokDataTest.verifyClass(TagValuesSuggest.class);
     }
 
     @Test

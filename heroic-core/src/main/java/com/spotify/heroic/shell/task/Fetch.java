@@ -32,6 +32,7 @@ import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricManager;
+import com.spotify.heroic.metric.MetricReadResult;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Tracing;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
@@ -55,7 +56,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import javax.inject.Inject;
 import javax.inject.Named;
-import lombok.ToString;
 import org.kohsuke.args4j.Option;
 
 @TaskUsage("Fetch a range of data points")
@@ -105,11 +105,12 @@ public class Fetch implements ShellTask {
             QueryOptions.builder().tracing(Tracing.fromBoolean(params.tracing));
         final QueryOptions options = optionsBuilder.build();
 
-        final Consumer<MetricCollection> printMetricsCollection = g -> {
+        final Consumer<MetricReadResult> printMetricsCollection = metricsAndResources -> {
+            MetricCollection g = metricsAndResources.getMetrics();
             Calendar current = null;
             Calendar last = null;
 
-            for (final Metric d : g.getData()) {
+            for (final Metric d : g.data()) {
                 current = Calendar.getInstance();
                 current.setTime(new Date(d.getTimestamp()));
 
@@ -132,20 +133,10 @@ public class Fetch implements ShellTask {
             return async.resolved();
         };
 
-        if (params.slicedDataFetch) {
-            return readGroup
-                .fetch(new FetchData.Request(source, series, range, options),
-                    FetchQuotaWatcher.NO_QUOTA, printMetricsCollection)
-                .lazyTransform(handleResult);
-        } else {
-            return readGroup
-                .fetch(new FetchData.Request(source, series, range, options),
-                    FetchQuotaWatcher.NO_QUOTA)
-                .lazyTransform(resultData -> {
-                    resultData.getGroups().forEach(printMetricsCollection);
-                    return handleResult.transform(resultData.getResult());
-                });
-        }
+        return readGroup
+            .fetch(new FetchData.Request(source, series, range, options),
+                FetchQuotaWatcher.NO_QUOTA, printMetricsCollection)
+            .lazyTransform(handleResult);
     }
 
     private boolean flipped(Calendar last, Calendar current) {
@@ -176,7 +167,6 @@ public class Fetch implements ShellTask {
         return start + TimeUnit.MILLISECONDS.convert(1, TimeUnit.HOURS);
     }
 
-    @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-s", aliases = {"--series"}, usage = "Series to fetch", metaVar = "<json>")
         private Optional<String> series = Optional.empty();

@@ -28,9 +28,11 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.fasterxml.jackson.module.kotlin.KotlinModule;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.analytics.AnalyticsModule;
+import com.spotify.heroic.cache.CacheModule;
 import com.spotify.heroic.cluster.ClusterDiscoveryModule;
 import com.spotify.heroic.cluster.RpcProtocolModule;
 import com.spotify.heroic.common.Duration;
@@ -38,6 +40,7 @@ import com.spotify.heroic.common.DurationSerialization;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.GroupsSerialization;
 import com.spotify.heroic.common.TypeNameMixin;
+import com.spotify.heroic.conditionalfeatures.ConditionalFeatures;
 import com.spotify.heroic.consumer.ConsumerModule;
 import com.spotify.heroic.filter.FilterRegistry;
 import com.spotify.heroic.generator.MetadataGenerator;
@@ -46,8 +49,6 @@ import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metadata.MetadataModule;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.EventSerialization;
-import com.spotify.heroic.metric.MetricCollection;
-import com.spotify.heroic.metric.MetricCollectionSerialization;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.MetricGroupSerialization;
 import com.spotify.heroic.metric.MetricModule;
@@ -58,6 +59,7 @@ import com.spotify.heroic.metric.PointSerialization;
 import com.spotify.heroic.metric.Spread;
 import com.spotify.heroic.metric.SpreadSerialization;
 import com.spotify.heroic.querylogging.QueryLoggingModule;
+import com.spotify.heroic.requestcondition.RequestCondition;
 import com.spotify.heroic.statistics.StatisticsModule;
 import com.spotify.heroic.suggest.SuggestModule;
 
@@ -90,11 +92,17 @@ public final class HeroicMappers {
         m.addMixIn(AnalyticsModule.Builder.class, TypeNameMixin.class);
         m.addMixIn(StatisticsModule.class, TypeNameMixin.class);
         m.addMixIn(QueryLoggingModule.class, TypeNameMixin.class);
+        m.addMixIn(CacheModule.Builder.class, TypeNameMixin.class);
+        m.addMixIn(RequestCondition.class, TypeNameMixin.class);
+        m.addMixIn(ConditionalFeatures.class, TypeNameMixin.class);
 
         m.registerModule(commonSerializers());
 
         /* support Optional */
         m.registerModule(new Jdk8Module());
+
+        // Support Kotlin data classes
+        m.registerModule(new KotlinModule());
 
         return m;
     }
@@ -108,6 +116,7 @@ public final class HeroicMappers {
         mapper.registerModule(new Jdk8Module().configureAbsentsAsNulls(true));
         mapper.registerModule(commonSerializers());
         mapper.registerModule(jsonSerializers());
+        mapper.registerModule(new KotlinModule());
 
         mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
@@ -138,11 +147,6 @@ public final class HeroicMappers {
 
         module.addSerializer(MetricGroup.class, new MetricGroupSerialization.Serializer());
         module.addDeserializer(MetricGroup.class, new MetricGroupSerialization.Deserializer());
-
-        module.addSerializer(MetricCollection.class,
-            new MetricCollectionSerialization.Serializer());
-        module.addDeserializer(MetricCollection.class,
-            new MetricCollectionSerialization.Deserializer());
 
         module.addSerializer(MetricType.class, new MetricTypeSerialization.Serializer());
         module.addDeserializer(MetricType.class, new MetricTypeSerialization.Deserializer());

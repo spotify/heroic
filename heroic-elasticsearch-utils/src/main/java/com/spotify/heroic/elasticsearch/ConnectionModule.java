@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.elasticsearch;
 
+import static java.util.Optional.ofNullable;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
@@ -33,16 +35,10 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 import java.util.List;
 import java.util.Map;
 
-import static java.util.Optional.ofNullable;
-
 @Module
-@Slf4j
 public class ConnectionModule {
     public static final String DEFAULT_CLUSTER_NAME = "elasticsearch";
     public static final List<String> DEFAULT_SEEDS = ImmutableList.of("localhost");
@@ -90,9 +86,13 @@ public class ConnectionModule {
         return new Provider(async);
     }
 
-    @RequiredArgsConstructor
     public class Provider {
         private final AsyncFramework async;
+
+        @java.beans.ConstructorProperties({ "async" })
+        public Provider(final AsyncFramework async) {
+            this.async = async;
+        }
 
         public Managed<Connection> construct(
             final String defaultTemplateName, final BackendType type

@@ -1,17 +1,5 @@
 package com.spotify.heroic.filter;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.spotify.heroic.HeroicMappers;
-import com.spotify.heroic.grammar.QueryParser;
-import com.spotify.heroic.test.FakeModuleLoader;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
-
-import java.io.IOException;
-
 import static com.spotify.heroic.filter.Filter.and;
 import static com.spotify.heroic.filter.Filter.hasTag;
 import static com.spotify.heroic.filter.Filter.matchKey;
@@ -22,12 +10,16 @@ import static com.spotify.heroic.filter.Filter.regex;
 import static com.spotify.heroic.filter.Filter.startsWith;
 import static org.junit.Assert.assertEquals;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.spotify.heroic.test.FakeModuleLoader;
+import java.io.IOException;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.runners.MockitoJUnitRunner;
+
 @RunWith(MockitoJUnitRunner.class)
 public class FilterSerializerTest {
-    @Mock
-    private QueryParser parser;
-
-    private ObjectMapper m = FakeModuleLoader.builder().build().json();;
+    private ObjectMapper m = FakeModuleLoader.builder().build().json();
 
     @Test
     public void serializeTest() throws IOException {
@@ -43,6 +35,34 @@ public class FilterSerializerTest {
 
         checkFilter(or(matchTag("a", "b"), matchTag("c", "d")),
             "[\"or\",[\"=\",\"a\",\"b\"],[\"=\",\"c\",\"d\"]]");
+
+        checkFilter(TrueFilter.create(), "[\"true\"]");
+        checkFilter(FalseFilter.create(), "[\"false\"]");
+    }
+
+    /**
+     * Check that object type-based variants work as expected.
+     */
+    @Test
+    public void objectTest() throws IOException {
+        checkObjectFilter(matchTag("a", "b"),
+            "{\"type\":\"matchTag\",\"tag\":\"a\",\"value\":\"b\"}");
+
+        checkObjectFilter(startsWith("a", "b"),
+            "{\"type\":\"startsWith\",\"tag\":\"a\",\"value\":\"b\"}");
+        checkObjectFilter(hasTag("a"), "{\"type\":\"hasTag\",\"tag\":\"a\"}");
+        checkObjectFilter(matchKey("a"), "{\"type\":\"key\",\"key\":\"a\"}");
+        checkObjectFilter(regex("a", "b"), "{\"type\":\"regex\",\"tag\":\"a\",\"value\":\"b\"}");
+        checkObjectFilter(not(matchTag("a", "b")),
+            "{\"type\":\"not\",\"filter\":{\"type\":\"matchTag\",\"tag\":\"a\",\"value\":\"b\"}}");
+
+        checkObjectFilter(and(matchTag("a", "b"), matchTag("c", "d")),
+            "{\"type\":\"and\",\"filters\":[{\"type\":\"matchTag\",\"tag\":\"a\"," +
+                "\"value\":\"b\"}," + "{\"type\":\"matchTag\",\"tag\":\"c\",\"value\":\"d\"}]}");
+
+        checkObjectFilter(or(matchTag("a", "b"), matchTag("c", "d")),
+            "{\"type\":\"or\",\"filters\":[{\"type\":\"matchTag\",\"tag\":\"a\",\"value\":\"b\"}," +
+                "{\"type\":\"matchTag\",\"tag\":\"c\",\"value\":\"d\"}]}");
     }
 
     private void checkFilter(final Filter filter, final String json) throws IOException {
@@ -50,5 +70,11 @@ public class FilterSerializerTest {
 
         assertEquals(f, m.readValue(json, Filter.class));
         assertEquals(json, m.writeValueAsString(f));
+    }
+
+    private void checkObjectFilter(final Filter filter, final String json) throws IOException {
+        final Filter f = filter.optimize();
+
+        assertEquals(f, m.readValue(json, Filter.class));
     }
 }

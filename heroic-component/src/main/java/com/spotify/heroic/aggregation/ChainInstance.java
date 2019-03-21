@@ -23,6 +23,7 @@ package com.spotify.heroic.aggregation;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
@@ -37,7 +38,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 
 /**
  * A special aggregation method that is a chain of other aggregation methods.
@@ -158,6 +158,13 @@ public class ChainInstance implements AggregationInstance {
         return chain.iterator().next().requiredTags();
     }
 
+    @Override
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(getClass(), () -> {
+            hasher.putField("chain", chain, hasher.list(hasher.with(AggregationInstance::hashTo)));
+        });
+    }
+
     private static final Joiner CHAIN_JOINER = Joiner.on(" -> ");
 
     @Override
@@ -195,10 +202,15 @@ public class ChainInstance implements AggregationInstance {
         return child.build();
     }
 
-    @RequiredArgsConstructor
     private static final class Session implements AggregationSession {
         private final AggregationSession first;
         private final Iterable<AggregationSession> rest;
+
+        @java.beans.ConstructorProperties({ "first", "rest" })
+        public Session(final AggregationSession first, final Iterable<AggregationSession> rest) {
+            this.first = first;
+            this.rest = rest;
+        }
 
         @Override
         public void updatePoints(

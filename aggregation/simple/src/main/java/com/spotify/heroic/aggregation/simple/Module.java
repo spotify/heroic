@@ -77,6 +77,8 @@ public class Module implements HeroicModule {
 
             c.register(Sum.NAME, Sum.class, SumInstance.class, samplingBuilder(Sum::new));
 
+            c.register(Sum2.NAME, Sum2.class, Sum2Instance.class, samplingBuilder(Sum2::new));
+
             c.register(Average.NAME, Average.class, AverageInstance.class,
                 samplingBuilder(Average::new));
 
@@ -96,20 +98,30 @@ public class Module implements HeroicModule {
                 new SamplingAggregationDSL<Quantile>(factory) {
                     @Override
                     protected Quantile buildWith(
-                        final AggregationArguments args, final Optional<Duration> size,
+                        final AggregationArguments args,
+                        final Optional<Duration> size,
                         final Optional<Duration> extent
                     ) {
-                        final Optional<Double> q = args
+                        final Double q = args
                             .positionalOrKeyword("q", DoubleExpression.class)
-                            .map(DoubleExpression::getValue);
-                        final Optional<Double> error = args
+                            .map(DoubleExpression::getValue)
+                            .orElse(null);
+                        final Double error = args
                             .positionalOrKeyword("error", DoubleExpression.class)
-                            .map(DoubleExpression::getValue);
-                        return new Quantile(Optional.empty(), size, extent, q, error);
+                            .map(DoubleExpression::getValue)
+                            .orElse(null);
+                        return new Quantile(
+                            null, size.orElse(null), extent.orElse(null), q, error);
                     }
                 });
 
-            c.register(Delta.NAME, Delta.class, DeltaInstance.class, args -> new Delta());
+            c.register(Delta.NAME, Delta.class, DeltaInstance.class, args -> Delta.INSTANCE);
+
+            c.register(DeltaPerSecond.NAME, DeltaPerSecond.class,
+                DeltaPerSecondInstance.class, args -> DeltaPerSecond.INSTANCE);
+
+            c.register(NotNegative.NAME, NotNegative.class,
+                NotNegativeInstance.class, args -> NotNegative.INSTANCE);
 
             c.register(TopK.NAME, TopK.class, TopKInstance.class,
                 args -> new TopK(fetchK(args, IntegerExpression.class).getValue(),
@@ -146,10 +158,11 @@ public class Module implements HeroicModule {
             return new SamplingAggregationDSL<T>(factory) {
                 @Override
                 protected T buildWith(
-                    final AggregationArguments args, final Optional<Duration> size,
+                    final AggregationArguments args,
+                    final Optional<Duration> size,
                     final Optional<Duration> extent
                 ) {
-                    return builder.apply(Optional.empty(), size, extent);
+                    return builder.apply(null, size.orElse(null), extent.orElse(null));
                 }
             };
         }
@@ -157,7 +170,7 @@ public class Module implements HeroicModule {
 
     interface SamplingBuilder<T> {
         T apply(
-            Optional<SamplingQuery> sampling, Optional<Duration> size, Optional<Duration> extent
+            SamplingQuery sampling, Duration size, Duration extent
         );
     }
 }

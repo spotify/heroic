@@ -24,17 +24,21 @@ package com.spotify.heroic.aggregation;
 import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.SerialWriter;
 import eu.toolchain.serializer.Serializer;
-import lombok.RequiredArgsConstructor;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
-@RequiredArgsConstructor
 public abstract class GroupingAggregationSerializer<T extends GroupingAggregation>
     implements Serializer<T> {
     private final Serializer<Optional<List<String>>> list;
     private final Serializer<AggregationInstance> aggregation;
+
+    @java.beans.ConstructorProperties({ "list", "aggregation" })
+    public GroupingAggregationSerializer(final Serializer<Optional<List<String>>> list,
+                                         final Serializer<AggregationInstance> aggregation) {
+        this.list = list;
+        this.aggregation = aggregation;
+    }
 
     @Override
     public void serialize(SerialWriter buffer, T value) throws IOException {

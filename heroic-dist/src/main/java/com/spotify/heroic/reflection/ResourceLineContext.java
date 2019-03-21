@@ -21,12 +21,15 @@
 
 package com.spotify.heroic.reflection;
 
-import lombok.RequiredArgsConstructor;
-
-@RequiredArgsConstructor
 class ResourceLineContext {
     private final ResourcePathContext parent;
     private final int line;
+
+    @java.beans.ConstructorProperties({ "parent", "line" })
+    public ResourceLineContext(final ResourcePathContext parent, final int line) {
+        this.parent = parent;
+        this.line = line;
+    }
 
     public ResourceException exception(final String message) {
         return new ResourceException(parent.context() + ":" + line + ": " + message);

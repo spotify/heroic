@@ -30,6 +30,7 @@ import com.spotify.heroic.common.Statistics;
 
 import eu.toolchain.async.AsyncFuture;
 
+import io.opencensus.trace.Span;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -49,20 +50,14 @@ public interface MetricBackend extends Initializing, Grouped, Collected {
     /**
      * Execute a single write.
      *
-     * @param write
+     * @param request
      * @return
      */
-    AsyncFuture<WriteMetric> write(WriteMetric.Request write);
-
-    /**
-     * Query for data points that is part of the specified list of rows and range.
-     *
-     * @param request Fetch request to use.
-     * @param watcher The watcher implementation to use when fetching metrics.
-     * @return A future containing the fetched data wrapped in a {@link FetchData} structure.
-     */
-    @Deprecated
-    AsyncFuture<FetchData> fetch(FetchData.Request request, FetchQuotaWatcher watcher);
+    AsyncFuture<WriteMetric> write(WriteMetric.Request request);
+    default AsyncFuture<WriteMetric> write(WriteMetric.Request request, Span parentSpan) {
+        // Ignore the parent span if the module does not specifically implement it.
+        return write(request);
+    }
 
     /**
      * Query for data points that is part of the specified list of rows and range.
@@ -74,7 +69,7 @@ public interface MetricBackend extends Initializing, Grouped, Collected {
      */
     AsyncFuture<FetchData.Result> fetch(
         FetchData.Request request, FetchQuotaWatcher watcher,
-        Consumer<MetricCollection> metricsConsumer
+        Consumer<MetricReadResult> metricsConsumer
     );
 
     /**

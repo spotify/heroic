@@ -29,17 +29,19 @@ import com.spotify.heroic.metric.datastax.Async;
 import com.spotify.heroic.metric.datastax.ManagedSetupConnection;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.text.StrSubstitutor;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Map;
+import org.apache.commons.lang3.text.StrSubstitutor;
 
-@RequiredArgsConstructor
 public class AbstractCassandraSchema {
     protected final AsyncFramework async;
+
+    @java.beans.ConstructorProperties({ "async" })
+    public AbstractCassandraSchema(final AsyncFramework async) {
+        this.async = async;
+    }
 
     protected AsyncFuture<PreparedStatement> prepareTemplate(
         final Map<String, String> values, Session s, final String path

@@ -40,9 +40,6 @@ import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.StreamCollector;
-import lombok.ToString;
-import org.kohsuke.args4j.Option;
-
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,6 +48,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.inject.Inject;
 import javax.inject.Named;
+import org.kohsuke.args4j.Option;
 
 @TaskUsage("Count data for a given set of keys")
 @TaskName("count-data")
@@ -156,7 +154,6 @@ public class CountData implements ShellTask {
         }, params.parallelism);
     }
 
-    @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-f", aliases = {"--file"}, usage = "File to read keys from",
             metaVar = "<file>")

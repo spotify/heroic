@@ -1,0 +1,9 @@
+dependencies {
+    implementation project(':heroic-test-it')
+    implementation project(':heroic-elasticsearch-utils')
+    implementation project(':heroic-component')
+    implementation project(':heroic-component-test')
+    implementation 'com.google.guava:guava'
+}
+
+description = 'Heroic: Elasticsearch Test Project'

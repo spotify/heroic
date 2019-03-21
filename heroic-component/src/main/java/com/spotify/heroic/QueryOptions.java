@@ -21,19 +21,37 @@
 
 package com.spotify.heroic;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.auto.value.AutoValue;
 import com.spotify.heroic.aggregation.BucketStrategy;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.Tracing;
 import java.util.Optional;
-import lombok.Data;
 
-@Data
-public class QueryOptions {
+@AutoValue
+public abstract class QueryOptions {
+    @JsonCreator
+    public static QueryOptions create(
+        @JsonProperty("bucketStrategy") Optional<BucketStrategy> bucketStrategy,
+        @JsonProperty("tracing") Optional<Tracing> tracing,
+        @JsonProperty("fetchSize") Optional<Integer> fetchSize,
+        @JsonProperty("dataLimit") OptionalLimit dataLimit,
+        @JsonProperty("aggregationLimit") OptionalLimit aggregationLimit,
+        @JsonProperty("groupLimit") OptionalLimit groupLimit,
+        @JsonProperty("seriesLimit") OptionalLimit seriesLimit,
+        @JsonProperty("failOnLimits") Optional<Boolean> failOnLimits
+    ) {
+        return new AutoValue_QueryOptions(bucketStrategy, tracing.orElse(Tracing.DEFAULT),
+            fetchSize, dataLimit, aggregationLimit, groupLimit, seriesLimit, failOnLimits);
+    }
+
     /**
      * Strategy for how to create buckets when performing a sampling aggregation.
      */
-    private final Optional<BucketStrategy> bucketStrategy;
+    @JsonProperty
+    public abstract Optional<BucketStrategy> bucketStrategy();
 
     /**
      * Indicates if tracing is enabled.
@@ -43,50 +61,66 @@ public class QueryOptions {
      *
      * @return {@code true} if tracing is enabled.
      */
-    private final Optional<Tracing> tracing;
+    @JsonProperty
+    public abstract Tracing tracing();
 
     /**
      * The number of entries to fetch for every batch.
      */
-    private final Optional<Integer> fetchSize;
+    @JsonProperty
+    public abstract Optional<Integer> fetchSize();
 
     /**
      * Limit the number of returned groups.
      */
-    private final OptionalLimit dataLimit;
+    @JsonProperty
+    public abstract OptionalLimit dataLimit();
 
     /**
      * Limit the number of points retained by the aggregation.
      */
-    private final OptionalLimit aggregationLimit;
+    @JsonProperty
+    public abstract OptionalLimit aggregationLimit();
 
     /**
      * Limit the number of returned groups.
      */
-    private final OptionalLimit groupLimit;
+    @JsonProperty
+    public abstract OptionalLimit groupLimit();
 
     /**
      * Limit the number of series used.
      */
-    private final OptionalLimit seriesLimit;
+    @JsonProperty
+    public abstract OptionalLimit seriesLimit();
 
     /**
      * Report limiting as a failure.
      */
-    private final Optional<Boolean> failOnLimits;
-
-    public Tracing tracing() {
-        return tracing.orElse(Tracing.DEFAULT);
-    }
+    @JsonProperty
+    public abstract Optional<Boolean> failOnLimits();
 
     public static QueryOptions defaults() {
-        return new QueryOptions(Optional.empty(), Optional.empty(), Optional.empty(),
+        return QueryOptions.create(Optional.empty(), Optional.empty(), Optional.empty(),
             OptionalLimit.empty(), OptionalLimit.empty(), OptionalLimit.empty(),
             OptionalLimit.empty(), Optional.empty());
     }
 
     public static Builder builder() {
         return new Builder();
+    }
+
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(getClass(), () -> {
+            hasher.putField("bucketStrategy", bucketStrategy(),
+                hasher.optional(hasher.with(BucketStrategy::hashTo)));
+            hasher.putField("dataLimit", dataLimit(), hasher.with(OptionalLimit::hashTo));
+            hasher.putField("aggregationLimit", aggregationLimit(),
+                hasher.with(OptionalLimit::hashTo));
+            hasher.putField("groupLimit", groupLimit(), hasher.with(OptionalLimit::hashTo));
+            hasher.putField("seriesLimit", seriesLimit(), hasher.with(OptionalLimit::hashTo));
+            hasher.putField("failOnLimits", failOnLimits(), hasher.optional(hasher.bool()));
+        });
     }
 
     public static class Builder {
@@ -140,8 +174,8 @@ public class QueryOptions {
         }
 
         public QueryOptions build() {
-            return new QueryOptions(bucketStrategy, tracing, fetchSize, dataLimit, aggregationLimit,
-                groupLimit, seriesLimit, failOnLimits);
+            return QueryOptions.create(bucketStrategy, tracing, fetchSize, dataLimit,
+                aggregationLimit, groupLimit, seriesLimit, failOnLimits);
         }
     }
 }

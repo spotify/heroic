@@ -32,10 +32,6 @@ import com.spotify.heroic.shell.TaskUsage;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.ToString;
-import org.kohsuke.args4j.Option;
-
-import javax.inject.Inject;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.InputStreamReader;
@@ -43,6 +39,8 @@ import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import javax.inject.Inject;
+import org.kohsuke.args4j.Option;
 
 @TaskUsage("Test to read and write a file")
 @TaskName("read-write-test")
@@ -81,7 +79,6 @@ public class ReadWriteTest implements ShellTask {
         return async.resolved();
     }
 
-    @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-f", aliases = {"--file"}, usage = "File to perform test against",
             metaVar = "<file>")
@@ -93,7 +90,7 @@ public class ReadWriteTest implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         ReadWriteTest task();
     }
 }

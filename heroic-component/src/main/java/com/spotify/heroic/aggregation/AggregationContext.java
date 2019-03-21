@@ -21,22 +21,31 @@
 
 package com.spotify.heroic.aggregation;
 
+import static com.spotify.heroic.common.Optionals.firstPresent;
+
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.Duration;
-import lombok.RequiredArgsConstructor;
-
 import java.util.Optional;
 import java.util.Set;
 
-import static com.spotify.heroic.common.Optionals.firstPresent;
-
-@RequiredArgsConstructor
 public class AggregationContext {
     private final Optional<Duration> size;
     private final Optional<Duration> extent;
     private final Duration defaultSize;
     private final Duration defaultExtent;
     private final Set<String> requiredTags;
+
+    @java.beans.ConstructorProperties({ "size", "extent", "defaultSize", "defaultExtent",
+                                        "requiredTags" })
+    public AggregationContext(final Optional<Duration> size, final Optional<Duration> extent,
+                              final Duration defaultSize, final Duration defaultExtent,
+                              final Set<String> requiredTags) {
+        this.size = size;
+        this.extent = extent;
+        this.defaultSize = defaultSize;
+        this.defaultExtent = defaultExtent;
+        this.requiredTags = requiredTags;
+    }
 
     /**
      * Get the size that is currently configured in the context.

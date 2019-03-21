@@ -1,0 +1,8 @@
+dependencies {
+    implementation 'com.fasterxml.jackson.core:jackson-annotations'
+    implementation 'junit:junit'
+    implementation 'org.mockito:mockito-core'
+    implementation 'com.google.guava:guava'
+}
+
+description = 'Heroic: Component Test Project'

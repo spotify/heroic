@@ -1,0 +1,74 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.spotify.heroic.repackaged</groupId>
+  <artifactId>folsom</artifactId>
+  <packaging>jar</packaging>
+  <version>1.2.1</version>
+
+  <name>Heroic: Re-Packaging of Folsom</name>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.spotify</groupId>
+      <artifactId>folsom</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.1.1</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <promoteTransitiveDependencies>true</promoteTransitiveDependencies>
+              <createDependencyReducedPom>true</createDependencyReducedPom>
+              <!-- excluded dependencies will be kept as a promoted dependency -->
+              <artifactSet>
+                <excludes>
+                  <exclude>org.slf4j:*</exclude>
+                  <exclude>com.google.code.findbugs:jsr305</exclude>
+                  <exclude>com.google.code.findbugs:annotations</exclude>
+                  <exclude>com.google.guava:*</exclude>
+                </excludes>
+              </artifactSet>
+
+              <relocations>
+                <relocation>
+                  <pattern>io.netty</pattern>
+                  <shadedPattern>com.spotify.heroic.folsom.netty</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.apache.commons</pattern>
+                  <shadedPattern>com.spotify.heroic.folsom.commons</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.xbill</pattern>
+                  <shadedPattern>com.spotify.heroic.folsom.xbill</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>com.spotify.dns</pattern>
+                  <shadedPattern>com.spotify.heroic.folsom.dns</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>com.yammer.metrics</pattern>
+                  <shadedPattern>com.spotify.heroic.folsom.metrics</shadedPattern>
+                </relocation>
+              </relocations>
+
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

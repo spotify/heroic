@@ -36,14 +36,11 @@ import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
-import lombok.Data;
-import lombok.ToString;
-import org.kohsuke.args4j.Option;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.time.LocalDate;
 import java.util.Optional;
+import javax.inject.Inject;
+import javax.inject.Named;
+import org.kohsuke.args4j.Option;
 
 @TaskUsage("Dump all fetch series values")
 @TaskName("analytics-dump-fetch-series")
@@ -79,32 +76,26 @@ public class AnalyticsDumpFetchSeries implements ShellTask {
             try {
                 io
                     .out()
-                    .println(mapper.writeValueAsString(
-                        new AnalyticsHits(series.getSeries().getHashCode().toString(),
-                            series.getHits())));
+                    .println(mapper.writeValueAsString(new AnalyticsHits(series.getSeries(),
+                        series.getSeries().getHashCode().toString(), series.getHits())));
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }
 
-            io.out().flush();
+            //io.out().flush();
             return async.resolved();
         }));
 
         return future;
     }
 
-    @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-d", aliases = {"--date"}, usage = "Date to fetch data for",
             metaVar = "<yyyy-MM-dd>")
         private Optional<String> date = Optional.empty();
     }
 
-    @Data
-    public static class AnalyticsHits {
-        private final String id;
-        private final long hits;
-    }
+
 
     public static AnalyticsDumpFetchSeries setup(final CoreComponent core) {
         return DaggerAnalyticsDumpFetchSeries_C.builder().coreComponent(core).build().task();

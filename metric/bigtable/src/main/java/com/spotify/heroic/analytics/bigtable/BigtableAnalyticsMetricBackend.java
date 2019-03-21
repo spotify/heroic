@@ -33,19 +33,25 @@ import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricCollection;
+import com.spotify.heroic.metric.MetricReadResult;
 import com.spotify.heroic.metric.WriteMetric;
 import eu.toolchain.async.AsyncFuture;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.function.Consumer;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @ToString
-@RequiredArgsConstructor
 class BigtableAnalyticsMetricBackend implements MetricBackend {
     private final BigtableMetricAnalytics analytics;
     private final MetricBackend backend;
+
+    @java.beans.ConstructorProperties({ "analytics", "backend" })
+    public BigtableAnalyticsMetricBackend(final BigtableMetricAnalytics analytics,
+                                          final MetricBackend backend) {
+        this.analytics = analytics;
+        this.backend = backend;
+    }
 
     @Override
     public boolean isReady() {
@@ -73,17 +79,9 @@ class BigtableAnalyticsMetricBackend implements MetricBackend {
     }
 
     @Override
-    public AsyncFuture<FetchData> fetch(
-        final FetchData.Request request, final FetchQuotaWatcher watcher
-    ) {
-        analytics.reportFetchSeries(LocalDate.now(), request.getSeries());
-        return backend.fetch(request, watcher);
-    }
-
-    @Override
     public AsyncFuture<FetchData.Result> fetch(
         final FetchData.Request request, final FetchQuotaWatcher watcher,
-        final Consumer<MetricCollection> metricsConsumer
+        final Consumer<MetricReadResult> metricsConsumer
     ) {
         analytics.reportFetchSeries(LocalDate.now(), request.getSeries());
         return backend.fetch(request, watcher, metricsConsumer);

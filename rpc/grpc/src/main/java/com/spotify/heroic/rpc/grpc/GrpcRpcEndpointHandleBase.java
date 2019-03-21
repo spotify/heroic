@@ -23,11 +23,14 @@ package com.spotify.heroic.rpc.grpc;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import io.grpc.MethodDescriptor;
-import lombok.RequiredArgsConstructor;
 
-@RequiredArgsConstructor
 public abstract class GrpcRpcEndpointHandleBase<Q, R> implements GrpcEndpointHandle<Q, R> {
     private final GrpcDescriptor<Q, R> spec;
+
+    @java.beans.ConstructorProperties({ "spec" })
+    public GrpcRpcEndpointHandleBase(final GrpcDescriptor<Q, R> spec) {
+        this.spec = spec;
+    }
 
     @Override
     public TypeReference<Q> queryType() {

@@ -21,26 +21,29 @@
 
 package com.spotify.heroic.metric;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import com.google.common.hash.Hasher;
-import lombok.Data;
-
-import java.beans.ConstructorProperties;
 import java.util.Map;
 
-@Data
-public class Payload implements Metric {
+@AutoValue
+public abstract class Payload implements Metric {
+    @JsonCreator
+    public static Payload create(
+        @JsonProperty("timestamp") long timestamp, @JsonProperty("state") byte[] state
+    ) {
+        return new AutoValue_Payload(timestamp, state);
+    }
+
     private static final Map<String, String> EMPTY_PAYLOAD = ImmutableMap.of();
 
-    private final long timestamp;
-    private final byte[] state;
-
-    @ConstructorProperties({"timestamp", "state"})
-    public Payload(final long timestamp, final byte[] state) {
-        this.timestamp = timestamp;
-        this.state = state;
-    }
+    @JsonProperty
+    public abstract long timestamp();
+    @JsonProperty
+    public abstract byte[] state();
 
     public boolean valid() {
         return true;
@@ -50,7 +53,13 @@ public class Payload implements Metric {
 
     @Override
     public void hash(final Hasher hasher) {
-        hasher.putInt(MetricType.EVENT.ordinal());
-        hasher.putBytes(state);
+        hasher.putInt(MetricType.CARDINALITY.ordinal());
+        hasher.putLong(timestamp());
+        hasher.putBytes(state());
+    }
+
+    @Override
+    public long getTimestamp() {
+        return timestamp();
     }
 }

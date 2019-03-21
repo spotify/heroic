@@ -42,10 +42,6 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.ResolvableFuture;
 import eu.toolchain.async.StreamCollector;
-import lombok.ToString;
-import org.apache.commons.lang3.tuple.Pair;
-import org.kohsuke.args4j.Option;
-
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -56,6 +52,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.inject.Named;
+import org.apache.commons.lang3.tuple.Pair;
+import org.kohsuke.args4j.Option;
 
 @TaskUsage("Delete all data for a set of keys")
 @TaskName("delete-keys")
@@ -226,7 +224,6 @@ public class DeleteKeys implements ShellTask {
                 count -> group.deleteKey(k, options).directTransform(v -> Pair.of(k, count)));
     }
 
-    @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-f", aliases = {"--file"}, usage = "File to read keys from",
             metaVar = "<file>")

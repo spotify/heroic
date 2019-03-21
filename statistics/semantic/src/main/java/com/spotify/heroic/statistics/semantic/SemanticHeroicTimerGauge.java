@@ -26,14 +26,15 @@ import com.google.common.base.Stopwatch;
 import com.spotify.heroic.statistics.HeroicTimer;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @ToString(of = {})
-@RequiredArgsConstructor
 public class SemanticHeroicTimerGauge implements HeroicTimer, Gauge<Long> {
 
     private final AtomicLong value = new AtomicLong(0);
+
+    public SemanticHeroicTimerGauge() {
+    }
 
     @Override
     public Context time() {

@@ -22,10 +22,8 @@
 package com.spotify.heroic.metric.bigtable.api;
 
 import com.google.protobuf.ByteString;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-
 import java.util.Optional;
+import lombok.Data;
 
 @Data
 public class ReadRowsRequest {
@@ -33,15 +31,18 @@ public class ReadRowsRequest {
     private final Optional<RowFilter> filter;
     private final Optional<ByteString> rowKey;
 
-    public com.google.bigtable.v2.ReadRowsRequest toPb(final String tableUri) {
+    public com.google.bigtable.v2.ReadRowsRequest toPb(
+        final String tableUri
+    ) {
         final com.google.bigtable.v2.RowSet.Builder rowSetBuilder =
           com.google.bigtable.v2.RowSet.newBuilder();
 
         range.map(RowRange::toPb).ifPresent(rowSetBuilder::addRowRanges);
         rowKey.ifPresent(rowSetBuilder::addRowKeys);
 
-        final com.google.bigtable.v2.ReadRowsRequest.Builder requestBuilder =
-            com.google.bigtable.v2.ReadRowsRequest.newBuilder();
+        final com.google.bigtable.v2.ReadRowsRequest.Builder
+            requestBuilder =
+                com.google.bigtable.v2.ReadRowsRequest.newBuilder();
 
         requestBuilder.setTableName(tableUri);
         requestBuilder.setRows(rowSetBuilder.build());
@@ -55,11 +56,13 @@ public class ReadRowsRequest {
         return new Builder();
     }
 
-    @RequiredArgsConstructor
     public static class Builder {
         private Optional<RowRange> range = Optional.empty();
         private Optional<RowFilter> filter = Optional.empty();
         private Optional<ByteString> rowKey = Optional.empty();
+
+        public Builder() {
+        }
 
         public Builder range(final RowRange range) {
             this.range = Optional.of(range);

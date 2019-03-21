@@ -23,17 +23,13 @@ package com.spotify.heroic.jetty;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
+import java.util.Optional;
 import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 
-import java.util.Optional;
-
-@RequiredArgsConstructor
 public class TLSJettyConnectionFactory implements JettyConnectionFactory {
     private final Optional<String> keyStorePath;
     private final Optional<String> keyStorePassword;
@@ -41,6 +37,19 @@ public class TLSJettyConnectionFactory implements JettyConnectionFactory {
     private final Optional<Boolean> trustAll;
 
     private final String nextProtocol;
+
+    @java.beans.ConstructorProperties({ "keyStorePath", "keyStorePassword", "keyManagerPassword",
+                                        "trustAll", "nextProtocol" })
+    public TLSJettyConnectionFactory(final Optional<String> keyStorePath,
+                                     final Optional<String> keyStorePassword,
+                                     final Optional<String> keyManagerPassword,
+                                     final Optional<Boolean> trustAll, final String nextProtocol) {
+        this.keyStorePath = keyStorePath;
+        this.keyStorePassword = keyStorePassword;
+        this.keyManagerPassword = keyManagerPassword;
+        this.trustAll = trustAll;
+        this.nextProtocol = nextProtocol;
+    }
 
     @Override
     public ConnectionFactory setup(final HttpConfiguration config) {
@@ -56,7 +65,6 @@ public class TLSJettyConnectionFactory implements JettyConnectionFactory {
         return new Builder();
     }
 
-    @NoArgsConstructor
     public static class Builder implements JettyConnectionFactory.Builder {
         private Optional<String> keyStorePath = Optional.empty();
         private Optional<String> keyStorePassword = Optional.empty();
@@ -68,6 +76,9 @@ public class TLSJettyConnectionFactory implements JettyConnectionFactory {
         @JsonCreator
         public Builder(@JsonProperty("nextProtocol") final Optional<String> nextProtocol) {
             this.nextProtocol = nextProtocol;
+        }
+
+        public Builder() {
         }
 
         public Builder keyStorePath(final String keyStorePath) {

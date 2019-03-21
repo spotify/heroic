@@ -1,6 +1,7 @@
 package com.spotify.heroic;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -8,14 +9,16 @@ import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
+import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
+import com.spotify.heroic.metric.MetricReadResult;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
-import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ClockSource;
 import eu.toolchain.async.RetryPolicy;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
@@ -23,7 +26,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 public abstract class AbstractConsumerIT extends AbstractSingleNodeIT {
-    public static final RetryPolicy RETRY_POLICY =
+    private static final RetryPolicy RETRY_POLICY =
         RetryPolicy.timed(1000, RetryPolicy.exponential(10, 100));
 
     protected boolean expectAtLeastOneCommit = false;
@@ -48,18 +51,21 @@ public abstract class AbstractConsumerIT extends AbstractSingleNodeIT {
         consumer.accept(request);
 
         tryUntil(() -> {
-            AsyncFuture<FetchData> fetchData = instance.inject(coreComponent -> {
+            final List<MetricReadResult> data = Collections.synchronizedList(new ArrayList<>());
+
+            instance.inject(coreComponent -> {
                 FetchData.Request fetchDataRequest =
                     new FetchData.Request(MetricType.POINT, s1, new DateRange(0, 100),
                         QueryOptions.defaults());
                 return coreComponent
                     .metricManager()
                     .useDefaultGroup()
-                    .fetch(fetchDataRequest, FetchQuotaWatcher.NO_QUOTA);
-            });
+                    .fetch(fetchDataRequest, FetchQuotaWatcher.NO_QUOTA, data::add);
+            }).get();
 
-            FetchData data = fetchData.get();
-            assertEquals(ImmutableList.of(mc), data.getGroups());
+            assertFalse(data.isEmpty());
+            final MetricCollection collection = data.iterator().next().getMetrics();
+            assertEquals(mc, collection);
             return null;
         });
     }
@@ -82,24 +88,28 @@ public abstract class AbstractConsumerIT extends AbstractSingleNodeIT {
         }
 
         tryUntil(() -> {
-            AsyncFuture<FetchData> fetchData = instance.inject(coreComponent -> {
+            final List<MetricReadResult> data = Collections.synchronizedList(new ArrayList<>());
+
+            instance.inject(coreComponent -> {
                 FetchData.Request fetchDataRequest =
                     new FetchData.Request(MetricType.POINT, s1, new DateRange(0, 100),
                         QueryOptions.defaults());
                 return coreComponent
                     .metricManager()
                     .useDefaultGroup()
-                    .fetch(fetchDataRequest, FetchQuotaWatcher.NO_QUOTA);
-            });
+                    .fetch(fetchDataRequest, FetchQuotaWatcher.NO_QUOTA, data::add);
+            }).get();
 
-            FetchData data = fetchData.get();
-            assertEquals(ImmutableList.of(MetricCollection.points(consumedPoints)),
-                data.getGroups());
+            assertFalse(data.isEmpty());
+            final MetricCollection metricCollection = data.iterator().next().getMetrics();
+            List<Metric> collection = new ArrayList<>(metricCollection.data());
+            collection.sort(Metric.comparator);
+            assertEquals(consumedPoints, collection);
             return null;
         });
     }
 
-    public void tryUntil(Callable<Void> callable) throws Exception {
+    private void tryUntil(Callable<Void> callable) throws Exception {
         RetryPolicy.Instance instance = RETRY_POLICY.apply(ClockSource.SYSTEM);
         List<Throwable> supressed = new ArrayList<>();
 

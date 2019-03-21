@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
+import static com.spotify.heroic.metric.bigtable.api.RowFilter.compareByteStrings;
+
 import com.google.bigtable.v2.Mutation;
 import com.google.cloud.bigtable.grpc.scanner.FlatRow;
 import com.google.protobuf.ByteString;
@@ -46,8 +48,6 @@ public class FakeBigtableConnection implements BigtableConnection {
     private final AsyncFramework async;
 
     private final ConcurrentMap<String, TableStorage> tables = new ConcurrentHashMap<>();
-    private final ConcurrentMap<Pair<Table, String>, ColumnFamily> columnFamilies =
-        new ConcurrentHashMap<>();
 
     @Inject
     public FakeBigtableConnection(final AsyncFramework async) {
@@ -111,16 +111,13 @@ public class FakeBigtableConnection implements BigtableConnection {
                     throw new IllegalArgumentException("no such table: " + name);
                 }
 
-                final Pair<Table, String> key = Pair.of(storage.getTable(), name);
-
-                ColumnFamily columnFamily = columnFamilies.get(key);
-
-                if (columnFamily == null) {
-                    columnFamily = new ColumnFamily(table.getClusterUri(), table.getName(), name);
-                    columnFamilies.put(key, columnFamily);
-                }
-
-                return columnFamily;
+                return table.getColumnFamily(name).orElseGet(() -> {
+                    final ColumnFamily columnFamily =
+                        new ColumnFamily(table.getClusterUri(), table.getName(), name);
+                    final Table newTable = storage.getTable().withAddColumnFamily(columnFamily);
+                    storage.setTable(newTable);
+                    return columnFamily;
+                });
             }
         }
     }
@@ -169,12 +166,17 @@ public class FakeBigtableConnection implements BigtableConnection {
 
     @Data
     class TableStorage {
-        private final Table table;
+        private Table table;
 
         private final ConcurrentMap<Pair<ByteString, ColumnFamily>, RowStorage> rows =
             new ConcurrentHashMap<>();
 
         private final Object lock = new Object();
+
+        @java.beans.ConstructorProperties({ "table" })
+        public TableStorage(final Table table) {
+            this.table = table;
+        }
 
         public AsyncFuture<Void> mutateRow(final ByteString rowKey, final Mutations mutations) {
             return async.call(() -> {
@@ -182,26 +184,19 @@ public class FakeBigtableConnection implements BigtableConnection {
                     switch (mutation.getMutationCase()) {
                         case SET_CELL:
                             final Mutation.SetCell setCell = mutation.getSetCell();
-                            final ColumnFamily columnFamily =
-                                columnFamilies.get(Pair.of(table, setCell.getFamilyName()));
+                            final ColumnFamily columnFamily = table
+                                .getColumnFamily(setCell.getFamilyName())
+                                .orElseThrow(() -> new IllegalArgumentException(
+                                    "no such column family: " + setCell.getFamilyName()));
 
-                            if (columnFamily == null) {
-                                throw new IllegalArgumentException(
-                                    "no such column family: " + setCell.getFamilyName());
-                            }
-
-                            RowStorage rowStorage;
+                            final RowStorage rowStorage;
 
                             synchronized (lock) {
                                 final Pair<ByteString, ColumnFamily> key =
                                     Pair.of(rowKey, columnFamily);
 
-                                rowStorage = rows.get(key);
-
-                                if (rowStorage == null) {
-                                    rowStorage = new RowStorage(columnFamily);
-                                    rows.put(key, rowStorage);
-                                }
+                                rowStorage =
+                                    rows.computeIfAbsent(key, k -> new RowStorage(columnFamily));
                             }
 
                             rowStorage.runSetCell(setCell);
@@ -225,9 +220,31 @@ public class FakeBigtableConnection implements BigtableConnection {
                 request.getFilter().<Function<ByteString, Boolean>>map(
                     filter -> filter::matchesColumn).orElse(column -> true);
 
-            final Function<ByteString, Boolean> matchesRowKey =
-                request.getRowKey().<Function<ByteString, Boolean>>map(
-                    rowKey -> rowKey::equals).orElse(key -> true);
+            final Function<ByteString, Boolean> matchesRowKey = bytes -> {
+                final boolean rangeMatches = request.getRange().map(range -> {
+                    if (range.getStart().isPresent()) {
+                        final int n = compareByteStrings(range.getStart().get(), bytes);
+
+                        if (!(n <= 0)) {
+                            return false;
+                        }
+                    }
+
+                    if (range.getEnd().isPresent()) {
+                        final int n = compareByteStrings(bytes, range.getEnd().get());
+
+                        if (!(n < 0)) {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                }).orElse(true);
+
+                final boolean keyMatches = request.getRowKey().map(bytes::equals).orElse(true);
+
+                return rangeMatches && keyMatches;
+            };
 
             return async.call(() -> rows.entrySet().stream().flatMap(entry -> {
                 final Pair<ByteString, ColumnFamily> key = entry.getKey();
@@ -267,11 +284,7 @@ public class FakeBigtableConnection implements BigtableConnection {
             storage
                 .entrySet()
                 .stream()
-                .filter(e -> {
-                    final boolean matches = matchesColumn.apply(e.getKey());
-                    final Optional<RowFilter> filter = request.getFilter();
-                    return matches;
-                })
+                .filter(e -> matchesColumn.apply(e.getKey()))
                 .map(column -> FlatRow.Cell
                     .newBuilder()
                     .withFamily(columnFamily.getName())

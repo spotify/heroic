@@ -24,14 +24,20 @@ package com.spotify.heroic.elasticsearch;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
-import lombok.RequiredArgsConstructor;
+import eu.toolchain.async.Transform;
+import javax.inject.Provider;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ActionResponse;
 import org.elasticsearch.action.ListenableActionFuture;
+import org.elasticsearch.index.engine.VersionConflictEngineException;
 
-@RequiredArgsConstructor
 public class AbstractElasticsearchBackend {
     protected final AsyncFramework async;
+
+    @java.beans.ConstructorProperties({ "async" })
+    public AbstractElasticsearchBackend(final AsyncFramework async) {
+        this.async = async;
+    }
 
     protected <T extends ActionResponse> AsyncFuture<T> bind(
         final ListenableActionFuture<T> actionFuture
@@ -45,11 +51,24 @@ public class AbstractElasticsearchBackend {
             }
 
             @Override
-            public void onFailure(Throwable e) {
+            public void onFailure(Exception e) {
                 future.fail(e);
             }
         });
 
         return future;
+    }
+
+    protected <T> Transform<Throwable, T> handleVersionConflict(
+        Provider<T> emptyProvider, Runnable reportWriteDroppedByDuplicate
+    ) {
+        return throwable -> {
+            if (throwable instanceof VersionConflictEngineException) {
+                // Index request rejected, document already exists. That's ok, return success.
+                reportWriteDroppedByDuplicate.run();
+                return emptyProvider.get();
+            }
+            throw new RuntimeException(throwable);
+        };
     }
 }

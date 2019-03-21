@@ -21,6 +21,10 @@
 
 package com.spotify.heroic.generator;
 
+import static com.spotify.heroic.common.Optionals.mergeOptionalList;
+import static com.spotify.heroic.common.Optionals.pickOptional;
+import static java.util.Optional.empty;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
@@ -31,23 +35,22 @@ import com.spotify.heroic.generator.sine.SineMetricGeneratorModule;
 import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.spotify.heroic.common.Optionals.mergeOptionalList;
-import static com.spotify.heroic.common.Optionals.pickOptional;
-import static java.util.Optional.empty;
-
-@RequiredArgsConstructor
 @Module
 public class CoreGeneratorModule {
     private final List<MetricGeneratorModule> modules;
     private final MetadataGenerator metadata;
+
+    public CoreGeneratorModule(
+        final List<MetricGeneratorModule> modules,
+        final MetadataGenerator metadata) {
+        this.modules = modules;
+        this.metadata = metadata;
+    }
 
     public GeneratorComponent module(final PrimaryComponent primary) {
         return DaggerCoreGeneratorModule_C.builder().m(new M(primary)).build();
@@ -60,10 +63,13 @@ public class CoreGeneratorModule {
         CoreGeneratorManager generatorManager();
     }
 
-    @RequiredArgsConstructor
     @Module
     class M {
         private final PrimaryComponent primary;
+
+        M(final PrimaryComponent primary) {
+            this.primary = primary;
+        }
 
         @Provides
         @GeneratorScope
@@ -98,10 +104,12 @@ public class CoreGeneratorModule {
         return new Builder();
     }
 
-    @NoArgsConstructor
     public static class Builder {
         private Optional<List<MetricGeneratorModule>> metrics = empty();
         private Optional<MetadataGenerator> metadata = empty();
+
+        private Builder() {
+        }
 
         @JsonCreator
         public Builder(

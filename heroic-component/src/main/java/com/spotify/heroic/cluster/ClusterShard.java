@@ -29,6 +29,7 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.RetryException;
 import eu.toolchain.async.RetryPolicy;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +45,8 @@ import lombok.extern.slf4j.Slf4j;
 @Data
 public class ClusterShard {
     private static final QueryTrace.Identifier RETRY_BACKOFF =
-        new QueryTrace.Identifier("retry-backoff");
+        QueryTrace.Identifier.create("retry-backoff");
+    private static final String DARKLOAD = "darkload";
 
     private final AsyncFramework async;
 
@@ -56,7 +58,7 @@ public class ClusterShard {
         Function<ClusterNode.Group, AsyncFuture<T>> function,
         BiFunction<T, List<QueryTrace>, T> handleRetryTraceFn
     ) {
-        final List<ClusterNode> nodesTried = new ArrayList<>();
+        final List<ClusterNode> nodesTried = Collections.synchronizedList(new ArrayList<>());
 
         if (!cluster.hasNextButNotWithId(shard, nodesTried::contains)) {
             return async.failed(new RuntimeException("No groups available"));
@@ -80,12 +82,12 @@ public class ClusterShard {
         return async
             .retryUntilResolved(() -> {
                 Optional<ClusterManager.NodeResult<AsyncFuture<T>>> ret =
-                    cluster.withNodeInShardButNotWithId(shard, nodesTried::contains, function);
+                    cluster.withNodeInShardButNotWithId(shard, nodesTried::contains,
+                        nodesTried::add, function);
                 if (!ret.isPresent()) {
                     throw new RuntimeException("No groups available");
                 }
                 ClusterManager.NodeResult<AsyncFuture<T>> result = ret.get();
-                nodesTried.add(result.getNode());
 
                 return result.getReturnValue().catchFailed(throwable -> {
                     reporter.reportClusterNodeRpcError();
@@ -115,6 +117,10 @@ public class ClusterShard {
         return nodes;
     }
 
+    public boolean isDarkload() {
+        return shard.containsKey(DARKLOAD);
+    }
+
     private List<QueryTrace> queryTracesFromRetries(
         final List<RetryException> retryExceptions, final List<Long> backoffTimings
     ) {
@@ -127,7 +133,7 @@ public class ClusterShard {
             final long microTS =
                 TimeUnit.MICROSECONDS.convert(re.getOffsetMillis(), TimeUnit.MILLISECONDS);
             long elapsed = microTS - lastTS;
-            traces.add(QueryTrace.of(new QueryTrace.Identifier(getMessageFrom(re)), elapsed));
+            traces.add(QueryTrace.of(QueryTrace.Identifier.create(getMessageFrom(re)), elapsed));
             lastTS = microTS;
 
             /* After each retry, a backoff pause is inserted before trying the next node.

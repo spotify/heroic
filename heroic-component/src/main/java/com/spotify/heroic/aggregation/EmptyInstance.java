@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
@@ -67,6 +68,11 @@ public class EmptyInstance implements AggregationInstance {
     @Override
     public AggregationInstance distributed() {
         return this;
+    }
+
+    @Override
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(getClass());
     }
 
     @Override

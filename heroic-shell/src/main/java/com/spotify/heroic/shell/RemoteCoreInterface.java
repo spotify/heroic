@@ -21,36 +21,27 @@
 
 package com.spotify.heroic.shell;
 
-import com.spotify.heroic.shell.protocol.Acknowledge;
-import com.spotify.heroic.shell.protocol.CommandDefinition;
-import com.spotify.heroic.shell.protocol.CommandDone;
-import com.spotify.heroic.shell.protocol.CommandOutput;
-import com.spotify.heroic.shell.protocol.CommandOutputFlush;
-import com.spotify.heroic.shell.protocol.CommandsRequest;
-import com.spotify.heroic.shell.protocol.CommandsResponse;
-import com.spotify.heroic.shell.protocol.EvaluateRequest;
-import com.spotify.heroic.shell.protocol.FileClose;
-import com.spotify.heroic.shell.protocol.FileFlush;
-import com.spotify.heroic.shell.protocol.FileNewInputStream;
-import com.spotify.heroic.shell.protocol.FileNewOutputStream;
-import com.spotify.heroic.shell.protocol.FileOpened;
-import com.spotify.heroic.shell.protocol.FileRead;
-import com.spotify.heroic.shell.protocol.FileReadResult;
-import com.spotify.heroic.shell.protocol.FileWrite;
-import com.spotify.heroic.shell.protocol.Message;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+
+import com.google.protobuf.ByteString;
+import com.spotify.heroic.proto.ShellMessage.CommandEvent;
+import com.spotify.heroic.proto.ShellMessage.CommandsResponse;
+import com.spotify.heroic.proto.ShellMessage.FileEvent;
+import com.spotify.heroic.proto.ShellMessage.FileRead;
+import com.spotify.heroic.proto.ShellMessage.FileStream;
+import com.spotify.heroic.proto.ShellMessage.FileWrite;
+import com.spotify.heroic.proto.ShellMessage.Message;
+import com.spotify.heroic.shell.protocol.MessageBuilder;
 import com.spotify.heroic.shell.protocol.SimpleMessageVisitor;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.serializer.SerializerFramework;
-import lombok.extern.slf4j.Slf4j;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,29 +50,21 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
-
-@Slf4j
 public class RemoteCoreInterface implements CoreInterface {
-    public static final int DEFAULT_PORT = 9190;
-    public static final int MAX_READ = 4096;
+    private static final int DEFAULT_PORT = 9190;
+    private static final int MAX_READ = 4096;
 
-    final InetSocketAddress address;
-    final AsyncFramework async;
-    final SerializerFramework serializer;
 
-    public RemoteCoreInterface(
-        InetSocketAddress address, AsyncFramework async, SerializerFramework serializer
-    ) throws IOException {
+    private final InetSocketAddress address;
+    private final AsyncFramework async;
+
+    public RemoteCoreInterface(InetSocketAddress address, AsyncFramework async) {
         this.address = address;
         this.async = async;
-        this.serializer = serializer;
     }
 
     @Override
-    public AsyncFuture<Void> evaluate(final List<String> command, final ShellIO io)
-        throws Exception {
+    public AsyncFuture<Void> evaluate(final List<String> commands, final ShellIO io) {
         return async.call(() -> {
             final AtomicBoolean running = new AtomicBoolean(true);
             final AtomicInteger fileCounter = new AtomicInteger();
@@ -91,15 +74,13 @@ public class RemoteCoreInterface implements CoreInterface {
             final Map<Integer, Callable<Void>> closers = new HashMap<>();
 
             try (final ShellConnection c = connect()) {
-                c.send(new EvaluateRequest(command));
+                c.send(MessageBuilder.evaluateRequest(commands));
 
-                final Message.Visitor<Optional<Message>> visitor =
+                final SimpleMessageVisitor<Optional<Message>> visitor =
                     setupVisitor(io, running, fileCounter, reading, writing, closers);
 
                 while (true) {
-                    final Message in = c.receive();
-
-                    final Optional<Message> out = in.visit(visitor);
+                    final Optional<Message> out = c.receiveAndParse(visitor);
 
                     if (!running.get()) {
                         break;
@@ -127,94 +108,86 @@ public class RemoteCoreInterface implements CoreInterface {
         final Map<Integer, Callable<Void>> closers
     ) {
         return new SimpleMessageVisitor<Optional<Message>>() {
-            public Optional<Message> visitCommandDone(CommandDone m) {
+            public Optional<Message> visitCommandDone(CommandEvent msg) {
                 running.set(false);
                 return empty();
             }
 
             @Override
-            public Optional<Message> visitCommandOutput(CommandOutput m) {
-                io.out().write(m.getData());
+            public Optional<Message> visitCommandOutput(CommandEvent msg) {
+                io.out().write(msg.getData());
                 return empty();
             }
 
             @Override
-            public Optional<Message> visitCommandOutputFlush(CommandOutputFlush m) {
+            public Optional<Message> visitCommandOutputFlush(CommandEvent msg) {
                 io.out().flush();
                 return empty();
             }
 
             @Override
-            public Optional<Message> visitFileNewInputStream(FileNewInputStream m)
-                throws Exception {
-                final InputStream in =
-                    io.newInputStream(Paths.get(m.getPath()), m.getOptionsAsArray());
+            public Optional<Message> visitFileNewInputStream(FileStream msg) throws Exception {
+                final InputStream in = io.newInputStream(Paths.get(msg.getPath()));
+                final int handle = fileCounter.incrementAndGet();
 
-                final int h = fileCounter.incrementAndGet();
-
-                reading.put(h, in);
-                closers.put(h, () -> {
+                reading.put(handle, in);
+                closers.put(handle, () -> {
                     in.close();
-                    reading.remove(h);
+                    reading.remove(handle);
                     return null;
                 });
 
-                return of(new FileOpened(h));
+                return of(MessageBuilder.fileEvent(handle, FileEvent.Event.OPENED));
             }
 
             @Override
-            public Optional<Message> visitFileNewOutputStream(FileNewOutputStream m)
-                throws Exception {
-                final OutputStream out =
-                    io.newOutputStream(Paths.get(m.getPath()), m.getOptionsAsArray());
+            public Optional<Message> visitFileNewOutputStream(FileStream msg) throws Exception {
+                final OutputStream out = io.newOutputStream(Paths.get(msg.getPath()));
+                final int handle = fileCounter.incrementAndGet();
 
-                final int h = fileCounter.incrementAndGet();
-
-                writing.put(h, out);
-                closers.put(h, () -> {
+                writing.put(handle, out);
+                closers.put(handle, () -> {
                     out.close();
-                    writing.remove(h);
+                    writing.remove(handle);
                     return null;
                 });
 
-                return of(new FileOpened(h));
+                return of(MessageBuilder.fileEvent(handle, FileEvent.Event.OPENED));
             }
 
             @Override
-            public Optional<Message> visitFileFlush(FileFlush m) throws Exception {
-                writer(m.getHandle()).flush();
-                return of(new Acknowledge());
+            public Optional<Message> visitFileFlush(FileEvent msg) throws Exception {
+                writer(msg.getHandle()).flush();
+                return of(MessageBuilder.acknowledge());
             }
 
             @Override
-            public Optional<Message> visitFileClose(FileClose m) throws Exception {
-                closer(m.getHandle()).call();
-                return of(new Acknowledge());
+            public Optional<Message> visitFileClose(FileEvent msg) throws Exception {
+                closer(msg.getHandle()).call();
+                return of(MessageBuilder.acknowledge());
             }
 
             @Override
-            public Optional<Message> visitFileWrite(FileWrite m) throws Exception {
-                final byte[] data = m.getData();
-                writer(m.getHandle()).write(data, 0, data.length);
+            public Optional<Message> visitFileWrite(FileWrite msg) throws Exception {
+                final byte[] data = msg.getDataBytes().toByteArray();
+                writer(msg.getHandle()).write(data, 0, data.length);
                 return empty();
             }
 
             @Override
-            public Optional<Message> visitFileRead(FileRead m) throws Exception {
-                final byte[] buffer = new byte[Math.min(MAX_READ, m.getLength())];
+            public Optional<Message> visitFileRead(FileRead msg) throws Exception {
+                final byte[] buffer = new byte[Math.min(MAX_READ, msg.getLength())];
 
-                int read = reader(m.getHandle()).read(buffer);
+                int read = reader(msg.getHandle()).read(buffer);
 
+                final ByteString bytes;
                 if (read == 0) {
-                    return of(new FileReadResult(new byte[0]));
+                    bytes = ByteString.EMPTY;
+                } else {
+                    bytes = ByteString.copyFrom(buffer);
                 }
 
-                return of(new FileReadResult(Arrays.copyOf(buffer, read)));
-            }
-
-            @Override
-            protected Optional<Message> visitUnknown(Message message) {
-                throw new IllegalArgumentException("Unhandled message: " + message);
+                return of(MessageBuilder.fileReadResult(bytes));
             }
 
             private InputStream reader(int handle) throws Exception {
@@ -250,19 +223,14 @@ public class RemoteCoreInterface implements CoreInterface {
     }
 
     @Override
-    public List<CommandDefinition> commands() throws Exception {
+    public List<CommandsResponse.CommandDefinition> commands() throws IOException {
         try (final ShellConnection c = connect()) {
-            return c.request(new CommandsRequest(), CommandsResponse.class).getCommands();
+            final Message message = MessageBuilder.commandEvent(CommandEvent.Event.REQUEST);
+            return c.request(message).getCommandsResponse().getCommandsList();
         }
     }
 
-    @Override
-    public void shutdown() throws Exception {
-    }
-
-    public static RemoteCoreInterface fromConnectString(
-        String connect, AsyncFramework async, SerializerFramework serializer
-    ) throws IOException {
+    public static RemoteCoreInterface fromConnectString(String connect, AsyncFramework async)  {
         final String host;
         final int port;
 
@@ -276,7 +244,7 @@ public class RemoteCoreInterface implements CoreInterface {
             port = DEFAULT_PORT;
         }
 
-        return new RemoteCoreInterface(new InetSocketAddress(host, port), async, serializer);
+        return new RemoteCoreInterface(new InetSocketAddress(host, port), async);
     }
 
     private ShellConnection connect() throws IOException {
@@ -284,6 +252,6 @@ public class RemoteCoreInterface implements CoreInterface {
 
         socket.connect(address);
 
-        return new ShellConnection(serializer, socket);
+        return new ShellConnection(socket);
     }
 }

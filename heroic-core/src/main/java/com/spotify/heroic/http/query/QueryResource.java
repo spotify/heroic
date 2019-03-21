@@ -39,7 +39,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
@@ -52,7 +51,6 @@ import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
-import lombok.Data;
 import org.apache.commons.lang3.tuple.Triple;
 
 @Path("query")
@@ -103,7 +101,7 @@ public class QueryResource {
     ) {
         final HttpContext httpContext = CoreHttpContextFactory.create(servletReq);
         final QueryContext queryContext =
-            QueryContext.create(query.getClientContext(), httpContext);
+            QueryContext.create(query.clientContext(), httpContext);
         queryLogger.logHttpQueryJson(queryContext, query);
 
         final Query q = query.toQueryBuilder(this.query::newQueryFromString).build();
@@ -136,7 +134,7 @@ public class QueryResource {
                     .build();
 
                 final QueryContext queryContext =
-                    QueryContext.create(qm.getClientContext(), httpContext);
+                    QueryContext.create(qm.clientContext(), httpContext);
                 queryLogger.logHttpQueryJson(queryContext, qm);
 
                 futures.add(g
@@ -155,9 +153,9 @@ public class QueryResource {
                     final QueryContext queryContext = e.getMiddle();
                     final QueryResult r = e.getRight();
                     final QueryMetricsResponse qmr =
-                        new QueryMetricsResponse(queryContext.getQueryId(), r.getRange(),
+                        new QueryMetricsResponse(queryContext.queryId(), r.getRange(),
                             r.getGroups(), r.getErrors(), r.getTrace(), r.getLimits(),
-                            Optional.of(r.getPreAggregationSampleSize()));
+                            Optional.of(r.getPreAggregationSampleSize()), r.getCache());
 
                     queryLogger.logFinalResponse(queryContext, qmr);
 
@@ -179,24 +177,12 @@ public class QueryResource {
         response.setTimeout(300, TimeUnit.SECONDS);
 
         httpAsync.bind(response, callback, r -> {
-            QueryMetricsResponse qmr =
-                new QueryMetricsResponse(queryContext.getQueryId(), r.getRange(), r.getGroups(),
+            final QueryMetricsResponse qmr =
+                new QueryMetricsResponse(queryContext.queryId(), r.getRange(), r.getGroups(),
                     r.getErrors(), r.getTrace(), r.getLimits(),
-                    Optional.of(r.getPreAggregationSampleSize()));
+                    Optional.of(r.getPreAggregationSampleSize()), r.getCache());
             queryLogger.logFinalResponse(queryContext, qmr);
             return qmr;
         });
-    }
-
-    @Data
-    public static final class StreamId {
-        private final Map<String, String> tags;
-        private final UUID id;
-    }
-
-    @Data
-    private static final class StreamQuery {
-        private final QueryManager.Group group;
-        private final Query query;
     }
 }

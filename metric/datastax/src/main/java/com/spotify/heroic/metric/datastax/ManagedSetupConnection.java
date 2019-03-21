@@ -23,7 +23,6 @@ package com.spotify.heroic.metric.datastax;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.ConsistencyLevel;
-import com.datastax.driver.core.PoolingOptions;
 import com.datastax.driver.core.QueryOptions;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.SocketOptions;
@@ -35,13 +34,10 @@ import com.spotify.heroic.metric.datastax.schema.Schema;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ManagedSetup;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-
 import java.net.InetSocketAddress;
 import java.util.Collection;
+import lombok.ToString;
 
-@RequiredArgsConstructor
 @ToString(of = {"seeds"})
 public class ManagedSetupConnection implements ManagedSetup<Connection> {
     private final AsyncFramework async;
@@ -53,11 +49,34 @@ public class ManagedSetupConnection implements ManagedSetup<Connection> {
     private final ConsistencyLevel consistencyLevel;
     private final RetryPolicy retryPolicy;
     private final DatastaxAuthentication authentication;
+    private final DatastaxPoolingOptions poolingOptions;
+
+    @java.beans.ConstructorProperties({ "async", "seeds", "schema", "configure", "fetchSize",
+                                        "readTimeout", "consistencyLevel", "retryPolicy",
+                                        "authentication", "poolingOptions" })
+    public ManagedSetupConnection(final AsyncFramework async,
+                                  final Collection<InetSocketAddress> seeds, final Schema schema,
+                                  final boolean configure, final int fetchSize,
+                                  final Duration readTimeout,
+                                  final ConsistencyLevel consistencyLevel,
+                                  final RetryPolicy retryPolicy,
+                                  final DatastaxAuthentication authentication,
+                                  final DatastaxPoolingOptions poolingOptions) {
+        this.async = async;
+        this.seeds = seeds;
+        this.schema = schema;
+        this.configure = configure;
+        this.fetchSize = fetchSize;
+        this.readTimeout = readTimeout;
+        this.consistencyLevel = consistencyLevel;
+        this.retryPolicy = retryPolicy;
+        this.authentication = authentication;
+        this.poolingOptions = poolingOptions;
+    }
 
     public AsyncFuture<Connection> construct() {
         AsyncFuture<Session> session = async.call(() -> {
-            // @formatter:off
-            final PoolingOptions pooling = new PoolingOptions();
+
 
             final QueryOptions queryOptions = new QueryOptions()
                 .setFetchSize(fetchSize)
@@ -69,13 +88,14 @@ public class ManagedSetupConnection implements ManagedSetup<Connection> {
             final Cluster.Builder cluster = Cluster.builder()
                 .addContactPointsWithPorts(seeds)
                 .withRetryPolicy(retryPolicy)
-                .withPoolingOptions(pooling)
                 .withQueryOptions(queryOptions)
                 .withSocketOptions(socketOptions)
                 .withLoadBalancingPolicy(new TokenAwarePolicy(new RoundRobinPolicy()));
             // @formatter:on
 
             authentication.accept(cluster);
+            poolingOptions.apply(cluster);
+
             return cluster.build().connect();
         });
 

@@ -28,7 +28,6 @@ import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
 import eu.toolchain.async.AsyncFuture;
-import lombok.RequiredArgsConstructor;
 
 public interface ConsumerSchema {
     Exposed setup(Depends depends);
@@ -52,10 +51,14 @@ public interface ConsumerSchema {
         }
     }
 
-    @RequiredArgsConstructor
     @Module
     class DependsModule {
         private final IngestionGroup group;
+
+        @java.beans.ConstructorProperties({ "group" })
+        public DependsModule(final IngestionGroup group) {
+            this.group = group;
+        }
 
         @Provides
         @ConsumerSchemaScope

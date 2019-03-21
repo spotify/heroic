@@ -1,0 +1,4 @@
+{
+  "type": "events",
+  "data": [[1000, {"foo":"bar"}], [2000, {"bar":"baz"}]]
+}

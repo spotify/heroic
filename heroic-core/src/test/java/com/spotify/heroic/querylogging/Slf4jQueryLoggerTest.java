@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.spotify.heroic.Query;
+import com.spotify.heroic.common.Histogram;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.FullQuery;
 import com.spotify.heroic.metric.QueryMetrics;
@@ -18,6 +19,7 @@ import com.spotify.heroic.metric.QueryMetricsResponse;
 import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.ResultLimits;
 import java.util.ArrayList;
+import java.util.Optional;
 import java.util.function.Consumer;
 import org.junit.Before;
 import org.junit.Test;
@@ -94,8 +96,8 @@ public class Slf4jQueryLoggerTest {
     @Test
     public void testOutgoingResponseAtNode() {
         final FullQuery response =
-            new FullQuery(QueryTrace.of(QueryTrace.identifier("test"), 0L), new ArrayList<>(),
-                new ArrayList<>(), Statistics.empty(), ResultLimits.of());
+            FullQuery.create(QueryTrace.of(QueryTrace.identifier("test"), 0L), new ArrayList<>(),
+                new ArrayList<>(), Statistics.empty(), ResultLimits.of(), Optional.empty());
         slf4jQueryLogger.logOutgoingResponseAtNode(queryContext, response);
         verify(logger, times(1)).accept(any(String.class));
     }
@@ -103,8 +105,8 @@ public class Slf4jQueryLoggerTest {
     @Test
     public void testIncomingResponseFromShard() {
         final FullQuery response =
-            new FullQuery(QueryTrace.of(QueryTrace.identifier("test"), 0L), new ArrayList<>(),
-                new ArrayList<>(), Statistics.empty(), ResultLimits.of());
+            FullQuery.create(QueryTrace.of(QueryTrace.identifier("test"), 0L), new ArrayList<>(),
+                new ArrayList<>(), Statistics.empty(), ResultLimits.of(), Optional.empty());
         slf4jQueryLogger.logIncomingResponseFromShard(queryContext, response);
         verify(logger, times(1)).accept(any(String.class));
     }

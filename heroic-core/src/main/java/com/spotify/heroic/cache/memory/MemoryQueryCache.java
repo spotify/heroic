@@ -49,7 +49,7 @@ public class MemoryQueryCache implements QueryCache {
     public AsyncFuture<QueryResult> load(
         FullQuery.Request request, Supplier<AsyncFuture<QueryResult>> loader
     ) {
-        final AggregationInstance aggregation = request.getAggregation();
+        final AggregationInstance aggregation = request.aggregation();
 
         /* can't be cached :( */
         if (aggregation.cadence() <= 0) {

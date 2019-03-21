@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
+import com.spotify.heroic.ObjectHasher;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -100,6 +101,8 @@ public interface OptionalLimit {
 
         return new ValueOptionalLimit(limit);
     }
+
+    void hashTo(ObjectHasher hasher);
 
     class Deserializer extends JsonDeserializer<OptionalLimit> {
         @Override

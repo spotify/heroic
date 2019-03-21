@@ -156,6 +156,34 @@ metadata:
 #    #config:
 #    #  zookeeper.connect: localhost:2181
 #    #  group.id: heroic
+#  - type: pubsub
+#    # Id for consumer
+#    # @default Generated
+#    id: null
+#    # Topic to consume from (required.) Will be created if it doesn't exist.
+#    topic: metrics
+#    # GCP project to consume from (required.)
+#    project: heroic
+#    # Subscription name to consume from (required.) Will be created if it doesn't exist.
+#    subscription: heroic-consumer
+#    # Schema to use when consuming (required).
+#    # The fully qualified class name of a schema implementation for consuming.
+#    #schema: com.spotify.heroic.consumer.schemas.Spotify100
+#    # Threads per topic.
+#    # @default 8
+#    #threadsPerTopic: 2
+#    # Maximum number of messages the consumer can have unacked.
+#    # @default 10000
+#    #maxOutStandingElementCount: 50000
+#    # Maximum byte size of messages the consumer can have unacked.
+#    # @default 1000000000
+#    #maxOutstandingRequestBytes: 2000000000
+#    # Maxiumum size of a single incoming message, in bytes. 20MB is the highest allowed by the API.
+#    # @default 20971520
+#    #maxInboundMessageSize: 40960000
+#    # Amount of time to keep the PubSub connection alive, in seconds.
+#    # @default 300
+#    #keepAlive: 600
 
 ## Aggregation cache.
 #cache:
@@ -192,3 +220,40 @@ metadata:
 ## Detailed Query Logging
 #queryLogging:
 #  type: slf4j
+
+## Tracing configuration
+#tracing:
+#  # Probability, between 0.0 and 1.0, of sampling each trace.
+#  # @default 0.01
+#  #probability: 0.01
+#  #jaeger:
+#  #  # Name of the service to report to Jaeger.
+#  #  # @default "heroic"
+#  #  service: heroic
+#  #  # Endpoint for storing Jaeger traces. (required)
+#  #  # @default empty
+#  #  thriftEndpoint: http://127.0.0.1:14268/api/traces
+#  # Local port to expose zpages on. Traces are accessible at http://localhost:{port}/tracez
+#  # @default empty
+#  #zpagesPort: 9090
+#  #lightstep:
+#  #  # Collector host running the satellite. (required)
+#  #  collectorHost: "lightstep-satellite.services.heroic"
+#  #  # Lightstep access token. (required)
+#  #  accessToken: "lightstep_token"
+#  #  # Reporting interval (ms)
+#  #  # @default 1000
+#  #  reportingIntervalMs: 1_000
+#  #  # Max buffered spans
+#  #  # @default 1000
+#  #  maxBufferedSpans: 1_000
+#  #signalfx:
+#  #  # Host gateway for SignalFx with the correct region. (required)
+#  #  signalfxGateway: "http://signalfxgateway.services.guc3:8080/v1/trace"
+#  #zipkin:
+#  #  # Zipkin URL to send traces to. (required)
+#  #  # @default empty
+#  #  url: http://localhost:9411/api/v2/spans
+#  #  # Name of the service to report to Zipkin.
+#  #  # @default "heroic"
+#  #  service: heroic

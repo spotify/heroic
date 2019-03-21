@@ -21,13 +21,13 @@
 
 package com.spotify.heroic.rpc.grpc;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static io.grpc.MethodDescriptor.generateFullMethodName;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.auto.value.AutoValue;
 import com.google.common.io.ByteStreams;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.cluster.NodeMetadata;
@@ -68,13 +68,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import javax.inject.Inject;
 import javax.inject.Named;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
-@ToString(of = {})
 @GrpcRpcScope
 public class GrpcRpcProtocol implements RpcProtocol {
     private final AsyncFramework async;
@@ -86,6 +80,11 @@ public class GrpcRpcProtocol implements RpcProtocol {
     private final NioEventLoopGroup workerGroup;
 
     private final Object lock = new Object();
+
+    @Override
+    public String toString() {
+        return "GrpcRpcProtocol()";
+    }
 
     @Inject
     public GrpcRpcProtocol(
@@ -115,6 +114,7 @@ public class GrpcRpcProtocol implements RpcProtocol {
                     .usePlaintext(true)
                     .executor(workerGroup)
                     .eventLoopGroup(workerGroup)
+                    .maxInboundMessageSize(maxFrameSize)
                     .build();
 
                 return async.resolved(channel);
@@ -158,10 +158,14 @@ public class GrpcRpcProtocol implements RpcProtocol {
         });
     }
 
-    @RequiredArgsConstructor
     public class GrpcRpcClusterNode implements ClusterNode {
         private final GrpcRpcClient client;
         private final NodeMetadata metadata;
+
+        public GrpcRpcClusterNode(GrpcRpcClient client, NodeMetadata metadata) {
+            this.client = client;
+            this.metadata = metadata;
+        }
 
         @Override
         public NodeMetadata metadata() {
@@ -195,9 +199,12 @@ public class GrpcRpcProtocol implements RpcProtocol {
             return client.toString();
         }
 
-        @RequiredArgsConstructor
         private class Group implements ClusterNode.Group {
             private final Optional<String> group;
+
+            public Group(Optional<String> group) {
+                this.group = group;
+            }
 
             @Override
             public ClusterNode node() {
@@ -281,30 +288,32 @@ public class GrpcRpcProtocol implements RpcProtocol {
             private <T, R> AsyncFuture<R> request(
                 GrpcDescriptor<GroupedQuery<T>, R> endpoint, T body
             ) {
-                final GroupedQuery<T> grouped = new GroupedQuery<>(group, body);
+                final GroupedQuery<T> grouped = GroupedQuery.create(group, body);
                 return client.request(endpoint, grouped, CallOptions.DEFAULT);
             }
         }
     }
 
-    @Data
-    public static class GroupedQuery<T> {
-        private final Optional<String> group;
-        private final T query;
-
+    @AutoValue
+    public abstract static class GroupedQuery<T> {
         @JsonCreator
-        public GroupedQuery(
+        public static <T> GroupedQuery<T> create(
             @JsonProperty("group") Optional<String> group, @JsonProperty("query") T query
         ) {
-            this.group = group;
-            this.query = checkNotNull(query, "query");
+            return new AutoValue_GrpcRpcProtocol_GroupedQuery<T>(group, query);
         }
+
+        @JsonProperty
+        public abstract Optional<String> group();
+        @JsonProperty
+        public abstract T query();
 
         public <G extends Grouped, R> R apply(
             UsableGroupManager<G> manager, BiFunction<G, T, R> function
         ) {
-            return function.apply(group.map(manager::useGroup).orElseGet(manager::useDefaultGroup),
-                query);
+            return function.apply(
+                group().map(manager::useGroup).orElseGet(manager::useDefaultGroup),
+                query());
         }
     }
 

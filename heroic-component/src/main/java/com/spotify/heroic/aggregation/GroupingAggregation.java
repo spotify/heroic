@@ -25,6 +25,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
@@ -41,7 +42,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @Data
@@ -102,12 +102,18 @@ public abstract class GroupingAggregation implements AggregationInstance {
     }
 
     @Override
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(getClass(), () -> {
+            hasher.putField("of", of, hasher.optional(hasher.list(hasher.string())));
+        });
+    }
+
+    @Override
     public String toString() {
         return String.format("%s(of=%s, each=%s)", getClass().getSimpleName(), of, each);
     }
 
     @ToString
-    @RequiredArgsConstructor
     private final class GroupSession implements AggregationSession {
         private final ConcurrentMap<Map<String, String>, AggregationSession> sessions =
             new ConcurrentHashMap<>();
@@ -116,6 +122,13 @@ public abstract class GroupingAggregation implements AggregationInstance {
         private final DateRange range;
         private final RetainQuotaWatcher quotaWatcher;
         private final BucketStrategy bucketStrategy;
+
+        public GroupSession(final DateRange range, final RetainQuotaWatcher quotaWatcher,
+                            final BucketStrategy bucketStrategy) {
+            this.range = range;
+            this.quotaWatcher = quotaWatcher;
+            this.bucketStrategy = bucketStrategy;
+        }
 
         @Override
         public void updatePoints(

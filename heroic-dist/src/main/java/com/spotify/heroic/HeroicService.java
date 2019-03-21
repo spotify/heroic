@@ -27,24 +27,19 @@ import com.spotify.heroic.reflection.ResourceException;
 import com.spotify.heroic.reflection.ResourceFileLoader;
 import com.spotify.heroic.reflection.ResourceInstance;
 import eu.toolchain.async.Transform;
-import lombok.Data;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.CmdLineException;
-import org.kohsuke.args4j.CmdLineParser;
-import org.kohsuke.args4j.Option;
-
-import java.lang.Thread.UncaughtExceptionHandler;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.List;
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Slf4j
 public class HeroicService {
-    public static interface Configuration {
+    private static final Logger log = LoggerFactory.getLogger(HeroicService.class);
+
+    public interface Configuration {
         void configure(HeroicCore.Builder builder, Parameters parameters);
     }
 
@@ -64,14 +59,11 @@ public class HeroicService {
         throws Exception {
         HeroicLogging.configure();
 
-        Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
-            @Override
-            public void uncaughtException(Thread t, Throwable e) {
-                try {
-                    log.error("Uncaught exception in thread {}, exiting...", t, e);
-                } finally {
-                    System.exit(1);
-                }
+        Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
+            try {
+                log.error("Uncaught exception in thread {}, exiting...", t, e);
+            } finally {
+                System.exit(1);
             }
         });
 
@@ -134,12 +126,9 @@ public class HeroicService {
             ResourceFileLoader.loadInstances(CONFIGURATION_RESOURCE, loader, Configuration.class);
 
         for (final ResourceInstance<Configuration> config : configs) {
-            config.invoke(new Transform<Configuration, Void>() {
-                @Override
-                public Void transform(Configuration result) throws Exception {
-                    result.configure(builder, params);
-                    return null;
-                }
+            config.invoke((Transform<Configuration, Void>) result -> {
+                result.configure(builder, params);
+                return null;
             });
         }
     }
@@ -147,7 +136,7 @@ public class HeroicService {
     private static void configureBuilder(
         final HeroicCore.Builder builder, final Parameters params
     ) {
-        final Path config = getConfigPath(params.extra);
+        final Path config = getConfigPath(params.getExtra());
 
         // setup as a service accepting http requests.
         builder.setupService(true);
@@ -159,31 +148,31 @@ public class HeroicService {
             builder.configPath(config);
         }
 
-        if (params.id != null) {
-            builder.id(params.id);
+        if (params.getId() != null) {
+            builder.id(params.getId());
         }
 
-        if (params.port != null) {
-            builder.port(params.port);
+        if (params.getPort() != null) {
+            builder.port(params.getPort());
         }
 
-        if (params.host != null) {
-            builder.host(params.host);
+        if (params.getHost() != null) {
+            builder.host(params.getHost());
         }
 
-        if (params.startupPing != null) {
-            builder.startupPing(params.startupPing);
+        if (params.getStartupPing() != null) {
+            builder.startupPing(params.getStartupPing());
         }
 
-        if (params.startupId != null) {
-            builder.startupId(params.startupId);
+        if (params.getStartupId() != null) {
+            builder.startupId(params.getStartupId());
         }
 
-        for (final String profile : params.profiles) {
+        for (final String profile : params.getProfiles()) {
             builder.profile(setupProfile(profile));
         }
 
-        builder.parameters(ExtraParameters.ofList(params.parameters));
+        builder.parameters(ExtraParameters.ofList(params.getParameters()));
         builder.modules(HeroicModules.ALL_MODULES);
     }
 
@@ -222,7 +211,7 @@ public class HeroicService {
             return null;
         }
 
-        if (params.help) {
+        if (params.getHelp()) {
             parser.printUsage(System.out);
             System.out.println();
             HeroicModules.printAllUsage(System.out, "-P");
@@ -231,42 +220,4 @@ public class HeroicService {
 
         return params;
     }
-
-    // @formatter:off
-    @ToString
-    @Data
-    public static class Parameters {
-        @Option(name = "-P", aliases = {"--profile"},
-                usage = "Activate a pre-defined profile instead of a configuration file. Profiles" +
-                        " are pre-defined configurations, useful for messing around with the " +
-                        "system.")
-        private List<String> profiles = new ArrayList<>();
-
-        @Option(name = "--port", usage = "Port number to bind to")
-        private Integer port = null;
-
-        @Option(name = "--host", usage = "Host to bind to")
-        private String host = null;
-
-        @Option(name = "--id", usage = "Heroic identifier")
-        private String id = null;
-
-        @Option(name = "-h", aliases = {"--help"}, help = true, usage = "Display help.")
-        private boolean help;
-
-        @Option(name = "--startup-ping",
-                usage = "Send a JSON frame to the given URI containing information about this " +
-                        "host after it has started.")
-        private String startupPing;
-
-        @Option(name = "--startup-id", usage = "Explicit id of a specific startup instance.")
-        private String startupId;
-
-        @Option(name = "-X", usage = "Define an extra parameter", metaVar = "<key>=<value>")
-        private List<String> parameters = new ArrayList<>();
-
-        @Argument
-        private List<String> extra = new ArrayList<>();
-    }
-    // @formatter:on
 }

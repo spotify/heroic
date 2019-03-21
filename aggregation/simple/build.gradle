@@ -1,0 +1,8 @@
+dependencies {
+    implementation project(':heroic-component')
+    testImplementation project(':heroic-test')
+    testImplementation project(':heroic-component-test')
+}
+
+group = 'com.spotify.heroic.aggregation'
+description = 'Heroic: Simple Aggregations'

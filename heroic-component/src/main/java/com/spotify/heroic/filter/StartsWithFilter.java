@@ -21,23 +21,32 @@
 
 package com.spotify.heroic.filter;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.auto.value.AutoValue;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.grammar.DSL;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
 
-@Data
-@EqualsAndHashCode(of = {"OPERATOR", "tag", "value"}, doNotUseGetters = true)
-public class StartsWithFilter implements Filter {
+@AutoValue
+@JsonTypeName("startsWith")
+public abstract class StartsWithFilter implements Filter {
+    @JsonCreator
+    public static StartsWithFilter create(
+        @JsonProperty("tag") String tag, @JsonProperty("value") String value
+    ) {
+        return new AutoValue_StartsWithFilter(tag, value);
+    }
+
     public static final String OPERATOR = "^";
-
-    private final String tag;
-    private final String value;
+    public abstract String tag();
+    public abstract String value();
 
     @Override
     public boolean apply(Series series) {
-        final String value;
-        return (value = series.getTags().get(tag)) != null && value.startsWith(this.value);
+        final String tagValue = series.getTags().get(tag());
+        return tagValue != null && tagValue.startsWith(value());
     }
 
     @Override
@@ -47,7 +56,7 @@ public class StartsWithFilter implements Filter {
 
     @Override
     public String toString() {
-        return "[" + OPERATOR + ", " + tag + ", " + value + "]";
+        return "[" + OPERATOR + ", " + tag() + ", " + value() + "]";
     }
 
     @Override
@@ -62,22 +71,30 @@ public class StartsWithFilter implements Filter {
 
     @Override
     public int compareTo(Filter o) {
-        if (!StartsWithFilter.class.equals(o.getClass())) {
+        if (!StartsWithFilter.class.isAssignableFrom(o.getClass())) {
             return operator().compareTo(o.operator());
         }
 
         final StartsWithFilter other = (StartsWithFilter) o;
-        final int first = tag.compareTo(other.tag);
+        final int first = tag().compareTo(other.tag());
 
         if (first != 0) {
             return first;
         }
 
-        return value.compareTo(other.value);
+        return value().compareTo(other.value());
     }
 
     @Override
     public String toDSL() {
-        return DSL.dumpString(tag) + " ^ " + DSL.dumpString(value);
+        return DSL.dumpString(tag()) + " ^ " + DSL.dumpString(value());
+    }
+
+    @Override
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(getClass(), () -> {
+            hasher.putField("tag", tag(), hasher.string());
+            hasher.putField("value", value(), hasher.string());
+        });
     }
 }

@@ -28,9 +28,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.TreeMultimap;
-import lombok.RequiredArgsConstructor;
-import org.mockito.Mockito;
-
 import java.beans.ConstructorProperties;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -42,11 +39,11 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.UUID;
+import org.mockito.Mockito;
 
 /**
  * Provides mock values for test classes.
  */
-@RequiredArgsConstructor
 public class FakeValueProvider {
     private final ValueSuppliers suppliers;
 
@@ -63,6 +60,11 @@ public class FakeValueProvider {
         0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
         0x01
     });
+
+    @ConstructorProperties({ "suppliers" })
+    public FakeValueProvider(final ValueSuppliers suppliers) {
+        this.suppliers = suppliers;
+    }
 
     public Object lookup(final Type type, final boolean secondary, final String name) {
         final Optional<Object> supplied = suppliers.lookup(type, secondary, name);

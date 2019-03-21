@@ -27,6 +27,9 @@ import com.spotify.heroic.common.SelectedGroup;
 import com.spotify.heroic.common.Statistics;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import io.opencensus.trace.Span;
+import io.opencensus.trace.Tracer;
+import io.opencensus.trace.Tracing;
 import lombok.Data;
 import lombok.ToString;
 
@@ -36,6 +39,7 @@ import java.util.function.Function;
 @Data
 @ToString(of = {"backends"})
 public class SuggestBackendGroup implements SuggestBackend {
+    private final Tracer tracer = Tracing.getTracer();
     private final AsyncFramework async;
     private final SelectedGroup<SuggestBackend> backends;
 
@@ -76,7 +80,14 @@ public class SuggestBackendGroup implements SuggestBackend {
 
     @Override
     public AsyncFuture<WriteSuggest> write(final WriteSuggest.Request request) {
-        return async.collect(run(b -> b.write(request)), WriteSuggest.reduce());
+        return write(request, tracer.getCurrentSpan());
+    }
+
+    @Override
+    public AsyncFuture<WriteSuggest> write(
+        final WriteSuggest.Request request, final Span parentSpan
+    ) {
+        return async.collect(run(b -> b.write(request, parentSpan)), WriteSuggest.reduce());
     }
 
     @Override

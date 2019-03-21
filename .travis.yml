@@ -1,25 +1,49 @@
 language: java
 
-sudo: false
-
 jdk:
   - oraclejdk8
 
 branches:
   only:
     - master
+    - /^(?i:master)-.*$/
+    - /^[0-9]+.[0-9]+.[0-9]+$/
+
 
 cache:
   directories:
     - $HOME/.m2
     - .cache
 
-# override default command since it doesn't skip checkstyle
+env:
+  global:
+    - DEBIAN_FRONTEND=noninteractive
+    - PUBSUB_EMULATOR_HOST=localhost:8085
+
+before_install:
+  - curl https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-214.0.0-linux-x86_64.tar.gz | tar xzf -
+  - ./google-cloud-sdk/install.sh --quiet --usage-reporting false --additional-components pubsub-emulator beta
+
 install:
   - tools/install-repackaged
 
+before_script:
+  - |
+    ./google-cloud-sdk/bin/gcloud beta emulators pubsub start &
+    PUBSUB_PID=$!
+
 script:
-  - mvn -nsu -T 1 -D threadCount=2 -D perCoreThreadCount=false -D environment=test -P '!findbugs,codecov' verify
+  - ./gradlew --info check jacocoRootReport
+
+after_script:
+  - kill -9 $PUBSUB_PID
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
+
+deploy:
+  # trigger docker hub build
+  on:
+      tags: true
+  provider: script
+  script: bash .scripts/trigger_docker_hub.sh

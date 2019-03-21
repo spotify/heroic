@@ -25,20 +25,27 @@ import com.spotify.heroic.jetty.JettyServerConnector;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
 import dagger.Provides;
-import lombok.RequiredArgsConstructor;
-
-import javax.inject.Named;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Optional;
+import javax.inject.Named;
 
-@RequiredArgsConstructor
 @dagger.Module
 public class HttpServerModule {
     private final InetSocketAddress bind;
     private final boolean enableCors;
     private final Optional<String> corsAllowOrigin;
     private final List<JettyServerConnector> connectors;
+
+    @java.beans.ConstructorProperties({ "bind", "enableCors", "corsAllowOrigin", "connectors" })
+    public HttpServerModule(final InetSocketAddress bind, final boolean enableCors,
+                            final Optional<String> corsAllowOrigin,
+                            final List<JettyServerConnector> connectors) {
+        this.bind = bind;
+        this.enableCors = enableCors;
+        this.corsAllowOrigin = corsAllowOrigin;
+        this.connectors = connectors;
+    }
 
     @Provides
     @Named("bind")

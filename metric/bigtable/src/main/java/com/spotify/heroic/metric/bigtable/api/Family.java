@@ -38,7 +38,8 @@ public class Family {
      */
     public Iterable<LatestCellValueColumn> latestCellValue() {
         return () -> {
-            final Iterator<com.google.bigtable.v2.Column> iterator = columns.iterator();
+            final Iterator<com.google.bigtable.v2.Column> iterator =
+                columns.iterator();
 
             return new Iterator<LatestCellValueColumn>() {
                 @Override
@@ -48,7 +49,8 @@ public class Family {
 
                 @Override
                 public LatestCellValueColumn next() {
-                    final com.google.bigtable.v2.Column next = iterator.next();
+                    final com.google.bigtable.v2.Column next =
+                        iterator.next();
 
                     if (next.getCellsCount() < 1) {
                         throw new IllegalStateException("empty cell");

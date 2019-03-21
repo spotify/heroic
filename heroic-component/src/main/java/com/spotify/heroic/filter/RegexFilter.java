@@ -21,26 +21,32 @@
 
 package com.spotify.heroic.filter;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.auto.value.AutoValue;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.grammar.DSL;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-
 import java.util.regex.Pattern;
 
-@Data
-@EqualsAndHashCode(of = {"OPERATOR", "tag", "value"}, doNotUseGetters = true)
-public class RegexFilter implements Filter {
+@AutoValue
+@JsonTypeName("regex")
+public abstract class RegexFilter implements Filter {
+    @JsonCreator
+    public static RegexFilter create(
+        @JsonProperty("tag") String tag, @JsonProperty("value") String value
+    ) {
+        return new AutoValue_RegexFilter(tag, value);
+    }
     public static final String OPERATOR = "~";
-
-    private final String tag;
-    private final String value;
+    abstract String tag();
+    abstract String value();
 
     @Override
     public boolean apply(Series series) {
-        final String value;
-        return (value = series.getTags().get(tag)) != null &&
-            Pattern.compile(this.value).matcher(value).matches();
+        final String tagValue = series.getTags().get(tag());
+        return tagValue != null && Pattern.compile(value()).matcher(tagValue).matches();
     }
 
     @Override
@@ -50,7 +56,7 @@ public class RegexFilter implements Filter {
 
     @Override
     public String toString() {
-        return "[" + OPERATOR + ", " + tag + ", " + value + "]";
+        return "[" + OPERATOR + ", " + tag() + ", " + value() + "]";
     }
 
     @Override
@@ -70,17 +76,25 @@ public class RegexFilter implements Filter {
         }
 
         final RegexFilter other = (RegexFilter) o;
-        final int first = tag.compareTo(other.tag);
+        final int first = tag().compareTo(other.tag());
 
         if (first != 0) {
             return first;
         }
 
-        return value.compareTo(other.value);
+        return value().compareTo(other.value());
     }
 
     @Override
     public String toDSL() {
-        return DSL.dumpString(tag) + " ~ " + DSL.dumpString(value);
+        return DSL.dumpString(tag()) + " ~ " + DSL.dumpString(value());
+    }
+
+    @Override
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(getClass(), () -> {
+            hasher.putField("tag", tag(), hasher.string());
+            hasher.putField("value", value(), hasher.string());
+        });
     }
 }

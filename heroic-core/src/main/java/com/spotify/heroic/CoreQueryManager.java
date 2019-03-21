@@ -38,9 +38,9 @@ import com.spotify.heroic.cluster.ClusterShard;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.Feature;
-import com.spotify.heroic.common.FeatureSet;
 import com.spotify.heroic.common.Features;
 import com.spotify.heroic.common.OptionalLimit;
+import com.spotify.heroic.conditionalfeatures.ConditionalFeatures;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.grammar.DefaultScope;
@@ -88,16 +88,17 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import javax.inject.Inject;
 import javax.inject.Named;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Slf4j
 public class CoreQueryManager implements QueryManager {
+    private static final Logger log = LoggerFactory.getLogger(CoreQueryManager.class);
     public static final long SHIFT_TOLERANCE = TimeUnit.MILLISECONDS.convert(10, TimeUnit.SECONDS);
     public static final QueryTrace.Identifier QUERY_SHARD =
         QueryTrace.identifier(CoreQueryManager.class, "query_shard");
     public static final QueryTrace.Identifier QUERY =
         QueryTrace.identifier(CoreQueryManager.class, "query");
+    private static boolean hasWarnedSlicedDataFetch = false;
 
     private final Features features;
     private final AsyncFramework async;
@@ -109,6 +110,7 @@ public class CoreQueryManager implements QueryManager {
     private final OptionalLimit groupLimit;
     private final QueryReporter reporter;
     private final QueryLogger queryLogger;
+    private final Optional<ConditionalFeatures> conditionalFeatures;
 
     private final long smallQueryThreshold;
 
@@ -118,6 +120,7 @@ public class CoreQueryManager implements QueryManager {
         final ClusterManager cluster, final QueryParser parser, final QueryCache queryCache,
         final AggregationFactory aggregations, @Named("groupLimit") final OptionalLimit groupLimit,
         @Named("smallQueryThreshold") final long smallQueryThreshold, final QueryReporter reporter,
+        final Optional<ConditionalFeatures> conditionalFeatures,
         final QueryLoggerFactory queryLoggerFactory
     ) {
         this.features = features;
@@ -130,6 +133,7 @@ public class CoreQueryManager implements QueryManager {
         this.groupLimit = groupLimit;
         this.reporter = reporter;
         this.smallQueryThreshold = smallQueryThreshold;
+        this.conditionalFeatures = conditionalFeatures;
         this.queryLogger = queryLoggerFactory.create("CoreQueryManager");
     }
 
@@ -190,9 +194,12 @@ public class CoreQueryManager implements QueryManager {
         });
     }
 
-    @RequiredArgsConstructor
     public class Group implements QueryManager.Group {
         private final List<ClusterShard> shards;
+
+        public Group(List<ClusterShard> shards) {
+            this.shards = shards;
+        }
 
         @Override
         public AsyncFuture<QueryResult> query(final Query q, final QueryContext queryContext) {
@@ -221,8 +228,7 @@ public class CoreQueryManager implements QueryManager {
 
             final AggregationInstance aggregationInstance;
 
-            final Features features = CoreQueryManager.this.features.applySet(
-                q.getFeatures().orElseGet(FeatureSet::empty));
+            final Features features = requestFeatures(q, queryContext);
 
             boolean isDistributed = features.hasFeature(Feature.DISTRIBUTED_AGGREGATIONS);
 
@@ -244,7 +250,7 @@ public class CoreQueryManager implements QueryManager {
             }
 
             final BucketStrategy bucketStrategy = options
-                .getBucketStrategy()
+                .bucketStrategy()
                 .orElseGet(() -> features.withFeature(Feature.END_BUCKET, () -> BucketStrategy.END,
                     () -> BucketStrategy.START));
 
@@ -257,12 +263,12 @@ public class CoreQueryManager implements QueryManager {
             }
 
             final FullQuery.Request request =
-                new FullQuery.Request(source, filter, range, aggregationInstance, options,
+                FullQuery.Request.create(source, filter, range, aggregationInstance, options,
                     queryContext, features);
 
             queryLogger.logOutgoingRequestToShards(queryContext, request);
 
-            return queryCache.load(request, () -> {
+            final AsyncFuture<QueryResult> query = queryCache.load(request, () -> {
                 for (final ClusterShard shard : shards) {
                     final QueryTrace.NamedWatch shardLocalWatch =
                         shardWatch.extendIdentifier(shard.getShard().toString());
@@ -275,19 +281,23 @@ public class CoreQueryManager implements QueryManager {
                         })
                         .directTransform(QueryResultPart.fromResultGroup(shard));
 
-                    futures.add(queryPart);
+                    if (!shard.isDarkload()) {
+                        // Stash the future to be able to gather result from all shards.
+                        // Except if this shard is a darkload shard, then we will just fire & forget
+                        futures.add(queryPart);
+                    }
                 }
 
-                final OptionalLimit limit = options.getGroupLimit().orElse(groupLimit);
+                final OptionalLimit limit = options.groupLimit().orElse(groupLimit);
 
-                return async
-                    .collect(futures, QueryResult.collectParts(QUERY, range, combiner, limit))
-                    .directTransform(result -> {
-                        reportCompletedQuery(result, fullQueryWatch);
-                        return result;
-                    })
-                    .onDone(onDoneQueryReporter);
+                return async.collect(futures,
+                    QueryResult.collectParts(QUERY, range, combiner, limit));
             });
+
+            return query.directTransform(result -> {
+                reportCompletedQuery(result, fullQueryWatch);
+                return result;
+            }).onDone(onDoneQueryReporter);
         }
 
         private void reportCompletedQuery(
@@ -297,8 +307,10 @@ public class CoreQueryManager implements QueryManager {
             if (sampleSize > smallQueryThreshold) {
                 return;
             }
-            final long duration = fullQueryWatch.elapsed(TimeUnit.MILLISECONDS);
-            reporter.reportSmallQueryLatency(duration);
+            final long durationNs = fullQueryWatch.elapsed(TimeUnit.NANOSECONDS);
+            reporter.reportLatencyVsSize(durationNs, result.getPreAggregationSampleSize());
+            final long durationMs = TimeUnit.NANOSECONDS.toMillis(durationNs);
+            reporter.reportSmallQueryLatency(durationMs);
         }
 
         @Override
@@ -409,11 +421,31 @@ public class CoreQueryManager implements QueryManager {
                  * Create new QT with queryTraces + current QT as a children */
                 final List<QueryTrace> traces = new ArrayList<>();
                 traces.addAll(queryTraces);
-                traces.add(fullQuery.getTrace());
+                traces.add(fullQuery.trace());
                 final QueryTrace newTrace = shardLocalWatch.end(traces);
                 return fullQuery.withTrace(newTrace);
             };
         }
+    }
+
+    private Features requestFeatures(final Query q, final QueryContext context) {
+        // apply conditional features to defaults, if present.
+        final Features configured =
+            conditionalFeatures.map(c -> features.applySet(c.match(context))).orElse(features);
+
+        // apply rules from query last, to give them precedence.
+        final Features features = q.getFeatures().map(configured::applySet).orElse(configured);
+
+        if (!features.hasFeature(Feature.SLICED_DATA_FETCH)) {
+            if (!hasWarnedSlicedDataFetch) {
+                hasWarnedSlicedDataFetch = true;
+                log.warn(
+                    "The mandatory feature 'com.spotify.heroic.sliced_data_fetch' can't be " +
+                        "disabled!");
+            }
+        }
+
+        return features;
     }
 
     private static <T> T retryTraceHandlerNoop(T result, List<QueryTrace> traces) {

@@ -34,13 +34,11 @@ import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
 import dagger.Component;
 import eu.toolchain.async.AsyncFuture;
-import lombok.ToString;
-import org.kohsuke.args4j.Option;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.time.LocalDate;
 import java.util.Optional;
+import javax.inject.Inject;
+import javax.inject.Named;
+import org.kohsuke.args4j.Option;
 
 @TaskUsage("Report that a series has been fetched")
 @TaskName("analytics-report-fetch-series")
@@ -70,7 +68,6 @@ public class AnalyticsReportFetchSeries implements ShellTask {
         return metricAnalytics.reportFetchSeries(date, series);
     }
 
-    @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-s", aliases = {"--series"}, usage = "Series to report fetch for",
             metaVar = "<json>")
@@ -79,6 +76,12 @@ public class AnalyticsReportFetchSeries implements ShellTask {
         @Option(name = "-d", aliases = {"--date"}, usage = "Date to fetch data for",
             metaVar = "<yyyy-MM-dd>")
         private Optional<String> date = Optional.empty();
+
+        public String toString() {
+            return "AnalyticsReportFetchSeries.Parameters(series=" + this.series + ", date="
+                   + this.date
+                   + ")";
+        }
     }
 
     public static AnalyticsReportFetchSeries setup(final CoreComponent core) {

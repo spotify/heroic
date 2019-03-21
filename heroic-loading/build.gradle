@@ -1,0 +1,13 @@
+dependencies {
+    implementation project(':heroic-component')
+    implementation 'eu.toolchain.serializer:tiny-serializer-core'
+    implementation 'eu.toolchain.async:tiny-async-core'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
+    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin'
+
+    compileOnly 'org.projectlombok:lombok'
+}
+
+description = 'Heroic: Base Project'

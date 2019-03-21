@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.statistics.noop;
 
+import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.SuggestBackendReporter;
 import com.spotify.heroic.suggest.SuggestBackend;
 
@@ -34,7 +35,16 @@ public class NoopSuggestBackendReporter implements SuggestBackendReporter {
     }
 
     @Override
-    public void reportWriteDroppedByRateLimit() {
+    public void reportWriteDroppedByCacheHit() {
+    }
+
+    @Override
+    public void reportWriteDroppedByDuplicate() {
+    }
+
+    @Override
+    public FutureReporter.Context setupWriteReporter() {
+        return NoopFutureReporterContext.get();
     }
 
     private static final NoopSuggestBackendReporter instance = new NoopSuggestBackendReporter();

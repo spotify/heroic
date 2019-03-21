@@ -21,20 +21,21 @@
 
 package com.spotify.heroic.metric;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.common.Series;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
-import lombok.AccessLevel;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
 
 /**
  * A collection of metrics.
@@ -66,89 +67,164 @@ import lombok.RequiredArgsConstructor;
  * @see Event
  * @see MetricGroup
  */
-@Data
-@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
-public abstract class MetricCollection {
-    final MetricType type;
-    final List<? extends Metric> data;
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes({
+    @JsonSubTypes.Type(MetricCollection.PointCollection.class),
+    @JsonSubTypes.Type(MetricCollection.EventCollection.class),
+    @JsonSubTypes.Type(MetricCollection.SpreadCollection.class),
+    @JsonSubTypes.Type(MetricCollection.GroupCollection.class),
+    @JsonSubTypes.Type(MetricCollection.CardinalityCollection.class),
+})
+public interface MetricCollection {
+    /**
+     * Get the underlying data.
+     */
+    List<? extends Metric> data();
 
     /**
-     * Helper method to fetch a collection of the given type, if applicable.
-     *
-     * @param expected The expected type to read.
-     * @return A list of the expected type.
+     * Get the type of the encapsulated data.
      */
-    @SuppressWarnings("unchecked")
-    public <T> List<T> getDataAs(Class<T> expected) {
-        if (!expected.isAssignableFrom(type.type())) {
-            throw new IllegalArgumentException(
-                String.format("Cannot assign type (%s) to expected (%s)", type, expected));
-        }
-
-        return (List<T>) data;
-    }
+    @JsonIgnore
+    MetricType getType();
 
     /**
      * Update the given aggregation with the content of this collection.
      */
-    public abstract void updateAggregation(
-        AggregationSession session, Map<String, String> tags, Set<Series> series
+    void updateAggregation(
+        AggregationSession session, Map<String, String> key, Set<Series> series
     );
 
-    public int size() {
-        return data.size();
+    /**
+     * Helper method to fetch a collection of the given type, if applicable.
+     * <p>
+     * This API is not safe, checks must be performed to verify that the encapsulated data type is
+     * the same as expected.
+     *
+     * @param expected The expected type to read.
+     * @return a list of the expected type.
+     */
+    @SuppressWarnings("unchecked")
+    @JsonIgnore
+    default <T> List<T> getDataAs(Class<T> expected) {
+        if (expected == getType().type()) {
+            return (List<T>) data();
+        }
+
+        throw new RuntimeException("collection not of type: " + expected);
     }
 
-    public boolean isEmpty() {
-        return data.isEmpty();
+    /**
+     * Get the size of the collection.
+     *
+     * @return size of the collection
+     */
+    default int size() {
+        return data().size();
     }
 
-    private static final MetricCollection empty = new EmptyMetricCollection();
-
-    public static MetricCollection empty() {
-        return empty;
+    /**
+     * Check if the collection is empty.
+     *
+     * @return {@code true} if the collection is empty
+     */
+    @JsonIgnore
+    default boolean isEmpty() {
+        return data().isEmpty();
     }
 
-    // @formatter:off
-    private static final
-    Map<MetricType, Function<List<? extends Metric>, MetricCollection>> adapters = ImmutableMap.of(
-        MetricType.GROUP, GroupCollection::new,
-        MetricType.POINT, PointCollection::new,
-        MetricType.EVENT, EventCollection::new,
-        MetricType.SPREAD, SpreadCollection::new,
-        MetricType.CARDINALITY, CardinalityCollection::new
-    );
-    // @formatter:on
+    @JsonIgnore
+    default Optional<Long> getAverageDistanceBetweenMetrics() {
+        final List<? extends Metric> data = data();
 
-    public static MetricCollection groups(List<MetricGroup> metrics) {
-        return new GroupCollection(metrics);
+        if (data.size() <= 1) {
+            return Optional.empty();
+        }
+
+        final long timeDiff = data.get(data.size() - 1).getTimestamp() - data.get(0).getTimestamp();
+        final long spans = data.size() - 1;
+
+        return Optional.of(timeDiff / spans);
     }
 
-    public static MetricCollection points(List<Point> metrics) {
-        return new PointCollection(metrics);
+    static MetricCollection groups(List<MetricGroup> metrics) {
+        return GroupCollection.create(metrics);
     }
 
-    public static MetricCollection events(List<Event> metrics) {
-        return new EventCollection(metrics);
+    /**
+     * Build a new points collection.
+     *
+     * @param metrics metrics to include in the collection
+     * @return a new points collection
+     */
+    static MetricCollection points(List<Point> metrics) {
+        return PointCollection.create(metrics);
     }
 
-    public static MetricCollection spreads(List<Spread> metrics) {
-        return new SpreadCollection(metrics);
+    /**
+     * Build a new events collection.
+     *
+     * @param metrics events to include in the collection
+     * @return a new events collection
+     */
+    static MetricCollection events(List<Event> metrics) {
+        return EventCollection.create(metrics);
     }
 
-    public static MetricCollection cardinality(List<Payload> metrics) {
-        return new CardinalityCollection(metrics);
+    /**
+     * Build a new spreads collection.
+     *
+     * @param metrics spreads to include in the collection
+     * @return a new spreads collection
+     */
+    static MetricCollection spreads(List<Spread> metrics) {
+        return SpreadCollection.create(metrics);
     }
 
-    public static MetricCollection build(
+    /**
+     * Build a new cardinality collection.
+     *
+     * @param metrics cardinality samples to include in the collection
+     * @return a new cardinality collection
+     */
+    static MetricCollection cardinality(List<Payload> metrics) {
+        return CardinalityCollection.create(metrics);
+    }
+
+    /**
+     * Build a new metric collection of the given type.
+     * <p>
+     * This API is not safe, checks must be performed to verify that the encapsulated data type is
+     * correct.
+     */
+    @SuppressWarnings("unchecked")
+    static MetricCollection build(
         final MetricType key, final List<? extends Metric> metrics
     ) {
-        final Function<List<? extends Metric>, MetricCollection> adapter =
-            checkNotNull(adapters.get(key), "adapter does not exist for type");
-        return adapter.apply(metrics);
+        switch (key) {
+            case EVENT:
+                return EventCollection.create((List<Event>) metrics);
+            case CARDINALITY:
+                return CardinalityCollection.create((List<Payload>) metrics);
+            case GROUP:
+                return GroupCollection.create((List<MetricGroup>) metrics);
+            case SPREAD:
+                return SpreadCollection.create((List<Spread>) metrics);
+            case POINT:
+                return PointCollection.create((List<Point>) metrics);
+            default:
+                throw new RuntimeException("unsupported metric collection");
+        }
     }
 
-    public static MetricCollection mergeSorted(
+    /**
+     * Merge the given collections and return a new metric collection with the sorted values.
+     * <p>
+     * This expects the source collections being merged to be sorted.
+     * <p>
+     * This API is not safe, checks must be performed to verify that the encapsulated data type is
+     * the same as expected.
+     */
+    static MetricCollection mergeSorted(
         final MetricType type, final List<List<? extends Metric>> values
     ) {
         final List<Metric> data = ImmutableList.copyOf(Iterators.mergeSorted(
@@ -157,93 +233,123 @@ public abstract class MetricCollection {
         return build(type, data);
     }
 
-    @SuppressWarnings("unchecked")
-    private static class PointCollection extends MetricCollection {
-        PointCollection(List<? extends Metric> points) {
-            super(MetricType.POINT, points);
+    @AutoValue
+    @JsonTypeName("points")
+    abstract class PointCollection implements MetricCollection {
+        @JsonCreator
+        public static PointCollection create(@JsonProperty("data") final List<Point> data) {
+            return new AutoValue_MetricCollection_PointCollection(data);
+        }
+
+        @JsonProperty
+        public abstract List<Point> data();
+
+        @Override
+        public MetricType getType() {
+            return MetricType.POINT;
         }
 
         @Override
         public void updateAggregation(
-            AggregationSession session, Map<String, String> tags, Set<Series> series
+            AggregationSession session, Map<String, String> key, Set<Series> series
         ) {
-            session.updatePoints(tags, series, adapt());
-        }
-
-        private List<Point> adapt() {
-            return (List<Point>) data;
+            session.updatePoints(key, series, data());
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private static class EventCollection extends MetricCollection {
-        EventCollection(List<? extends Metric> events) {
-            super(MetricType.EVENT, events);
+    @AutoValue
+    @JsonTypeName("events")
+    abstract class EventCollection implements MetricCollection {
+        @JsonCreator
+        public static EventCollection create(@JsonProperty("data") final List<Event> data) {
+            return new AutoValue_MetricCollection_EventCollection(data);
+        }
+
+        @JsonProperty
+        public abstract List<Event> data();
+
+        @Override
+        public MetricType getType() {
+            return MetricType.EVENT;
         }
 
         @Override
         public void updateAggregation(
-            AggregationSession session, Map<String, String> tags, Set<Series> series
+            AggregationSession session, Map<String, String> key, Set<Series> series
         ) {
-            session.updateEvents(tags, series, adapt());
-        }
-
-        private List<Event> adapt() {
-            return (List<Event>) data;
+            session.updateEvents(key, series, data());
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private static class SpreadCollection extends MetricCollection {
-        SpreadCollection(List<? extends Metric> spread) {
-            super(MetricType.SPREAD, spread);
+    @AutoValue
+    @JsonTypeName("spreads")
+    abstract class SpreadCollection implements MetricCollection {
+        @JsonCreator
+        public static SpreadCollection create(@JsonProperty("data") final List<Spread> data) {
+            return new AutoValue_MetricCollection_SpreadCollection(data);
+        }
+
+        @JsonProperty
+        public abstract List<Spread> data();
+
+        @Override
+        public MetricType getType() {
+            return MetricType.SPREAD;
         }
 
         @Override
         public void updateAggregation(
-            AggregationSession session, Map<String, String> tags, Set<Series> series
+            AggregationSession session, Map<String, String> key, Set<Series> series
         ) {
-            session.updateSpreads(tags, series, adapt());
-        }
-
-        private List<Spread> adapt() {
-            return (List<Spread>) data;
+            session.updateSpreads(key, series, data());
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private static class GroupCollection extends MetricCollection {
-        GroupCollection(List<? extends Metric> groups) {
-            super(MetricType.GROUP, groups);
+    @AutoValue
+    @JsonTypeName("groups")
+    abstract class GroupCollection implements MetricCollection {
+        @JsonCreator
+        public static GroupCollection create(@JsonProperty("data") final List<MetricGroup> data) {
+            return new AutoValue_MetricCollection_GroupCollection(data);
+        }
+
+        @JsonProperty
+        public abstract List<MetricGroup> data();
+
+        @Override
+        public MetricType getType() {
+            return MetricType.GROUP;
         }
 
         @Override
         public void updateAggregation(
-            AggregationSession session, Map<String, String> tags, Set<Series> series
+            AggregationSession session, Map<String, String> key, Set<Series> series
         ) {
-            session.updateGroup(tags, series, adapt());
-        }
-
-        private List<MetricGroup> adapt() {
-            return (List<MetricGroup>) data;
+            session.updateGroup(key, series, data());
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private static class CardinalityCollection extends MetricCollection {
-        CardinalityCollection(List<? extends Metric> cardinality) {
-            super(MetricType.CARDINALITY, cardinality);
+    @AutoValue
+    @JsonTypeName("cardinality")
+    abstract class CardinalityCollection implements MetricCollection {
+        @JsonCreator
+        public static CardinalityCollection create(@JsonProperty("data") final List<Payload> data) {
+            return new AutoValue_MetricCollection_CardinalityCollection(data);
+        }
+
+        @JsonProperty
+        public abstract List<Payload> data();
+
+        @Override
+        public MetricType getType() {
+            return MetricType.CARDINALITY;
         }
 
         @Override
         public void updateAggregation(
-            AggregationSession session, Map<String, String> tags, Set<Series> series
+            AggregationSession session, Map<String, String> key, Set<Series> series
         ) {
-            session.updatePayload(tags, series, adapt());
-        }
-
-        private List<Payload> adapt() {
-            return (List<Payload>) data;
+            session.updatePayload(key, series, data());
         }
     }
 }

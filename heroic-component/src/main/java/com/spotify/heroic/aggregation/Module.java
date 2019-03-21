@@ -46,7 +46,7 @@ public class Module implements HeroicModule {
                     protected Aggregation build(
                         Optional<List<String>> over, Optional<Aggregation> each
                     ) {
-                        return new Group(over, each.map(AggregationOrList::fromAggregation));
+                        return Group.create(over, each.map(AggregationOrList::fromAggregation));
                     }
                 });
 
@@ -56,7 +56,7 @@ public class Module implements HeroicModule {
                     protected Aggregation build(
                         Optional<List<String>> over, Optional<Aggregation> each
                     ) {
-                        return new Collapse(over, each);
+                        return Collapse.create(over, each);
                     }
                 });
 
@@ -92,7 +92,8 @@ public class Module implements HeroicModule {
                         final Optional<SamplingQuery> sampling;
 
                         if (size.isPresent() || extent.isPresent()) {
-                            sampling = Optional.of(new SamplingQuery(size, extent));
+                            sampling = Optional.of(
+                                new SamplingQuery(size.orElse(null), extent.orElse(null)));
                         } else {
                             sampling = Optional.empty();
                         }

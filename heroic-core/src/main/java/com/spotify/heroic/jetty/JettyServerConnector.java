@@ -24,23 +24,30 @@ package com.spotify.heroic.jetty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
+import java.net.InetSocketAddress;
+import java.util.List;
+import java.util.Optional;
 import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 
-import java.net.InetSocketAddress;
-import java.util.List;
-import java.util.Optional;
-
-@RequiredArgsConstructor
 public class JettyServerConnector {
     private final Optional<InetSocketAddress> address;
     private final List<JettyConnectionFactory> factories;
     private final Optional<String> defaultProtocol;
     private final JettyHttpConfiguration config;
+
+    @java.beans.ConstructorProperties({ "address", "factories", "defaultProtocol", "config" })
+    public JettyServerConnector(final Optional<InetSocketAddress> address,
+                                final List<JettyConnectionFactory> factories,
+                                final Optional<String> defaultProtocol,
+                                final JettyHttpConfiguration config) {
+        this.address = address;
+        this.factories = factories;
+        this.defaultProtocol = defaultProtocol;
+        this.config = config;
+    }
 
     public static List<JettyConnectionFactory.Builder> defaultFactories() {
         return ImmutableList.of(HttpJettyConnectionFactory.builder(),
@@ -68,7 +75,6 @@ public class JettyServerConnector {
         return new Builder();
     }
 
-    @NoArgsConstructor
     public static class Builder {
         private Optional<InetSocketAddress> address = Optional.empty();
         private Optional<List<JettyConnectionFactory.Builder>> factories = Optional.empty();
@@ -84,6 +90,9 @@ public class JettyServerConnector {
             this.address = address;
             this.factories = facts;
             this.defaultProtocol = defaultProtocol;
+        }
+
+        public Builder() {
         }
 
         public Builder address(final InetSocketAddress address) {

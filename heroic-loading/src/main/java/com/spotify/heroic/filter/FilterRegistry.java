@@ -24,33 +24,53 @@ package com.spotify.heroic.filter;
 import static com.spotify.heroic.filter.FilterEncoding.filter;
 import static com.spotify.heroic.filter.FilterEncoding.string;
 
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TreeTraversingParser;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.grammar.QueryParser;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import lombok.RequiredArgsConstructor;
 
-@RequiredArgsConstructor
+/**
+ * Registry of all known filters.
+ * <p>
+ * This is primarily used to provide serialization for Filters.
+ * <p>
+ * A filter can be deserialized from an object, or an array. When an object is used, the type field
+ * is determined by the filters {@link com.fasterxml.jackson.annotation.JsonTypeName} annotation.
+ * Otherwise it falls back to the id.
+ * <p>
+ * Object-based is the more universal method, but is typically more verbose. It is useful for use in
+ * clients which are statically typed, since type-based deserialization is usually readily
+ * supported.
+ *
+ * @see com.spotify.heroic.filter.Filter
+ */
 public class FilterRegistry {
     private final Map<String, FilterEncoding<? extends Filter>> deserializers = new HashMap<>();
 
     private final Map<Class<? extends Filter>, JsonSerializer<Filter>> serializers =
         new HashMap<>();
 
-    private final HashMap<Class<?>, String> typeMapping = new HashMap<>();
+    private final HashMap<Class<? extends Filter>, String> typeMapping = new HashMap<>();
+    private final HashMap<String, Class<? extends Filter>> typeNameMapping = new HashMap<>();
+
+    public FilterRegistry() {
+    }
 
     public <T extends Filter> void registerList(
         String id, Class<T> type, FilterEncoding<T> s
@@ -89,7 +109,7 @@ public class FilterRegistry {
         }
 
         final FilterJsonDeserializer deserializer =
-            new FilterJsonDeserializer(ImmutableMap.copyOf(deserializers), parser);
+            new FilterJsonDeserializer(ImmutableMap.copyOf(deserializers), typeNameMapping, parser);
         m.addDeserializer(Filter.class, deserializer);
         return m;
     }
@@ -106,11 +126,31 @@ public class FilterRegistry {
         if (typeMapping.put(type, id) != null) {
             throw new IllegalStateException("Multiple mappings for single type: " + type);
         }
+
+        final String typeName = buildTypeId(id, type);
+
+        if (typeNameMapping.put(typeName, type) != null) {
+            throw new IllegalStateException("Multiple type names for single type: " + type);
+        }
     }
 
-    @RequiredArgsConstructor
+    private <T extends Filter> String buildTypeId(final String id, final Class<T> type) {
+        final JsonTypeName annotation = type.getAnnotation(JsonTypeName.class);
+
+        if (annotation == null) {
+            return id;
+        }
+
+        return annotation.value();
+    }
+
     private static final class FilterJsonSerializer extends JsonSerializer<Filter> {
         private final FilterEncoding<Filter> serializer;
+
+        @java.beans.ConstructorProperties({ "serializer" })
+        public FilterJsonSerializer(final FilterEncoding<Filter> serializer) {
+            this.serializer = serializer;
+        }
 
         @Override
         public void serialize(Filter value, JsonGenerator g, SerializerProvider provider)
@@ -123,9 +163,13 @@ public class FilterRegistry {
             g.writeEndArray();
         }
 
-        @RequiredArgsConstructor
         private static final class EncoderImpl implements FilterEncoding.Encoder {
             private final JsonGenerator generator;
+
+            @java.beans.ConstructorProperties({ "generator" })
+            public EncoderImpl(final JsonGenerator generator) {
+                this.generator = generator;
+            }
 
             @Override
             public void string(String string) throws IOException {
@@ -139,18 +183,39 @@ public class FilterRegistry {
         }
     }
 
-    @RequiredArgsConstructor
+    /**
+     * Provides both array, and object based deserialization for filters.
+     */
     static class FilterJsonDeserializer extends JsonDeserializer<Filter> {
         final Map<String, FilterEncoding<? extends Filter>> deserializers;
+        final HashMap<String, Class<? extends Filter>> typeNameMapping;
         final QueryParser parser;
 
+        @java.beans.ConstructorProperties({ "deserializers", "typeNameMapping", "parser" })
+        public FilterJsonDeserializer(
+            final Map<String, FilterEncoding<? extends Filter>> deserializers,
+            final HashMap<String, Class<? extends Filter>> typeNameMapping,
+            final QueryParser parser) {
+            this.deserializers = deserializers;
+            this.typeNameMapping = typeNameMapping;
+            this.parser = parser;
+        }
+
         @Override
-        public Filter deserialize(JsonParser p, DeserializationContext c)
-            throws IOException, JsonProcessingException {
-            if (p.getCurrentToken() != JsonToken.START_ARRAY) {
-                throw c.mappingException("Expected start of array");
+        public Filter deserialize(JsonParser p, DeserializationContext c) throws IOException {
+            if (p.getCurrentToken() == JsonToken.START_ARRAY) {
+                return deserializeArray(p, c);
             }
 
+            if (p.getCurrentToken() == JsonToken.START_OBJECT) {
+                return deserializeObject(p, c);
+            }
+
+            throw c.mappingException("Expected start of array or object");
+        }
+
+        private Filter deserializeArray(final JsonParser p, final DeserializationContext c)
+            throws IOException {
             if (p.nextToken() != JsonToken.VALUE_STRING) {
                 throw c.mappingException("Expected operator (string)");
             }
@@ -187,16 +252,48 @@ public class FilterRegistry {
             }
         }
 
-        private Filter parseRawFilter(RawFilter filter) {
-            return parser.parseFilter(filter.getFilter());
+        private Filter deserializeObject(final JsonParser p, final DeserializationContext c)
+            throws IOException {
+            final ObjectNode object = (ObjectNode) p.readValueAs(JsonNode.class);
+
+            final JsonNode typeNode = object.remove("type");
+
+            if (typeNode == null) {
+                throw c.mappingException("Expected 'type' field");
+            }
+
+            if (!typeNode.isTextual()) {
+                throw c.mappingException("Expected 'type' to be string");
+            }
+
+            final String type = typeNode.asText();
+
+            final Class<? extends Filter> cls = typeNameMapping.get(type);
+
+            if (cls == null) {
+                throw c.mappingException("No such type: " + type);
+            }
+
+            // use tree traversing parser to operate on the node (without 'type') again.
+            final TreeTraversingParser parser = new TreeTraversingParser(object, p.getCodec());
+            return parser.readValueAs(cls);
         }
 
-        @RequiredArgsConstructor
+        private Filter parseRawFilter(RawFilter filter) {
+            return parser.parseFilter(filter.filter());
+        }
+
         private static final class Decoder implements FilterEncoding.Decoder {
             private final JsonParser parser;
             private final DeserializationContext c;
 
             private int index = 0;
+
+            @java.beans.ConstructorProperties({ "parser", "c" })
+            public Decoder(final JsonParser parser, final DeserializationContext c) {
+                this.parser = parser;
+                this.c = c;
+            }
 
             @Override
             public Optional<String> string() throws IOException {
@@ -252,32 +349,31 @@ public class FilterRegistry {
         final FilterRegistry registry = new FilterRegistry();
 
         registry.registerList(AndFilter.OPERATOR, AndFilter.class,
-            new MultiArgumentsFilterBase<>(AndFilter::new, AndFilter::getStatements, filter()));
+            new MultiArgumentsFilterBase<>(AndFilter::create, AndFilter::filters, filter()));
 
         registry.registerList(OrFilter.OPERATOR, OrFilter.class,
-            new MultiArgumentsFilterBase<>(OrFilter::new, OrFilter::getStatements, filter()));
+            new MultiArgumentsFilterBase<>(OrFilter::create, OrFilter::filters, filter()));
 
         registry.registerOne(NotFilter.OPERATOR, NotFilter.class,
-            new OneArgumentFilterEncoding<>(NotFilter::new, NotFilter::getFilter, filter()));
+            new OneArgumentFilterEncoding<>(NotFilter::create, NotFilter::filter, filter()));
 
         registry.registerTwo(MatchKeyFilter.OPERATOR, MatchKeyFilter.class,
-            new OneArgumentFilterEncoding<>(MatchKeyFilter::new, MatchKeyFilter::getValue,
-                string()));
+            new OneArgumentFilterEncoding<>(MatchKeyFilter::create, MatchKeyFilter::key, string()));
 
         registry.registerTwo(MatchTagFilter.OPERATOR, MatchTagFilter.class,
-            new TwoArgumentFilterEncoding<>(MatchTagFilter::new, MatchTagFilter::getTag,
-                MatchTagFilter::getValue, string(), string()));
+            new TwoArgumentFilterEncoding<>(MatchTagFilter::create, MatchTagFilter::tag,
+                MatchTagFilter::value, string(), string()));
 
         registry.registerOne(HasTagFilter.OPERATOR, HasTagFilter.class,
-            new OneArgumentFilterEncoding<>(HasTagFilter::new, HasTagFilter::getTag, string()));
+            new OneArgumentFilterEncoding<>(HasTagFilter::create, HasTagFilter::tag, string()));
 
         registry.registerTwo(StartsWithFilter.OPERATOR, StartsWithFilter.class,
-            new TwoArgumentFilterEncoding<>(StartsWithFilter::new, StartsWithFilter::getTag,
-                StartsWithFilter::getValue, string(), string()));
+            new TwoArgumentFilterEncoding<>(StartsWithFilter::create, StartsWithFilter::tag,
+                StartsWithFilter::value, string(), string()));
 
         registry.registerTwo(RegexFilter.OPERATOR, RegexFilter.class,
-            new TwoArgumentFilterEncoding<>(RegexFilter::new, RegexFilter::getTag,
-                RegexFilter::getValue, string(), string()));
+            new TwoArgumentFilterEncoding<>(RegexFilter::create, RegexFilter::tag,
+                RegexFilter::value, string(), string()));
 
         registry.registerEmpty(TrueFilter.OPERATOR, TrueFilter.class,
             new NoArgumentFilterBase<>(TrueFilter::get));
@@ -286,7 +382,7 @@ public class FilterRegistry {
             new NoArgumentFilterBase<>(FalseFilter::get));
 
         registry.registerOne(RawFilter.OPERATOR, RawFilter.class,
-            new OneArgumentFilterEncoding<>(RawFilter::new, RawFilter::getFilter, string()));
+            new OneArgumentFilterEncoding<>(RawFilter::create, RawFilter::filter, string()));
 
         return registry;
     }

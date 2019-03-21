@@ -21,21 +21,28 @@
 
 package com.spotify.heroic.filter;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.auto.value.AutoValue;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.grammar.DSL;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
 
-@Data
-@EqualsAndHashCode(of = {"OPERATOR", "tag"}, doNotUseGetters = true)
-public class HasTagFilter implements Filter {
+@AutoValue
+@JsonTypeName("hasTag")
+public abstract class HasTagFilter implements Filter {
+    @JsonCreator
+    public static HasTagFilter create(@JsonProperty("tag") String tag) {
+        return new AutoValue_HasTagFilter(tag);
+    }
+
     public static final String OPERATOR = "+";
-
-    private final String tag;
+    public abstract String tag();
 
     @Override
     public boolean apply(Series series) {
-        return series.getTags().containsKey(tag);
+        return series.getTags().containsKey(tag());
     }
 
     @Override
@@ -45,7 +52,7 @@ public class HasTagFilter implements Filter {
 
     @Override
     public String toString() {
-        return "[" + OPERATOR + ", " + tag + "]";
+        return "[" + OPERATOR + ", " + tag() + "]";
     }
 
     @Override
@@ -65,15 +72,22 @@ public class HasTagFilter implements Filter {
         }
 
         final HasTagFilter other = (HasTagFilter) o;
-        return tag.compareTo(other.tag);
+        return tag().compareTo(other.tag());
     }
 
     @Override
     public String toDSL() {
-        return "+" + DSL.dumpString(tag);
+        return "+" + DSL.dumpString(tag());
+    }
+
+    @Override
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(getClass(), () -> {
+            hasher.putField("tag", tag(), hasher.string());
+        });
     }
 
     public static Filter of(String tag) {
-        return new HasTagFilter(tag);
+        return HasTagFilter.create(tag);
     }
 }

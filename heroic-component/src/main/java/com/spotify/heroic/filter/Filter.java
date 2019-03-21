@@ -22,6 +22,7 @@
 package com.spotify.heroic.filter;
 
 import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.Series;
 
 public interface Filter extends Comparable<Filter> {
@@ -42,36 +43,38 @@ public interface Filter extends Comparable<Filter> {
     String toDSL();
 
     static MatchTagFilter matchTag(String tag, String value) {
-        return new MatchTagFilter(tag, value);
+        return MatchTagFilter.create(tag, value);
     }
 
     static StartsWithFilter startsWith(String tag, String value) {
-        return new StartsWithFilter(tag, value);
+        return StartsWithFilter.create(tag, value);
     }
 
     static HasTagFilter hasTag(String tag) {
-        return new HasTagFilter(tag);
+        return HasTagFilter.create(tag);
     }
 
     static MatchKeyFilter matchKey(String value) {
-        return new MatchKeyFilter(value);
+        return MatchKeyFilter.create(value);
     }
 
     static RegexFilter regex(String tag, String value) {
-        return new RegexFilter(tag, value);
+        return RegexFilter.create(tag, value);
     }
 
     static AndFilter and(Filter... filters) {
-        return new AndFilter(ImmutableList.copyOf(filters));
+        return AndFilter.create(ImmutableList.copyOf(filters));
     }
 
     static OrFilter or(Filter... filters) {
-        return new OrFilter(ImmutableList.copyOf(filters));
+        return OrFilter.create(ImmutableList.copyOf(filters));
     }
 
     static NotFilter not(Filter filter) {
-        return new NotFilter(filter);
+        return NotFilter.create(filter);
     }
+
+    void hashTo(ObjectHasher hasher);
 
     interface Visitor<T> {
         default T visitStartsWith(StartsWithFilter startsWith) {

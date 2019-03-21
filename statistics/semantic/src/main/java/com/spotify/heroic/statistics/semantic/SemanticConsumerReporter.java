@@ -21,27 +21,25 @@
 
 package com.spotify.heroic.statistics.semantic;
 
+import com.codahale.metrics.Counter;
 import com.codahale.metrics.Histogram;
-import com.codahale.metrics.Meter;
 import com.spotify.heroic.statistics.ConsumerReporter;
 import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.HeroicTimer;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @ToString(of = {"base"})
-@RequiredArgsConstructor
 public class SemanticConsumerReporter implements ConsumerReporter {
     private static final String COMPONENT = "consumer";
 
-    private final SemanticMetricRegistry registry;
     private final MetricId base;
 
-    private final Meter messageIn;
-    private final Meter messageError;
-    private final Meter consumerSchemaError;
+    private final Counter messageIn;
+    private final Counter messageError;
+    private final Counter messageRetry;
+    private final Counter consumerSchemaError;
     private final SemanticRatioGauge consumerThreadsLiveRatio;
     private final Histogram messageSize;
     private final Histogram messageDrift;
@@ -52,20 +50,21 @@ public class SemanticConsumerReporter implements ConsumerReporter {
     private final SemanticHeroicTimerGauge consumerCommitPhase2Timer;
 
     public SemanticConsumerReporter(SemanticMetricRegistry registry, String id) {
-        this.registry = registry;
-
         this.base = MetricId.build().tagged("component", COMPONENT, "id", id);
 
-        messageIn = registry.meter(base.tagged("what", "message-in", "unit", Units.MESSAGE));
-        messageError = registry.meter(base.tagged("what", "message-error", "unit", Units.FAILURE));
+        messageIn = registry.counter(base.tagged("what", "message-in", "unit", Units.COUNT));
+        messageError = registry.counter(base.tagged("what", "message-error", "unit", Units.COUNT));
+        messageRetry = registry.counter(base.tagged("what", "message-retry", "unit", Units.COUNT));
         consumerSchemaError =
-            registry.meter(base.tagged("what", "consumer-schema-error", "unit", Units.FAILURE));
+            registry.counter(base.tagged("what", "consumer-schema-error", "unit", Units.COUNT));
         consumerThreadsLiveRatio = new SemanticRatioGauge();
         registry.register(base.tagged("what", "consumer-threads-live-ratio", "unit", Units.RATIO),
             consumerThreadsLiveRatio);
-        messageSize = registry.histogram(base.tagged("what", "message-size", "unit", Units.BYTE));
+        messageSize = registry.getOrAdd(base.tagged("what", "message-size", "unit", Units.BYTE),
+            HistogramBuilder.HISTOGRAM);
         messageDrift =
-            registry.histogram(base.tagged("what", "message-drift", "unit", Units.MILLISECOND));
+            registry.getOrAdd(base.tagged("what", "message-drift", "unit", Units.MILLISECOND),
+                HistogramBuilder.HISTOGRAM);
 
         consumer = new SemanticFutureReporter(registry,
             base.tagged("what", "consumer", "unit", Units.WRITE));
@@ -81,20 +80,58 @@ public class SemanticConsumerReporter implements ConsumerReporter {
                 new SemanticHeroicTimerGauge());
     }
 
+    @java.beans.ConstructorProperties({ "base", "messageIn", "messageError", "messageRetry",
+                                        "consumerSchemaError", "consumerThreadsLiveRatio",
+                                        "messageSize", "messageDrift", "consumer",
+                                        "consumerCommitWholeOperationTimer",
+                                        "consumerCommitPhase1Timer", "consumerCommitPhase2Timer" })
+    public SemanticConsumerReporter(
+        final MetricId base,
+        final Counter messageIn,
+        final Counter messageError,
+        final Counter messageRetry,
+        final Counter consumerSchemaError,
+        final SemanticRatioGauge consumerThreadsLiveRatio,
+        final Histogram messageSize,
+        final Histogram messageDrift,
+        final SemanticFutureReporter consumer,
+        final SemanticHeroicTimerGauge consumerCommitWholeOperationTimer,
+        final SemanticHeroicTimerGauge consumerCommitPhase1Timer,
+        final SemanticHeroicTimerGauge consumerCommitPhase2Timer
+    ) {
+        this.base = base;
+        this.messageIn = messageIn;
+        this.messageError = messageError;
+        this.messageRetry = messageRetry;
+        this.consumerSchemaError = consumerSchemaError;
+        this.consumerThreadsLiveRatio = consumerThreadsLiveRatio;
+        this.messageSize = messageSize;
+        this.messageDrift = messageDrift;
+        this.consumer = consumer;
+        this.consumerCommitWholeOperationTimer = consumerCommitWholeOperationTimer;
+        this.consumerCommitPhase1Timer = consumerCommitPhase1Timer;
+        this.consumerCommitPhase2Timer = consumerCommitPhase2Timer;
+    }
+
     @Override
     public void reportMessageSize(int size) {
-        messageIn.mark();
+        messageIn.inc();
         messageSize.update(size);
     }
 
     @Override
     public void reportMessageError() {
-        messageError.mark();
+        messageError.inc();
+    }
+
+    @Override
+    public void reportMessageRetry() {
+        messageRetry.inc();
     }
 
     @Override
     public void reportConsumerSchemaError() {
-        consumerSchemaError.mark();
+        consumerSchemaError.inc();
     }
 
     @Override

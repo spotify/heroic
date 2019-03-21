@@ -81,6 +81,8 @@ public class EventSerialization {
                     String.format("Expected end of object, not %s", p.getCurrentToken()));
             }
 
+            // advance past end object
+            p.nextToken();
             return new Event(timestamp, builder.build());
         }
     }

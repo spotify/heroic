@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.elasticsearch;
 
-import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.async.AsyncObserver;
 import com.spotify.heroic.common.OptionalLimit;
@@ -36,17 +35,6 @@ import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.Managed;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-import org.elasticsearch.action.search.SearchRequestBuilder;
-import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.action.search.SearchType;
-import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.index.query.FilterBuilder;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.search.SearchHit;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -54,6 +42,13 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import org.elasticsearch.action.ListenableActionFuture;
+import org.elasticsearch.action.search.SearchRequestBuilder;
+import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.search.SearchHit;
 
 public abstract class AbstractElasticsearchMetadataBackend extends AbstractElasticsearchBackend
     implements MetadataBackend {
@@ -68,7 +63,7 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
 
     protected abstract Managed<Connection> connection();
 
-    protected abstract FilterBuilder filter(Filter filter);
+    protected abstract QueryBuilder filter(Filter filter);
 
     protected abstract Series toSeries(SearchHit hit);
 
@@ -76,32 +71,41 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
         final Connection c, final SearchRequestBuilder request, final OptionalLimit limit,
         final Function<SearchHit, T> converter
     ) {
-        return bind(request.execute()).lazyTransform((initial) -> {
-            if (initial.getScrollId() == null) {
-                return async.resolved(LimitedSet.of());
-            }
+        final ScrollTransform<T> scrollTransform =
+            new ScrollTransform<T>(async, limit, converter, scrollId -> {
+                // Function<> that returns a Supplier
+                return () -> {
+                    final ListenableActionFuture<SearchResponse> execute =
+                        c.prepareSearchScroll(scrollId).setScroll(SCROLL_TIME).execute();
+                    return bind(execute);
+                };
+            });
 
-            final String scrollId = initial.getScrollId();
-
-            final Supplier<AsyncFuture<SearchResponse>> scroller =
-                () -> bind(c.prepareSearchScroll(scrollId).setScroll(SCROLL_TIME).execute());
-
-            return scroller.get().lazyTransform(
-                new ScrollTransform<>(async, limit, scroller, converter)
-            );
-        });
+        return bind(request.execute()).lazyTransform(scrollTransform);
     }
 
-    @RequiredArgsConstructor
     public static class ScrollTransform<T> implements LazyTransform<SearchResponse, LimitedSet<T>> {
         private final AsyncFramework async;
         private final OptionalLimit limit;
-        private final Supplier<AsyncFuture<SearchResponse>> scroller;
 
         int size = 0;
         int duplicates = 0;
         final Set<T> results = new HashSet<>();
         final Function<SearchHit, T> converter;
+        final Function<String, Supplier<AsyncFuture<SearchResponse>>> scrollFactory;
+
+        @java.beans.ConstructorProperties({ "async", "limit", "converter", "scrollFactory" })
+        public ScrollTransform(
+            final AsyncFramework async,
+            final OptionalLimit limit,
+            final Function<SearchHit, T> converter,
+            final Function<String, Supplier<AsyncFuture<SearchResponse>>> scrollFactory
+        ) {
+            this.async = async;
+            this.limit = limit;
+            this.converter = converter;
+            this.scrollFactory = scrollFactory;
+        }
 
         @Override
         public AsyncFuture<LimitedSet<T>> transform(final SearchResponse response)
@@ -127,18 +131,39 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
                 return async.resolved(new LimitedSet<>(results, false));
             }
 
+            final String scrollId = response.getScrollId();
+            if (scrollId == null) {
+                return async.resolved(LimitedSet.of());
+            }
+
+            // Fetch the next page in the scrolling search. The result will be handled by a new call
+            // to this method.
+            final Supplier<AsyncFuture<SearchResponse>> scroller = scrollFactory.apply(scrollId);
             return scroller.get().lazyTransform(this);
         }
     }
 
-    @RequiredArgsConstructor
-    public class ScrollTransformStream<T> implements LazyTransform<SearchResponse, Void> {
+    public static class ScrollTransformStream<T> implements LazyTransform<SearchResponse, Void> {
         private final OptionalLimit limit;
-        private final Supplier<AsyncFuture<SearchResponse>> scroller;
         private final Function<Set<T>, AsyncFuture<Void>> seriesFunction;
         private final Function<SearchHit, T> converter;
+        private final Function<String, Supplier<AsyncFuture<SearchResponse>>> scrollFactory;
 
         int size = 0;
+
+        @java.beans.ConstructorProperties({ "limit", "seriesFunction", "converter",
+                                            "scrollFactory" })
+        public ScrollTransformStream(
+            final OptionalLimit limit,
+            final Function<Set<T>, AsyncFuture<Void>> seriesFunction,
+            final Function<SearchHit, T> converter,
+            final Function<String, Supplier<AsyncFuture<SearchResponse>>> scrollFactory
+        ) {
+            this.limit = limit;
+            this.seriesFunction = seriesFunction;
+            this.converter = converter;
+            this.scrollFactory = scrollFactory;
+        }
 
         @Override
         public AsyncFuture<Void> transform(final SearchResponse response) throws Exception {
@@ -159,9 +184,16 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
                 return seriesFunction.apply(batch);
             }
 
-            return seriesFunction
-                .apply(batch)
-                .lazyTransform(v -> scroller.get().lazyTransform(this));
+            final String scrollId = response.getScrollId();
+            if (scrollId == null) {
+                return seriesFunction.apply(batch);
+            }
+
+            // Fetch the next page in the scrolling search. The result will be handled by a new call
+            // to this method.
+            return seriesFunction.apply(batch).lazyTransform(v -> {
+                return scrollFactory.apply(scrollId).get().lazyTransform(this);
+            });
         }
     }
 
@@ -170,9 +202,9 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
 
     @Override
     public AsyncObservable<Entries> entries(final Entries.Request request) {
-        final FilterBuilder f = filter(request.getFilter());
+        final QueryBuilder f = filter(request.getFilter());
 
-        QueryBuilder query = QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f);
+        final QueryBuilder query = new BoolQueryBuilder().must(f);
 
         final Borrowed<Connection> c = connection().borrow();
 
@@ -190,7 +222,6 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
                     .search(type)
                     .setSize(ENTRIES_SCAN_SIZE)
                     .setScroll(ENTRIES_TIMEOUT)
-                    .setSearchType(SearchType.SCAN)
                     .setQuery(query);
             } catch (NoIndexSelectedException e) {
                 throw new IllegalArgumentException("no valid index selected", e);
@@ -260,15 +291,5 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
                 }
             });
         };
-    }
-
-    @Data
-    public static class LimitedSet<T> {
-        private final Set<T> set;
-        private final boolean limited;
-
-        public static <T> LimitedSet<T> of() {
-            return new LimitedSet<>(ImmutableSet.of(), false);
-        }
     }
 }

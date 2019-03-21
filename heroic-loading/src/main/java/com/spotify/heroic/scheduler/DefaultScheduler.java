@@ -21,20 +21,22 @@
 
 package com.spotify.heroic.scheduler;
 
-import lombok.RequiredArgsConstructor;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
 @Slf4j
-@RequiredArgsConstructor
 @ToString(exclude = {"scheduler"})
 public class DefaultScheduler implements Scheduler {
     private static final String UNKNOWN = "unknown";
 
     private final ScheduledExecutorService scheduler;
+
+    @java.beans.ConstructorProperties({ "scheduler" })
+    public DefaultScheduler(final ScheduledExecutorService scheduler) {
+        this.scheduler = scheduler;
+    }
 
     @Override
     public void periodically(long value, final TimeUnit unit, final Task task) {

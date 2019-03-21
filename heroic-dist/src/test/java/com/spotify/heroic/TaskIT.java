@@ -1,5 +1,12 @@
 package com.spotify.heroic;
 
+import static com.spotify.heroic.test.Data.points;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -11,31 +18,20 @@ import com.spotify.heroic.ingestion.IngestionComponent;
 import com.spotify.heroic.ingestion.IngestionManager;
 import com.spotify.heroic.shell.ShellIO;
 import eu.toolchain.async.AsyncFuture;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.InOrder;
-
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.net.URI;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import static com.spotify.heroic.test.Data.points;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.InOrder;
 
 public class TaskIT extends AbstractLocalClusterIT {
     private final Series s1 = Series.of("key1", ImmutableMap.of("shared", "a", "diff", "a"));
-    private final Series s2 = Series.of("key1", ImmutableMap.of("shared", "a", "diff", "b"));
 
     private ShellTasks tasks;
 
@@ -78,7 +74,7 @@ public class TaskIT extends AbstractLocalClusterIT {
     public void readFile() throws Exception {
         final InputStream in = new ByteArrayInputStream("foo\nbar\n".getBytes(Charsets.UTF_8));
 
-        doReturn(in).when(io).newInputStream(any(Path.class), eq(StandardOpenOption.READ));
+        doReturn(in).when(io).newInputStream(any(Path.class));
 
         run("test-read-file");
 

@@ -23,15 +23,23 @@ package com.spotify.heroic.statistics.semantic;
 
 import com.codahale.metrics.Timer;
 import com.spotify.heroic.statistics.HeroicTimer;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @ToString(of = {})
-@RequiredArgsConstructor
 public class SemanticHeroicTimer implements HeroicTimer {
-    @RequiredArgsConstructor
+
+    @java.beans.ConstructorProperties({ "timer" })
+    public SemanticHeroicTimer(final Timer timer) {
+        this.timer = timer;
+    }
+
     public class SemanticContext implements Context {
         private final Timer.Context context;
+
+        @java.beans.ConstructorProperties({ "context" })
+        public SemanticContext(final Timer.Context context) {
+            this.context = context;
+        }
 
         @Override
         public void finished() throws Exception {

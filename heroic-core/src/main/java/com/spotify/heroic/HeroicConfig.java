@@ -28,10 +28,13 @@ import static java.util.Objects.requireNonNull;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonLocation;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.auto.value.AutoValue;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.analytics.AnalyticsModule;
@@ -41,6 +44,7 @@ import com.spotify.heroic.cache.noop.NoopCacheModule;
 import com.spotify.heroic.cluster.ClusterManagerModule;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.FeatureSet;
+import com.spotify.heroic.conditionalfeatures.ConditionalFeatures;
 import com.spotify.heroic.consumer.ConsumerModule;
 import com.spotify.heroic.generator.CoreGeneratorModule;
 import com.spotify.heroic.ingestion.IngestionModule;
@@ -59,19 +63,50 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.LoggerFactory;
 
-@Slf4j
-@RequiredArgsConstructor
-@Data
-public class HeroicConfig {
+@AutoValue
+public abstract class HeroicConfig {
+    public static HeroicConfig create(
+        Optional<String> id,
+        Duration startTimeout,
+        Duration stopTimeout,
+        Optional<String> host,
+        Optional<Integer> port,
+        List<JettyServerConnector> connectors,
+        Optional<Boolean> disableMetrics,
+        boolean enableCors,
+        Optional<String> corsAllowOrigin,
+        FeatureSet features,
+        ClusterManagerModule cluster,
+        MetricManagerModule metric,
+        MetadataManagerModule metadata,
+        SuggestManagerModule suggest,
+        CacheModule cache,
+        IngestionModule ingestion,
+        List<ConsumerModule> consumers,
+        Optional<ShellServerModule> shellServer,
+        AnalyticsModule analytics,
+        CoreGeneratorModule generator,
+        StatisticsModule statistics,
+        QueryLoggingModule queryLogging,
+        Optional<ConditionalFeatures> conditionalFeatures,
+        Map<String, Object> tracing,
+        String version,
+        String service
+    ) {
+        return new AutoValue_HeroicConfig(id, startTimeout, stopTimeout, host, port, connectors,
+            disableMetrics, enableCors, corsAllowOrigin, features, cluster, metric, metadata,
+            suggest, cache, ingestion, consumers, shellServer, analytics, generator, statistics,
+            queryLogging, conditionalFeatures, tracing, version, service);
+    }
+
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(HeroicConfig.class);
     public static final List<ConsumerModule> DEFAULT_CONSUMERS = ImmutableList.of();
     public static final boolean DEFAULT_ENABLE_CORS = true;
     public static final Duration DEFAULT_START_TIMEOUT = Duration.of(5, TimeUnit.MINUTES);
@@ -80,43 +115,45 @@ public class HeroicConfig {
     public static final String DEFAULT_VERSION = "HEAD";
     public static final String DEFAULT_SERVICE = "The Heroic Time Series Database";
 
-    private final Optional<String> id;
+    public abstract Optional<String> id();
 
     /**
      * The time core will wait for all services (implementing
      * {@link com.spotify.heroic.lifecycle.LifeCycle}
      * to start before giving up.
      */
-    private final Duration startTimeout;
+    public abstract Duration startTimeout();
 
     /**
      * The time core will wait for all services (implementing
      * {@link com.spotify.heroic.lifecycle.LifeCycle}
      * to stop before giving up.
      */
-    private final Duration stopTimeout;
-    private final Optional<String> host;
-    private final Optional<Integer> port;
-    private final List<JettyServerConnector> connectors;
-    private final Optional<Boolean> disableMetrics;
-    private final boolean enableCors;
-    private final Optional<String> corsAllowOrigin;
-    private final FeatureSet features;
-    private final ClusterManagerModule cluster;
-    private final MetricManagerModule metric;
-    private final MetadataManagerModule metadata;
-    private final SuggestManagerModule suggest;
-    private final CacheModule cache;
-    private final IngestionModule ingestion;
-    private final List<ConsumerModule> consumers;
-    private final Optional<ShellServerModule> shellServer;
-    private final AnalyticsModule analytics;
-    private final CoreGeneratorModule generator;
-    private final StatisticsModule statistics;
-    private final QueryLoggingModule queryLogging;
+    public abstract Duration stopTimeout();
+    public abstract Optional<String> host();
+    public abstract Optional<Integer> port();
+    public abstract List<JettyServerConnector> connectors();
+    public abstract Optional<Boolean> disableMetrics();
+    public abstract boolean enableCors();
+    public abstract Optional<String> corsAllowOrigin();
+    public abstract FeatureSet features();
+    public abstract ClusterManagerModule cluster();
+    public abstract MetricManagerModule metric();
+    public abstract MetadataManagerModule metadata();
+    public abstract SuggestManagerModule suggest();
+    public abstract CacheModule cache();
+    public abstract IngestionModule ingestion();
+    public abstract List<ConsumerModule> consumers();
+    public abstract Optional<ShellServerModule> shellServer();
+    public abstract AnalyticsModule analytics();
+    public abstract CoreGeneratorModule generator();
+    public abstract StatisticsModule statistics();
+    public abstract QueryLoggingModule queryLogging();
+    public abstract Optional<ConditionalFeatures> conditionalFeature();
+    public abstract Map<String, Object> tracing();
 
-    private final String version;
-    private final String service;
+    public abstract String version();
+    public abstract String service();
 
     public static Builder builder() {
         return new Builder();
@@ -155,7 +192,7 @@ public class HeroicConfig {
 
     static Optional<HeroicConfig.Builder> loadConfig(
         final ObjectMapper mapper, final InputStream in
-    ) throws JsonMappingException, IOException {
+    ) throws IOException {
         final JsonParser parser = mapper.getFactory().createParser(in);
 
         if (parser.nextToken() == null) {
@@ -169,8 +206,6 @@ public class HeroicConfig {
         return ImmutableList.of(JettyServerConnector.builder());
     }
 
-    @NoArgsConstructor
-    @AllArgsConstructor
     public static class Builder {
         private Optional<String> id = empty();
         private Optional<Duration> startTimeout = empty();
@@ -194,9 +229,71 @@ public class HeroicConfig {
         private Optional<CoreGeneratorModule.Builder> generator = empty();
         private Optional<StatisticsModule> statistics = empty();
         private Optional<QueryLoggingModule> queryLogging = empty();
+        private Optional<ConditionalFeatures> conditionalFeatures = empty();
+        private Optional<Map<String, Object>> tracing = empty();
 
         private Optional<String> version = empty();
         private Optional<String> service = empty();
+
+        private Builder() {
+        }
+
+        @JsonCreator
+        public Builder(
+            @JsonProperty("id") Optional<String> id,
+            @JsonProperty("startTimeout") Optional<Duration> startTimeout,
+            @JsonProperty("stopTimeout") Optional<Duration> stopTimeout,
+            @JsonProperty("host") Optional<String> host,
+            @JsonProperty("port") Optional<Integer> port,
+            @JsonProperty("connectors") Optional<List<JettyServerConnector.Builder>> connectors,
+            @JsonProperty("disableMetrics") Optional<Boolean> disableMetrics,
+            @JsonProperty("enableCors") Optional<Boolean> enableCors,
+            @JsonProperty("corsAllowOrigin") Optional<String> corsAllowOrigin,
+            @JsonProperty("features") Optional<FeatureSet> features,
+            @JsonProperty("cluster") Optional<ClusterManagerModule.Builder> cluster,
+            @JsonProperty("metrics") Optional<MetricManagerModule.Builder> metrics,
+            @JsonProperty("metadata") Optional<MetadataManagerModule.Builder> metadata,
+            @JsonProperty("suggest") Optional<SuggestManagerModule.Builder> suggest,
+            @JsonProperty("cache") Optional<CacheModule.Builder> cache,
+            @JsonProperty("ingestion") Optional<IngestionModule.Builder> ingestion,
+            @JsonProperty("consumers") Optional<List<ConsumerModule.Builder>> consumers,
+            @JsonProperty("shellServer") Optional<ShellServerModule> shellServer,
+            @JsonProperty("analytics") Optional<AnalyticsModule.Builder> analytics,
+            @JsonProperty("generator") Optional<CoreGeneratorModule.Builder> generator,
+            @JsonProperty("statistics") Optional<StatisticsModule> statistics,
+            @JsonProperty("queryLogging") Optional<QueryLoggingModule> queryLogging,
+            @JsonProperty("conditionalFeatures") Optional<ConditionalFeatures> conditionalFeatures,
+            @JsonProperty("tracing") Optional<Map<String, Object>> tracing,
+            @JsonProperty("version") Optional<String> version,
+            @JsonProperty("service") Optional<String> service
+        ) {
+            this.id = id;
+            this.startTimeout = startTimeout;
+            this.stopTimeout = stopTimeout;
+            this.host = host;
+            this.port = port;
+            this.connectors = connectors;
+            this.disableMetrics = disableMetrics;
+            this.enableCors = enableCors;
+            this.corsAllowOrigin = corsAllowOrigin;
+            this.features = features;
+            this.cluster = cluster;
+            this.metrics = metrics;
+            this.metadata = metadata;
+            this.suggest = suggest;
+            this.cache = cache;
+            this.ingestion = ingestion;
+            this.consumers = consumers;
+            this.shellServer = shellServer;
+            this.analytics = analytics;
+            this.generator = generator;
+            this.statistics = statistics;
+            this.queryLogging = queryLogging;
+            this.conditionalFeatures = conditionalFeatures;
+            this.tracing = tracing;
+            this.version = version;
+            this.service = service;
+        }
 
         public Builder enableCors(boolean enableCors) {
             this.enableCors = of(enableCors);
@@ -289,6 +386,16 @@ public class HeroicConfig {
             return this;
         }
 
+        public Builder conditionalFeatures(ConditionalFeatures conditionalFeatures) {
+            this.conditionalFeatures = of(conditionalFeatures);
+            return this;
+        }
+
+        public Builder tracing(Map<String, Object> tracing) {
+            this.tracing = of(tracing);
+            return this;
+        }
+
         public Builder merge(Builder o) {
             // @formatter:off
             return new Builder(
@@ -314,8 +421,10 @@ public class HeroicConfig {
                 mergeOptional(generator, o.generator, CoreGeneratorModule.Builder::merge),
                 pickOptional(statistics, o.statistics),
                 pickOptional(queryLogging, o.queryLogging),
-                pickOptional(service, o.service),
-                pickOptional(version, o.version)
+                pickOptional(conditionalFeatures, o.conditionalFeatures),
+                pickOptional(tracing, o.tracing),
+                pickOptional(version, o.version),
+                pickOptional(service, o.service)
             );
             // @formatter:on
         }
@@ -330,7 +439,7 @@ public class HeroicConfig {
             final String defaultVersion = loadDefaultVersion().orElse(DEFAULT_VERSION);
 
             // @formatter:off
-            return new HeroicConfig(
+            return HeroicConfig.create(
                 id,
                 startTimeout.orElse(DEFAULT_START_TIMEOUT),
                 stopTimeout.orElse(DEFAULT_STOP_TIMEOUT),
@@ -354,6 +463,8 @@ public class HeroicConfig {
                 generator.orElseGet(CoreGeneratorModule::builder).build(),
                 statistics.orElseGet(NoopStatisticsModule::new),
                 queryLogging.orElseGet(NoopQueryLoggingModule::new),
+                conditionalFeatures,
+                tracing.orElseGet(HashMap::new),
                 version.orElse(defaultVersion),
                 service.orElse(DEFAULT_SERVICE)
             );

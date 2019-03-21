@@ -26,13 +26,15 @@ import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.datastax.MetricsRowKey;
 import eu.toolchain.async.Transform;
-import lombok.RequiredArgsConstructor;
-
 import java.util.Optional;
 
-@RequiredArgsConstructor
 public abstract class AbstractSchemaInstance implements SchemaInstance {
     protected final String key;
+
+    @java.beans.ConstructorProperties({ "key" })
+    public AbstractSchemaInstance(final String key) {
+        this.key = key;
+    }
 
     @Override
     public Transform<Row, BackendKey> keyConverter() {

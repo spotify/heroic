@@ -66,7 +66,7 @@ public class FilterKAreaAggregationTest {
 
         if (first.getKey().equals(ImmutableMap.of("site", "lon"))) {
             assertEquals(ImmutableList.of(new Point(1, 3.0), new Point(2, 3.0)),
-                first.getMetrics().getData());
+                first.getMetrics().data());
         } else {
             Assert.fail("unexpected group: " + first.getKey());
         }

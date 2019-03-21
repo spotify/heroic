@@ -21,16 +21,20 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
+import com.google.bigtable.v2.Mutation;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 
-@RequiredArgsConstructor
 public class Mutations {
     private final List<com.google.bigtable.v2.Mutation> mutations;
+
+    @java.beans.ConstructorProperties({ "mutations" })
+    public Mutations(final List<Mutation> mutations) {
+        this.mutations = mutations;
+    }
 
     /**
      * Get the list of mutations.
@@ -51,19 +55,25 @@ public class Mutations {
 
     @Data
     public static class Builder {
-        final List<com.google.bigtable.v2.Mutation> mutations = new ArrayList<>();
+        final List<com.google.bigtable.v2.Mutation> mutations =
+            new ArrayList<>();
 
         public Builder setCell(
             String family, ByteString columnQualifier, ByteString value
         ) {
-            final com.google.bigtable.v2.Mutation.SetCell.Builder setCell =
-                com.google.bigtable.v2.Mutation.SetCell
+            final com.google.bigtable.v2.Mutation.SetCell.Builder
+                setCell = com.google.bigtable.v2.Mutation.SetCell
                     .newBuilder()
                     .setFamilyName(family)
                     .setColumnQualifier(columnQualifier)
                     .setValue(value);
 
-            mutations.add(com.google.bigtable.v2.Mutation.newBuilder().setSetCell(setCell).build());
+            mutations.add(
+                com.google.bigtable.v2.Mutation
+                .newBuilder()
+                .setSetCell(setCell)
+                    .build()
+            );
             return this;
         }
 

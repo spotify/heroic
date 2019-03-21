@@ -25,7 +25,6 @@ import com.google.protobuf.ByteString;
 import java.util.List;
 import java.util.Optional;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 
 public interface RowFilter {
     static ColumnRange.Builder newColumnRangeBuilder(String family) {
@@ -34,7 +33,7 @@ public interface RowFilter {
 
     /**
      * Test if the current filter matches the given column qualifier.
-     *
+     * <p>
      * This method is primarily used when testing.
      *
      * @param columnQualifier column qualifier to match
@@ -44,7 +43,7 @@ public interface RowFilter {
 
     /**
      * Test if the current filter matches the given column family.
-     *
+     * <p>
      * This method is primarily used when testing.
      *
      * @param familyName family to match
@@ -101,7 +100,10 @@ public interface RowFilter {
             final com.google.bigtable.v2.RowFilter.Chain.Builder chain =
                 com.google.bigtable.v2.RowFilter.Chain.newBuilder();
             this.chain.forEach(f -> chain.addFilters(f.toPb()));
-            return com.google.bigtable.v2.RowFilter.newBuilder().setChain(chain.build()).build();
+            return com.google.bigtable.v2.RowFilter
+                .newBuilder()
+                .setChain(chain.build())
+                .build();
         }
     }
 
@@ -117,25 +119,25 @@ public interface RowFilter {
         @Override
         public boolean matchesColumn(final ByteString columnQualifier) {
             if (!startQualifierClosed
-                .map(sqo -> compareByteStrings(sqo, columnQualifier) <= 0)
+                .map(sqc -> compareByteStrings(sqc, columnQualifier) <= 0)
                 .orElse(true)) {
                 return false;
             }
 
             if (!startQualifierOpen
-                .map(q -> compareByteStrings(q, columnQualifier) < 0)
+                .map(sqo -> compareByteStrings(sqo, columnQualifier) < 0)
                 .orElse(true)) {
                 return false;
             }
 
             if (!endQualifierClosed
-                .map(sqo -> compareByteStrings(sqo, columnQualifier) >= 0)
+                .map(eqc -> compareByteStrings(eqc, columnQualifier) >= 0)
                 .orElse(true)) {
                 return false;
             }
 
             if (!endQualifierOpen
-                .map(sqo -> compareByteStrings(sqo, columnQualifier) > 0)
+                .map(eqo -> compareByteStrings(eqo, columnQualifier) > 0)
                 .orElse(true)) {
                 return false;
             }
@@ -151,7 +153,9 @@ public interface RowFilter {
         @Override
         public com.google.bigtable.v2.RowFilter toPb() {
             final com.google.bigtable.v2.ColumnRange.Builder builder =
-                com.google.bigtable.v2.ColumnRange.newBuilder().setFamilyName(family);
+                com.google.bigtable.v2.ColumnRange
+                    .newBuilder()
+                    .setFamilyName(family);
 
             startQualifierClosed.ifPresent(builder::setStartQualifierClosed);
             startQualifierOpen.ifPresent(builder::setStartQualifierOpen);
@@ -164,7 +168,6 @@ public interface RowFilter {
                 .build();
         }
 
-        @RequiredArgsConstructor
         public static class Builder {
             private final String family;
 
@@ -172,6 +175,11 @@ public interface RowFilter {
             private Optional<ByteString> startQualifierOpen = Optional.empty();
             private Optional<ByteString> endQualifierClosed = Optional.empty();
             private Optional<ByteString> endQualifierOpen = Optional.empty();
+
+            @java.beans.ConstructorProperties({ "family" })
+            public Builder(final String family) {
+                this.family = family;
+            }
 
             public Builder startQualifierClosed(final ByteString startQualifierClosed) {
                 this.startQualifierClosed = Optional.of(startQualifierClosed);
@@ -235,7 +243,10 @@ public interface RowFilter {
 
         @Override
         public com.google.bigtable.v2.RowFilter toPb() {
-            return com.google.bigtable.v2.RowFilter.newBuilder().setBlockAllFilter(true).build();
+            return com.google.bigtable.v2.RowFilter
+                .newBuilder()
+                .setBlockAllFilter(true)
+                .build();
         }
     }
 

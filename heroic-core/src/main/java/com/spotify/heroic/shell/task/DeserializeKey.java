@@ -33,12 +33,10 @@ import com.spotify.heroic.shell.TaskUsage;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.ToString;
+import java.util.Optional;
+import javax.inject.Inject;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
-
-import javax.inject.Inject;
-import java.util.Optional;
 
 @TaskUsage("Deserialize the given backend key")
 @TaskName("deserialize-key")
@@ -77,7 +75,6 @@ public class DeserializeKey implements ShellTask {
         }).orElseGet(async::resolved);
     }
 
-    @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "--group", usage = "Backend group to use", metaVar = "<group>")
         private Optional<String> group = Optional.empty();

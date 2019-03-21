@@ -38,6 +38,10 @@ public class NoopConsumerReporter implements ConsumerReporter {
     }
 
     @Override
+    public void reportMessageRetry() {
+    }
+
+    @Override
     public void reportConsumerSchemaError() {
     }
 

@@ -49,10 +49,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import javax.inject.Named;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import org.apache.commons.lang3.tuple.Pair;
 
 /**
@@ -181,8 +178,6 @@ public class ClusterManagerModule {
         return new Builder();
     }
 
-    @AllArgsConstructor(access = AccessLevel.PRIVATE)
-    @NoArgsConstructor(access = AccessLevel.PRIVATE)
     public static class Builder {
         private Optional<UUID> id = empty();
         private Optional<Map<String, String>> tags = empty();
@@ -207,6 +202,27 @@ public class ClusterManagerModule {
             this.discovery = discovery;
             this.protocols = protocols;
             this.topology = topology;
+        }
+
+        private Builder(
+            final Optional<UUID> id,
+            final Optional<Map<String, String>> tags,
+            final Optional<Boolean> useLocal,
+            final Optional<ClusterDiscoveryModule> discovery,
+            final Optional<List<RpcProtocolModule>> protocols,
+            final Optional<Set<Map<String, String>>> topology,
+            final Optional<NodeMetadataFactory> metadataFactory
+        ) {
+            this.id = id;
+            this.tags = tags;
+            this.useLocal = useLocal;
+            this.discovery = discovery;
+            this.protocols = protocols;
+            this.topology = topology;
+            this.metadataFactory = metadataFactory;
+        }
+
+        private Builder() {
         }
 
         public Builder id(UUID id) {

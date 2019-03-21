@@ -23,9 +23,8 @@ package com.spotify.heroic.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.DateRange;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
 
 public interface BucketStrategy {
     long MAX_BUCKET_COUNT = 100000L;
@@ -47,6 +46,8 @@ public interface BucketStrategy {
         }
     }
 
+    void hashTo(ObjectHasher hasher);
+
     class Start implements BucketStrategy {
         @JsonValue
         public String value() {
@@ -65,7 +66,11 @@ public interface BucketStrategy {
             return new StartMapping(range.start(), start, size, extent, (int) count);
         }
 
-        @RequiredArgsConstructor
+        @Override
+        public void hashTo(final ObjectHasher hasher) {
+            hasher.putObject(getClass());
+        }
+
         private static class StartMapping implements Mapping {
             private final long start;
             private final long offset;
@@ -73,10 +78,21 @@ public interface BucketStrategy {
             private final long extent;
             private final int buckets;
 
+            @java.beans.ConstructorProperties({ "start", "offset", "size", "extent", "buckets" })
+            public StartMapping(final long start, final long offset, final long size,
+                                final long extent,
+                                final int buckets) {
+                this.start = start;
+                this.offset = offset;
+                this.size = size;
+                this.extent = extent;
+                this.buckets = buckets;
+            }
+
             /**
              * Calculate the start and end index of the buckets that should be seeded for the given
              * timestamp.
-             *
+             * <p>
              * This guarantees that each timestamp ends up in the range [start, start + extent) for
              * any given bucket.
              *
@@ -91,7 +107,7 @@ public interface BucketStrategy {
                 final int start = Math.max((int) ((adjusted + (size - extent)) / size), 0);
                 final int end = Math.min((int) ((adjusted + size) / size), buckets);
 
-                return new BucketStrategy.StartEnd(start, end);
+                return new StartEnd(start, end);
             }
 
             @Override
@@ -124,7 +140,11 @@ public interface BucketStrategy {
             return new EndMapping(start, range.start(), size, extent, (int) count);
         }
 
-        @RequiredArgsConstructor
+        @Override
+        public void hashTo(final ObjectHasher hasher) {
+            hasher.putObject(getClass());
+        }
+
         private static class EndMapping implements Mapping {
             private final long start;
             private final long offset;
@@ -132,10 +152,21 @@ public interface BucketStrategy {
             private final long extent;
             private final int buckets;
 
+            @java.beans.ConstructorProperties({ "start", "offset", "size", "extent", "buckets" })
+            public EndMapping(final long start, final long offset, final long size,
+                              final long extent,
+                              final int buckets) {
+                this.start = start;
+                this.offset = offset;
+                this.size = size;
+                this.extent = extent;
+                this.buckets = buckets;
+            }
+
             /**
              * Calculate the start and end index of the buckets that should be seeded for the given
              * timestamp.
-             *
+             * <p>
              * This guarantees that each timestamp ends up in the range (end - extent, end] for
              * any given bucket.
              *
@@ -171,14 +202,5 @@ public interface BucketStrategy {
         long start();
 
         int buckets();
-    }
-
-    /**
-     * A start, and an end bucket (exclusive) selected.
-     */
-    @Data
-    class StartEnd {
-        private final int start;
-        private final int end;
     }
 }

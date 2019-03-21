@@ -22,15 +22,21 @@
 package com.spotify.heroic.metric.bigtable.api;
 
 import com.google.bigtable.v2.MutateRowRequest;
-import com.google.cloud.bigtable.grpc.async.BulkMutation;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.ByteString;
+import com.google.cloud.bigtable.grpc.async.BulkMutation;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
+import io.opencensus.common.Scope;
+import io.opencensus.trace.AttributeValue;
+import io.opencensus.trace.Span;
+import io.opencensus.trace.Status;
+import io.opencensus.trace.Tracer;
+import io.opencensus.trace.Tracing;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
@@ -42,11 +48,14 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class BigtableMutatorImpl implements BigtableMutator {
     private final AsyncFramework async;
-    private final com.google.cloud.bigtable.grpc.BigtableSession session;
+    private final com.google.cloud.bigtable.grpc.BigtableSession
+        session;
     private final boolean disableBulkMutations;
     private final Map<String, BulkMutation> tableToBulkMutation;
     private final ScheduledExecutorService scheduler;
-    private final Object lock = new Object();
+    private final Object tableAccessLock = new Object();
+    private final Object flushLock = new Object();
+    private final Tracer tracer = Tracing.getTracer();
 
     public BigtableMutatorImpl(
         AsyncFramework async,
@@ -100,36 +109,55 @@ public class BigtableMutatorImpl implements BigtableMutator {
     private AsyncFuture<Void> mutateSingleRow(
         String tableName, ByteString rowKey, Mutations mutations
     ) {
-        return convertVoid(
-            session
-                .getDataClient()
-                .mutateRowAsync(toMutateRowRequest(tableName, rowKey, mutations)));
+        final Span span = tracer.spanBuilder("BigtableMutator.mutateSingleRow").startSpan();
+        try (Scope ws = tracer.withSpan(span)) {
+            return convertVoid(
+                session
+                    .getDataClient()
+                    .mutateRowAsync(toMutateRowRequest(tableName, rowKey, mutations)))
+                .onFinished(span::end);
+        }
     }
 
     private AsyncFuture<Void> mutateBatchRow(
         String tableName, ByteString rowKey, Mutations mutations
     ) {
-        final BulkMutation bulkMutation = getOrAddBulkMutation(tableName);
-        return convertVoid(bulkMutation.add(toMutateRowRequest(tableName, rowKey, mutations)));
+        final Span span = tracer.spanBuilder("BigtableMutator.mutateBatchRow").startSpan();
+        try (Scope ws = tracer.withSpan(span)) {
+            span.putAttribute("table", AttributeValue.stringAttributeValue(tableName));
+
+            final BulkMutation bulkMutation = getOrAddBulkMutation(tableName);
+
+            span.addAnnotation("Adding rows to bulk mutation");
+            return convertVoid(bulkMutation.add(toMutateRowRequest(tableName, rowKey, mutations)))
+                .onFinished(span::end);
+        }
     }
 
     private BulkMutation getOrAddBulkMutation(String tableName) {
-        synchronized (lock) {
-            if (tableToBulkMutation.containsKey(tableName)) {
-                return tableToBulkMutation.get(tableName);
-            }
+        final Span span = tracer.spanBuilder("BigtableMutator.getOrAddBulkMutation").startSpan();
+        try (Scope ws = tracer.withSpan(span)) {
+            span.addAnnotation("Acquiring lock");
+            synchronized (tableAccessLock) {
+                span.addAnnotation("Lock acquired");
 
-            final BulkMutation bulkMutation = session
-                .createBulkMutation(
+                if (tableToBulkMutation.containsKey(tableName)) {
+                    span.setStatus(Status.ALREADY_EXISTS.withDescription("Mutation exists in map"));
+                    span.end();
+                    return tableToBulkMutation.get(tableName);
+                }
+
+                final BulkMutation bulkMutation = session.createBulkMutation(
                     session
                         .getOptions()
                         .getInstanceName()
-                        .toTableName(tableName),
-                    session.createAsyncExecutor());
+                        .toTableName(tableName));
 
-            tableToBulkMutation.put(tableName, bulkMutation);
+                tableToBulkMutation.put(tableName, bulkMutation);
 
-            return bulkMutation;
+                span.end();
+                return bulkMutation;
+            }
         }
     }
 
@@ -165,8 +193,14 @@ public class BigtableMutatorImpl implements BigtableMutator {
     }
 
     private void flush() {
-        synchronized (lock) {
-            tableToBulkMutation.values().stream().forEach(BulkMutation::flush);
+        synchronized (flushLock) {
+            tableToBulkMutation.values().stream().forEach(mutation -> {
+                try {
+                    mutation.flush();
+                } catch (final InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            });
         }
     }
 }

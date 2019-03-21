@@ -38,17 +38,14 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
-import lombok.AccessLevel;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
-import javax.inject.Named;
 import java.net.InetAddress;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
+import javax.inject.Named;
+import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Data
@@ -176,7 +173,6 @@ public class CollectdConsumerModule implements ConsumerModule {
         }
     }
 
-    @NoArgsConstructor(access = AccessLevel.PRIVATE)
     public static class Builder implements ConsumerModule.Builder {
         private Optional<String> id = Optional.empty();
         private Optional<String> host = Optional.empty();
@@ -196,6 +192,9 @@ public class CollectdConsumerModule implements ConsumerModule {
             this.port = port;
             this.hostProcessor = hostPattern;
             this.types = types;
+        }
+
+        private Builder() {
         }
 
         public Builder id(String id) {

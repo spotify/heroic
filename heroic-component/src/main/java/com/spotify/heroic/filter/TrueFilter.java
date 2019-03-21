@@ -21,16 +21,22 @@
 
 package com.spotify.heroic.filter;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.auto.value.AutoValue;
+import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.Series;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
 
-@Data
-@EqualsAndHashCode(of = {"OPERATOR"}, doNotUseGetters = true)
-public class TrueFilter implements Filter {
+@AutoValue
+@JsonTypeName("true")
+public abstract class TrueFilter implements Filter {
+    @JsonCreator
+    public static TrueFilter create() {
+        return new AutoValue_TrueFilter();
+    }
+
     public static final String OPERATOR = "true";
-
-    private static final TrueFilter instance = new TrueFilter();
+    private static final TrueFilter instance = TrueFilter.create();
 
     public static TrueFilter get() {
         return instance;
@@ -63,7 +69,7 @@ public class TrueFilter implements Filter {
 
     @Override
     public int compareTo(Filter o) {
-        if (!TrueFilter.class.equals(o.getClass())) {
+        if (!TrueFilter.class.isAssignableFrom(o.getClass())) {
             return operator().compareTo(o.operator());
         }
 
@@ -72,6 +78,11 @@ public class TrueFilter implements Filter {
 
     @Override
     public String toDSL() {
-        return "false";
+        return "true";
+    }
+
+    @Override
+    public void hashTo(final ObjectHasher hasher) {
+        hasher.putObject(getClass());
     }
 }

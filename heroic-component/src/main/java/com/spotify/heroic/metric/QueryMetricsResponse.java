@@ -25,17 +25,21 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Stream;
 import lombok.Data;
 import lombok.NonNull;
 
@@ -66,13 +70,19 @@ public class QueryMetricsResponse {
     @NonNull
     private final Optional<Long> preAggregationSampleSize;
 
+    @NonNull
+    private final Optional<CacheInfo> cache;
+
     public static class Serializer extends JsonSerializer<QueryMetricsResponse> {
         @Override
         public void serialize(
             QueryMetricsResponse response, JsonGenerator g, SerializerProvider provider
         ) throws IOException {
             final List<ShardedResultGroup> result = response.getResult();
-            final Map<String, SortedSet<String>> common = calculateCommon(g, result);
+            final Map<String, SortedSet<String>> commonTags =
+                calculateCommon(result, Series::getTags);
+            final Map<String, SortedSet<String>> commonResource =
+                calculateCommon(result, Series::getResource);
 
             g.writeStartObject();
 
@@ -80,12 +90,18 @@ public class QueryMetricsResponse {
             g.writeObjectField("range", response.getRange());
             g.writeObjectField("trace", response.getTrace());
             g.writeObjectField("limits", response.getLimits());
+            g.writeBooleanField("cached",
+                response.getCache().map(CacheInfo::isCached).orElse(false));
+            g.writeObjectField("cache", response.getCache());
 
             g.writeFieldName("commonTags");
-            serializeCommonTags(g, common);
+            serializeCommonTags(g, commonTags);
+
+            g.writeFieldName("commonResource");
+            serializeCommonTags(g, commonResource);
 
             g.writeFieldName("result");
-            serializeResult(g, common, result);
+            serializeResult(g, result);
 
             g.writeObjectField("preAggregationSampleSize", response.getPreAggregationSampleSize());
 
@@ -127,41 +143,52 @@ public class QueryMetricsResponse {
         }
 
         private Map<String, SortedSet<String>> calculateCommon(
-            final JsonGenerator g, final List<ShardedResultGroup> result
+            final List<ShardedResultGroup> result,
+            final Function<Series, Map<String, String>> accessor
         ) {
-            final Map<String, SortedSet<String>> common = new HashMap<>();
-            final Set<String> blacklist = new HashSet<>();
+            final Iterator<Map<String, SortedSet<String>>> resourcePartitions = result
+                .stream()
+                .map(r -> partitionMaps(r.getSeries().stream().map(accessor)))
+                .iterator();
 
-            for (final ShardedResultGroup r : result) {
-                final Set<Map.Entry<String, SortedSet<String>>> entries =
-                    SeriesValues.fromSeries(r.getSeries().iterator()).getTags().entrySet();
+            if (!resourcePartitions.hasNext()) {
+                return ImmutableMap.of();
+            }
 
-                for (final Map.Entry<String, SortedSet<String>> e : entries) {
-                    if (blacklist.contains(e.getKey())) {
-                        continue;
-                    }
+            final Map<String, SortedSet<String>> common = resourcePartitions.next();
 
-                    final SortedSet<String> previous = common.put(e.getKey(), e.getValue());
+            while (resourcePartitions.hasNext()) {
+                final Map<String, SortedSet<String>> next = resourcePartitions.next();
+                common.keySet().removeIf(k -> !next.containsKey(k));
 
-                    if (previous == null) {
-                        continue;
-                    }
+                if (common.isEmpty()) {
+                    return common;
+                }
 
-                    if (previous.equals(e.getValue())) {
-                        continue;
-                    }
-
-                    blacklist.add(e.getKey());
-                    common.remove(e.getKey());
+                for (final Map.Entry<String, SortedSet<String>> e : common.entrySet()) {
+                    e.getValue().addAll(next.get(e.getKey()));
                 }
             }
 
             return common;
         }
 
+        private Map<String, SortedSet<String>> partitionMaps(
+            final Stream<Map<String, String>> stream
+        ) {
+            final Map<String, SortedSet<String>> partitioned = new HashMap<>();
+
+            stream.forEach(m -> {
+                for (final Map.Entry<String, String> e : m.entrySet()) {
+                    partitioned.computeIfAbsent(e.getKey(), k -> new TreeSet<>()).add(e.getValue());
+                }
+            });
+
+            return partitioned;
+        }
+
         private void serializeResult(
-            final JsonGenerator g, final Map<String, SortedSet<String>> common,
-            final List<ShardedResultGroup> result
+            final JsonGenerator g, final List<ShardedResultGroup> result
         ) throws IOException {
 
             g.writeStartArray();
@@ -176,11 +203,15 @@ public class QueryMetricsResponse {
                 g.writeStringField("hash", Integer.toHexString(group.hashGroup()));
                 g.writeObjectField("shard", group.getShard());
                 g.writeNumberField("cadence", group.getCadence());
-                g.writeObjectField("values", collection.getData());
+                g.writeObjectField("values", collection.data());
 
                 writeKey(g, series.getKeys());
-                writeTags(g, common, series.getTags());
+
+                writeTags(g, series.getTags());
                 writeTagCounts(g, series.getTags());
+
+                writeResource(g, series.getResource());
+                writeResourceCounts(g, series.getResource());
 
                 g.writeEndObject();
             }
@@ -199,19 +230,13 @@ public class QueryMetricsResponse {
         }
 
         void writeTags(
-            JsonGenerator g, final Map<String, SortedSet<String>> common,
-            final Map<String, SortedSet<String>> tags
+            JsonGenerator g, final Map<String, SortedSet<String>> tags
         ) throws IOException {
             g.writeFieldName("tags");
 
             g.writeStartObject();
 
             for (final Map.Entry<String, SortedSet<String>> pair : tags.entrySet()) {
-                // TODO: enable this when commonTags is used.
-                /*if (common.containsKey(pair.getKey())) {
-                    continue;
-                }*/
-
                 final SortedSet<String> values = pair.getValue();
 
                 if (values.size() != 1) {
@@ -242,11 +267,50 @@ public class QueryMetricsResponse {
 
             g.writeEndObject();
         }
+
+        void writeResourceCounts(JsonGenerator g, final Map<String, SortedSet<String>> tags)
+            throws IOException {
+            g.writeFieldName("resourceCounts");
+
+            g.writeStartObject();
+
+            for (final Map.Entry<String, SortedSet<String>> pair : tags.entrySet()) {
+                final SortedSet<String> values = pair.getValue();
+
+                if (values.size() <= 1) {
+                    continue;
+                }
+
+                g.writeNumberField(pair.getKey(), values.size());
+            }
+
+            g.writeEndObject();
+        }
+
+        void writeResource(
+            JsonGenerator g, final Map<String, SortedSet<String>> resource
+        ) throws IOException {
+            g.writeFieldName("resource");
+
+            g.writeStartObject();
+
+            for (final Map.Entry<String, SortedSet<String>> pair : resource.entrySet()) {
+                final SortedSet<String> values = pair.getValue();
+
+                if (values.size() != 1) {
+                    continue;
+                }
+
+                g.writeStringField(pair.getKey(), values.iterator().next());
+            }
+
+            g.writeEndObject();
+        }
     }
 
     public Summary summarize() {
         return new Summary(range, ShardedResultGroup.summarize(result), statistics, errors, trace,
-            limits, preAggregationSampleSize);
+            limits, preAggregationSampleSize, cache);
     }
 
     // Only include data suitable to log to query log
@@ -259,5 +323,6 @@ public class QueryMetricsResponse {
         private final QueryTrace trace;
         private final ResultLimits limits;
         private final Optional<Long> preAggregationSampleSize;
+        private final Optional<CacheInfo> cache;
     }
 }

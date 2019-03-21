@@ -1,0 +1,9 @@
+dependencies {
+    implementation project(':heroic-component')
+    testImplementation project(':heroic-test-it')
+
+    compileOnly 'org.projectlombok:lombok'
+}
+
+group = 'com.spotify.heroic.metadata'
+description = 'Heroic: In-Memory Metadata'

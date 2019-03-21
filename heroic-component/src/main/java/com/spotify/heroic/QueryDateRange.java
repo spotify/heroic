@@ -21,6 +21,8 @@
 
 package com.spotify.heroic;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -30,12 +32,8 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.TimeUtils;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-
 import java.util.concurrent.TimeUnit;
-
-import static com.google.common.base.Preconditions.checkNotNull;
+import lombok.Data;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 @JsonSubTypes({
@@ -44,7 +42,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 })
 public interface QueryDateRange {
     @Data
-    @RequiredArgsConstructor
     @JsonTypeName("absolute")
     public static class Absolute implements QueryDateRange {
         private final long start;
@@ -54,6 +51,12 @@ public interface QueryDateRange {
         public Absolute(@JsonProperty("start") Long start, @JsonProperty("end") Long end) {
             this.start = checkNotNull(start, "start");
             this.end = checkNotNull(end, "end");
+        }
+
+        @java.beans.ConstructorProperties({ "start", "end" })
+        public Absolute(final long start, final long end) {
+            this.start = start;
+            this.end = end;
         }
 
         @Override
@@ -77,7 +80,6 @@ public interface QueryDateRange {
     }
 
     @Data
-    @RequiredArgsConstructor
     @JsonTypeName("relative")
     public static class Relative implements QueryDateRange {
         public static final TimeUnit DEFAULT_UNIT = TimeUnit.DAYS;
@@ -89,6 +91,12 @@ public interface QueryDateRange {
         public Relative(@JsonProperty("unit") String unit, @JsonProperty("value") Long value) {
             this.unit = TimeUtils.parseTimeUnit(unit).orElse(DEFAULT_UNIT);
             this.value = checkNotNull(value, "value");
+        }
+
+        @java.beans.ConstructorProperties({ "unit", "value" })
+        public Relative(final TimeUnit unit, final long value) {
+            this.unit = unit;
+            this.value = value;
         }
 
         @Override
