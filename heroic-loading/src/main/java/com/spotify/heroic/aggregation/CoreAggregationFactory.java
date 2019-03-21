@@ -22,14 +22,16 @@
 package com.spotify.heroic.aggregation;
 
 import com.spotify.heroic.grammar.Expression;
-import lombok.RequiredArgsConstructor;
-
 import java.util.List;
 import java.util.Map;
 
-@RequiredArgsConstructor
 public class CoreAggregationFactory implements AggregationFactory {
     final Map<String, AggregationDSL> builderMap;
+
+    @java.beans.ConstructorProperties({ "builderMap" })
+    public CoreAggregationFactory(final Map<String, AggregationDSL> builderMap) {
+        this.builderMap = builderMap;
+    }
 
     @Override
     public Aggregation build(String name, List<Expression> args, Map<String, Expression> keywords) {

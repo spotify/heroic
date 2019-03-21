@@ -34,16 +34,22 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @QueryLoggingScope
 @Slf4j
-@RequiredArgsConstructor
 public class Slf4jQueryLogger implements QueryLogger {
     private final Consumer<String> queryLog;
     private final ObjectMapper objectMapper;
     private final String component;
+
+    @java.beans.ConstructorProperties({ "queryLog", "objectMapper", "component" })
+    public Slf4jQueryLogger(final Consumer<String> queryLog, final ObjectMapper objectMapper,
+                            final String component) {
+        this.queryLog = queryLog;
+        this.objectMapper = objectMapper;
+        this.component = component;
+    }
 
     @Override
     public void logHttpQueryText(
@@ -117,8 +123,8 @@ public class Slf4jQueryLogger implements QueryLogger {
     ) {
         performAndCatch(() -> {
             final MessageFormat<T> message =
-                new MessageFormat<>(component, context.getQueryId(), context.getClientContext(),
-                    context.getHttpContext(), type, data);
+                new MessageFormat<>(component, context.queryId(), context.clientContext(),
+                    context.httpContext(), type, data);
 
             final String timestamp = Instant.now().toString();
             final LogFormat logFormat = new LogFormat(timestamp, message);

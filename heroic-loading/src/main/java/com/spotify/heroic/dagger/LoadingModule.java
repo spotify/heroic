@@ -54,9 +54,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import javax.inject.Named;
-import lombok.RequiredArgsConstructor;
 
-@RequiredArgsConstructor
 @Module
 public class LoadingModule {
     private final ExecutorService executor;
@@ -64,6 +62,15 @@ public class LoadingModule {
     private final boolean managedExecutor;
     private final HeroicConfiguration options;
     private final ExtraParameters parameters;
+
+    public LoadingModule(final ExecutorService executor, final boolean managedExecutor,
+                         final HeroicConfiguration options,
+                         final ExtraParameters parameters) {
+        this.executor = executor;
+        this.managedExecutor = managedExecutor;
+        this.options = options;
+        this.parameters = parameters;
+    }
 
     @Provides
     @LoadingScope

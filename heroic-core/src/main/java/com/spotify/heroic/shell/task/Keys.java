@@ -23,7 +23,6 @@ package com.spotify.heroic.shell.task;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.async.AsyncObserver;
@@ -40,24 +39,21 @@ import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
+import com.spotify.heroic.shell.task.parameters.KeysParameters;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
-import org.kohsuke.args4j.Option;
-
-import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.inject.Inject;
 import javax.inject.Named;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @TaskUsage("List available metric keys for all backends")
 @TaskName("keys")
-@Slf4j
 public class Keys implements ShellTask {
+    private static final Logger log = LoggerFactory.getLogger(Keys.class);
     private final AsyncFramework async;
     private final MetricManager metrics;
     private final ObjectMapper mapper;
@@ -73,28 +69,29 @@ public class Keys implements ShellTask {
 
     @Override
     public TaskParameters params() {
-        return new Parameters();
+        return new KeysParameters();
     }
 
     @Override
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
-        final Parameters params = (Parameters) base;
+        final KeysParameters params = (KeysParameters) base;
 
         final BackendKeyFilter keyFilter = Tasks.setupKeyFilter(params, mapper);
 
         final QueryOptions.Builder options =
-            QueryOptions.builder().tracing(Tracing.fromBoolean(params.tracing));
+            QueryOptions.builder().tracing(Tracing.fromBoolean(params.getTracing()));
 
-        params.fetchSize.ifPresent(options::fetchSize);
+        params.getFetchSize().ifPresent(options::fetchSize);
 
-        final MetricBackendGroup group = metrics.useOptionalGroup(params.group);
+        final MetricBackendGroup group = metrics.useOptionalGroup(params.getGroup());
 
         final ResolvableFuture<Void> future = async.future();
 
         final AsyncObservable<BackendKeySet> observable;
 
-        if (params.keysPaged) {
-            observable = group.streamKeysPaged(keyFilter, options.build(), params.keysPageSize);
+        if (params.getKeysPaged()) {
+            observable = group.streamKeysPaged(
+                keyFilter, options.build(), params.getKeysPageSize());
         } else {
             observable = group.streamKeys(keyFilter, options.build());
         }
@@ -140,32 +137,6 @@ public class Keys implements ShellTask {
         });
 
         return future;
-    }
-
-    @ToString
-    private static class Parameters extends Tasks.KeyspaceBase {
-        @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
-            metaVar = "<group>")
-        private Optional<String> group = Optional.empty();
-
-        @Option(name = "--tracing",
-            usage = "Trace the queries for more debugging when things go wrong")
-        private boolean tracing = false;
-
-        @Option(name = "--keys-paged",
-            usage = "Use the high-level paging mechanism when streaming keys")
-        private boolean keysPaged = false;
-
-        @Option(name = "--keys-page-size", usage = "Use the given page-size when paging keys")
-        private int keysPageSize = 10;
-
-        @Option(name = "--fetch-size", usage = "Use the given fetch size")
-        private Optional<Integer> fetchSize = Optional.empty();
-
-        @Override
-        public List<String> getQuery() {
-            return ImmutableList.of();
-        }
     }
 
     public static Keys setup(final CoreComponent core) {

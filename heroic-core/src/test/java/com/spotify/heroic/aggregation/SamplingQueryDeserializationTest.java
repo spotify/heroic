@@ -22,12 +22,12 @@ public class SamplingQueryDeserializationTest {
         final Duration d = Duration.of(10, TimeUnit.MINUTES);
 
         try (final InputStream in = openResource(getClass(), "SamplingQuery.1.json")) {
-            assertEquals(new SamplingQuery(Optional.of(d), Optional.empty()),
+            assertEquals(new SamplingQuery(d, null),
                 m.readValue(in, SamplingQuery.class));
         }
 
         try (final InputStream in = openResource(getClass(), "SamplingQuery.2.json")) {
-            assertEquals(new SamplingQuery(Optional.empty(), Optional.of(d)),
+            assertEquals(new SamplingQuery(null, d),
                 m.readValue(in, SamplingQuery.class));
         }
     }

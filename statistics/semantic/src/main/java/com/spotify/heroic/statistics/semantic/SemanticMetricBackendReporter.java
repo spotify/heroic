@@ -51,7 +51,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAccumulator;
 import java.util.function.Consumer;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @ToString(of = {"base"})
@@ -205,9 +204,13 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
         return queryMetrics.setup();
     }
 
-    @RequiredArgsConstructor
     private class InstrumentedMetricBackend implements MetricBackend {
         private final MetricBackend delegate;
+
+        @java.beans.ConstructorProperties({ "delegate" })
+        public InstrumentedMetricBackend(final MetricBackend delegate) {
+            this.delegate = delegate;
+        }
 
         @Override
         public Statistics getStatistics() {

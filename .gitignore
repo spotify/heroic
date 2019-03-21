@@ -20,3 +20,9 @@ bin
 bower_components
 node_modules
 output
+
+# gradle
+build/
+out/
+gradle-app.setting
+.gradle

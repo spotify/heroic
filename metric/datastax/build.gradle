@@ -1,0 +1,15 @@
+dependencies {
+    implementation project(':heroic-component')
+    implementation 'com.spotify.heroic.repackaged:datastax-driver-core'
+    implementation 'eu.toolchain.serializer:tiny-serializer-core'
+    implementation 'eu.toolchain.async:tiny-async-api'
+    implementation 'eu.toolchain.serializer:tiny-serializer-api'
+    compileOnly 'org.projectlombok:lombok'
+    compileOnly 'eu.toolchain.serializer:tiny-serializer-processor'
+
+    testImplementation project(':heroic-test-it')
+    testImplementation project(':heroic-component-test')
+}
+
+group = 'com.spotify.heroic.metric'
+description = 'Heroic: Datastax Backend'

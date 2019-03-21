@@ -58,7 +58,7 @@ public class MetricGroup implements Metric {
         hasher.putInt(MetricType.GROUP.ordinal());
 
         for (final MetricCollection c : groups) {
-            for (final Metric m : c.getData()) {
+            for (final Metric m : c.data()) {
                 m.hash(hasher);
             }
         }

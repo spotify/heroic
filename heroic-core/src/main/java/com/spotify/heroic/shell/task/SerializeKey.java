@@ -21,10 +21,7 @@
 
 package com.spotify.heroic.shell.task;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.MetricManager;
@@ -36,15 +33,10 @@ import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import dagger.Component;
 import eu.toolchain.async.AsyncFuture;
-import lombok.Data;
-import lombok.ToString;
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.Option;
-
 import javax.inject.Inject;
 import javax.inject.Named;
-
-import static com.google.common.base.Preconditions.checkNotNull;
+import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.Option;
 
 @TaskUsage("Serialize the given backend key")
 @TaskName("serialize-key")
@@ -68,7 +60,7 @@ public class SerializeKey implements ShellTask {
         final Parameters params = (Parameters) base;
 
         final BackendKey backendKey =
-            mapper.readValue(params.key, BackendKeyArgument.class).toBackendKey();
+            mapper.readValue(params.key, SerializeKeyBackendKeyArgument.class).toBackendKey();
 
         return metrics
             .useGroup(params.group)
@@ -84,25 +76,6 @@ public class SerializeKey implements ShellTask {
             });
     }
 
-    @Data
-    public static class BackendKeyArgument {
-        private final Series series;
-        private final long base;
-
-        @JsonCreator
-        public BackendKeyArgument(
-            @JsonProperty("series") Series series, @JsonProperty("base") Long base
-        ) {
-            this.series = checkNotNull(series, "series");
-            this.base = checkNotNull(base, "base");
-        }
-
-        public BackendKey toBackendKey() {
-            return new BackendKey(series, base);
-        }
-    }
-
-    @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "--group", usage = "Backend group to use", metaVar = "<group>")
         private String group = null;
@@ -116,7 +89,7 @@ public class SerializeKey implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         SerializeKey task();
     }
 }

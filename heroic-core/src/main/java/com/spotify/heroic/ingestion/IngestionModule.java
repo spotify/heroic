@@ -21,6 +21,12 @@
 
 package com.spotify.heroic.ingestion;
 
+import static com.spotify.heroic.common.Optionals.pickOptional;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.common.Optionals;
 import com.spotify.heroic.dagger.PrimaryComponent;
@@ -35,19 +41,9 @@ import com.spotify.heroic.suggest.SuggestComponent;
 import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-
-import javax.inject.Named;
 import java.util.Optional;
+import javax.inject.Named;
 
-import static com.spotify.heroic.common.Optionals.pickOptional;
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
-
-@RequiredArgsConstructor
 public class IngestionModule {
     private static final String INGESTION_FILTER_PARAM = "ingestion.filter";
 
@@ -61,6 +57,20 @@ public class IngestionModule {
     private final boolean updateSuggestions;
     private final int maxConcurrentWrites;
     private final Optional<String> filter;
+
+    public IngestionModule(
+        final boolean updateMetrics,
+        final boolean updateMetadata,
+        final boolean updateSuggestions,
+        final int maxConcurrentWrites,
+        final Optional<String> filter
+    ) {
+        this.updateMetrics = updateMetrics;
+        this.updateMetadata = updateMetadata;
+        this.updateSuggestions = updateSuggestions;
+        this.maxConcurrentWrites = maxConcurrentWrites;
+        this.filter = filter;
+    }
 
     public IngestionComponent module(
         PrimaryComponent primary, SuggestComponent suggest, MetadataComponent metadata,
@@ -139,14 +149,30 @@ public class IngestionModule {
         return new Builder();
     }
 
-    @NoArgsConstructor(access = AccessLevel.PRIVATE)
-    @AllArgsConstructor
     public static class Builder {
         private Optional<Boolean> updateMetrics = empty();
         private Optional<Boolean> updateMetadata = empty();
         private Optional<Boolean> updateSuggestions = empty();
         private Optional<Integer> maxConcurrentWrites = empty();
         private Optional<String> filter = empty();
+
+        private Builder() {
+        }
+
+        @JsonCreator
+        public Builder(
+            @JsonProperty("updateMetrics") final Optional<Boolean> updateMetrics,
+            @JsonProperty("updateMetadata") final Optional<Boolean> updateMetadata,
+            @JsonProperty("updateSuggestions") final Optional<Boolean> updateSuggestions,
+            @JsonProperty("maxConcurrentWrites") final Optional<Integer> maxConcurrentWrites,
+            @JsonProperty("filter") final Optional<String> filter
+        ) {
+            this.updateMetrics = updateMetrics;
+            this.updateMetadata = updateMetadata;
+            this.updateSuggestions = updateSuggestions;
+            this.maxConcurrentWrites = maxConcurrentWrites;
+            this.filter = filter;
+        }
 
         public Builder updateAll() {
             this.updateMetrics = of(true);

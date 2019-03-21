@@ -25,8 +25,6 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import eu.toolchain.serializer.Serializer;
-import lombok.RequiredArgsConstructor;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -38,7 +36,6 @@ import java.util.Map;
  *
  * @author udoprog
  */
-@RequiredArgsConstructor
 public class CoreAggregationRegistry implements AggregationRegistry {
     final Serializer<String> string;
 
@@ -47,6 +44,11 @@ public class CoreAggregationRegistry implements AggregationRegistry {
     final Map<String, AggregationDSL> builderMap = new HashMap<>();
 
     private final Object lock = new Object();
+
+    @java.beans.ConstructorProperties({ "string" })
+    public CoreAggregationRegistry(final Serializer<String> string) {
+        this.string = string;
+    }
 
     @Override
     public <A extends Aggregation, I extends AggregationInstance> void register(

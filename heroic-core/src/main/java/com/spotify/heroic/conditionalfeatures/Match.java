@@ -21,23 +21,33 @@
 
 package com.spotify.heroic.conditionalfeatures;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.auto.value.AutoValue;
 import com.spotify.heroic.common.FeatureSet;
 import com.spotify.heroic.querylogging.QueryContext;
 import com.spotify.heroic.requestcondition.RequestCondition;
-import lombok.Data;
 
 /**
  * Matches a single condition, and applies the matching features.
  */
-@Data
-public class Match implements ConditionalFeatures {
-    private final RequestCondition condition;
-    private final FeatureSet features;
+@AutoValue
+public abstract class Match implements ConditionalFeatures {
+    @JsonCreator
+    public static Match create(
+        @JsonProperty("condition") RequestCondition condition,
+        @JsonProperty("features") FeatureSet features
+    ) {
+        return new AutoValue_Match(condition, features);
+    }
+
+    public abstract RequestCondition condition();
+    public abstract FeatureSet features();
 
     @Override
     public FeatureSet match(QueryContext queryContext) {
-        if (condition.matches(queryContext)) {
-            return features;
+        if (condition().matches(queryContext)) {
+            return features();
         }
 
         return FeatureSet.empty();

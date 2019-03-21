@@ -21,6 +21,11 @@
 
 package com.spotify.heroic.shell;
 
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
 import dagger.Module;
@@ -30,29 +35,30 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
 import eu.toolchain.serializer.SerializerFramework;
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import javax.inject.Named;
+import org.slf4j.LoggerFactory;
 
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
-
-@Slf4j
-@RequiredArgsConstructor
 @Module
 public class ShellServerModule {
-    public static final String DEFAULT_HOST = "localhost";
-    public static final int DEFAULT_PORT = 9190;
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(ShellServerModule.class);
+    private static final String DEFAULT_HOST = "localhost";
+    private static final int DEFAULT_PORT = 9190;
 
     final Optional<String> host;
     final Optional<Integer> port;
+
+    @JsonCreator
+    public ShellServerModule(
+        @JsonProperty("host") Optional<String> host,
+        @JsonProperty("port") Optional<Integer> port
+    ) {
+        this.host = host;
+        this.port = port;
+    }
 
     @Provides
     @ShellServerScope
@@ -99,10 +105,12 @@ public class ShellServerModule {
         return new Builder();
     }
 
-    @NoArgsConstructor(access = AccessLevel.PRIVATE)
     public static class Builder {
         private Optional<String> host = empty();
         private Optional<Integer> port = empty();
+
+        private Builder() {
+        }
 
         public Builder host(String host) {
             this.host = of(host);

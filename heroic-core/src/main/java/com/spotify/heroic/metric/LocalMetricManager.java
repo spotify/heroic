@@ -72,7 +72,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.inject.Inject;
 import javax.inject.Named;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.NotImplementedException;
@@ -185,10 +184,10 @@ public class LocalMetricManager implements MetricManager {
                 final OptionalLimit seriesLimit, final OptionalLimit groupLimit,
                 final QuotaWatcher quotaWatcher, final DataInMemoryReporter dataInMemoryReporter
             ) {
-                this.aggregation = request.getAggregation();
-                this.range = request.getRange();
-                this.options = request.getOptions();
-                this.source = request.getSource();
+                this.aggregation = request.aggregation();
+                this.range = request.range();
+                this.options = request.options();
+                this.source = request.source();
 
                 this.failOnLimits = failOnLimits;
                 this.seriesLimit = seriesLimit;
@@ -199,9 +198,9 @@ public class LocalMetricManager implements MetricManager {
 
                 this.dataInMemoryReporter = dataInMemoryReporter;
 
-                final Features features = request.getFeatures();
+                final Features features = request.features();
                 this.bucketStrategy = options
-                    .getBucketStrategy()
+                    .bucketStrategy()
                     .orElseGet(
                         () -> features.withFeature(Feature.END_BUCKET, () -> BucketStrategy.END,
                             () -> BucketStrategy.START));
@@ -309,28 +308,28 @@ public class LocalMetricManager implements MetricManager {
         }
 
         private AsyncFuture<FullQuery> protectedQuery(final FullQuery.Request request) {
-            final QueryOptions options = request.getOptions();
-            final QueryContext queryContext = request.getContext();
+            final QueryOptions options = request.options();
+            final QueryContext queryContext = request.context();
 
             queryLogger.logIncomingRequestAtNode(queryContext, request);
 
             final DataInMemoryReporter dataInMemoryReporter = reporter.newDataInMemoryReporter();
 
             final QuotaWatcher quotaWatcher = new QuotaWatcher(
-                options.getDataLimit().orElse(dataLimit).asLong().orElse(Long.MAX_VALUE), options
-                .getAggregationLimit()
+                options.dataLimit().orElse(dataLimit).asLong().orElse(Long.MAX_VALUE), options
+                .aggregationLimit()
                 .orElse(aggregationLimit)
                 .asLong()
                 .orElse(Long.MAX_VALUE), dataInMemoryReporter);
 
             final OptionalLimit seriesLimit =
-                options.getSeriesLimit().orElse(LocalMetricManager.this.seriesLimit);
+                options.seriesLimit().orElse(LocalMetricManager.this.seriesLimit);
 
             final boolean failOnLimits =
-                options.getFailOnLimits().orElse(LocalMetricManager.this.failOnLimits);
+                options.failOnLimits().orElse(LocalMetricManager.this.failOnLimits);
 
             final OptionalLimit groupLimit =
-                options.getGroupLimit().orElse(LocalMetricManager.this.groupLimit);
+                options.groupLimit().orElse(LocalMetricManager.this.groupLimit);
 
             // Transform that takes the result from ES metadata lookup to fetch from backend
             final LazyTransform<FindSeries, FullQuery> transform =
@@ -339,7 +338,7 @@ public class LocalMetricManager implements MetricManager {
 
             return metadata
                 .findSeries(
-                    new FindSeries.Request(request.getFilter(), request.getRange(), seriesLimit))
+                    new FindSeries.Request(request.filter(), request.range(), seriesLimit))
                 .onDone(reporter.reportFindSeries())
                 .lazyTransform(transform)
                 .directTransform(fullQuery -> {
@@ -450,7 +449,7 @@ public class LocalMetricManager implements MetricManager {
                 final List<List<? extends Metric>> collections = new ArrayList<>();
 
                 for (final MetricCollection result : results) {
-                    collections.add(result.getData());
+                    collections.add(result.data());
                 }
 
                 return MetricCollection.mergeSorted(key.getType(), collections);
@@ -471,7 +470,6 @@ public class LocalMetricManager implements MetricManager {
         }
     }
 
-    @RequiredArgsConstructor
     private abstract static class ResultCollector
         implements StreamCollector<FetchData.Result, FullQuery> {
         private static final String ROWS_ACCESSED = "rowsAccessed";
@@ -488,6 +486,24 @@ public class LocalMetricManager implements MetricManager {
         final boolean failOnLimits;
 
         private final ConcurrentHashMultiset<Long> rowDensityData = ConcurrentHashMultiset.create();
+
+        private ResultCollector(
+            final QuotaWatcher watcher,
+            final DataInMemoryReporter dataInMemoryReporter,
+            final AggregationInstance aggregation,
+            final AggregationSession session,
+            final ResultLimits limits,
+            final OptionalLimit groupLimit,
+            final boolean failOnLimits
+        ) {
+            this.watcher = watcher;
+            this.dataInMemoryReporter = dataInMemoryReporter;
+            this.aggregation = aggregation;
+            this.session = session;
+            this.limits = limits;
+            this.groupLimit = groupLimit;
+            this.failOnLimits = failOnLimits;
+        }
 
         @Override
         public void resolved(final FetchData.Result result) throws Exception {
@@ -560,7 +576,7 @@ public class LocalMetricManager implements MetricManager {
                 errorsBuilder.add(QueryError.fromMessage(
                     checkIssues(failed, cancelled).orElse("Query exceeded quota")));
 
-                return new FullQuery(trace, errorsBuilder.build(), ImmutableList.of(),
+                return FullQuery.create(trace, errorsBuilder.build(), ImmutableList.of(),
                     Statistics.empty(), new ResultLimits(limitsBuilder.build()), dataDensity);
             }
 
@@ -587,7 +603,7 @@ public class LocalMetricManager implements MetricManager {
                         errorsBuilder.add(QueryError.fromMessage(
                             "The number of result groups is more than the allowed limit of " +
                                 groupLimit));
-                        return new FullQuery(trace, errorsBuilder.build(), ImmutableList.of(),
+                        return FullQuery.create(trace, errorsBuilder.build(), ImmutableList.of(),
                             baseStatistics,
                             new ResultLimits(limitsBuilder.add(ResultLimit.GROUP).build()),
                             dataDensity);
@@ -601,7 +617,7 @@ public class LocalMetricManager implements MetricManager {
                     aggregation.cadence()));
             }
 
-            return new FullQuery(trace, errorsBuilder.build(), groups,
+            return FullQuery.create(trace, errorsBuilder.build(), groups,
                 baseStatistics.merge(result.getStatistics()),
                 new ResultLimits(limitsBuilder.build()), dataDensity);
         }
@@ -628,7 +644,6 @@ public class LocalMetricManager implements MetricManager {
         }
     }
 
-    @RequiredArgsConstructor
     private static class QuotaWatcher implements FetchQuotaWatcher, RetainQuotaWatcher {
         private final long dataLimit;
         private final long retainLimit;
@@ -638,6 +653,13 @@ public class LocalMetricManager implements MetricManager {
         private final AtomicLong retained = new AtomicLong();
 
         private final LongAdder rowsAccessed = new LongAdder();
+
+        private QuotaWatcher(final long dataLimit, final long retainLimit,
+                             final DataInMemoryReporter dataInMemoryReporter) {
+            this.dataLimit = dataLimit;
+            this.retainLimit = retainLimit;
+            this.dataInMemoryReporter = dataInMemoryReporter;
+        }
 
         @Override
         public void readData(long n) {

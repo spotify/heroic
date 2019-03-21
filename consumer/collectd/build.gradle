@@ -1,0 +1,8 @@
+dependencies {
+    implementation project(':heroic-component')
+    implementation 'io.netty:netty-transport'
+    compileOnly 'org.projectlombok:lombok'
+}
+
+group = 'com.spotify.heroic.consumer'
+description = 'Heroic: collectd Consumer'

@@ -22,29 +22,17 @@
 package com.spotify.heroic;
 
 import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicCore.Builder;
 import com.spotify.heroic.args4j.CmdLine;
-import com.spotify.heroic.shell.AbstractShellTaskParams;
+import com.spotify.heroic.proto.ShellMessage.CommandsResponse.CommandDefinition;
 import com.spotify.heroic.shell.CoreInterface;
 import com.spotify.heroic.shell.RemoteCoreInterface;
 import com.spotify.heroic.shell.ShellIO;
-import com.spotify.heroic.shell.ShellProtocol;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskParameters;
-import com.spotify.heroic.shell.protocol.CommandDefinition;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.TinyAsync;
-import eu.toolchain.serializer.SerializerFramework;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
-import org.kohsuke.args4j.CmdLineException;
-import org.kohsuke.args4j.CmdLineParser;
-import org.kohsuke.args4j.Option;
-
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -60,15 +48,19 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Executors;
+import org.apache.commons.lang3.StringUtils;
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Slf4j
 public class HeroicShell {
+    private static final Logger log = LoggerFactory.getLogger(HeroicShell.class);
+
     public static final Path[] DEFAULT_CONFIGS =
         new Path[]{Paths.get("heroic.yml"), Paths.get("/etc/heroic/heroic.yml")};
 
-    public static final SerializerFramework serializer = ShellProtocol.setupSerializer();
-
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
         HeroicLogging.configure();
 
         Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
@@ -79,7 +71,7 @@ public class HeroicShell {
             }
         });
 
-        final Parameters params = new Parameters();
+        final ShellParameters params = new ShellParameters();
         final CmdLineParser parser = setupParser(params);
         final ParsedArguments parsed = ParsedArguments.parse(args);
 
@@ -133,21 +125,21 @@ public class HeroicShell {
         System.exit(0);
     }
 
-    private static CoreInterface setupCoreBridge(Parameters params, AsyncFramework async)
+    private static CoreInterface setupCoreBridge(ShellParameters params, AsyncFramework async)
         throws Exception {
-        if (params.connect != null) {
-            return setupRemoteCore(params.connect, async);
+        final String connect = params.getConnect();
+        if (connect != null) {
+            return setupRemoteCore(connect, async);
         }
 
         return setupLocalCore(params, async);
     }
 
-    private static CoreInterface setupRemoteCore(String connect, AsyncFramework async)
-        throws Exception {
-        return RemoteCoreInterface.fromConnectString(connect, async, serializer);
+    private static CoreInterface setupRemoteCore(String connect, AsyncFramework async) {
+        return RemoteCoreInterface.fromConnectString(connect, async);
     }
 
-    private static CoreInterface setupLocalCore(Parameters params, AsyncFramework async)
+    private static CoreInterface setupLocalCore(ShellParameters params, AsyncFramework async)
         throws Exception {
         final HeroicCore.Builder builder = setupBuilder(params);
 
@@ -168,7 +160,7 @@ public class HeroicShell {
             }
 
             @Override
-            public List<CommandDefinition> commands() throws Exception {
+            public List<CommandDefinition> commands() {
                 return tasks.commands();
             }
 
@@ -179,7 +171,7 @@ public class HeroicShell {
         });
     }
 
-    static void interactive(Parameters params, CoreInterface core) throws Exception {
+    static void interactive(ShellParameters params, CoreInterface core) throws Exception {
         log.info("Setting up interactive shell...");
 
         Exception e = null;
@@ -207,10 +199,18 @@ public class HeroicShell {
     static void runInteractiveShell(final CoreInterface core) throws Exception {
         final List<CommandDefinition> commands = new ArrayList<>(core.commands());
 
-        commands.add(new CommandDefinition("clear", ImmutableList.of(), "Clear the current shell"));
-        commands.add(new CommandDefinition("timeout", ImmutableList.of(),
-            "Get or set the current task timeout"));
-        commands.add(new CommandDefinition("exit", ImmutableList.of(), "Exit the shell"));
+        commands.add(CommandDefinition.newBuilder()
+            .setName("clear")
+            .setUsage("Clear the current shell")
+            .build());
+        commands.add(CommandDefinition.newBuilder()
+            .setName("timeout")
+            .setUsage("Get or set the current task timeout")
+            .build());
+        commands.add(CommandDefinition.newBuilder()
+            .setName("exit")
+            .setUsage("Exit the shell")
+            .build());
 
         try (final FileInputStream input = new FileInputStream(FileDescriptor.in)) {
             final HeroicInteractiveShell interactive =
@@ -334,11 +334,11 @@ public class HeroicShell {
         return StringUtils.join(alternatives, ", ");
     }
 
-    static HeroicCore.Builder setupBuilder(Parameters params) {
+    static HeroicCore.Builder setupBuilder(ShellParameters params) {
         HeroicCore.Builder builder = HeroicCore
             .builder()
-            .setupService(params.server)
-            .disableBackends(params.disableBackends)
+            .setupService(params.getServer())
+            .disableBackends(params.getDisableBackends())
             .modules(HeroicModules.ALL_MODULES)
             .oneshot(true);
 
@@ -346,7 +346,7 @@ public class HeroicShell {
             builder.configPath(parseConfigPath(params.config()));
         }
 
-        builder.parameters(ExtraParameters.ofList(params.parameters));
+        builder.parameters(ExtraParameters.ofList(params.getParameters()));
 
         for (final String profile : params.profiles()) {
             final HeroicProfile p = HeroicModules.PROFILES.get(profile);
@@ -359,7 +359,7 @@ public class HeroicShell {
             builder.profile(p);
         }
 
-        builder.setupShellServer(params.shellServer);
+        builder.setupShellServer(params.getShellServer());
 
         return builder;
     }
@@ -372,30 +372,15 @@ public class HeroicShell {
         return CmdLine.createParser(params);
     }
 
-    @ToString
-    public static class Parameters extends AbstractShellTaskParams {
-        @Option(name = "--server", usage = "Start shell as server (enables listen port)")
-        private boolean server = false;
-
-        @Option(name = "--shell-server",
-            usage = "Start shell with shell server (enables remote connections)")
-        private boolean shellServer = false;
-
-        @Option(name = "--disable-backends", usage = "Start core without configuring backends")
-        private boolean disableBackends = false;
-
-        @Option(name = "--connect", usage = "Connect to a remote heroic server",
-            metaVar = "<host>[:<port>]")
-        private String connect = null;
-
-        @Option(name = "-X", usage = "Define an extra parameter", metaVar = "<key>=<value>")
-        private List<String> parameters = new ArrayList<>();
-    }
-
-    @RequiredArgsConstructor
     static class ParsedArguments {
         final List<String> primary;
         final List<String> child;
+
+        @java.beans.ConstructorProperties({ "primary", "child" })
+        public ParsedArguments(final List<String> primary, final List<String> child) {
+            this.primary = primary;
+            this.child = child;
+        }
 
         public static ParsedArguments parse(String[] args) {
             final List<String> primary = new ArrayList<>();

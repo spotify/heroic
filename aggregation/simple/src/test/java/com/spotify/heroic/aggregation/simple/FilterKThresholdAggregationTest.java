@@ -63,7 +63,7 @@ public class FilterKThresholdAggregationTest {
 
         if (first.getKey().equals(ImmutableMap.of("site", "sto"))) {
             assertEquals(ImmutableList.of(new Point(2, 2.0), new Point(3, 2.0)),
-                first.getMetrics().getData());
+                first.getMetrics().data());
         } else {
             Assert.fail("unexpected group: " + first.getKey());
         }

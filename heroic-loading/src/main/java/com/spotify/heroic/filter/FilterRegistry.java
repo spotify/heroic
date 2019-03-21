@@ -44,7 +44,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import lombok.RequiredArgsConstructor;
 
 /**
  * Registry of all known filters.
@@ -61,7 +60,6 @@ import lombok.RequiredArgsConstructor;
  *
  * @see com.spotify.heroic.filter.Filter
  */
-@RequiredArgsConstructor
 public class FilterRegistry {
     private final Map<String, FilterEncoding<? extends Filter>> deserializers = new HashMap<>();
 
@@ -70,6 +68,9 @@ public class FilterRegistry {
 
     private final HashMap<Class<? extends Filter>, String> typeMapping = new HashMap<>();
     private final HashMap<String, Class<? extends Filter>> typeNameMapping = new HashMap<>();
+
+    public FilterRegistry() {
+    }
 
     public <T extends Filter> void registerList(
         String id, Class<T> type, FilterEncoding<T> s
@@ -143,9 +144,13 @@ public class FilterRegistry {
         return annotation.value();
     }
 
-    @RequiredArgsConstructor
     private static final class FilterJsonSerializer extends JsonSerializer<Filter> {
         private final FilterEncoding<Filter> serializer;
+
+        @java.beans.ConstructorProperties({ "serializer" })
+        public FilterJsonSerializer(final FilterEncoding<Filter> serializer) {
+            this.serializer = serializer;
+        }
 
         @Override
         public void serialize(Filter value, JsonGenerator g, SerializerProvider provider)
@@ -158,9 +163,13 @@ public class FilterRegistry {
             g.writeEndArray();
         }
 
-        @RequiredArgsConstructor
         private static final class EncoderImpl implements FilterEncoding.Encoder {
             private final JsonGenerator generator;
+
+            @java.beans.ConstructorProperties({ "generator" })
+            public EncoderImpl(final JsonGenerator generator) {
+                this.generator = generator;
+            }
 
             @Override
             public void string(String string) throws IOException {
@@ -177,11 +186,20 @@ public class FilterRegistry {
     /**
      * Provides both array, and object based deserialization for filters.
      */
-    @RequiredArgsConstructor
     static class FilterJsonDeserializer extends JsonDeserializer<Filter> {
         final Map<String, FilterEncoding<? extends Filter>> deserializers;
         final HashMap<String, Class<? extends Filter>> typeNameMapping;
         final QueryParser parser;
+
+        @java.beans.ConstructorProperties({ "deserializers", "typeNameMapping", "parser" })
+        public FilterJsonDeserializer(
+            final Map<String, FilterEncoding<? extends Filter>> deserializers,
+            final HashMap<String, Class<? extends Filter>> typeNameMapping,
+            final QueryParser parser) {
+            this.deserializers = deserializers;
+            this.typeNameMapping = typeNameMapping;
+            this.parser = parser;
+        }
 
         @Override
         public Filter deserialize(JsonParser p, DeserializationContext c) throws IOException {
@@ -262,15 +280,20 @@ public class FilterRegistry {
         }
 
         private Filter parseRawFilter(RawFilter filter) {
-            return parser.parseFilter(filter.getFilter());
+            return parser.parseFilter(filter.filter());
         }
 
-        @RequiredArgsConstructor
         private static final class Decoder implements FilterEncoding.Decoder {
             private final JsonParser parser;
             private final DeserializationContext c;
 
             private int index = 0;
+
+            @java.beans.ConstructorProperties({ "parser", "c" })
+            public Decoder(final JsonParser parser, final DeserializationContext c) {
+                this.parser = parser;
+                this.c = c;
+            }
 
             @Override
             public Optional<String> string() throws IOException {
@@ -326,31 +349,31 @@ public class FilterRegistry {
         final FilterRegistry registry = new FilterRegistry();
 
         registry.registerList(AndFilter.OPERATOR, AndFilter.class,
-            new MultiArgumentsFilterBase<>(AndFilter::new, AndFilter::getFilters, filter()));
+            new MultiArgumentsFilterBase<>(AndFilter::create, AndFilter::filters, filter()));
 
         registry.registerList(OrFilter.OPERATOR, OrFilter.class,
-            new MultiArgumentsFilterBase<>(OrFilter::new, OrFilter::getFilters, filter()));
+            new MultiArgumentsFilterBase<>(OrFilter::create, OrFilter::filters, filter()));
 
         registry.registerOne(NotFilter.OPERATOR, NotFilter.class,
-            new OneArgumentFilterEncoding<>(NotFilter::new, NotFilter::getFilter, filter()));
+            new OneArgumentFilterEncoding<>(NotFilter::create, NotFilter::filter, filter()));
 
         registry.registerTwo(MatchKeyFilter.OPERATOR, MatchKeyFilter.class,
-            new OneArgumentFilterEncoding<>(MatchKeyFilter::new, MatchKeyFilter::getKey, string()));
+            new OneArgumentFilterEncoding<>(MatchKeyFilter::create, MatchKeyFilter::key, string()));
 
         registry.registerTwo(MatchTagFilter.OPERATOR, MatchTagFilter.class,
-            new TwoArgumentFilterEncoding<>(MatchTagFilter::new, MatchTagFilter::getTag,
-                MatchTagFilter::getValue, string(), string()));
+            new TwoArgumentFilterEncoding<>(MatchTagFilter::create, MatchTagFilter::tag,
+                MatchTagFilter::value, string(), string()));
 
         registry.registerOne(HasTagFilter.OPERATOR, HasTagFilter.class,
-            new OneArgumentFilterEncoding<>(HasTagFilter::new, HasTagFilter::getTag, string()));
+            new OneArgumentFilterEncoding<>(HasTagFilter::create, HasTagFilter::tag, string()));
 
         registry.registerTwo(StartsWithFilter.OPERATOR, StartsWithFilter.class,
-            new TwoArgumentFilterEncoding<>(StartsWithFilter::new, StartsWithFilter::getTag,
-                StartsWithFilter::getValue, string(), string()));
+            new TwoArgumentFilterEncoding<>(StartsWithFilter::create, StartsWithFilter::tag,
+                StartsWithFilter::value, string(), string()));
 
         registry.registerTwo(RegexFilter.OPERATOR, RegexFilter.class,
-            new TwoArgumentFilterEncoding<>(RegexFilter::new, RegexFilter::getTag,
-                RegexFilter::getValue, string(), string()));
+            new TwoArgumentFilterEncoding<>(RegexFilter::create, RegexFilter::tag,
+                RegexFilter::value, string(), string()));
 
         registry.registerEmpty(TrueFilter.OPERATOR, TrueFilter.class,
             new NoArgumentFilterBase<>(TrueFilter::get));
@@ -359,7 +382,7 @@ public class FilterRegistry {
             new NoArgumentFilterBase<>(FalseFilter::get));
 
         registry.registerOne(RawFilter.OPERATOR, RawFilter.class,
-            new OneArgumentFilterEncoding<>(RawFilter::new, RawFilter::getFilter, string()));
+            new OneArgumentFilterEncoding<>(RawFilter::create, RawFilter::filter, string()));
 
         return registry;
     }

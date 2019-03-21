@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.shell.task;
 
-import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metadata.CountSeries;
@@ -32,17 +31,10 @@ import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
+import com.spotify.heroic.shell.task.parameters.MetadataCountParameters;
 import dagger.Component;
 import eu.toolchain.async.AsyncFuture;
-import lombok.Getter;
-import lombok.ToString;
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.Option;
-
 import javax.inject.Inject;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 
 @TaskUsage("Count how much metadata matches a given query")
 @TaskName("metadata-count")
@@ -58,39 +50,24 @@ public class MetadataCount implements ShellTask {
 
     @Override
     public TaskParameters params() {
-        return new Parameters();
+        return new MetadataCountParameters();
     }
 
     @Override
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
-        final Parameters params = (Parameters) base;
+        final MetadataCountParameters params = (MetadataCountParameters) base;
 
         final CountSeries.Request request =
             new CountSeries.Request(Tasks.setupFilter(parser, params), params.getRange(),
                 params.getLimit());
 
         return metadata
-            .useOptionalGroup(params.group)
+            .useOptionalGroup(params.getGroup())
             .countSeries(request)
             .directTransform(result -> {
                 io.out().println(String.format("Found %d serie(s)", result.getCount()));
                 return null;
             });
-    }
-
-    @ToString
-    private static class Parameters extends Tasks.QueryParamsBase {
-        @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
-            metaVar = "<group>")
-        private Optional<String> group = Optional.empty();
-
-        @Option(name = "--limit", usage = "Limit the number of deletes (default: alot)")
-        @Getter
-        private OptionalLimit limit = OptionalLimit.empty();
-
-        @Argument
-        @Getter
-        private List<String> query = new ArrayList<String>();
     }
 
     public static MetadataCount setup(final CoreComponent core) {

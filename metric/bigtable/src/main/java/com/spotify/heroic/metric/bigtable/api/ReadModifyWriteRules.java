@@ -21,18 +21,21 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
+import com.google.bigtable.v2.ReadModifyWriteRule;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Data;
 
-@RequiredArgsConstructor
 public class ReadModifyWriteRules {
     private final List<com.google.bigtable.v2.ReadModifyWriteRule>
         rules;
+
+    @java.beans.ConstructorProperties({ "rules" })
+    public ReadModifyWriteRules(final List<ReadModifyWriteRule> rules) {
+        this.rules = rules;
+    }
 
     /**
      * Get the list of rules.

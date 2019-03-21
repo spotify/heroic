@@ -37,6 +37,7 @@ import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.elasticsearch.AbstractElasticsearchMetadataBackend;
 import com.spotify.heroic.elasticsearch.BackendType;
 import com.spotify.heroic.elasticsearch.Connection;
+import com.spotify.heroic.elasticsearch.LimitedSet;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
 import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
 import com.spotify.heroic.filter.AndFilter;
@@ -92,8 +93,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Named;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 import org.elasticsearch.action.ActionRequestBuilder;
 import org.elasticsearch.action.DocWriteRequest.OpType;
@@ -112,11 +111,10 @@ import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 
-@Slf4j
 @ElasticsearchScope
-@ToString(of = {"connection"})
 public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     implements MetadataBackend, LifeCycles {
+
     private final Tracer tracer = Tracing.getTracer();
     public static final String WRITE_CACHE_SIZE = "write-cache-size";
 
@@ -571,28 +569,28 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
             @Override
             public QueryBuilder visitNot(final NotFilter not) {
-                return new BoolQueryBuilder().mustNot(not.getFilter().visit(this));
+                return new BoolQueryBuilder().mustNot(not.filter().visit(this));
             }
 
             @Override
             public QueryBuilder visitMatchTag(final MatchTagFilter matchTag) {
-                return termQuery(TAGS, matchTag.getTag() + TAG_DELIMITER + matchTag.getValue());
+                return termQuery(TAGS, matchTag.tag() + TAG_DELIMITER + matchTag.value());
             }
 
             @Override
             public QueryBuilder visitStartsWith(final StartsWithFilter startsWith) {
                 return prefixQuery(TAGS,
-                    startsWith.getTag() + TAG_DELIMITER + startsWith.getValue());
+                    startsWith.tag() + TAG_DELIMITER + startsWith.value());
             }
 
             @Override
             public QueryBuilder visitHasTag(final HasTagFilter hasTag) {
-                return termQuery(TAG_KEYS, hasTag.getTag());
+                return termQuery(TAG_KEYS, hasTag.tag());
             }
 
             @Override
             public QueryBuilder visitMatchKey(final MatchKeyFilter matchKey) {
-                return termQuery(KEY, matchKey.getKey());
+                return termQuery(KEY, matchKey.key());
             }
 
             @Override
@@ -626,5 +624,9 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         final Map<String, Map<String, Object>> mappings = new HashMap<>();
         mappings.put("metadata", ElasticsearchMetadataUtils.loadJsonResource("kv/metadata.json"));
         return new BackendType(mappings, ImmutableMap.of(), MetadataBackendKV.class);
+    }
+
+    public String toString() {
+        return "MetadataBackendKV(connection=" + this.connection + ")";
     }
 }

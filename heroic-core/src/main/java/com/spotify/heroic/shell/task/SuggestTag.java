@@ -22,7 +22,6 @@
 package com.spotify.heroic.shell.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
@@ -32,21 +31,14 @@ import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
+import com.spotify.heroic.shell.task.parameters.SuggestTagParameters;
 import com.spotify.heroic.suggest.MatchOptions;
 import com.spotify.heroic.suggest.SuggestManager;
 import com.spotify.heroic.suggest.TagSuggest;
 import dagger.Component;
 import eu.toolchain.async.AsyncFuture;
-import lombok.Getter;
-import lombok.ToString;
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.Option;
-
 import javax.inject.Inject;
 import javax.inject.Named;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 
 @TaskUsage("Get tag suggestions")
 @TaskName("suggest-tag")
@@ -66,22 +58,22 @@ public class SuggestTag implements ShellTask {
 
     @Override
     public TaskParameters params() {
-        return new Parameters();
+        return new SuggestTagParameters();
     }
 
     @Override
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
-        final Parameters params = (Parameters) base;
+        final SuggestTagParameters params = (SuggestTagParameters) base;
 
         final Filter filter = Tasks.setupFilter(parser, params);
 
         final MatchOptions fuzzyOptions = MatchOptions.builder().build();
 
         return suggest
-            .useOptionalGroup(params.group)
+            .useOptionalGroup(params.getGroup())
             .tagSuggest(
                 new TagSuggest.Request(filter, params.getRange(), params.getLimit(), fuzzyOptions,
-                    params.key, params.value))
+                    params.getKey(), params.getValue()))
             .directTransform(result -> {
                 int i = 0;
 
@@ -91,28 +83,6 @@ public class SuggestTag implements ShellTask {
 
                 return null;
             });
-    }
-
-    @ToString
-    private static class Parameters extends Tasks.QueryParamsBase {
-        @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
-            metaVar = "<group>")
-        private Optional<String> group = Optional.empty();
-
-        @Option(name = "-k", aliases = {"--key"}, usage = "Provide key context for suggestion")
-        private Optional<String> key = Optional.empty();
-
-        @Option(name = "-v", aliases = {"--value"}, usage = "Provide value context for suggestion")
-        private Optional<String> value = Optional.empty();
-
-        @Option(name = "--limit", aliases = {"--limit"},
-            usage = "Limit the number of printed entries")
-        @Getter
-        private OptionalLimit limit = OptionalLimit.empty();
-
-        @Argument
-        @Getter
-        private List<String> query = new ArrayList<String>();
     }
 
     public static SuggestTag setup(final CoreComponent core) {

@@ -11,7 +11,7 @@ public class FeaturesTest {
 
     @Test
     public void serializationTest() throws Exception {
-        final Features f1 = new Features(ImmutableSortedSet.of(Feature.DISTRIBUTED_AGGREGATIONS));
+        final Features f1 = Features.create(ImmutableSortedSet.of(Feature.DISTRIBUTED_AGGREGATIONS));
         final String ref = "[\"com.spotify.heroic.distributed_aggregations\"]";
 
         assertEquals(ref, m.writeValueAsString(f1));

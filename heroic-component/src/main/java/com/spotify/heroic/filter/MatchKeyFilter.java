@@ -21,24 +21,28 @@
 
 package com.spotify.heroic.filter;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.auto.value.AutoValue;
 import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.grammar.DSL;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
 
-@Data
-@EqualsAndHashCode(of = {"OPERATOR", "key"}, doNotUseGetters = true)
+@AutoValue
 @JsonTypeName("key")
-public class MatchKeyFilter implements Filter {
-    public static final String OPERATOR = "key";
+public abstract class MatchKeyFilter implements Filter {
+    @JsonCreator
+    public static MatchKeyFilter create(@JsonProperty("key") String key) {
+        return new AutoValue_MatchKeyFilter(key);
+    }
 
-    private final String key;
+    public static final String OPERATOR = "key";
+    public abstract String key();
 
     @Override
     public boolean apply(Series series) {
-        return series.getKey().equals(key);
+        return series.getKey().equals(key());
     }
 
     @Override
@@ -48,7 +52,7 @@ public class MatchKeyFilter implements Filter {
 
     @Override
     public String toString() {
-        return "[" + OPERATOR + ", " + key + "]";
+        return "[" + OPERATOR + ", " + key() + "]";
     }
 
     @Override
@@ -63,23 +67,23 @@ public class MatchKeyFilter implements Filter {
 
     @Override
     public int compareTo(Filter o) {
-        if (!MatchKeyFilter.class.equals(o.getClass())) {
+        if (!MatchKeyFilter.class.isAssignableFrom(o.getClass())) {
             return operator().compareTo(o.operator());
         }
 
         final MatchKeyFilter other = (MatchKeyFilter) o;
-        return key.compareTo(other.key);
+        return key().compareTo(other.key());
     }
 
     @Override
     public String toDSL() {
-        return "$key = " + DSL.dumpString(key);
+        return "$key = " + DSL.dumpString(key());
     }
 
     @Override
     public void hashTo(final ObjectHasher hasher) {
         hasher.putObject(getClass(), () -> {
-            hasher.putField("key", key, hasher.string());
+            hasher.putField("key", key(), hasher.string());
         });
     }
 }

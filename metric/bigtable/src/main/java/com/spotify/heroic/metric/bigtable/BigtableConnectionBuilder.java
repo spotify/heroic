@@ -27,7 +27,6 @@ import com.google.cloud.bigtable.config.CredentialOptions;
 import com.google.cloud.bigtable.config.RetryOptions;
 import com.google.cloud.bigtable.grpc.BigtableSession;
 import com.google.common.collect.ImmutableList;
-import io.grpc.Status;
 import com.spotify.heroic.metric.bigtable.api.BigtableDataClient;
 import com.spotify.heroic.metric.bigtable.api.BigtableDataClientImpl;
 import com.spotify.heroic.metric.bigtable.api.BigtableMutator;
@@ -36,13 +35,12 @@ import com.spotify.heroic.metric.bigtable.api.BigtableTableAdminClient;
 import com.spotify.heroic.metric.bigtable.api.BigtableTableTableAdminClientImpl;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import io.grpc.Status;
 import java.util.Optional;
 import java.util.concurrent.Callable;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @ToString(of = {"project", "instance", "credentials"})
-@RequiredArgsConstructor
 public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
     private static final String USER_AGENT = "heroic";
 
@@ -56,6 +54,23 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
     private final boolean disableBulkMutations;
     private final int flushIntervalSeconds;
     private final Optional<Integer> batchSize;
+
+    @java.beans.ConstructorProperties({ "project", "instance", "credentials", "async",
+                                        "disableBulkMutations", "flushIntervalSeconds",
+                                        "batchSize" })
+    public BigtableConnectionBuilder(final String project, final String instance,
+                                     final CredentialsBuilder credentials,
+                                     final AsyncFramework async, final boolean disableBulkMutations,
+                                     final int flushIntervalSeconds,
+                                     final Optional<Integer> batchSize) {
+        this.project = project;
+        this.instance = instance;
+        this.credentials = credentials;
+        this.async = async;
+        this.disableBulkMutations = disableBulkMutations;
+        this.flushIntervalSeconds = flushIntervalSeconds;
+        this.batchSize = batchSize;
+    }
 
     @Override
     public BigtableConnection call() throws Exception {
@@ -97,7 +112,6 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
             client);
     }
 
-    @RequiredArgsConstructor
     @ToString(of = {"project", "instance"})
     public static class GrpcBigtableConnection implements BigtableConnection {
         private final AsyncFramework async;
@@ -108,6 +122,22 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
         final BigtableMutator mutator;
         final BigtableTableAdminClient tableAdminClient;
         final BigtableDataClient dataClient;
+
+        @java.beans.ConstructorProperties({ "async", "project", "instance", "session", "mutator",
+                                            "tableAdminClient", "dataClient" })
+        public GrpcBigtableConnection(final AsyncFramework async, final String project,
+                                      final String instance, final BigtableSession session,
+                                      final BigtableMutator mutator,
+                                      final BigtableTableAdminClient tableAdminClient,
+                                      final BigtableDataClient dataClient) {
+            this.async = async;
+            this.project = project;
+            this.instance = instance;
+            this.session = session;
+            this.mutator = mutator;
+            this.tableAdminClient = tableAdminClient;
+            this.dataClient = dataClient;
+        }
 
         @Override
         public BigtableTableAdminClient tableAdminClient() {

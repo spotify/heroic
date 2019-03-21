@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.statistics.semantic;
 
-import com.codahale.metrics.Meter;
+import com.codahale.metrics.Counter;
 import com.spotify.heroic.statistics.MemcachedReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
@@ -32,22 +32,22 @@ public class SemanticMemcachedReporter implements MemcachedReporter {
 
   private static final String COMPONENT = "memcached";
 
-  private final Meter memcachedHit;
-  private final Meter memcachedMiss;
-  private final Meter memcachedTimeout;
-  private final Meter memcachedError;
+  private final Counter memcachedHit;
+  private final Counter memcachedMiss;
+  private final Counter memcachedTimeout;
+  private final Counter memcachedError;
 
   public SemanticMemcachedReporter(SemanticMetricRegistry registry, final String consumerType) {
     final MetricId id = MetricId.build().tagged("component", COMPONENT, "consumer", consumerType);
 
-    memcachedHit = registry.meter(id.tagged("what", "memcached-performance", "result",
+    memcachedHit = registry.counter(id.tagged("what", "memcached-performance", "result",
         "hit"));
-    memcachedMiss = registry.meter(id.tagged("what", "memcached-performance", "result",
+    memcachedMiss = registry.counter(id.tagged("what", "memcached-performance", "result",
         "miss"));
-    memcachedTimeout = registry.meter(id.tagged("what", "memcached-performance", "result",
+    memcachedTimeout = registry.counter(id.tagged("what", "memcached-performance", "result",
         "timeout"));
 
-    memcachedError = registry.meter(id.tagged("what", "memcached-performance", "result",
+    memcachedError = registry.counter(id.tagged("what", "memcached-performance", "result",
         "error"));
 
 
@@ -56,22 +56,22 @@ public class SemanticMemcachedReporter implements MemcachedReporter {
 
   @Override
   public void reportMemcachedHit() {
-    memcachedHit.mark();
+    memcachedHit.inc();
   }
 
   @Override
   public void reportMemcachedMiss() {
-    memcachedMiss.mark();
+    memcachedMiss.inc();
   }
 
   @Override
   public void reportMemcachedTimeout() {
-    memcachedTimeout.mark();
+    memcachedTimeout.inc();
   }
 
   @Override
   public void reportMemcachedError() {
-    memcachedError.mark();
+    memcachedError.inc();
   }
 }
 

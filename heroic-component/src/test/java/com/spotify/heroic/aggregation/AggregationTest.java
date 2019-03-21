@@ -47,11 +47,12 @@ public class AggregationTest {
      */
     @Test
     public void testTagElision() {
-        final Aggregation g1 = Group.of(Optional.of(ImmutableList.of("foo")), Optional.of(a));
+        final Aggregation g1 = Group.createFromAggregation(Optional.of(ImmutableList.of("foo")), Optional.of(a));
+
         final Aggregation g2 =
-            Group.of(Optional.of(ImmutableList.of("bar")), Optional.of(new Chain(ImmutableList.of(
+            Group.createFromAggregation(Optional.of(ImmutableList.of("bar")), Optional.of(new Chain(ImmutableList.of(
                 // inner groups should _not_ force tags elision
-                Group.of(Optional.of(ImmutableList.of("baz")), Optional.of(a))))));
+                Group.createFromAggregation(Optional.of(ImmutableList.of("baz")), Optional.of(a))))));
 
         final AggregationInstance instance =
             Aggregations.chain(Optional.of(ImmutableList.of(g1, g2))).apply(context);

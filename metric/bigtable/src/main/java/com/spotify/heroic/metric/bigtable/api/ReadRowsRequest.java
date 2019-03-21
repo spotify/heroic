@@ -22,10 +22,8 @@
 package com.spotify.heroic.metric.bigtable.api;
 
 import com.google.protobuf.ByteString;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-
 import java.util.Optional;
+import lombok.Data;
 
 @Data
 public class ReadRowsRequest {
@@ -58,11 +56,13 @@ public class ReadRowsRequest {
         return new Builder();
     }
 
-    @RequiredArgsConstructor
     public static class Builder {
         private Optional<RowRange> range = Optional.empty();
         private Optional<RowFilter> filter = Optional.empty();
         private Optional<ByteString> rowKey = Optional.empty();
+
+        public Builder() {
+        }
 
         public Builder range(final RowRange range) {
             this.range = Optional.of(range);

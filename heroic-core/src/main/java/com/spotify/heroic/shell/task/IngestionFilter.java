@@ -34,12 +34,10 @@ import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import dagger.Component;
 import eu.toolchain.async.AsyncFuture;
-import lombok.ToString;
-import org.kohsuke.args4j.Argument;
-
-import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
+import javax.inject.Inject;
+import org.kohsuke.args4j.Argument;
 
 @TaskUsage("Configure the ingestion filter")
 @TaskName("ingestion-filter")
@@ -77,7 +75,6 @@ public class IngestionFilter implements ShellTask {
         return ingestion.setFilter(filter);
     }
 
-    @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Argument(metaVar = "<filter>", usage = "Filter to use")
         private List<String> filter = new ArrayList<>();

@@ -34,13 +34,10 @@ import com.spotify.heroic.metric.datastax.schema.Schema;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ManagedSetup;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-
 import java.net.InetSocketAddress;
 import java.util.Collection;
+import lombok.ToString;
 
-@RequiredArgsConstructor
 @ToString(of = {"seeds"})
 public class ManagedSetupConnection implements ManagedSetup<Connection> {
     private final AsyncFramework async;
@@ -53,6 +50,29 @@ public class ManagedSetupConnection implements ManagedSetup<Connection> {
     private final RetryPolicy retryPolicy;
     private final DatastaxAuthentication authentication;
     private final DatastaxPoolingOptions poolingOptions;
+
+    @java.beans.ConstructorProperties({ "async", "seeds", "schema", "configure", "fetchSize",
+                                        "readTimeout", "consistencyLevel", "retryPolicy",
+                                        "authentication", "poolingOptions" })
+    public ManagedSetupConnection(final AsyncFramework async,
+                                  final Collection<InetSocketAddress> seeds, final Schema schema,
+                                  final boolean configure, final int fetchSize,
+                                  final Duration readTimeout,
+                                  final ConsistencyLevel consistencyLevel,
+                                  final RetryPolicy retryPolicy,
+                                  final DatastaxAuthentication authentication,
+                                  final DatastaxPoolingOptions poolingOptions) {
+        this.async = async;
+        this.seeds = seeds;
+        this.schema = schema;
+        this.configure = configure;
+        this.fetchSize = fetchSize;
+        this.readTimeout = readTimeout;
+        this.consistencyLevel = consistencyLevel;
+        this.retryPolicy = retryPolicy;
+        this.authentication = authentication;
+        this.poolingOptions = poolingOptions;
+    }
 
     public AsyncFuture<Connection> construct() {
         AsyncFuture<Session> session = async.call(() -> {

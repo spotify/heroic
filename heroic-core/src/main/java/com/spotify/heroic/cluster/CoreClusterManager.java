@@ -72,7 +72,7 @@ import lombok.extern.slf4j.Slf4j;
 @ToString(of = {"useLocal"})
 public class CoreClusterManager implements ClusterManager, LifeCycles {
     public static final QueryTrace.Identifier LOCAL_IDENTIFIER =
-        new QueryTrace.Identifier("[local]");
+        QueryTrace.Identifier.create("[local]");
     private final AsyncFramework async;
     private final ClusterDiscovery discovery;
     private final NodeMetadata localMetadata;
@@ -378,7 +378,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
                 log.info("{} using local instead of {} (closing old node)", id, node);
 
                 final TracingClusterNode tracingNode = new TracingClusterNode(local,
-                    new QueryTrace.Identifier(uri.toString() + "[local]"));
+                    QueryTrace.Identifier.create(uri.toString() + "[local]"));
 
                 // close old node
                 return node
@@ -387,7 +387,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
             }
 
             return async.resolved(new SuccessfulUpdate(uri, true,
-                new TracingClusterNode(node, new QueryTrace.Identifier(uri.toString()))));
+                new TracingClusterNode(node, QueryTrace.Identifier.create(uri.toString()))));
         }).catchFailed(Update.error(uri)).catchCancelled(Update.cancellation(uri));
     }
 

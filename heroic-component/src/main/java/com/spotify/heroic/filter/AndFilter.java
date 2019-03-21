@@ -21,7 +21,10 @@
 
 package com.spotify.heroic.filter;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.auto.value.AutoValue;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.ObjectHasher;
@@ -33,21 +36,22 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Stream;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
 import org.apache.commons.lang3.StringUtils;
 
-@Data
-@EqualsAndHashCode(of = {"OPERATOR", "filters"}, doNotUseGetters = true)
+@AutoValue
 @JsonTypeName("and")
-public class AndFilter implements Filter {
-    public static final String OPERATOR = "and";
+public abstract class AndFilter implements Filter {
+    @JsonCreator
+    public static AndFilter create(@JsonProperty("filters") List<Filter> filters) {
+        return new AutoValue_AndFilter(filters);
+    }
 
-    private final List<Filter> filters;
+    public static final String OPERATOR = "and";
+    abstract List<Filter> filters();
 
     @Override
     public boolean apply(Series series) {
-        return filters.stream().allMatch(s -> s.apply(series));
+        return filters().stream().allMatch(s -> s.apply(series));
     }
 
     @Override
@@ -57,10 +61,10 @@ public class AndFilter implements Filter {
 
     @Override
     public String toString() {
-        final List<String> parts = new ArrayList<>(filters.size() + 1);
+        final List<String> parts = new ArrayList<>(filters().size() + 1);
         parts.add(OPERATOR);
 
-        for (final Filter statement : filters) {
+        for (final Filter statement : filters()) {
             parts.add(statement.toString());
         }
 
@@ -69,7 +73,7 @@ public class AndFilter implements Filter {
 
     @Override
     public Filter optimize() {
-        return optimize(flatten(this.filters));
+        return optimize(flatten(this.filters()));
     }
 
     static SortedSet<Filter> flatten(final Collection<Filter> filters) {
@@ -84,7 +88,7 @@ public class AndFilter implements Filter {
             @Override
             public Stream<Filter> visitNot(final NotFilter not) {
                 // check for De Morgan's
-                return not.getFilter().visit(new Filter.Visitor<Stream<Filter>>() {
+                return not.filter().visit(new Filter.Visitor<Stream<Filter>>() {
                     @Override
                     public Stream<Filter> visitOr(final OrFilter or) {
                         return or.terms().stream().map(f -> NotFilter.of(f).optimize());
@@ -114,7 +118,7 @@ public class AndFilter implements Filter {
                 // Optimize away expressions which are always false.
                 // Example: foo = bar and !(foo = bar)
 
-                if (filters.contains(((NotFilter) f).getFilter())) {
+                if (filters.contains(((NotFilter) f).filter())) {
                     return FalseFilter.get();
                 }
             } else if (f instanceof StartsWithFilter) {
@@ -122,8 +126,8 @@ public class AndFilter implements Filter {
                 // Example: foo ^ hello and foo ^ helloworld -> foo ^ helloworld
 
                 if (FilterUtils.containsPrefixedWith(filters, (StartsWithFilter) f,
-                    (inner, outer) -> FilterUtils.prefixedWith(inner.getValue(),
-                        outer.getValue()))) {
+                    (inner, outer) -> FilterUtils.prefixedWith(inner.value(),
+                        outer.value()))) {
                     continue;
                 }
             } else if (f instanceof MatchTagFilter) {
@@ -153,7 +157,7 @@ public class AndFilter implements Filter {
             return result.iterator().next();
         }
 
-        return new AndFilter(ImmutableList.copyOf(result));
+        return AndFilter.create(ImmutableList.copyOf(result));
     }
 
     @Override
@@ -162,12 +166,12 @@ public class AndFilter implements Filter {
     }
 
     public List<Filter> terms() {
-        return filters;
+        return filters();
     }
 
     @Override
     public int compareTo(Filter o) {
-        if (!AndFilter.class.equals(o.getClass())) {
+        if (!AndFilter.class.isAssignableFrom(o.getClass())) {
             return operator().compareTo(o.operator());
         }
 
@@ -179,17 +183,17 @@ public class AndFilter implements Filter {
 
     @Override
     public String toDSL() {
-        return "(" + and.join(filters.stream().map(Filter::toDSL).iterator()) + ")";
+        return "(" + and.join(filters().stream().map(Filter::toDSL).iterator()) + ")";
     }
 
     @Override
     public void hashTo(final ObjectHasher hasher) {
         hasher.putObject(this.getClass(), () -> {
-            hasher.putField("filters", filters, hasher.list(hasher.with(Filter::hashTo)));
+            hasher.putField("filters", filters(), hasher.list(hasher.with(Filter::hashTo)));
         });
     }
 
     public static Filter of(Filter... filters) {
-        return new AndFilter(Arrays.asList(filters));
+        return AndFilter.create(Arrays.asList(filters));
     }
 }

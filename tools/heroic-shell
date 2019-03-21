@@ -5,11 +5,11 @@ dist="$root/heroic-dist"
 
 JVM_OPTS=${JVM_OPTS:-""}
 
-MVN=${MVN:-mvn}
-MVN_OPTS=${MVN_OPTS:-"-B -V"}
+GRADLE=${GRADLE:-./gradlew}
+GRADLE_OPTS=${GRADLE_OPTS:-"--console=plain"}
+DIST_TASK="heroic-dist:shadowJar"
 
-dist_jar="$dist/target/heroic-dist-0.0.1-SNAPSHOT-shaded.jar"
-
+dist_jar="$dist/build/libs/heroic-dist-0.0.1-SNAPSHOT-shaded.jar"
 CLASSPATH="$dist_jar"
 
 if [[ $1 == '-debug' ]]; then
@@ -21,7 +21,7 @@ fi
 if [[ -d $dist ]]; then
     if [[ ! -f $dist_jar ]]; then
         $root/tools/install-repackaged
-        (cd $root && $MVN $MVN_OPTS -D maven.test.skip=true clean package)
+        (cd $root && $GRADLE $GRADLE_OPTS clean $DIST_TASK)
     fi
 
     if [[ ! -f $dist_jar ]]; then

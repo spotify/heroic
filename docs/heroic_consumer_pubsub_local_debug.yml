@@ -25,10 +25,11 @@ metrics:
 
 consumers:
   - type: pubsub
-    schema: com.spotify.heroic.consumer.schemas.Spotify100
+    schema: com.spotify.heroic.consumer.schemas.Spotify100Proto
     topic: test-topic
     project: google-test-project 
     subscription: test-subscription
+    maxOutstandingElementCount: 5000 # Default 20,000
 
 
 ingestion:

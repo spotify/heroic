@@ -21,14 +21,20 @@
 
 package com.spotify.heroic.requestcondition;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.google.auto.value.AutoValue;
 import com.spotify.heroic.querylogging.QueryContext;
-import lombok.Data;
 
 /**
  * Default request condition that match multiple ones.
  */
-@Data
-public class Noop implements RequestCondition {
+@AutoValue
+public abstract class Noop implements RequestCondition {
+    @JsonCreator
+    public static Noop create() {
+        return new AutoValue_Noop();
+    }
+
     @Override
     public boolean matches(final QueryContext context) {
         return false;

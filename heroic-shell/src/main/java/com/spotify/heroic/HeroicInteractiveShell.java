@@ -22,20 +22,13 @@
 package com.spotify.heroic;
 
 import com.google.common.collect.ImmutableList;
+import com.google.protobuf.ProtocolStringList;
+import com.spotify.heroic.proto.ShellMessage.CommandsResponse.CommandDefinition;
 import com.spotify.heroic.shell.CoreInterface;
 import com.spotify.heroic.shell.QuoteParser;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.Tasks;
-import com.spotify.heroic.shell.protocol.CommandDefinition;
 import eu.toolchain.async.AsyncFuture;
-import jline.console.ConsoleReader;
-import jline.console.UserInterruptException;
-import jline.console.completer.StringsCompleter;
-import jline.console.history.FileHistory;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -44,10 +37,17 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import jline.console.ConsoleReader;
+import jline.console.UserInterruptException;
+import jline.console.completer.StringsCompleter;
+import jline.console.history.FileHistory;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Slf4j
-@RequiredArgsConstructor
 public class HeroicInteractiveShell {
+    private static final Logger log = LoggerFactory.getLogger(HeroicInteractiveShell.class);
+
     final ConsoleReader reader;
     final List<CommandDefinition> commands;
     final FileHistory history;
@@ -56,6 +56,15 @@ public class HeroicInteractiveShell {
 
     // mutable state, a.k.a. settings
     int timeout = 10;
+
+    @java.beans.ConstructorProperties({ "reader", "commands", "history" })
+    public HeroicInteractiveShell(final ConsoleReader reader,
+                                  final List<CommandDefinition> commands,
+                                  final FileHistory history) {
+        this.reader = reader;
+        this.commands = commands;
+        this.history = history;
+    }
 
     public void run(final CoreInterface core) throws Exception {
         final PrintWriter out = new PrintWriter(reader.getOutput());
@@ -145,11 +154,12 @@ public class HeroicInteractiveShell {
     void printTasksHelp(PrintWriter out) {
         out.println("Available commands:");
 
-        for (final CommandDefinition c : commands) {
-            out.println(String.format("%s - %s", c.getName(), c.getUsage()));
+        for (final CommandDefinition cmd : commands) {
+            out.println(String.format("%s - %s", cmd.getName(), cmd.getUsage()));
 
-            if (!c.getAliases().isEmpty()) {
-                out.println(String.format("  aliases: %s", StringUtils.join(", ", c.getAliases())));
+            final ProtocolStringList aliases = cmd.getAliasesList();
+            if (!aliases.isEmpty()) {
+                out.println(String.format("  aliases: %s", StringUtils.join(", ", aliases)));
             }
         }
     }
@@ -183,8 +193,7 @@ public class HeroicInteractiveShell {
         }
     }
 
-    void runTask(List<String> command, final ShellIO io, final CoreInterface core)
-        throws Exception {
+    void runTask(List<String> command, final ShellIO io, final CoreInterface core) {
         final AsyncFuture<Void> t;
 
         try {

@@ -29,14 +29,15 @@ import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.Statistics;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.RequiredArgsConstructor;
-
 import java.util.List;
 import java.util.Optional;
 
-@RequiredArgsConstructor
 public abstract class AbstractMetricBackend implements MetricBackend {
     private final AsyncFramework async;
+
+    public AbstractMetricBackend(final AsyncFramework async) {
+        this.async = async;
+    }
 
     @Override
     public Statistics getStatistics() {

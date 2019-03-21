@@ -25,7 +25,7 @@ public class QueryTraceTest {
         final ObjectMapper m = new ObjectMapper();
         final String json = "{\"what\":{\"name\":\"foo\"},\"elapsed\":42,\"children\":[]}";
         final QueryTrace trace =
-            new QueryTrace.ActiveTrace(QueryTrace.identifier("foo"), 42L, ImmutableList.of());
+            QueryTrace.ActiveTrace.create(QueryTrace.identifier("foo"), 42L, ImmutableList.of());
 
         assertEquals(json, m.writeValueAsString(trace));
         assertEquals(trace, m.readValue(json, QueryTrace.class));
@@ -38,7 +38,7 @@ public class QueryTraceTest {
         final String serializedJson =
             "{\"what\":{\"name\":\"foo\"},\"elapsed\":42,\"children\":[]}";
         final QueryTrace trace =
-            new QueryTrace.ActiveTrace(QueryTrace.identifier("foo"), 42L, ImmutableList.of());
+            QueryTrace.ActiveTrace.create(QueryTrace.identifier("foo"), 42L, ImmutableList.of());
 
         assertEquals(serializedJson, m.writeValueAsString(trace));
         assertEquals(trace, m.readValue(json, QueryTrace.class));
@@ -48,14 +48,14 @@ public class QueryTraceTest {
     public void namedWatch() {
         final QueryTrace.Identifier identifier = QueryTrace.identifier("foo");
         final QueryTrace.NamedWatch watch =
-            new QueryTrace.ActiveNamedWatch(identifier, Stopwatch.createStarted());
+            QueryTrace.ActiveNamedWatch.create(identifier, Stopwatch.createStarted());
         final QueryTrace trace = watch.end();
 
         assertTrue(trace instanceof QueryTrace.ActiveTrace);
         final QueryTrace.ActiveTrace activeTrace = (QueryTrace.ActiveTrace) trace;
-        assertEquals(identifier, activeTrace.getWhat());
+        assertEquals(identifier, activeTrace.what());
         assertTrue(activeTrace.elapsed() >= 0L);
-        assertEquals(ImmutableList.of(), activeTrace.getChildren());
+        assertEquals(ImmutableList.of(), activeTrace.children());
     }
 
     private QueryTrace tracedMethod(final Tracing tracing) {
@@ -86,23 +86,23 @@ public class QueryTraceTest {
         assertTrue(trace instanceof QueryTrace.ActiveTrace);
         final QueryTrace.ActiveTrace active = (QueryTrace.ActiveTrace) trace;
 
-        assertEquals(QueryTrace.identifier("parent"), active.getWhat());
-        assertTrue(active.getElapsed() >= 0);
-        assertEquals(2, active.getChildren().size());
+        assertEquals(QueryTrace.identifier("parent"), active.what());
+        assertTrue(active.elapsed() >= 0);
+        assertEquals(2, active.children().size());
 
         final QueryTrace.ActiveTrace c1 =
-            (QueryTrace.ActiveTrace) ((QueryTrace.ActiveTrace) trace).getChildren().get(0);
+            (QueryTrace.ActiveTrace) ((QueryTrace.ActiveTrace) trace).children().get(0);
 
-        assertEquals(QueryTrace.identifier("one"), c1.getWhat());
-        assertTrue(c1.getElapsed() >= 0);
-        assertEquals(0, c1.getChildren().size());
+        assertEquals(QueryTrace.identifier("one"), c1.what());
+        assertTrue(c1.elapsed() >= 0);
+        assertEquals(0, c1.children().size());
 
         final QueryTrace.ActiveTrace c2 =
-            (QueryTrace.ActiveTrace) ((QueryTrace.ActiveTrace) trace).getChildren().get(1);
+            (QueryTrace.ActiveTrace) ((QueryTrace.ActiveTrace) trace).children().get(1);
 
-        assertEquals(QueryTrace.identifier("two"), c2.getWhat());
-        assertTrue(c2.getElapsed() >= 0);
-        assertEquals(0, c2.getChildren().size());
+        assertEquals(QueryTrace.identifier("two"), c2.what());
+        assertTrue(c2.elapsed() >= 0);
+        assertEquals(0, c2.children().size());
     }
 
     @Test

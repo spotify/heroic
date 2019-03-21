@@ -72,8 +72,8 @@ public abstract class AbstractKafkaConsumerIT extends AbstractConsumerIT {
 
             final Series series = request.getSeries();
             for (final Point p : mc.getDataAs(Point.class)) {
-                final Version1 src =
-                    new Version1("1.1.0", series.getKey(), "localhost", p.getTimestamp(),
+                final DataVersion1 src =
+                    new DataVersion1("1.1.0", series.getKey(), "localhost", p.getTimestamp(),
                         series.getTags(), series.getResource(), p.getValue());
 
                 final byte[] message;

@@ -29,10 +29,6 @@ import eu.toolchain.async.ResolvableFuture;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateRequestBuilder;
@@ -42,14 +38,14 @@ import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchScrollRequestBuilder;
 import org.elasticsearch.client.IndicesAdminClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Common connection abstraction between Node and TransportClient.
  */
-@Slf4j
-@RequiredArgsConstructor
-@ToString(of = {"index", "client"})
 public class Connection {
+    private static final Logger log = LoggerFactory.getLogger(Connection.class);
     private final AsyncFramework async;
     private final IndexMapping index;
     private final ClientSetup.ClientWrapper client;
@@ -57,10 +53,21 @@ public class Connection {
     private final String templateName;
     private final BackendType type;
 
+    @java.beans.ConstructorProperties({ "async", "index", "client", "templateName", "type" })
+    public Connection(final AsyncFramework async, final IndexMapping index,
+                      final ClientSetup.ClientWrapper client, final String templateName,
+                      final BackendType type) {
+        this.async = async;
+        this.index = index;
+        this.client = client;
+        this.templateName = templateName;
+        this.type = type;
+    }
+
     public AsyncFuture<Void> close() {
         final List<AsyncFuture<Void>> futures = new ArrayList<>();
 
-        futures.add(async.call((Callable<Void>) () -> {
+        futures.add(async.call(() -> {
             client.getShutdown().run();
             return null;
         }));
@@ -134,5 +141,9 @@ public class Connection {
     public List<DeleteRequestBuilder> delete(String type, String id)
         throws NoIndexSelectedException {
         return index.delete(client.getClient(), type, id);
+    }
+
+    public String toString() {
+        return "Connection(index=" + this.index + ", client=" + this.client + ")";
     }
 }

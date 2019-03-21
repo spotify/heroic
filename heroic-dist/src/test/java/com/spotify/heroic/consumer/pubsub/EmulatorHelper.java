@@ -24,7 +24,6 @@ package com.spotify.heroic.consumer.pubsub;
 import com.google.api.gax.core.CredentialsProvider;
 import com.google.api.gax.core.NoCredentialsProvider;
 import com.google.api.gax.grpc.GrpcTransportChannel;
-import com.google.api.gax.rpc.AlreadyExistsException;
 import com.google.api.gax.rpc.FixedTransportChannelProvider;
 import com.google.api.gax.rpc.TransportChannelProvider;
 import com.google.cloud.pubsub.v1.Publisher;
@@ -65,9 +64,6 @@ public class EmulatorHelper {
                 .build()
         );
         ProjectSubscriptionName subscriptionName = ProjectSubscriptionName.of(projectId, subscriptionId);
-        try {
-            subscriptionAdminClient.deleteSubscription(subscriptionName);
-        } catch (AlreadyExistsException ignored) {
-        }
+        subscriptionAdminClient.deleteSubscription(subscriptionName);
     }
 }

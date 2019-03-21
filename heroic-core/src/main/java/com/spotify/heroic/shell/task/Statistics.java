@@ -39,11 +39,9 @@ import com.spotify.heroic.suggest.SuggestManager;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.ToString;
-
-import javax.inject.Inject;
 import java.util.Map.Entry;
 import java.util.Set;
+import javax.inject.Inject;
 
 @TaskUsage("Get local statistics")
 @TaskName("statistics")
@@ -127,7 +125,6 @@ public class Statistics implements ShellTask {
         return async.resolved();
     }
 
-    @ToString
     private static class Parameters extends AbstractShellTaskParams {
     }
 
@@ -136,7 +133,7 @@ public class Statistics implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         Statistics task();
     }
 }

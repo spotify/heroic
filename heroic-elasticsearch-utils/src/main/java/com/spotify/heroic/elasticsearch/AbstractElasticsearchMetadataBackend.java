@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.elasticsearch;
 
-import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.async.AsyncObserver;
 import com.spotify.heroic.common.OptionalLimit;
@@ -43,8 +42,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
 import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
@@ -87,7 +84,6 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
         return bind(request.execute()).lazyTransform(scrollTransform);
     }
 
-    @RequiredArgsConstructor
     public static class ScrollTransform<T> implements LazyTransform<SearchResponse, LimitedSet<T>> {
         private final AsyncFramework async;
         private final OptionalLimit limit;
@@ -97,6 +93,19 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
         final Set<T> results = new HashSet<>();
         final Function<SearchHit, T> converter;
         final Function<String, Supplier<AsyncFuture<SearchResponse>>> scrollFactory;
+
+        @java.beans.ConstructorProperties({ "async", "limit", "converter", "scrollFactory" })
+        public ScrollTransform(
+            final AsyncFramework async,
+            final OptionalLimit limit,
+            final Function<SearchHit, T> converter,
+            final Function<String, Supplier<AsyncFuture<SearchResponse>>> scrollFactory
+        ) {
+            this.async = async;
+            this.limit = limit;
+            this.converter = converter;
+            this.scrollFactory = scrollFactory;
+        }
 
         @Override
         public AsyncFuture<LimitedSet<T>> transform(final SearchResponse response)
@@ -134,7 +143,6 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
         }
     }
 
-    @RequiredArgsConstructor
     public static class ScrollTransformStream<T> implements LazyTransform<SearchResponse, Void> {
         private final OptionalLimit limit;
         private final Function<Set<T>, AsyncFuture<Void>> seriesFunction;
@@ -142,6 +150,20 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
         private final Function<String, Supplier<AsyncFuture<SearchResponse>>> scrollFactory;
 
         int size = 0;
+
+        @java.beans.ConstructorProperties({ "limit", "seriesFunction", "converter",
+                                            "scrollFactory" })
+        public ScrollTransformStream(
+            final OptionalLimit limit,
+            final Function<Set<T>, AsyncFuture<Void>> seriesFunction,
+            final Function<SearchHit, T> converter,
+            final Function<String, Supplier<AsyncFuture<SearchResponse>>> scrollFactory
+        ) {
+            this.limit = limit;
+            this.seriesFunction = seriesFunction;
+            this.converter = converter;
+            this.scrollFactory = scrollFactory;
+        }
 
         @Override
         public AsyncFuture<Void> transform(final SearchResponse response) throws Exception {
@@ -269,15 +291,5 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
                 }
             });
         };
-    }
-
-    @Data
-    public static class LimitedSet<T> {
-        private final Set<T> set;
-        private final boolean limited;
-
-        public static <T> LimitedSet<T> of() {
-            return new LimitedSet<>(ImmutableSet.of(), false);
-        }
     }
 }

@@ -22,20 +22,18 @@
 package com.spotify.heroic.statistics.semantic;
 
 import com.codahale.metrics.Counter;
-import com.codahale.metrics.Meter;
 import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.HeroicTimer;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @ToString(of = {})
 public class SemanticFutureReporter implements FutureReporter {
     private final SemanticHeroicTimer timer;
-    private final Meter failed;
-    private final Meter resolved;
-    private final Meter cancelled;
+    private final Counter failed;
+    private final Counter resolved;
+    private final Counter cancelled;
     private final Counter pending;
 
     public SemanticFutureReporter(SemanticMetricRegistry registry, MetricId id) {
@@ -47,11 +45,11 @@ public class SemanticFutureReporter implements FutureReporter {
 
         this.timer = new SemanticHeroicTimer(registry.timer(id.tagged("what", what + "-latency")));
         this.failed =
-            registry.meter(id.tagged("what", what + "-failure-rate", "unit", Units.FAILURE));
+            registry.counter(id.tagged("what", what + "-failed", "unit", Units.COUNT));
         this.resolved =
-            registry.meter(id.tagged("what", what + "-resolve-rate", "unit", Units.RESOLVE));
+            registry.counter(id.tagged("what", what + "-resolved", "unit", Units.COUNT));
         this.cancelled =
-            registry.meter(id.tagged("what", what + "-cancel-rate", "unit", Units.CANCEL));
+            registry.counter(id.tagged("what", what + "-cancelled", "unit", Units.COUNT));
         this.pending =
             registry.counter(id.tagged("what", what + "-pending", "unit", Units.COUNT));
     }
@@ -62,28 +60,32 @@ public class SemanticFutureReporter implements FutureReporter {
         return new SemanticContext(timer.time());
     }
 
-    @RequiredArgsConstructor
     private class SemanticContext implements FutureReporter.Context {
         private final HeroicTimer.Context context;
+
+        @java.beans.ConstructorProperties({ "context" })
+        public SemanticContext(final HeroicTimer.Context context) {
+            this.context = context;
+        }
 
         @Override
         public void failed(Throwable e) throws Exception {
             pending.dec();
-            failed.mark();
+            failed.inc();
             context.stop();
         }
 
         @Override
         public void resolved(Object result) throws Exception {
             pending.dec();
-            resolved.mark();
+            resolved.inc();
             context.stop();
         }
 
         @Override
         public void cancelled() throws Exception {
             pending.dec();
-            cancelled.mark();
+            cancelled.inc();
             context.stop();
         }
     }

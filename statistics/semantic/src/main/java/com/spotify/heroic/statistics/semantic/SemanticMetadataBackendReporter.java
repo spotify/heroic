@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.statistics.semantic;
 
-import com.codahale.metrics.Meter;
+import com.codahale.metrics.Counter;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.Statistics;
@@ -41,7 +41,6 @@ import com.spotify.heroic.statistics.MetadataBackendReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 import eu.toolchain.async.AsyncFuture;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @ToString(of = {"base"})
@@ -57,10 +56,9 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
     private final FutureReporter write;
     private final FutureReporter backendWrite;
 
-    private final Meter entries;
-
-    private final Meter writesDroppedByCacheHit;
-    private final Meter writesDroppedByDuplicate;
+    private final Counter entries;
+    private final Counter writesDroppedByCacheHit;
+    private final Counter writesDroppedByDuplicate;
 
 
     public SemanticMetadataBackendReporter(SemanticMetricRegistry registry) {
@@ -82,12 +80,12 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
             new SemanticFutureReporter(registry, base.tagged("what", "write", "unit", Units.WRITE));
         backendWrite = new SemanticFutureReporter(registry,
             base.tagged("what", "backend-write", "unit", Units.WRITE));
-        entries = registry.meter(base.tagged("what", "entries", "unit", Units.QUERY));
+        entries = registry.counter(base.tagged("what", "entries", "unit", Units.COUNT));
 
-        writesDroppedByCacheHit =
-            registry.meter(base.tagged("what", "writes-dropped-by-cache-hit", "unit", Units.DROP));
-        writesDroppedByDuplicate =
-            registry.meter(base.tagged("what", "writes-dropped-by-duplicate", "unit", Units.DROP));
+        writesDroppedByCacheHit = registry.counter(
+            base.tagged("what", "writes-dropped-by-cache-hit", "unit", Units.COUNT));
+        writesDroppedByDuplicate = registry.counter(
+            base.tagged("what", "writes-dropped-by-duplicate", "unit", Units.COUNT));
 
     }
 
@@ -105,17 +103,21 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
 
     @Override
     public void reportWriteDroppedByCacheHit() {
-        writesDroppedByCacheHit.mark();
+        writesDroppedByCacheHit.inc();
     }
 
     @Override
     public void reportWriteDroppedByDuplicate() {
-        writesDroppedByDuplicate.mark();
+        writesDroppedByDuplicate.inc();
     }
 
-    @RequiredArgsConstructor
     class InstrumentedMetadataBackend implements MetadataBackend {
         private final MetadataBackend delegate;
+
+        @java.beans.ConstructorProperties({ "delegate" })
+        public InstrumentedMetadataBackend(final MetadataBackend delegate) {
+            this.delegate = delegate;
+        }
 
         @Override
         public AsyncFuture<Void> configure() {
@@ -129,7 +131,7 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
 
         @Override
         public AsyncObservable<Entries> entries(final Entries.Request request) {
-            entries.mark();
+            entries.inc();
             return delegate.entries(request);
         }
 

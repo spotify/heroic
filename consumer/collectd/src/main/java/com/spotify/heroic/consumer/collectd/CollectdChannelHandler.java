@@ -32,22 +32,29 @@ import eu.toolchain.async.AsyncFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
-import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.tuple.Pair;
-
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import org.apache.commons.lang3.tuple.Pair;
 
-@RequiredArgsConstructor
 public class CollectdChannelHandler extends SimpleChannelInboundHandler<DatagramPacket> {
     private final AsyncFramework async;
     private final IngestionGroup ingestion;
     private final Optional<GrokProcessor> hostProcessor;
     private final CollectdTypes types;
+
+    @java.beans.ConstructorProperties({ "async", "ingestion", "hostProcessor", "types" })
+    public CollectdChannelHandler(final AsyncFramework async, final IngestionGroup ingestion,
+                                  final Optional<GrokProcessor> hostProcessor,
+                                  final CollectdTypes types) {
+        this.async = async;
+        this.ingestion = ingestion;
+        this.hostProcessor = hostProcessor;
+        this.types = types;
+    }
 
     @Override
     protected void channelRead0(final ChannelHandlerContext ctx, final DatagramPacket msg)

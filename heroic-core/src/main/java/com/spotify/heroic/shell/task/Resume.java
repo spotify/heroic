@@ -33,12 +33,9 @@ import com.spotify.heroic.shell.TaskUsage;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.Getter;
-import lombok.ToString;
-import org.kohsuke.args4j.Option;
-
-import javax.inject.Inject;
 import java.util.Set;
+import javax.inject.Inject;
+import org.kohsuke.args4j.Option;
 
 @TaskUsage("Resume (or Unpause) operation of local components")
 @TaskName("resume")
@@ -74,10 +71,8 @@ public class Resume implements ShellTask {
         return async.collectAndDiscard(futures.build());
     }
 
-    @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "--skip-consumers", usage = "Do not resume consumers")
-        @Getter
         private boolean skipConsumers = false;
     }
 
@@ -86,7 +81,7 @@ public class Resume implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         Resume task();
     }
 }

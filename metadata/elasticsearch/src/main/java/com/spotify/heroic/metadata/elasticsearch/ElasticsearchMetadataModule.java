@@ -69,7 +69,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import javax.inject.Named;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.Pair;
 
 @Data
@@ -105,7 +104,6 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
 
     static {
         backendTypes.put("kv", defaultSetup);
-        backendTypes.put("v1", MetadataBackendV1::backendType);
     }
 
     public static List<String> types() {
@@ -182,7 +180,6 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
         LifeCycle life();
     }
 
-    @RequiredArgsConstructor
     @Module
     class M {
         public static final String ELASTICSEARCH_CONFIGURE_PARAM = "elasticsearch.configure";
@@ -193,6 +190,21 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
         private final Double writesPerSecond;
         private final Long rateLimitSlowStartSeconds;
         private final Long writeCacheDurationMinutes;
+
+        @java.beans.ConstructorProperties({ "groups", "templateName", "backendType",
+                                            "writesPerSecond",
+                                            "rateLimitSlowStartSeconds",
+                                            "writeCacheDurationMinutes" })
+        public M(final Groups groups, final String templateName, final BackendType backendType,
+                 final Double writesPerSecond, final Long rateLimitSlowStartSeconds,
+                 final Long writeCacheDurationMinutes) {
+            this.groups = groups;
+            this.templateName = templateName;
+            this.backendType = backendType;
+            this.writesPerSecond = writesPerSecond;
+            this.rateLimitSlowStartSeconds = rateLimitSlowStartSeconds;
+            this.writeCacheDurationMinutes = writeCacheDurationMinutes;
+        }
 
         @Provides
         @ElasticsearchScope
@@ -253,23 +265,13 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
 
         @Provides
         @ElasticsearchScope
-        MetadataBackend backend(Lazy<MetadataBackendKV> kv, Lazy<MetadataBackendV1> v1) {
-            if (backendType.getType().equals(MetadataBackendV1.class)) {
-                return v1.get();
-            }
-
+        MetadataBackend backend(Lazy<MetadataBackendKV> kv) {
             return kv.get();
         }
 
         @Provides
         @ElasticsearchScope
-        LifeCycle life(
-            LifeCycleManager manager, Lazy<MetadataBackendKV> kv, Lazy<MetadataBackendV1> v1
-        ) {
-            if (backendType.getType().equals(MetadataBackendV1.class)) {
-                return manager.build(v1.get());
-            }
-
+        LifeCycle life(LifeCycleManager manager, Lazy<MetadataBackendKV> kv) {
             return manager.build(kv.get());
         }
     }

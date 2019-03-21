@@ -21,16 +21,20 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
+import com.google.bigtable.v2.Mutation;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 
-@RequiredArgsConstructor
 public class Mutations {
     private final List<com.google.bigtable.v2.Mutation> mutations;
+
+    @java.beans.ConstructorProperties({ "mutations" })
+    public Mutations(final List<Mutation> mutations) {
+        this.mutations = mutations;
+    }
 
     /**
      * Get the list of mutations.

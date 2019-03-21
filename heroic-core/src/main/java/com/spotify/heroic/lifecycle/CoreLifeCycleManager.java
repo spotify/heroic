@@ -22,8 +22,6 @@
 package com.spotify.heroic.lifecycle;
 
 import com.spotify.heroic.dagger.PrimaryScope;
-import lombok.RequiredArgsConstructor;
-
 import javax.inject.Inject;
 
 @PrimaryScope
@@ -45,10 +43,14 @@ public class CoreLifeCycleManager implements LifeCycleManager {
         return new ManagedLifeCycle(id, instance);
     }
 
-    @RequiredArgsConstructor
     class ManagedLifeCycle implements LifeCycle {
         private final String id;
         private final LifeCycles instance;
+
+        public ManagedLifeCycle(final String id, final LifeCycles instance) {
+            this.id = id;
+            this.instance = instance;
+        }
 
         @Override
         public void install() {

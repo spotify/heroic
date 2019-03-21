@@ -22,7 +22,6 @@
 package com.spotify.heroic.shell.task;
 
 import com.spotify.heroic.async.AsyncObserver;
-import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
@@ -36,25 +35,16 @@ import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
+import com.spotify.heroic.shell.task.parameters.MetadataFindSeriesIdParameters;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
-import lombok.Getter;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.Option;
-
-import javax.inject.Inject;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 import java.util.function.Consumer;
+import javax.inject.Inject;
 
 @TaskUsage("Find series using the given filters")
 @TaskName("metadata-find-series-ids")
-@Slf4j
 public class MetadataFindSeriesIds implements ShellTask {
     private final MetadataManager metadata;
     private final QueryParser parser;
@@ -71,15 +61,15 @@ public class MetadataFindSeriesIds implements ShellTask {
 
     @Override
     public TaskParameters params() {
-        return new Parameters();
+        return new MetadataFindSeriesIdParameters();
     }
 
     @Override
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
-        final Parameters params = (Parameters) base;
+        final MetadataFindSeriesIdParameters params = (MetadataFindSeriesIdParameters) base;
 
         final Filter filter = Tasks.setupFilter(parser, params);
-        final MetadataBackend group = metadata.useOptionalGroup(params.group);
+        final MetadataBackend group = metadata.useOptionalGroup(params.getGroup());
         final Consumer<String> printer = id -> io.out().println(id);
         final ResolvableFuture<Void> future = async.future();
 
@@ -111,22 +101,6 @@ public class MetadataFindSeriesIds implements ShellTask {
             });
 
         return future;
-    }
-
-    @ToString
-    private static class Parameters extends Tasks.QueryParamsBase {
-        @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
-            metaVar = "<group>")
-        private Optional<String> group = Optional.empty();
-
-        @Option(name = "--limit", aliases = {"--limit"},
-            usage = "Limit the number of printed entries")
-        @Getter
-        private OptionalLimit limit = OptionalLimit.empty();
-
-        @Argument
-        @Getter
-        private List<String> query = new ArrayList<>();
     }
 
     public static MetadataFindSeriesIds setup(final CoreComponent core) {

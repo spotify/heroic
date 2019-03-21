@@ -26,6 +26,8 @@ import static com.spotify.heroic.common.Optionals.pickOptional;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.analytics.MetricAnalytics;
@@ -43,20 +45,15 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import javax.inject.Named;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
-@Data
 @Module
 public class MetricManagerModule {
     public static final int DEFAULT_FETCH_PARALLELISM = 100;
     public static final boolean DEFAULT_FAIL_ON_LIMITS = false;
     public static final long DEFAULT_SMALL_QUERY_THRESHOLD = 200000;
 
-    private final List<MetricModule> backends;
-    private final Optional<List<String>> defaultBackends;
+    public final List<MetricModule> backends;
+    public final Optional<List<String>> defaultBackends;
 
     /**
      * Limit in how many groups we are allowed to return.
@@ -98,6 +95,30 @@ public class MetricManagerModule {
      * Threshold for defining a "small" query, measured in pre-aggregation sample size
      */
     private final long smallQueryThreshold;
+
+    private MetricManagerModule(
+        List<MetricModule> backends,
+        Optional<List<String>> defaultBackends,
+        OptionalLimit groupLimit,
+        OptionalLimit seriesLimit,
+        OptionalLimit aggregationLimit,
+        OptionalLimit dataLimit,
+        OptionalLimit concurrentQueriesBackoff,
+        int fetchParallelism,
+        boolean failOnLimits,
+        long smallQueryThreshold
+    ) {
+        this.backends = backends;
+        this.defaultBackends = defaultBackends;
+        this.groupLimit = groupLimit;
+        this.seriesLimit = seriesLimit;
+        this.aggregationLimit = aggregationLimit;
+        this.dataLimit = dataLimit;
+        this.concurrentQueriesBackoff = concurrentQueriesBackoff;
+        this.fetchParallelism = fetchParallelism;
+        this.failOnLimits = failOnLimits;
+        this.smallQueryThreshold = smallQueryThreshold;
+    }
 
     @Provides
     @MetricScope
@@ -213,8 +234,6 @@ public class MetricManagerModule {
         return new Builder();
     }
 
-    @NoArgsConstructor(access = AccessLevel.PRIVATE)
-    @AllArgsConstructor
     public static class Builder {
         private Optional<List<MetricModule>> backends = empty();
         private Optional<List<String>> defaultBackends = empty();
@@ -226,6 +245,34 @@ public class MetricManagerModule {
         private Optional<Integer> fetchParallelism = empty();
         private Optional<Boolean> failOnLimits = empty();
         private Optional<Long> smallQueryThreshold = empty();
+
+        private Builder() {
+        }
+
+        @JsonCreator
+        public Builder(
+            @JsonProperty("backends") Optional<List<MetricModule>> backends,
+            @JsonProperty("defaultBackends") Optional<List<String>> defaultBackends,
+            @JsonProperty("groupLimit") OptionalLimit groupLimit,
+            @JsonProperty("seriesLimit") OptionalLimit seriesLimit,
+            @JsonProperty("aggregationLimit") OptionalLimit aggregationLimit,
+            @JsonProperty("dataLimit") OptionalLimit dataLimit,
+            @JsonProperty("concurrentQueriesBackoff") OptionalLimit concurrentQueriesBackoff,
+            @JsonProperty("fetchParallelism") Optional<Integer> fetchParallelism,
+            @JsonProperty("failOnLimits") Optional<Boolean> failOnLimits,
+            @JsonProperty("smallQueryThreshold") Optional<Long> smallQueryThreshold
+        ) {
+            this.backends = backends;
+            this.defaultBackends = defaultBackends;
+            this.groupLimit = groupLimit;
+            this.seriesLimit = seriesLimit;
+            this.aggregationLimit = aggregationLimit;
+            this.dataLimit = dataLimit;
+            this.concurrentQueriesBackoff = concurrentQueriesBackoff;
+            this.fetchParallelism = fetchParallelism;
+            this.failOnLimits = failOnLimits;
+            this.smallQueryThreshold = smallQueryThreshold;
+        }
 
         public Builder backends(List<MetricModule> backends) {
             this.backends = of(backends);

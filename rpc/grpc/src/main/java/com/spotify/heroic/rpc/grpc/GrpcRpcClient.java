@@ -35,11 +35,9 @@ import io.grpc.Metadata;
 import io.grpc.Status;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@RequiredArgsConstructor
 public class GrpcRpcClient {
     private final AsyncFramework async;
     private final InetSocketAddress address;
@@ -48,6 +46,18 @@ public class GrpcRpcClient {
     private final Meter errors = new Meter();
 
     private static final GrpcRpcEmptyBody EMPTY = new GrpcRpcEmptyBody();
+
+    public GrpcRpcClient(
+        final AsyncFramework async,
+        final InetSocketAddress address,
+        final ObjectMapper mapper,
+        final Managed<ManagedChannel> channel
+    ) {
+        this.async = async;
+        this.address = address;
+        this.mapper = mapper;
+        this.channel = channel;
+    }
 
     public AsyncFuture<Void> close() {
         return channel.stop();
@@ -118,7 +128,12 @@ public class GrpcRpcClient {
             call.request(1);
             call.halfClose();
 
-            return future.onFailed(e -> errors.mark());
+            // Don't mark all api nodes as unhealthy if only suggest is failing.
+            return future.onFailed(e -> {
+                if (!endpoint.descriptor().getFullMethodName().contains("heroic/suggest:")) {
+                    errors.mark();
+                }
+            });
         });
     }
 

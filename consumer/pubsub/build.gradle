@@ -1,0 +1,12 @@
+dependencies {
+    implementation 'com.google.cloud:google-cloud-pubsub'
+    implementation 'io.grpc:grpc-netty'
+    implementation project(':heroic-component')
+    implementation 'com.fasterxml.jackson.core:jackson-annotations'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+
+    compileOnly 'org.projectlombok:lombok'
+}
+
+group = 'com.spotify.heroic.consumer'
+description = 'Heroic: PubSub Consumer'

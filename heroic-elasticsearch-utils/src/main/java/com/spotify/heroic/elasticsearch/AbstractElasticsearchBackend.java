@@ -26,15 +26,18 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
 import eu.toolchain.async.Transform;
 import javax.inject.Provider;
-import lombok.RequiredArgsConstructor;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ActionResponse;
 import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.index.engine.VersionConflictEngineException;
 
-@RequiredArgsConstructor
 public class AbstractElasticsearchBackend {
     protected final AsyncFramework async;
+
+    @java.beans.ConstructorProperties({ "async" })
+    public AbstractElasticsearchBackend(final AsyncFramework async) {
+        this.async = async;
+    }
 
     protected <T extends ActionResponse> AsyncFuture<T> bind(
         final ListenableActionFuture<T> actionFuture

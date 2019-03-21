@@ -21,19 +21,26 @@
 
 package com.spotify.heroic.requestcondition;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.auto.value.AutoValue;
 import com.spotify.heroic.querylogging.QueryContext;
 import java.util.List;
-import lombok.Data;
 
 /**
  * A request condition that match if any child condition match.
  */
-@Data
-public class Any implements RequestCondition {
-    private final List<RequestCondition> conditions;
+@AutoValue
+public abstract class Any implements RequestCondition {
+    @JsonCreator
+    public static Any create(@JsonProperty("conditions") List<RequestCondition> conditions) {
+        return new AutoValue_Any(conditions);
+    }
+
+    abstract List<RequestCondition> conditions();
 
     @Override
     public boolean matches(QueryContext context) {
-        return conditions.stream().anyMatch(c -> c.matches(context));
+        return conditions().stream().anyMatch(c -> c.matches(context));
     }
 }

@@ -51,7 +51,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Named;
-import lombok.ToString;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 
@@ -123,7 +122,7 @@ public class Query implements ShellTask {
                         .out()
                         .println(String.format("%s: %s %s", group.getType(), resultGroup.getShard(),
                             indent.writeValueAsString(resultGroup.getSeries())));
-                    io.out().println(indent.writeValueAsString(group.getData()));
+                    io.out().println(indent.writeValueAsString(group.data()));
                     io.out().flush();
                 }
 
@@ -135,7 +134,6 @@ public class Query implements ShellTask {
             });
     }
 
-    @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")
@@ -169,7 +167,7 @@ public class Query implements ShellTask {
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         Query task();
     }
 }

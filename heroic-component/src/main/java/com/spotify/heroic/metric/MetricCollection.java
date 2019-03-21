@@ -27,6 +27,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.spotify.heroic.aggregation.AggregationSession;
@@ -35,7 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import lombok.Data;
 
 /**
  * A collection of metrics.
@@ -79,7 +79,7 @@ public interface MetricCollection {
     /**
      * Get the underlying data.
      */
-    List<? extends Metric> getData();
+    List<? extends Metric> data();
 
     /**
      * Get the type of the encapsulated data.
@@ -107,7 +107,7 @@ public interface MetricCollection {
     @JsonIgnore
     default <T> List<T> getDataAs(Class<T> expected) {
         if (expected == getType().type()) {
-            return (List<T>) getData();
+            return (List<T>) data();
         }
 
         throw new RuntimeException("collection not of type: " + expected);
@@ -119,7 +119,7 @@ public interface MetricCollection {
      * @return size of the collection
      */
     default int size() {
-        return getData().size();
+        return data().size();
     }
 
     /**
@@ -129,12 +129,12 @@ public interface MetricCollection {
      */
     @JsonIgnore
     default boolean isEmpty() {
-        return getData().isEmpty();
+        return data().isEmpty();
     }
 
     @JsonIgnore
     default Optional<Long> getAverageDistanceBetweenMetrics() {
-        final List<? extends Metric> data = getData();
+        final List<? extends Metric> data = data();
 
         if (data.size() <= 1) {
             return Optional.empty();
@@ -147,7 +147,7 @@ public interface MetricCollection {
     }
 
     static MetricCollection groups(List<MetricGroup> metrics) {
-        return new GroupCollection(metrics);
+        return GroupCollection.create(metrics);
     }
 
     /**
@@ -157,7 +157,7 @@ public interface MetricCollection {
      * @return a new points collection
      */
     static MetricCollection points(List<Point> metrics) {
-        return new PointCollection(metrics);
+        return PointCollection.create(metrics);
     }
 
     /**
@@ -167,7 +167,7 @@ public interface MetricCollection {
      * @return a new events collection
      */
     static MetricCollection events(List<Event> metrics) {
-        return new EventCollection(metrics);
+        return EventCollection.create(metrics);
     }
 
     /**
@@ -177,7 +177,7 @@ public interface MetricCollection {
      * @return a new spreads collection
      */
     static MetricCollection spreads(List<Spread> metrics) {
-        return new SpreadCollection(metrics);
+        return SpreadCollection.create(metrics);
     }
 
     /**
@@ -187,7 +187,7 @@ public interface MetricCollection {
      * @return a new cardinality collection
      */
     static MetricCollection cardinality(List<Payload> metrics) {
-        return new CardinalityCollection(metrics);
+        return CardinalityCollection.create(metrics);
     }
 
     /**
@@ -202,15 +202,15 @@ public interface MetricCollection {
     ) {
         switch (key) {
             case EVENT:
-                return new EventCollection((List<Event>) metrics);
+                return EventCollection.create((List<Event>) metrics);
             case CARDINALITY:
-                return new CardinalityCollection((List<Payload>) metrics);
+                return CardinalityCollection.create((List<Payload>) metrics);
             case GROUP:
-                return new GroupCollection((List<MetricGroup>) metrics);
+                return GroupCollection.create((List<MetricGroup>) metrics);
             case SPREAD:
-                return new SpreadCollection((List<Spread>) metrics);
+                return SpreadCollection.create((List<Spread>) metrics);
             case POINT:
-                return new PointCollection((List<Point>) metrics);
+                return PointCollection.create((List<Point>) metrics);
             default:
                 throw new RuntimeException("unsupported metric collection");
         }
@@ -233,15 +233,16 @@ public interface MetricCollection {
         return build(type, data);
     }
 
+    @AutoValue
     @JsonTypeName("points")
-    @Data
-    class PointCollection implements MetricCollection {
-        private final List<Point> data;
-
+    abstract class PointCollection implements MetricCollection {
         @JsonCreator
-        public PointCollection(@JsonProperty("data") final List<Point> data) {
-            this.data = data;
+        public static PointCollection create(@JsonProperty("data") final List<Point> data) {
+            return new AutoValue_MetricCollection_PointCollection(data);
         }
+
+        @JsonProperty
+        public abstract List<Point> data();
 
         @Override
         public MetricType getType() {
@@ -252,19 +253,20 @@ public interface MetricCollection {
         public void updateAggregation(
             AggregationSession session, Map<String, String> key, Set<Series> series
         ) {
-            session.updatePoints(key, series, data);
+            session.updatePoints(key, series, data());
         }
     }
 
+    @AutoValue
     @JsonTypeName("events")
-    @Data
-    class EventCollection implements MetricCollection {
-        private final List<Event> data;
-
+    abstract class EventCollection implements MetricCollection {
         @JsonCreator
-        public EventCollection(@JsonProperty("data") final List<Event> data) {
-            this.data = data;
+        public static EventCollection create(@JsonProperty("data") final List<Event> data) {
+            return new AutoValue_MetricCollection_EventCollection(data);
         }
+
+        @JsonProperty
+        public abstract List<Event> data();
 
         @Override
         public MetricType getType() {
@@ -275,19 +277,20 @@ public interface MetricCollection {
         public void updateAggregation(
             AggregationSession session, Map<String, String> key, Set<Series> series
         ) {
-            session.updateEvents(key, series, data);
+            session.updateEvents(key, series, data());
         }
     }
 
+    @AutoValue
     @JsonTypeName("spreads")
-    @Data
-    class SpreadCollection implements MetricCollection {
-        private final List<Spread> data;
-
+    abstract class SpreadCollection implements MetricCollection {
         @JsonCreator
-        public SpreadCollection(@JsonProperty("data") final List<Spread> data) {
-            this.data = data;
+        public static SpreadCollection create(@JsonProperty("data") final List<Spread> data) {
+            return new AutoValue_MetricCollection_SpreadCollection(data);
         }
+
+        @JsonProperty
+        public abstract List<Spread> data();
 
         @Override
         public MetricType getType() {
@@ -298,19 +301,20 @@ public interface MetricCollection {
         public void updateAggregation(
             AggregationSession session, Map<String, String> key, Set<Series> series
         ) {
-            session.updateSpreads(key, series, data);
+            session.updateSpreads(key, series, data());
         }
     }
 
+    @AutoValue
     @JsonTypeName("groups")
-    @Data
-    class GroupCollection implements MetricCollection {
-        private final List<MetricGroup> data;
-
+    abstract class GroupCollection implements MetricCollection {
         @JsonCreator
-        public GroupCollection(@JsonProperty("data") final List<MetricGroup> data) {
-            this.data = data;
+        public static GroupCollection create(@JsonProperty("data") final List<MetricGroup> data) {
+            return new AutoValue_MetricCollection_GroupCollection(data);
         }
+
+        @JsonProperty
+        public abstract List<MetricGroup> data();
 
         @Override
         public MetricType getType() {
@@ -321,19 +325,20 @@ public interface MetricCollection {
         public void updateAggregation(
             AggregationSession session, Map<String, String> key, Set<Series> series
         ) {
-            session.updateGroup(key, series, data);
+            session.updateGroup(key, series, data());
         }
     }
 
+    @AutoValue
     @JsonTypeName("cardinality")
-    @Data
-    class CardinalityCollection implements MetricCollection {
-        private final List<Payload> data;
-
+    abstract class CardinalityCollection implements MetricCollection {
         @JsonCreator
-        public CardinalityCollection(@JsonProperty("data") final List<Payload> data) {
-            this.data = data;
+        public static CardinalityCollection create(@JsonProperty("data") final List<Payload> data) {
+            return new AutoValue_MetricCollection_CardinalityCollection(data);
         }
+
+        @JsonProperty
+        public abstract List<Payload> data();
 
         @Override
         public MetricType getType() {
@@ -344,7 +349,7 @@ public interface MetricCollection {
         public void updateAggregation(
             AggregationSession session, Map<String, String> key, Set<Series> series
         ) {
-            session.updatePayload(key, series, data);
+            session.updatePayload(key, series, data());
         }
     }
 }

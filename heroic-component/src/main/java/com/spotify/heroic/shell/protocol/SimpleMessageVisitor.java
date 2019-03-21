@@ -21,81 +21,82 @@
 
 package com.spotify.heroic.shell.protocol;
 
-public abstract class SimpleMessageVisitor<R> implements Message.Visitor<R> {
-    @Override
-    public R visitCommandDone(CommandDone message) throws Exception {
-        return visitUnknown(message);
+import com.spotify.heroic.proto.ShellMessage.CommandEvent;
+import com.spotify.heroic.proto.ShellMessage.CommandsResponse;
+import com.spotify.heroic.proto.ShellMessage.EvaluateRequest;
+import com.spotify.heroic.proto.ShellMessage.FileEvent;
+import com.spotify.heroic.proto.ShellMessage.FileRead;
+import com.spotify.heroic.proto.ShellMessage.FileReadResult;
+import com.spotify.heroic.proto.ShellMessage.FileStream;
+import com.spotify.heroic.proto.ShellMessage.FileWrite;
+import com.spotify.heroic.proto.ShellMessage.Message;
+
+public abstract class SimpleMessageVisitor<R> {
+    public R visitCommandDone(CommandEvent message) throws Exception {
+        return visitUnknown();
     }
 
-    @Override
-    public R visitCommandOutput(CommandOutput message) throws Exception {
-        return visitUnknown(message);
+    public R visitCommandOutput(CommandEvent message) throws Exception {
+        return visitUnknown();
     }
 
-    @Override
-    public R visitCommandOutputFlush(CommandOutputFlush message) throws Exception {
-        return visitUnknown(message);
+    public R visitCommandOutputFlush(CommandEvent message) throws Exception {
+        return visitUnknown();
     }
 
-    @Override
     public R visitCommandsResponse(CommandsResponse message) throws Exception {
-        return visitUnknown(message);
+        return visitUnknown();
     }
 
-    @Override
-    public R visitFileNewInputStream(FileNewInputStream message) throws Exception {
-        return visitUnknown(message);
+    public R visitFileNewInputStream(FileStream message) throws Exception {
+        return visitUnknown();
     }
 
-    @Override
-    public R visitFileNewOutputStream(FileNewOutputStream message) throws Exception {
-        return visitUnknown(message);
+    public R visitFileNewOutputStream(FileStream message) throws Exception {
+        return visitUnknown();
     }
 
-    @Override
-    public R visitFileClose(FileClose message) throws Exception {
-        return visitUnknown(message);
+    public R visitFileClose(FileEvent message) throws Exception {
+        return visitUnknown();
     }
 
-    @Override
     public R visitFileRead(FileRead message) throws Exception {
-        return visitUnknown(message);
+        return visitUnknown();
     }
 
-    @Override
-    public R visitFileFlush(FileFlush message) throws Exception {
-        return visitUnknown(message);
+    public R visitFileFlush(FileEvent message) throws Exception {
+        return visitUnknown();
     }
 
-    @Override
     public R visitFileWrite(FileWrite message) throws Exception {
-        return visitUnknown(message);
+        return visitUnknown();
     }
 
-    @Override
-    public R visitCommandsRequest(CommandsRequest message) throws Exception {
-        return visitUnknown(message);
+    public R visitCommandsRequest(CommandEvent message) throws Exception {
+        return visitUnknown();
     }
 
-    @Override
     public R visitRunTaskRequest(EvaluateRequest message) throws Exception {
-        return visitUnknown(message);
+        return visitUnknown();
     }
 
-    @Override
-    public R visitFileOpened(FileOpened message) throws Exception {
-        return visitUnknown(message);
+    public R visitFileOpened(FileEvent message) throws Exception {
+        return visitUnknown();
     }
 
-    @Override
     public R visitFileReadResult(FileReadResult message) throws Exception {
-        return visitUnknown(message);
+        return visitUnknown();
     }
 
-    @Override
-    public R visitOk(Acknowledge message) throws Exception {
-        return visitUnknown(message);
+    public R visitOk() throws Exception {
+        return visitUnknown();
     }
 
-    protected abstract R visitUnknown(Message message) throws Exception;
+    public R visitUnknown() throws Exception {
+        throw new IllegalArgumentException("Unhandled message");
+    }
+
+    public R visitUnknown(Message message) throws Exception {
+        throw new IllegalArgumentException("Unhandled message: " + message.toString());
+    }
 }

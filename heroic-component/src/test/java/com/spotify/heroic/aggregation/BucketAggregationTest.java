@@ -12,8 +12,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -35,19 +33,21 @@ public class BucketAggregationTest {
         return new IterableBuilder();
     }
 
-    @Data
-    @EqualsAndHashCode(callSuper = true)
     public static class TestBucket extends AbstractBucket {
         private final long timestamp;
-        private double sum;
+        private double sum = 0;
 
-        public void updatePoint(Map<String, String> key, Point d) {
-            sum += d.getValue();
+        TestBucket(long timestamp) {
+            this.timestamp = timestamp;
         }
 
         @Override
-        public long timestamp() {
+        public long getTimestamp() {
             return timestamp;
+        }
+
+        public void updatePoint(Map<String, String> key, Point d) {
+            sum += d.getValue();
         }
     }
 
@@ -97,7 +97,7 @@ public class BucketAggregationTest {
         final AggregationResult result = session.result();
 
         assertEquals(build().add(20, 14.0).add(30, 7.0).result(),
-            result.getResult().get(0).getMetrics().getData());
+            result.getResult().get(0).getMetrics().data());
     }
 
     @Test
@@ -117,7 +117,7 @@ public class BucketAggregationTest {
         final AggregationResult result = session.result();
 
         assertEquals(build().add(20, 14.0).add(30, 7.0).result(),
-            result.getResult().get(0).getMetrics().getData());
+            result.getResult().get(0).getMetrics().data());
     }
 
     @Test
@@ -139,7 +139,7 @@ public class BucketAggregationTest {
         final AggregationResult result = session.result();
 
         assertEquals(build().add(20, 7.0).add(30, 7.0).result(),
-            result.getResult().get(0).getMetrics().getData());
+            result.getResult().get(0).getMetrics().data());
     }
 
     @Test
@@ -160,7 +160,7 @@ public class BucketAggregationTest {
         final AggregationResult result = session.result();
 
         assertEquals(build().add(20, 14.0).add(30, 7.0).add(40, 1.0).result(),
-            result.getResult().get(0).getMetrics().getData());
+            result.getResult().get(0).getMetrics().data());
     }
 
     private AggregationSession setupSession(

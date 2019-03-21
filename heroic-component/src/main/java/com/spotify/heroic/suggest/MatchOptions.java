@@ -21,11 +21,8 @@
 
 package com.spotify.heroic.suggest;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.util.Optional;
+import lombok.Data;
 
 @Data
 public class MatchOptions {
@@ -38,8 +35,6 @@ public class MatchOptions {
         return new Builder();
     }
 
-    @AllArgsConstructor
-    @NoArgsConstructor
     public static class Builder {
         public static final boolean DEFAULT_FUZZY = false;
         public static final int DEFAULT_FUZZY_PREFIX_LENGTH = 2;
@@ -50,6 +45,20 @@ public class MatchOptions {
         private Optional<Integer> fuzzyPrefixLength = Optional.empty();
         private Optional<Integer> fuzzyMaxExpansions = Optional.empty();
         private Optional<Boolean> tokenize = Optional.empty();
+
+        @java.beans.ConstructorProperties({ "fuzzy", "fuzzyPrefixLength", "fuzzyMaxExpansions",
+                                            "tokenize" })
+        public Builder(final Optional<Boolean> fuzzy, final Optional<Integer> fuzzyPrefixLength,
+                       final Optional<Integer> fuzzyMaxExpansions,
+                       final Optional<Boolean> tokenize) {
+            this.fuzzy = fuzzy;
+            this.fuzzyPrefixLength = fuzzyPrefixLength;
+            this.fuzzyMaxExpansions = fuzzyMaxExpansions;
+            this.tokenize = tokenize;
+        }
+
+        public Builder() {
+        }
 
         public Builder fuzzy(boolean fuzzy) {
             this.fuzzy = Optional.of(fuzzy);

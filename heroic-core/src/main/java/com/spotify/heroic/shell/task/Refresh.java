@@ -31,8 +31,6 @@ import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import dagger.Component;
 import eu.toolchain.async.AsyncFuture;
-import lombok.ToString;
-
 import javax.inject.Inject;
 
 @TaskUsage("Refresh the cluster")
@@ -55,7 +53,6 @@ public class Refresh implements ShellTask {
         return cluster.refresh();
     }
 
-    @ToString
     private static class Parameters extends AbstractShellTaskParams {
     }
 

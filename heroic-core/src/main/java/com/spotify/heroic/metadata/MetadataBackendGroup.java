@@ -28,16 +28,20 @@ import com.spotify.heroic.common.SelectedGroup;
 import com.spotify.heroic.common.Statistics;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
 import lombok.ToString;
 
-import java.util.List;
-
-@RequiredArgsConstructor
 @ToString(of = {"backends"})
 public class MetadataBackendGroup implements MetadataBackend {
     private final SelectedGroup<MetadataBackend> backends;
     private final AsyncFramework async;
+
+    @java.beans.ConstructorProperties({ "backends", "async" })
+    public MetadataBackendGroup(final SelectedGroup<MetadataBackend> backends,
+                                final AsyncFramework async) {
+        this.backends = backends;
+        this.async = async;
+    }
 
     @Override
     public AsyncFuture<Void> configure() {

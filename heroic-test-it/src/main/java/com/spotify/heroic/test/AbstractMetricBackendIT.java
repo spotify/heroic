@@ -60,15 +60,17 @@ import java.util.TreeSet;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
 import org.junit.runners.model.Statement;
+import org.slf4j.Logger;
 
-@Slf4j
 public abstract class AbstractMetricBackendIT {
+    private static final Logger log = org.slf4j.LoggerFactory
+        .getLogger(AbstractMetricBackendIT.class);
+
     protected final Series s1 =
         new Series("s1", ImmutableSortedMap.of("id", "s1"), ImmutableSortedMap.of("resource", "a"));
     protected final Series s2 =
@@ -240,9 +242,9 @@ public abstract class AbstractMetricBackendIT {
         final SortedSet<Metric> metricsExpected = new TreeSet<>(comparator);
         final SortedSet<Metric> metricsActual = new TreeSet<>(comparator);
         metricsExpected.addAll(
-            expected.stream().flatMap(mc -> mc.getData().stream()).collect(Collectors.toList()));
+            expected.stream().flatMap(mc -> mc.data().stream()).collect(Collectors.toList()));
         metricsActual.addAll(
-            actual.stream().flatMap(mc -> mc.getData().stream()).collect(Collectors.toList()));
+            actual.stream().flatMap(mc -> mc.data().stream()).collect(Collectors.toList()));
 
         assertEquals(metricsExpected, metricsActual);
     }
@@ -251,7 +253,6 @@ public abstract class AbstractMetricBackendIT {
         return new TestCase();
     }
 
-    @lombok.Data
     private class TestCase {
         private Optional<Integer> denseStart = Optional.empty();
         private Optional<Integer> dense = Optional.empty();
@@ -415,14 +416,14 @@ public abstract class AbstractMetricBackendIT {
         assertEquals(ImmutableSet.of(expected.getType()), types.collect(Collectors.toSet()));
         actual
             .stream()
-            .flatMap(mc -> mc.getData().stream())
+            .flatMap(mc -> mc.data().stream())
             .sorted(Metric.comparator())
             .forEach(new Consumer<Metric>() {
                 int i;
 
                 @Override
                 public void accept(final Metric metric) {
-                    assertEquals(expected.getData().get(i), metric);
+                    assertEquals(expected.data().get(i), metric);
                     i++;
                 }
             });

@@ -26,8 +26,6 @@ import io.opencensus.common.Scope;
 import io.opencensus.trace.Span;
 import io.opencensus.trace.Tracer;
 import io.opencensus.trace.Tracing;
-import lombok.RequiredArgsConstructor;
-
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -36,11 +34,17 @@ import java.util.concurrent.ConcurrentMap;
  * @param <K>
  * @author mehrdad
  */
-@RequiredArgsConstructor
 public class DefaultRateLimitedCache<K> implements RateLimitedCache<K> {
     private final ConcurrentMap<K, Boolean> cache;
     private final RateLimiter rateLimiter;
     private final Tracer tracer = Tracing.getTracer();
+
+    @java.beans.ConstructorProperties({ "cache", "rateLimiter" })
+    public DefaultRateLimitedCache(final ConcurrentMap<K, Boolean> cache,
+                                   final RateLimiter rateLimiter) {
+        this.cache = cache;
+        this.rateLimiter = rateLimiter;
+    }
 
     public boolean acquire(K key, final Runnable cacheHit) {
         try (Scope ss = tracer.spanBuilder("DefaultRateLimitedCache").startScopedSpan()) {

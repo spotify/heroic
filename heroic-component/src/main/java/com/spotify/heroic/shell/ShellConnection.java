@@ -21,12 +21,13 @@
 
 package com.spotify.heroic.shell;
 
-import com.spotify.heroic.shell.protocol.Message;
-import com.spotify.heroic.shell.protocol.Message_Serializer;
-import eu.toolchain.serializer.SerialReader;
-import eu.toolchain.serializer.Serializer;
-import eu.toolchain.serializer.SerializerFramework;
-import eu.toolchain.serializer.StreamSerialWriter;
+import com.spotify.heroic.proto.ShellMessage.CommandEvent;
+import com.spotify.heroic.proto.ShellMessage.FileEvent;
+import com.spotify.heroic.proto.ShellMessage.FileStream;
+import com.spotify.heroic.proto.ShellMessage.Message;
+import com.spotify.heroic.shell.protocol.SimpleMessageVisitor;
+import java.io.InputStream;
+import java.io.OutputStream;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.Closeable;
@@ -35,25 +36,23 @@ import java.net.Socket;
 
 @Slf4j
 public class ShellConnection implements Closeable {
-    final Socket socket;
-    final SerialReader reader;
-    final StreamSerialWriter writer;
-    final Serializer<Message> message;
+    private final Socket socket;
+    private final InputStream reader;
+    private final OutputStream writer;
 
-    public ShellConnection(final SerializerFramework framework, final Socket socket)
+    public ShellConnection(final Socket socket)
         throws IOException {
         this.socket = socket;
-        this.reader = framework.readStream(socket.getInputStream());
-        this.writer = framework.writeStream(socket.getOutputStream());
-        this.message = new Message_Serializer(framework);
+        this.reader = socket.getInputStream();
+        this.writer = socket.getOutputStream();
     }
 
     public Message receive() throws IOException {
-        return message.deserialize(reader);
+        return Message.parseDelimitedFrom(reader);
     }
 
     public void send(Message m) throws IOException {
-        message.serialize(writer, m);
+        m.writeDelimitedTo(writer);
         writer.flush();
     }
 
@@ -62,19 +61,63 @@ public class ShellConnection implements Closeable {
         socket.close();
     }
 
-    @SuppressWarnings("unchecked")
-    public <T extends Message, R extends Message> R request(T request, Class<R> expected)
-        throws IOException {
-        send(request);
+    public <R> R receiveAndParse(SimpleMessageVisitor<R> visitor) throws Exception {
+        final Message message  = receive();
 
-        final Message response = receive();
-
-        if (!expected.isAssignableFrom(response.getClass())) {
-            throw new IOException(
-                String.format("Got unexpected message (%s), expected (%s)", response.getClass(),
-                    expected));
+        switch (message.getTypeCase()) {
+            case ACKNOWLEDGE:
+                return visitor.visitOk();
+            case COMMAND_EVENT:
+                final CommandEvent commandEvent = message.getCommandEvent();
+                switch (commandEvent.getEvent()) {
+                    case DONE: return visitor.visitCommandDone(commandEvent);
+                    case OUTPUT: return visitor.visitCommandOutput(commandEvent);
+                    case FLUSH: return visitor.visitCommandOutputFlush(commandEvent);
+                    case REQUEST: return visitor.visitCommandsRequest(commandEvent);
+                    default: return visitor.visitUnknown(message);
+                }
+            case COMMANDS_RESPONSE:
+                return visitor.visitCommandsResponse(message.getCommandsResponse());
+            case EVALUATE_REQUEST:
+                return visitor.visitRunTaskRequest(message.getEvaluateRequest());
+            case FILE_EVENT:
+                final FileEvent fileEvent = message.getFileEvent();
+                switch (fileEvent.getEvent()) {
+                    case CLOSE: return visitor.visitFileClose(fileEvent);
+                    case FLUSH: return visitor.visitFileFlush(fileEvent);
+                    case OPENED: return visitor.visitFileOpened(fileEvent);
+                    default: return visitor.visitUnknown(message);
+                }
+            case FILE_STREAM:
+                final FileStream fileStream = message.getFileStream();
+                switch (fileStream.getType()) {
+                    case INPUT: return visitor.visitFileNewInputStream(fileStream);
+                    case OUTPUT: return visitor.visitFileNewOutputStream(fileStream);
+                    default: return visitor.visitUnknown(message);
+                }
+            case FILE_READ:
+                return visitor.visitFileRead(message.getFileRead());
+            case FILE_READ_RESULT:
+                return visitor.visitFileReadResult(message.getFileReadResult());
+            case FILE_WRITE:
+                return visitor.visitFileWrite(message.getFileWrite());
+            default:
+                return visitor.visitUnknown(message);
         }
+    }
 
-        return (R) response;
+    public Message request(Message request) throws IOException {
+        send(request);
+        return receive();
+    }
+
+    /*
+     * Send a message on the connection that expects an Acknowledgement to be sent back.
+     */
+    public void ackedRequest(Message message) throws IOException {
+        final Message response = request(message);
+        if (!response.hasAcknowledge()) {
+            throw new IOException("Got unexpected message closing file");
+        }
     }
 }

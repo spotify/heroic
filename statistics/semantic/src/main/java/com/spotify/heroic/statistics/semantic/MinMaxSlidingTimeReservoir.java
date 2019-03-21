@@ -24,12 +24,12 @@ package com.spotify.heroic.statistics.semantic;
 import com.codahale.metrics.Clock;
 import com.codahale.metrics.Reservoir;
 import com.codahale.metrics.Snapshot;
+import com.codahale.metrics.UniformSnapshot;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 public class MinMaxSlidingTimeReservoir implements Reservoir {
@@ -116,7 +116,7 @@ public class MinMaxSlidingTimeReservoir implements Reservoir {
 
         final Snapshot snapshot = delegate.getSnapshot();
 
-        return value.map(minMax -> {
+        final Optional<Snapshot> slidingSnapshot = value.map(minMax -> {
             final long[] values = snapshot.getValues();
 
             if (values.length > 0) {
@@ -124,8 +124,10 @@ public class MinMaxSlidingTimeReservoir implements Reservoir {
                 values[values.length - 1] = Math.max(minMax.max, values[values.length - 1]);
             }
 
-            return new Snapshot(values);
-        }).orElse(snapshot);
+            return new UniformSnapshot(values);
+        });
+
+        return slidingSnapshot.orElse(snapshot);
     }
 
     /**
@@ -150,9 +152,13 @@ public class MinMaxSlidingTimeReservoir implements Reservoir {
     }
 
     @ToString
-    @RequiredArgsConstructor
     private static class MinMaxEntry {
         private final long min;
         private final long max;
+
+        private MinMaxEntry(final long min, final long max) {
+            this.min = min;
+            this.max = max;
+        }
     }
 }

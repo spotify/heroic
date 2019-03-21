@@ -38,7 +38,6 @@ import dagger.Component;
 import eu.toolchain.async.AsyncFuture;
 import javax.inject.Inject;
 import javax.inject.Named;
-import lombok.ToString;
 import org.kohsuke.args4j.Option;
 
 @TaskUsage("Write metadata")
@@ -74,7 +73,6 @@ public class MetadataWrite implements ShellTask {
             .directTransform(v -> null);
     }
 
-    @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-s", aliases = {"--series"}, usage = "Series to fetch", metaVar = "<json>",
             required = true)

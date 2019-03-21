@@ -2,14 +2,16 @@ package com.spotify.heroic.consumer.schemas;
 
 import static org.junit.Assert.assertEquals;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.google.auto.value.AutoValue;
 import com.google.common.io.Resources;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import lombok.Data;
 import org.junit.Test;
 
 public class Spotify100Test {
@@ -19,15 +21,28 @@ public class Spotify100Test {
         return mapper;
     }
 
-    @Data
-    public static class Expected {
-        private final Optional<String> version;
-        private final Optional<String> key;
-        private final Optional<String> host;
-        private final Optional<Long> time;
-        private final Optional<Map<String, String>> attributes;
-        private final Optional<Map<String, String>> resource;
-        private final Optional<Double> value;
+    @AutoValue
+    abstract static class Expected {
+        @JsonCreator
+        static Expected create(
+            @JsonProperty("version") Optional<String> version,
+            @JsonProperty("key") Optional<String> key,
+            @JsonProperty("host") Optional<String> host,
+            @JsonProperty("time") Optional<Long> time,
+            @JsonProperty("attributes") Optional<Map<String, String>> attributes,
+            @JsonProperty("resource") Optional<Map<String, String>> resource,
+            @JsonProperty("value") Optional<Double> value
+        ) {
+            return new AutoValue_Spotify100Test_Expected(version, key, host, time, attributes, resource, value);
+        }
+
+        abstract Optional<String> version();
+        abstract Optional<String> key();
+        abstract Optional<String> host();
+        abstract Optional<Long> time();
+        abstract Optional<Map<String, String>> attributes();
+        abstract Optional<Map<String, String>> resource();
+        abstract Optional<Double> value();
     }
 
     @Test
@@ -64,27 +79,27 @@ public class Spotify100Test {
 
             final Expected expected = expectedMapper.readValue(parts[1].trim(), Expected.class);
 
-            expected.getKey().ifPresent(key -> {
+            expected.key().ifPresent(key -> {
                 assertEquals(line + ": expected key", key, value.getKey());
             });
 
-            expected.getHost().ifPresent(host -> {
+            expected.host().ifPresent(host -> {
                 assertEquals(line + ": expected host", host, value.getHost());
             });
 
-            expected.getTime().ifPresent(time -> {
+            expected.time().ifPresent(time -> {
                 assertEquals(line + ": expected time", time, value.getTime());
             });
 
-            expected.getAttributes().ifPresent(attributes -> {
+            expected.attributes().ifPresent(attributes -> {
                 assertEquals(line + ": expected attributes", attributes, value.getAttributes());
             });
 
-            expected.getResource().ifPresent(resource -> {
+            expected.resource().ifPresent(resource -> {
                 assertEquals(line + ": expected resource", resource, value.getResource());
             });
 
-            expected.getValue().ifPresent(v -> {
+            expected.value().ifPresent(v -> {
                 assertEquals(line + ": expected value", v, value.getValue());
             });
         }

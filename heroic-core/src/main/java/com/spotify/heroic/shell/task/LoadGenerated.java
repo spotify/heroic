@@ -50,8 +50,6 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
 import javax.inject.Named;
-import lombok.Getter;
-import lombok.ToString;
 import org.kohsuke.args4j.Option;
 
 @TaskUsage("Load generated metrics into backends")
@@ -118,7 +116,6 @@ public class LoadGenerated implements ShellTask {
         return async.collectAndDiscard(writes);
     }
 
-    @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
             metaVar = "<group>")
@@ -126,8 +123,11 @@ public class LoadGenerated implements ShellTask {
 
         @Option(name = "-c", aliases = {"--count"},
             usage = "The number of series to generate (default: 100)")
-        @Getter
         private int seriesCount = 100;
+
+        public int getSeriesCount() {
+            return seriesCount;
+        }
 
         @Option(name = "--generator", usage = "Generator to use")
         private List<String> generators = ImmutableList.of("sine", "random-events");

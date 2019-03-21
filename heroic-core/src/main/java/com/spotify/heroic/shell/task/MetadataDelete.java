@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.shell.task;
 
-import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
@@ -35,19 +34,11 @@ import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
+import com.spotify.heroic.shell.task.parameters.MetadataDeleteParameters;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.LazyTransform;
-import lombok.Getter;
-import lombok.ToString;
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.Option;
-
 import javax.inject.Inject;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 
 @TaskUsage("Delete metadata matching the given query")
 @TaskName("metadata-delete")
@@ -67,23 +58,23 @@ public class MetadataDelete implements ShellTask {
 
     @Override
     public TaskParameters params() {
-        return new Parameters();
+        return new MetadataDeleteParameters();
     }
 
     @Override
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
-        final Parameters params = (Parameters) base;
+        final MetadataDeleteParameters params = (MetadataDeleteParameters) base;
 
         final Filter filter = Tasks.setupFilter(parser, params);
 
-        final MetadataBackend group = metadata.useOptionalGroup(params.group);
+        final MetadataBackend group = metadata.useOptionalGroup(params.getGroup());
 
         return group
             .countSeries(new CountSeries.Request(filter, params.getRange(), params.getLimit()))
-            .lazyTransform((LazyTransform<CountSeries, Void>) c -> {
+            .lazyTransform(c -> {
                 io.out().println(String.format("Deleteing %d entrie(s)", c.getCount()));
 
-                if (!params.ok) {
+                if (!params.isOk()) {
                     io.out().println("Deletion stopped, use --ok to proceed");
                     return async.resolved(null);
                 }
@@ -95,30 +86,12 @@ public class MetadataDelete implements ShellTask {
             });
     }
 
-    @ToString
-    private static class Parameters extends Tasks.QueryParamsBase {
-        @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
-            metaVar = "<group>")
-        private Optional<String> group = Optional.empty();
-
-        @Option(name = "--ok", usage = "Verify that you actually want to run")
-        private boolean ok = false;
-
-        @Option(name = "--limit", usage = "Limit the number of deletes (default: alot)")
-        @Getter
-        private OptionalLimit limit = OptionalLimit.empty();
-
-        @Argument
-        @Getter
-        private List<String> query = new ArrayList<String>();
-    }
-
     public static MetadataDelete setup(final CoreComponent core) {
         return DaggerMetadataDelete_C.builder().coreComponent(core).build().task();
     }
 
     @Component(dependencies = CoreComponent.class)
-    static interface C {
+    interface C {
         MetadataDelete task();
     }
 }
