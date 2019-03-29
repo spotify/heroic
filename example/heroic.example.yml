@@ -92,47 +92,68 @@ metadata:
         # @default Randomly generated.
         seed: 0
     ## ElasticSearch-based metadata.
-    #- type: elasticsearch
-    #  # Backend id, if not specified it will be generated.
-    #  # @default null
-    #  #id: null
-    #  # Name of elasticsearch cluster.
-    #  # @default "elasticsearch"
-    #  #clusterName: elasticsearch
-    #  # ElasticSearch index.
-    #  # @default "heroic"
-    #  #index:
-    #  # Index mapping to use
-    #  # @default Single
-    #  #  #type: single
-    #  #  # Single index type that only operates on a single index.
-    #  #  #index: heroic
-    #  #  # Rotating index type that creates new indices over time.
-    #  #  #type: rotating
-    #  #  # Pattern to use when creating index.
-    #  #  # The pattern must contain a single '%s' that will be
-    #  #  # replaced with the base time stamp of the index.
-    #  #  # @default "heroic-%s"
-    #  #  #pattern: heroic-%s
-    #  #  # Interval in milliseconds that each index is valid.
-    #  #  # @default: 604800000 (one week)
-    #  #  #interval: 604800000
-    #  # Use node client transport.
-    #  # If true, heroic will join ElasticSearch as a read-only node.
-    #  # @default false
-    #  #nodeClient: false
-    #  # How many buffered write actions are allowed.
-    #  # @default 1000
-    #  #writeBulkActions: 1000
-    #  # Bulk dump interval in seconds.
-    #  # @default 1
-    #  #dumpInterval: 1
-    #  # How many requests are sent to the server in bulk.
-    #  # @default 5
-    #  #concurrentBulkRequests: 5
-    #  #Seed nodes (required).
-    #  seeds:
-    #    - localhost:9200
+    # - backendType: kv
+    #   # deprecated but useful as a descriptor
+    #   type: elasticsearch
+    #   # Backend id, if not specified it will be generated.
+    #   # @default null
+    #   id: null
+    #   # Settings specific to the elasticsearch connection.
+    #   connection:
+    #     # Name of elasticsearch cluster.
+    #     # @default "elasticsearch"
+    #     clusterName: elasticsearch
+    #     # ElasticSearch index.
+    #     # @default "heroic"
+    #     index:
+    #       # Index mapping to use
+    #       # @default "single": only operates on a single index.
+    #       # "rotating": creates new indices over time.
+    #       type: single
+    #       ### single only
+    #       # Name of the index
+    #       # @default "heroic"
+    #       index: heroic
+    #       ###
+    #       ### rotating only
+    #       # Pattern to use when creating index.
+    #       # The pattern must contain a single '%s' that will be
+    #       # replaced with the base time stamp of the index.
+    #       # @default "heroic-%s"
+    #       pattern: heroic-%s
+    #       # Interval in milliseconds that each index is valid.
+    #       # @default: 604800000 (one week)
+    #       interval: 604800000
+    #       # Maximum indices to read at a time. Minimum of 1.
+    #       # @default 2
+    #       maxReadIndices: 2
+    #       # Maximum indices to write to at a time. Minumum of 1.
+    #       # @default 1
+    #       maxWriteIndices: 1
+    #       ###
+    #     # Use node client transport.
+    #     # If true, heroic will join ElasticSearch as a read-only node.
+    #     # @default false
+    #     nodeClient: false
+    #     # The template name to use for templates created by this backend.
+    #     # @default "heroic-metadata"
+    #     templateName: heroic-metadata
+    #     # The elasticsearch client configuration to use.
+    #     # One of:
+    #     #   "standalone": complete local cluster
+    #     #   "node": join the cluster as a non-data, non-leader node
+    #     #   "transport": connect using the transport protocol
+    #     # @default "transport"
+    #     client: transport
+    #     # Initial nodes in the cluster to connect to (required).
+    #     seeds:
+    #       - localhost:9200
+    #   # The number of writes this backend allows per second before rate-limiting kicks in.
+    #   # @default 3000
+    #   writesPerSecond: 3000
+    #   # The number of minutes a write will be cached for.
+    #   # @Default 240
+    #   writeCacheDurationMinutes: 240
 
 # Data consumers.
 #consumers:
