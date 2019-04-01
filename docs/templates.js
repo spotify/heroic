@@ -3142,7 +3142,7 @@ angular.module('_pages/docs/config/elasticsearch_connection.ngt', []).run(['$tem
     '    <td>The template name to use for templates created by this backend.</td>\n' +
     '  </tr>\n' +
     '  <tr>\n' +
-    '    <td><code>clientSetup</code></td>\n' +
+    '    <td><code>client</code></td>\n' +
     '    <td>\n' +
     '      The client configuration to use.<br />\n' +
     '      The following types are available.\n' +
@@ -4655,4 +4655,3 @@ angular.module('_js/api-type.ngt', []).run(['$templateCache', function($template
     '</div>\n' +
     '');
 }]);
-
