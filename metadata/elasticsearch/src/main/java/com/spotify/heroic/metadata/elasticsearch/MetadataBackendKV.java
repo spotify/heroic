@@ -115,7 +115,7 @@ import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     implements MetadataBackend, LifeCycles {
 
-    private final Tracer tracer = Tracing.getTracer();
+    private static final Tracer tracer = Tracing.getTracer();
     public static final String WRITE_CACHE_SIZE = "write-cache-size";
 
     static final String KEY = "key";

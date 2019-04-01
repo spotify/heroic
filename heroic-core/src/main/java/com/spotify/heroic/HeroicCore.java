@@ -84,8 +84,6 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
 import io.opencensus.contrib.zpages.ZPageHandlers;
-import io.opencensus.exporter.trace.jaeger.JaegerTraceExporter;
-import io.opencensus.exporter.trace.zipkin.ZipkinTraceExporter;
 import io.opencensus.trace.Tracing;
 import io.opencensus.trace.config.TraceConfig;
 import io.opencensus.trace.samplers.Samplers;
@@ -139,6 +137,8 @@ public class HeroicCore implements HeroicConfiguration {
 
     private static final int DEFAULT_LIGHTSTEP_REPORTING_MS = 1_000;
     private static final int DEFAULT_LIGHTSTEP_MAX_SPANS = 1_000;
+    private static final boolean DEFAULT_GRPC_ROUNDROBIN = true;
+    private static final boolean DEFAULT_GRPC_RESETCLIENT = false;
 
     static final UncaughtExceptionHandler uncaughtExceptionHandler = (Thread t, Throwable e) -> {
         try {
@@ -312,9 +312,14 @@ public class HeroicCore implements HeroicConfiguration {
                 DEFAULT_LIGHTSTEP_REPORTING_MS);
             final Integer maxBufferedSpans = (Integer) config.getOrDefault("maxBufferedSpans",
                 DEFAULT_LIGHTSTEP_MAX_SPANS);
+            final Boolean grpcRoundRobin = (Boolean) config.getOrDefault("grpcRoundRobin",
+                DEFAULT_GRPC_ROUNDROBIN);
+            final Boolean grpcResetClient = (Boolean) config.getOrDefault("grpcResetClient",
+                DEFAULT_GRPC_RESETCLIENT);
+            final String grpcCollectorTarget = configMap.get("grpcCollectorTarget");
 
 
-            if (collectorHost == null || accessToken == null) {
+            if (collectorHost == null || accessToken == null || grpcCollectorTarget == null) {
                 throw new IllegalArgumentException("Configuration for Lightstep is incomplete");
             }
 
@@ -324,7 +329,9 @@ public class HeroicCore implements HeroicConfiguration {
                 .withMaxBufferedSpans(maxBufferedSpans)
                 .withCollectorHost(collectorHost)
                 .withCollectorProtocol("http")
-                .withCollectorPort(8282)
+                .withGrpcRoundRobin(grpcRoundRobin)
+                .withResetClient(grpcResetClient)
+                .withGrpcCollectorTarget(grpcCollectorTarget)
                 .withComponentName("heroic");
 
             final Options options;
@@ -339,44 +346,6 @@ public class HeroicCore implements HeroicConfiguration {
 
         }
 
-        final Object signalfxConfig = config.get("signalfx");
-        if (signalfxConfig != null) {
-            final Map<String, String> configMap = (Map) signalfxConfig;
-            final String signalfxGateway = configMap.get("signalfxGateway");
-
-            if (signalfxGateway == null) {
-                throw new IllegalArgumentException("Gateway for SignalFx gateway is not set and "
-                                                   + "the correct region"
-                                                   + "could not be determined.");
-            }
-
-            log.info("Setting up SignalFx tracing");
-            JaegerTraceExporter.createAndRegister(signalfxGateway, "heroic");
-        }
-
-        final Object jaegerConfig = config.get("jaeger");
-        if (jaegerConfig != null) {
-            final Map<String, String> configMap = (Map) jaegerConfig;
-            final String service = configMap.getOrDefault("service", "heroic");
-            final String thriftEndpoint = configMap.get("thriftEndpoint");
-
-            if (thriftEndpoint == null) {
-                throw new IllegalArgumentException("Configuration for jaeger is incomplete");
-            }
-
-            log.info("Setting up Jaeger tracing for service {}", service);
-            // Create and register the Jaeger Tracing exporter
-            JaegerTraceExporter.createAndRegister(thriftEndpoint, service);
-        }
-
-        final Object zipkinConfig = config.get("zipkin");
-        if (zipkinConfig != null) {
-            final Map<String, String> configMap = (Map) zipkinConfig;
-            final String service = configMap.getOrDefault("service", "heroic");
-            final String url = configMap.get("url");
-            ZipkinTraceExporter.createAndRegister(url, service);
-        }
-
         final Integer zpagesPort = (Integer) config.get("zpagesPort");
         if (zpagesPort != null) {
             log.info("Starting zpage handlers on port {}", zpagesPort.toString());
@@ -385,7 +354,7 @@ public class HeroicCore implements HeroicConfiguration {
         }
 
         final double probability = (double) config.getOrDefault("probability", 0.01);
-        log.info("Setting tracing to sample with a probability of {}", String.valueOf(probability));
+        log.info("Setting tracing to sample with a probability of {}", probability);
         TraceConfig traceConfig = Tracing.getTraceConfig();
         traceConfig.updateActiveTraceParams(
             traceConfig
