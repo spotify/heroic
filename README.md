@@ -58,7 +58,7 @@ The following is an example of how this can be run:
 ./gradlew heroic-dist:runShadow <config>
 ```
 
-which is the equivalant of doing:
+which is the equivalent of doing:
 
 ```
 java -jar $PWD/heroic-dist/build/libs/heroic-dist-0.0.1-SNAPSHOT-shaded.jar <config>
@@ -237,7 +237,7 @@ with the way it is formatted, consistency is more important.
 For special cases, see [Bypassing Validation](#bypassing-validation).
 
 If possible, limit your changes to one module per commit.
-If you add new, or modify existing classes. Keep that change to a single commit while maintaing
+If you add new, or modify existing classes. Keep that change to a single commit while maintaining
 backwards compatible behaviour. Deprecate any old APIs as appropriate with `@Deprecated` and
 add documentation for how to use the new API.
 
