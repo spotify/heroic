@@ -20,6 +20,7 @@ bin
 bower_components
 node_modules
 output
+/docs/_site/
 
 # gradle
 build/
