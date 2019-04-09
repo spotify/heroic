@@ -1,0 +1,19 @@
+<p>
+  A client querying any heroic node in a federation will cause it to fan out to
+  all known <em>shards</em> and merge the result.
+</p>
+
+<img style="width: 100%;" src="images/sharding.svg"></img>
+
+<p>
+  Federations tries to be as transparent as possible in the face of problems.
+  Each request that fans out to a shard has the potential to fail, preventing that data to become unavailable.
+</p>
+
+<p>
+  In the face of errors, successful shards will be returned as normal.
+  The failing shards will be specifically reported as such, and it is left to
+  the client to decide what to do next.
+</p>
+
+<img style="width: 100%;" src="images/errors.svg"></img>

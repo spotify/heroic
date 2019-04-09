@@ -1,0 +1,104 @@
+---
+title: Features Configuration
+---
+<h2>{{ page.title }}</h2>
+
+<p>
+  Features are a way to modify the behaviour of your service.
+  They are implemented as flags namespaced to heroic, an example would be:
+  <code>com.spotify.heroic.shift_range</code>.
+</p>
+
+<p>
+  Features can be configured either on a per-query basis, or in the
+  configuration section <code>features</code> to apply it to all queries by
+  default.
+  They can either be enabled or disabled. To enable a flag, you specify its
+  name. To disable it, you specify it's name prefixed with a minux sign
+  <code>-&lt;name&gt;</code>.
+</p>
+
+<p>
+  Precedence is defined as the following:
+</p>
+
+<ul>
+  <li>Query</li>
+  <li>Configuration</li>
+  <li>Default</li>
+</ul>
+
+<p>
+  This is applied for any given feature flag.
+  If omitted in one stage, it will be looked up in another.
+</p>
+
+<p>
+  A typical configuration looks something like this.
+</p>
+
+<codeblock language="yaml">
+features:
+  - com.spotify.heroic.shift_range
+  - -com.spotify.heroic.distributed_aggregations
+</codeblock>
+
+<p>
+  When added to a query, they are added to the <code>.features</code> section
+  like this:
+</p>
+
+<codeblock language="json">
+{
+  "features": [
+    "com.spotify.heroic.shift_range",
+    "-com.spotify.heroic.distributed_aggregations"
+  ]
+}
+</codeblock>
+
+<h3 id="available-features">Available Features</h3>
+
+<div class="callout callout-danger">
+  <h4>This section can quickly become out of date</h4>
+  <p>
+    For the source of truth, look at the Feature class in heroic:
+    <a git-href-java="heroic-component">com.spotify.heroic.common.Feature</a>
+  </p>
+</div>
+
+<table class="table">
+  <tr>
+    <th>Name</th>
+    <th>Description</th>
+    <th>Default</th>
+  </tr>
+
+  <tr>
+    <td><code>com.spotify.heroic.distributed_aggregations</code></td>
+    <td>
+      Enable feature to perform distributed aggregations.
+      Aggregations are commonly performed per-shard, and the result
+      concatenated. This enables experimental support for distributed
+      aggregations which behave transparently across shards.
+      Typically this will cause more data to be transported across shards for
+      each request.
+    </td>
+    <td>
+      off
+    </td>
+  </tr>
+
+  <tr>
+    <td><code>com.spotify.heroic.shift_range</code></td>
+    <td>
+      Enable feature to cause range to be rounded on the current cadence.
+      This will assert that there are data outside of the range queried for and
+      that the range is aligned to the queried cadence.
+      Which is a useful feature when using a dashboarding system.
+    </td>
+    <td>
+      on
+    </td>
+  </tr>
+</table>

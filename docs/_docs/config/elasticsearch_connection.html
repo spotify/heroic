@@ -1,0 +1,222 @@
+---
+title: Elasticsearch Connection
+---
+<h2>{{ page.title }}</h2>
+
+<p>
+  Elasticsearch backends are configured with a connection object.
+  This determines how an elasticsearch-based backend is connected.
+</p>
+
+<table class="table">
+  <tr>
+    <td><code>clusterName</code></td>
+    <td>Cluster name to connect to.</td>
+  </tr>
+  <tr>
+    <td><code>seeds</code></td>
+    <td>List of seeds to connect to.</td>
+  </tr>
+  <tr>
+    <td><code>nodeClient</code></td>
+    <td>If set to <code>true</code>, use a node client by default.</td>
+  </tr>
+  <tr>
+    <td><code>concurrentBulkRequests</code></td>
+    <td>The number of concurrent bulk requests this connection supports.</td>
+  </tr>
+  <tr>
+    <td><code>flushInterval</code></td>
+    <td>The interval in milliseconds at which the bulk will flush.</td>
+  </tr>
+  <tr>
+    <td><code>bulkActions</code></td>
+    <td>The number of bulk actions that will be pooled before a flush.</td>
+  </tr>
+  <tr>
+    <td><code>index</code></td>
+    <td>
+      The index mapping to use.<br />
+      The index mapping determines which index names will be used.<br />
+      The following types of index mappings are available.
+
+      <ul>
+        <li><a ui-sref="{'#': 'elasticsearch-rotating'}">rotating</a> - a rotating index mapping, where indexes rotate over time.</li>
+        <li><a ui-sref="{'#': 'elasticsearch-single'}">single</a> - a single index mapping, where the same index is used indefinitely.</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <td><code>templateName</code></td>
+    <td>The template name to use for templates created by this backend.</td>
+  </tr>
+  <tr>
+    <td><code>clientSetup</code></td>
+    <td>
+      The client configuration to use.<br />
+      The following types are available.
+
+      <ul>
+        <li><a ui-sref="{'#': 'elasticsearch-transport'}">transport</a> - a transport client, which connects to the cluster using the transport protocol.</li>
+        <li><a ui-sref="{'#': 'elasticsearch-node'}">node</a> - the node client, which joins the cluster as a non-data, non-leader node.</li>
+        <li><a ui-sref="{'#': 'elasticsearch-standalone'}">standalone</a> - standalone mode, which create a complete local cluster.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3 id="elasticsearch-rotating">Rotating Index Mapping</h3>
+
+<codeblock language="yaml">
+type: rotating
+pattern: metadata-%s
+interval: 1w
+maxReadIndices: 2
+maxWriteIndices: 1
+</codeblock>
+
+<p>
+  Mapping that maps to the same single index.
+</p>
+
+<table class="table">
+  <tr>
+    <td><code>type</code></td>
+    <td><b>single</b></td>
+  </tr>
+  <tr>
+    <td><code>pattern</code></td>
+    <td>Pattern of the index to use, must include <code>%s</code> which will be replaced with the unix timestamp of the index.</td>
+  </tr>
+  <tr>
+    <td><code>interval</code></td>
+    <td>The duration at which the index will be rotated.</td>
+  </tr>
+  <tr>
+    <td><code>maxReadIndices</code></td>
+    <td>The of indexes to read from.</td>
+  </tr>
+  <tr>
+    <td><code>maxWriteIndices</code></td>
+    <td>The number of indexes to write to.</td>
+  </tr>
+</table>
+
+<h3 id="elasticsearch-single">Single Index Mapping</h3>
+
+<codeblock language="yaml">
+type: single
+index: metadata
+</codeblock>
+
+<p>
+  Mapping that maps to the same single index.
+</p>
+
+<table class="table">
+  <tr>
+    <td><code>type</code></td>
+    <td><b>single</b></td>
+  </tr>
+  <tr>
+    <td><code>index</code></td>
+    <td>Name of the index to use.</td>
+  </tr>
+</table>
+
+<h3 id="elasticsearch-transport">Transport Client</h3>
+
+<p>
+  The transport client connects to the cluster from the outside using the transport protocol.
+  This is the most lightweight method of interacting with the Elasticsearch cluster.
+</p>
+
+<codeblock language="yaml">
+type: transport
+clusterName: heroic
+seeds:
+  - localhost
+</codeblock>
+
+<table class="table">
+  <tr>
+    <td><code>type</code></td>
+    <td><b>node</b></td>
+  </tr>
+  <tr>
+    <td><code>clusterName</code></td>
+    <td>The name of the cluster to setup.</td>
+  </tr>
+  <tr>
+    <td><code>seeds</code></td>
+    <td>
+      A list of seeds to connect to.
+    </td>
+  </tr>
+</table>
+
+<h3 id="elasticsearch-node">Node Client</h3>
+
+<p>
+  A node client joins the cluster as a node.
+  This will typically yield better performance since index lookups and aggregations can be performed without having to 'hop' to another node.
+</p>
+
+<p>
+  It is typically recommended against, due the complexity involved in the client.
+</p>
+
+<codeblock language="yaml">
+type: node
+clusterName: heroic
+seeds:
+  - localhost
+</codeblock>
+
+<table class="table">
+  <tr>
+    <td><code>type</code></td>
+    <td><b>node</b></td>
+  </tr>
+  <tr>
+    <td><code>clusterName</code></td>
+    <td>The name of the cluster to setup.</td>
+  </tr>
+  <tr>
+    <td><code>seeds</code></td>
+    <td>
+      A list of seeds to connect to.
+    </td>
+  </tr>
+</table>
+
+<h3 id="elasticsearch-standalone">Standalone Client</h3>
+
+<p>
+  Standalone client setup configures a complete local Elasticsearch node.
+  This is typically used when running a fully in-memory configuration of heroic.
+</p>
+
+<codeblock language="yaml">
+type: standalone
+clusterName: heroic-standalone
+root: /tmp/heroic-standalone
+</codeblock>
+
+<table class="table">
+  <tr>
+    <td><code>type</code></td>
+    <td><b>standalone</b></td>
+  </tr>
+  <tr>
+    <td><code>clusterName</code></td>
+    <td>The name of the cluster to setup.</td>
+  </tr>
+  <tr>
+    <td><code>root</code></td>
+    <td>
+      Root directory where indexes will be stored.
+      If omitted, will create a temporary root directory.
+    </td>
+  </tr>
+</table>

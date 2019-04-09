@@ -1,0 +1,33 @@
+<api-endpoint path="/metadata/series-count" method="POST">
+  <p>
+    Count the number of time series matching a given filter.
+  </p>
+
+  <api-accept curl-data='{"filter": ["and", ["key", "system"], ["=", "role", "database"]]}'>
+    <api-type>
+      <api-field required="false" name="filter" type-href="Filter">
+        A filter to use when counting series.
+      </api-field>
+
+      <api-field required="false" name="range" type-href="QueryDateRange">
+        Range for which to count series.
+      </api-field>
+    </api-type>
+
+    <h4>Example Request</h4>
+
+    <codeblock language="json">
+    {"filter": ["and", ["key", "system"], ["=", "role", "database"]]}
+    </codeblock>
+  </api-accept>
+  <api-response status="200">
+    <h4>Example <span class="status">200</span> Response</h4>
+    <codeblock language="json">
+    {
+      "errors": [],
+      "limited": false,
+      "count": 10001
+    }
+    </codeblock>
+  </api-response>
+</api-endpoint>

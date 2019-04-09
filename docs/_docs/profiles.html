@@ -1,0 +1,66 @@
+---
+title: Profiles
+---
+<h2>{{ page.title }}</h2>
+
+<p>
+  Profiles are small configuration units which can be merged into the overall
+  configuration.
+</p>
+
+<p>
+  The following is an example of starting heroic with an in-memory configuration
+  using the shell, and the <code>memory</code> profile:
+</p>
+
+<codeblock language="bash">
+$> tools/heroic-shell --server -P memory
+</codeblock>
+
+<p>
+  A list of all available profiles and their options can be seen with the
+  <code>--help</code> switch.
+</p>
+
+<p>
+  Note: <code>-X elasticsearch.configure</code> will cause the temporary
+  elasticsearch instances to be automatically configured.
+</p>
+
+<h3>Playing with the <code>memory</code> profile</h3>
+
+<p>
+  Using the <code>load-generated</code> command, you can generate some random
+  data for the last week to play around with.
+</p>
+
+<codeblock language="bash">
+heroic&gt; load-generated
+...
+</codeblock>
+
+<p>
+  You can also manually write some data into the the local instance:
+</p>
+
+<codeblock language="bash">
+heroic&gt; write --series '{"key": "test", "tags": {"host": "a", "what": "foo"}}' -p 00:00=1 -p 00:01=2
+heroic&gt; write --series '{"key": "test", "tags": {"host": "a", "what": "bar"}}' -p 00:00=3 -p 00:01=4
+</codeblock>
+
+<p>
+  We can fetch the data back out:
+</p>
+
+<codeblock language="bash">
+heroic&gt; fetch --series '{"key": "test", "tags": {"host": "a", "what": "bar"}}' --start 00:00 --end 00:02
+</codeblock>
+
+<p>
+  We can also query the data:
+</p>
+
+<codeblock language="bash">
+heroic&gt; query average from points(1d) where $key = test;
+heroic&gt; query average from points(1d) where $key = test and what=bar;
+</codeblock>

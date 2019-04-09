@@ -1,0 +1,18 @@
+<api-endpoint path="/metadata/keys" method="POST">
+  <p>
+    Use to query for keys.
+  </p>
+
+  <div ng-include="'_pages/docs/api/accept-metadata-query-body.ngt'"></div>
+
+  <api-response status="200">
+    <h4>Example <span class="status">200</span> Response</h4>
+
+    <codeblock language="json">
+    {
+      "result": ["foo", "bar"],
+      "sampleSize": 5
+    }
+    </codeblock>
+  </api-response>
+</api-endpoint>

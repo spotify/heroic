@@ -1,0 +1,45 @@
+---
+title: Compile Heroic
+---
+<h2>{{ page.title }}</h2>
+
+<div class="callout callout-danger">
+  <h4>
+    Unstable Project
+  </h4>
+  <p>
+    In order to run Heroic you currently have to compile your own jar.
+    This is because the project should still be considered unstable, and might change in the future.
+  </p>
+</div>
+
+<p>
+  In order to compile Heroic, you'll need a working <a href="http://www.oracle.com/technetwork/java/javase/downloads/index.html">Java 8 JDK</a>, and <a href="https://maven.apache.org/">Maven 3</a>.
+</p>
+
+<p>
+  Get the Heroic source from GitHub:
+</p>
+
+<pre><code language="bash">
+$ git clone https://github.com/spotify/heroic.git
+</code></pre>
+
+<p>
+  Go to the cloned directory and run Maven:
+</p>
+
+<pre><code language="bash">
+$ cd heroic
+$ tools/install-repackaged
+$ mvn clean package
+</code></pre>
+
+<p>
+  The previous command will generate a new .jar file in <b>heroic-dist/target</b>, which you can
+  use to run Heroic through <a git-href-java="heroic-dist">com.spotify.heroic.HeroicService</a>.
+</p>
+
+<pre><code language="bash">
+$ java -cp heroic-dist/target/heroic-dist-0.0.1-SNAPSHOT-shaded.jar com.spotify.heroic.HeroicService &lt;config&gt;
+</code></pre>

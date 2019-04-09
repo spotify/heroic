@@ -1,0 +1,18 @@
+<api-endpoint path="/metadata/series" method="PUT">
+  <p>
+    Write the given series metadata.
+  </p>
+
+  <div ng-include="'_pages/docs/api/accept-series.ngt'"></div>
+
+  <api-response status="200">
+    <h4>Example <span class="status">200</span> Response</h4>
+
+    <codeblock language="json">
+    [
+      {"key": "foo", "tags": {"site": "lon"}},
+      {"key": "foo", "tags": {"site": "sto"}}
+    ]
+    </codeblock>
+  </api-response>
+</api-endpoint>

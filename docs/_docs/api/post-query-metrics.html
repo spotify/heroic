@@ -1,0 +1,123 @@
+<api-endpoint path="/query/metrics" method="POST">
+  <p>
+    Query and aggregate metrics.
+  </p>
+
+  <api-accept curl-data='{"range": {"type": "relative", "unit": "HOURS", "value": 2}, "filter": ["and", ["key", "foo"], ["=", "foo", "bar"], ["+", "role"]], "groupBy": ["site"]}'>
+    <api-type name="Query">
+      <api-field required="true" name="range" type-href="QueryDateRange">
+        The range in time for which to query
+      </api-field>
+
+      <api-field name="filter" type-href="Filter">
+        <p>
+          A statement used to filter down the selected time series.
+          Each individual filtering field (<code>filter</code>, <code>key</code>, <code>tags</code>, and <code>hasTags</code>) may be empty.
+          At least one must be specified to make up a valid filter.
+        </p>
+
+        <p>
+          See <a ui-sref="docs.query_language({'#': 'filtering'})">filtering</a> for details on how to build a filter.
+        </p>
+      </api-field>
+
+      <api-field name="aggregation" type-href="Aggregation">
+        Aggregation to use when down-sampling.
+      </api-field>
+
+      <api-field name="groupBy">
+        <p>
+          Will create several result groups from the given keys.
+          Series will be aggregated on a per-group basis.
+        </p>
+
+        <h5>Example 1.</h5>
+
+        Given time series <code language="json">{"a": 1, "b": 2}</code> and <code language="json">{"b": 3, "c": 4}</code>, and a <code>groupBy</code> of <code language="json">["a", "b"]</code>
+        the returned result groups would be <code language="json">[{"a": 1, "b": 2}, {"a": null, "b": 3}]</code>.
+      </api-field>
+
+      <api-field name="features" type-json="[<string>, ...]">
+        <p>
+          Enable or disable a feature on a per-query basis.
+          See <a ui-sref="docs.config.features">Features Configuration</a> for more details.
+        </p>
+      </api-field>
+    </api-type>
+
+    <h4>Example Request</h4>
+
+    <codeblock language="json">
+    {
+      "range": {"type": "relative", "unit": "HOURS", "value": 2},
+      "filter": ["and", ["key", "foo"], ["=", "foo", "bar"], ["+", "role"]],
+      "groupBy": ["site"]
+    }
+    </codeblock>
+  </api-accept>
+
+  <api-response>
+    <api-type name="QueryResponse">
+      <api-field name="range" type-json="{start: <number>, end: <number>}">
+        The range in time for which to query
+      </api-field>
+
+      <api-field name="errors" type-array-href="RequestError">
+        Potential errors returned either from different shards or for specific
+        time series. The presence of an error does not cause the entire query
+        to fail, instead it is up to the client to use this information to
+        decide if the response is reliable enough.
+      </api-field>
+
+      <api-field name="result" type-array-href="ShardedResultGroup">
+        An array of result groups.
+      </api-field>
+
+      <api-field name="statistics" type-href="Statistics">
+        Statistics about the current query.
+        This field should be inspected for errors which will have caused the result
+        to be inconsistent.
+      </api-field>
+    </api-type>
+
+    <h4>Example Response</h4>
+
+    <codeblock language="json">
+    {
+      "errors": [
+        {
+          "type": "node",
+          "nodeId": "abcd-efgh",
+          "nodeUri": "http://example.com",
+          "tags": {"site": "lon"},
+          "error": "Connection refused",
+          "internal": true
+        },
+        {
+          "type": "series",
+          "tags": {"site": "lon"},
+          "error": "Aggregation too heavy, too many rows from the database would have to be fetched to satisfy the request!",
+          "internal": true
+        }
+      ],
+      "result": [
+        {
+          "hash": "deadbeef",
+          "tags": {"foo": "bar"},
+          "values": [[1300000000000, 42.0]]
+        },
+        {
+          "hash": "beefdead",
+          "tags": {"foo": "baz"},
+          "values": [[1300000000000, 42.0]]
+        }
+      ],
+      "range": {
+        "end": 1469816790000,
+        "start": 1469809590000
+      },
+      "statistics": {}
+    }
+    </codeblock>
+  </api-response>
+</api-endpoint>

@@ -1,0 +1,18 @@
+---
+title: API
+---
+<h1>{{ page.title }}</h1>
+
+<h2>Endpoints</h2>
+
+<div ng-repeat="e in endpoints">
+  <h4><a ui-sref="^.{{e.sref}}">{{e.method}} {{e.url}}</a></h4>
+  <p>{{e.help}}</p>
+</div>
+
+<h2>Types</h2>
+
+<div ng-repeat="t in types">
+  <h4><a ui-sref="^.type-{{t.id}}">{{t.name}}</a></h4>
+  <p ng-if="!!t.help">{{t.help}}</p>
+</div>

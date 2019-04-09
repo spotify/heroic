@@ -1,0 +1,124 @@
+---
+title: Configuring Metadata
+---
+<h2>{{ page.title }}</h2>
+
+<p>
+  Metadata acts as the index to time series data, it is the driving force behind our <a ui-sref="^.^.query_language">Query Language</a>.
+</p>
+
+<p>
+  Metadata resolution is important since it allows operators to specify a subset of known metadata, and resolve it into a set of matching time series.
+  Without metadata, the burden of keeping track of time series would lie solely in the client.
+</p>
+
+<p>
+  A typical metadata configuration could look like the following.
+</p>
+
+<codeblock language="yaml">
+metadata:
+  backends:
+    - type: elasticsearch
+      connection:
+        index:
+          type: rotating
+          pattern: heroic-a-%s
+</codeblock>
+
+<p>
+  <b>WARNINGS</b> There are ElasticSearch settings and mappings that must be configured before indexing operations are processed. These are required to make the reads efficient. At Spotify
+  these settings are added when setting up the ElasticSearch cluster with Puppet.
+
+<a href="https://github.com/spotify/heroic/blob/7ff07a654048ce760e867835e11f230cd7c5a4ee/metadata/elasticsearch/src/main/resources/com.spotify.heroic.metadata.elasticsearch/kv/metadata.json">settings/mappings are here</a>
+
+</p>
+
+<table class="table">
+  <tr>
+    <td><code>backends</code></td>
+    <td>A list of metadata backend configurations</td>
+  </tr>
+  <tr>
+    <td><code>defaultBackends</code></td>
+    <td>
+      A list of backend group names that are part of the default group.
+      The default group is the group of backends that are used for operations unless a specified group is used.
+      The default behaviour is to include <em>all configured backends</em> in the default group.
+    </td>
+  </tr>
+</table>
+
+<h4>Elasticsearch</h4>
+
+<table class="table">
+  <tr>
+    <td><code>type</code></td>
+    <td><code>"elasticsearch"</code></td>
+  </tr>
+  <tr>
+    <td><code>id</code></td>
+    <td>
+      Specify which id this backend has that is used to uniquely identify this backend.
+      If not specified, the id will be generated.
+    </td>
+  </tr>
+  <tr>
+    <td><code>groups</code></td>
+    <td>
+      Specify which group, or list groups, this backend should be part of.
+    </td>
+  </tr>
+  <tr>
+    <td><code>connection</code></td>
+    <td>
+      An elasticsearch connection specification.
+      For details, see <a ui-sref="^.elasticsearch_connection">Elasticsearch Connection</a>.
+    </td>
+  </tr>
+  <tr>
+    <td><code>writesPerSecond</code></td>
+    <td>
+      The number of writes this backend allows per second before rate-limiting kicks in.
+    </td>
+  </tr>
+  <tr>
+    <td><code>writeCacheDurationMinutes</code></td>
+    <td>
+      The number of minutes a write will be cached for.
+    </td>
+  </tr>
+  <tr>
+    <td><code>templateName</code></td>
+    <td>
+      Default name of the template that will be configured in elasticsearch for this backend.
+    </td>
+  </tr>
+  <tr>
+    <td><code>backendType</code></td>
+    <td>
+      Which backend configuration to use, has an effect on the schema and how tags are accessed.
+      Currently, the following types are available.
+
+      <ul>
+        <li>
+          <b>v1</b> - which is the first generation backend schema.
+        </li>
+        <li>
+          <b>kv</b> - a backend type based of a flattening the key-value context into a single array.
+          We've shown that it is more efficient, but have to support both since some users rely on the first generation schema.
+        </li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<p>
+  Example of what the stored metadata look like.
+</p>
+<codeblock language="json">
+
+{'_index': 'heroic-1535587200000', '_type': 'metadata', '_id': '447939eaf69475f685518dc2c179ddaf', '_version': 1, 'found': True, '_source': {'key': 'apollo', 'tags': ['component\x00memcache-client', 'operation\x00get', 'what\x00memcache-results'], 'tag_keys': ['component', 'operation', 'what']}}
+
+
+</codeblock>
