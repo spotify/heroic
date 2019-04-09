@@ -1,3 +1,5 @@
+---
+---
 <!doctype html>
 <html ng-app="hdoc" ng-controller="HeroicDocumentationCtrl">
   <head>
@@ -5,14 +7,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Heroic Documentation">
     <meta name="author" content="Spotify">
-    <base href="/heroic/">
+    <base href="{{ '/' | relative_url }}">
 
     <title>Heroic Documentation</title>
 
     <!-- angular -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.4.7/angular.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/angular-ui-bootstrap/2.2.0/ui-bootstrap-tpls.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/angular-ui-router/1.0.0-beta.3/angular-ui-router.min.js"></script>
 
     <!-- prism -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.16.0/prism.min.js"></script>
@@ -38,14 +39,14 @@
     <nav class="navbar navbar-inverse">
       <div class="container">
         <div class="navbar-left">
-          <a ui-sref="index">
+          <a href="{{ '/' | relative_url }}">
             <img src="images/logo_on_dark.48.png" style="margin-top: .25em;" />
           </a>
         </div>
 
         <ul class="nav navbar-nav">
-          <li ui-sref-active="active">
-            <a ui-sref="docs.overview">Documentation</a>
+          <li class="active">
+            <a href="docs/overview">Documentation</a>
           </li>
 
           <li ui-sref-active="active">

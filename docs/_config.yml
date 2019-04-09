@@ -1,1 +1,4 @@
 baseurl: /heroic
+collections:
+  docs:
+    output: true
