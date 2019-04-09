@@ -97,20 +97,6 @@
     };
   });
 
-  m.directive('code', function() {
-    return {
-      restrict: 'E',
-      link: function($scope, $element, $attr) {
-        if (!$attr.language)
-          return;
-
-        $element.text(stripText($element));
-        $element.addClass('language-' + $attr.language);
-        Prism.highlightElement($element[0]);
-      }
-    };
-  });
-
   m.directive('gitHrefPackage', function(github) {
     return {
       restrict: 'A',
@@ -164,26 +150,6 @@
       restrict: 'A',
       link: function($scope, $element, $attr) {
         $element.attr('href', github.relativeUrl($attr.gitHref));
-      }
-    };
-  });
-
-  m.directive('id', function($state) {
-    return {
-      restrict: 'A',
-      link: function($scope, $element, $attr) {
-        var $glyph = angular.element('<span class="glyphicon glyphicon-link">');
-
-        var $ln = angular.element('<a class="link-to">');
-        $ln.append($glyph);
-
-        $element.append($ln);
-
-        $scope.$watch(function() {
-          return $attr.id;
-        }, function(newId) {
-          $ln.attr('href', $state.href('.', {'#': newId}));
-        });
       }
     };
   });

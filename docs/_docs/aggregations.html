@@ -1,5 +1,6 @@
 ---
 title: Aggregations
+short_url: docs/aggregations
 ---
 <h2>{{ page.title }}</h2>
 
@@ -15,13 +16,13 @@ title: Aggregations
 </p>
 
 <ul>
-  <li><a ui-sref="{'#': 'min'}">Minimum Aggregation</a></li>
-  <li><a ui-sref="{'#': 'max'}">Maximum Aggregation</a></li>
-  <li><a ui-sref="{'#': 'average'}">Average Aggregation</a></li>
-  <li><a ui-sref="{'#': 'sum'}">Sum Aggregation</a></li>
-  <li><a ui-sref="{'#': 'chain'}">Chain Aggregation</a></li>
-  <li><a ui-sref="{'#': 'group'}">Group Aggregation</a></li>
-  <li><a ui-sref="{'#': 'filtering'}">TopK/BottomK/AboveK/BelowK Aggregation</a></li>
+  <li><a href="{{ page.short_url }}#min">Minimum Aggregation</a></li>
+  <li><a href="{{ page.short_url }}#max">Maximum Aggregation</a></li>
+  <li><a href="{{ page.short_url }}#average">Average Aggregation</a></li>
+  <li><a href="{{ page.short_url }}#sum">Sum Aggregation</a></li>
+  <li><a href="{{ page.short_url }}#chain">Chain Aggregation</a></li>
+  <li><a href="{{ page.short_url }}#group">Group Aggregation</a></li>
+  <li><a href="{{ page.short_url }}#filtering">TopK/BottomK/AboveK/BelowK Aggregation</a></li>
 </ul>
 
 <h3>Size and Extent</h3>
@@ -54,7 +55,10 @@ The following graphics represents what data will be sampled to generate the samp
 
 <img style="width: 100%;" src="images/size_extent_3.svg"></img>
 
-<h3 id="min">Min Aggregation</h3>
+<h3 id="min">
+  Min Aggregation
+  <a class="link-to" href="{{ page.short_url }}#min"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <h5>JSON</h5>
 
@@ -76,7 +80,10 @@ min(size=&lt;duration&gt;, extent=&lt;duration&gt;)
 
 <img style="width: 100%;" src="images/aggregation_min.svg"></img>
 
-<h3 id="max">Max Aggregation</h3>
+<h3 id="max">
+  Max Aggregation
+  <a class="link-to" href="{{ page.short_url }}#max"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <h5>JSON</h5>
 
@@ -98,7 +105,10 @@ max(size=&lt;duration&gt;, extent=&lt;duration&gt;)
 
 <img style="width: 100%;" src="images/aggregation_max.svg"></img>
 
-<h3 id="average">Average Aggregation</h3>
+<h3 id="average">
+  Average Aggregation
+  <a class="link-to" href="{{ page.short_url }}#average"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <h5>JSON</h5>
 
@@ -120,7 +130,10 @@ average(size=&lt;duration&gt;, extent=&lt;duration&gt;)
 
 <img style="width: 100%;" src="images/aggregation_average.svg"></img>
 
-<h3 id="sum">Sum Aggregation</h3>
+<h3 id="sum">
+  Sum Aggregation
+  <a class="link-to" href="{{ page.short_url }}#sum"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <h5>JSON</h5>
 
@@ -142,7 +155,10 @@ sum(size=&lt;duration&gt;, extent=&lt;duration&gt;)
 
 <img style="width: 100%;" src="images/aggregation_sum.svg"></img>
 
-<h3 id="chain">Chain Aggregation</h3>
+<h3 id="chain">
+  Chain Aggregation
+  <a class="link-to" href="{{ page.short_url }}#chain"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <h5>JSON</h5>
 
@@ -161,7 +177,10 @@ sum(size=&lt;duration&gt;, extent=&lt;duration&gt;)
   The result of the first aggregation is fed into the second, and so forth.
 </p>
 
-<h3 id="group">Group Aggregation</h3>
+<h3 id="group">
+  Group Aggregation
+  <a class="link-to" href="{{ page.short_url }}#group"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <h5>JSON</h5>
 
@@ -198,12 +217,15 @@ sum(size=&lt;duration&gt;, extent=&lt;duration&gt;)
 </p>
 
 <p>
-  The below example is the <a ui-sref="{'#': 'average'}">average</a> aggregation applied to each group.
+  The below example is the <a href="{{ page.short_url }}#average">average</a> aggregation applied to each group.
 </p>
 
 <img style="width: 100%;" src="images/aggregation_group_average.svg"></img>
 
-<h3 id="filtering">TopK/BottomK/AboveK/BelowK Aggregation</h3>
+<h3 id="filtering">
+  TopK/BottomK/AboveK/BelowK Aggregation
+  <a class="link-to" href="{{ page.short_url }}#filtering"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <h5>JSON</h5>
 

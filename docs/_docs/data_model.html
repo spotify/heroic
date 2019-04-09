@@ -1,5 +1,6 @@
 ---
 title: Data Model
+short_url: docs/data_model
 ---
 <h2>{{ page.title }}</h2>
 
@@ -17,7 +18,10 @@ title: Data Model
   currently either a set of data points, or events.
 </p>
 
-<h3 id="data-points">Points</h3>
+<h3 id="data-points">
+  Points
+  <a class="link-to" href="{{ page.short_url }}#data-points"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <p>
   Java Class:
@@ -46,7 +50,10 @@ title: Data Model
 [&lt;timestamp&gt;, &lt;value&gt;]
 </pre></code>
 
-<h3 id="events">Events</h3>
+<h3 id="events">
+  Events
+  <a class="link-to" href="{{ page.short_url }}#events"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <p>
   Java Class: <a git-href-java="heroic-component">com.spotify.heroic.metric.Event</a>
@@ -83,7 +90,10 @@ title: Data Model
 [&lt;timestamp&gt;, {&lt;payload&gt;}]
 </pre></code>
 
-<h3 id="series">Semantic Series</h3>
+<h3 id="series">
+  Semantic Series
+  <a class="link-to" href="{{ page.short_url }}#series"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <p>
   We strongly encourage the concept of semantic series.

@@ -1,5 +1,6 @@
 ---
 title: Metric Configuration
+short_url: docs/config/metrics
 ---
 <h2>{{ page.title }}</h2>
 
@@ -78,7 +79,10 @@ metrics:
   </tr>
 </table>
 
-<h3 id="datastax-cassandra">Datastax Cassandra</h3>
+<h3 id="datastax-cassandra">
+  Datastax Cassandra
+  <a class="link-to" href="{{ page.short_url }}#datastax-cassandra"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <table class="table">
   <tr>
@@ -114,7 +118,10 @@ metrics:
   </tr>
 </table>
 
-<h4 id="schema-ng">Next Generation Schema</h4>
+<h4 id="schema-ng">
+  Next Generation Schema
+  <a class="link-to" href="{{ page.short_url }}#schema-ng"><span class="glyphicon glyphicon-link"></span></a>
+</h4>
 
 <table class="table">
   <tr>
@@ -131,7 +138,10 @@ metrics:
   The next version of the schema, built with no strings attached to previous implementations.
 </p>
 
-<h4 id="schema-legacy">Legacy Schema</h4>
+<h4 id="schema-legacy">
+  Legacy Schema
+  <a class="link-to" href="{{ page.short_url }}#schema-legacy"><span class="glyphicon glyphicon-link"></span></a>
+</h4>
 
 <table class="table">
   <tr>
@@ -149,7 +159,10 @@ metrics:
   It was inherited, in part, from some of the key composition utilities made available by <em>datastax</em>, making it a bit awkward to work with for other utilities.
 </p>
 
-<h3 id="google-bigtable">Google Bigtable</h3>
+<h3 id="google-bigtable">
+  Google Bigtable
+  <a class="link-to" href="{{ page.short_url }}#google-bigtable"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <pre><code class="language-yaml">
 type: bigtable
@@ -229,7 +242,10 @@ credentials:
   </tr>
 </table>
 
-<h4 id="compute-engine-credentials">Compute Engine Credentials</h4>
+<h4 id="compute-engine-credentials">
+  Compute Engine Credentials
+  <a class="link-to" href="{{ page.short_url }}#compute-engine-credentials"><span class="glyphicon glyphicon-link"></span></a>
+</h4>
 
 <table class="table">
   <tr>
@@ -247,7 +263,10 @@ credentials:
   </tr>
 </table>
 
-<h4 id="json-credentials">JSON Credentials</h4>
+<h4 id="json-credentials">
+  JSON Credentials
+  <a class="link-to" href="{{ page.short_url }}#json-credentials"><span class="glyphicon glyphicon-link"></span></a>
+</h4>
 
 <table class="table">
   <tr>
@@ -265,7 +284,7 @@ credentials:
 <p>
 A note on sending metrics with the same timestamp and/or duplicate metrics.
 
-These metric values will not be duplicated within the row, since Heroic is mutating rows and not appending to the column family. In bigtable each 
+These metric values will not be duplicated within the row, since Heroic is mutating rows and not appending to the column family. In bigtable each
 timestamp + value is a column within the row.
 
 <img style="width: 100%;" src="images/row-mutation.png"></img>

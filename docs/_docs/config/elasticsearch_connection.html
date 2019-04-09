@@ -1,5 +1,6 @@
 ---
 title: Elasticsearch Connection
+short_url: docs/config/elasticsearch_connection
 ---
 <h2>{{ page.title }}</h2>
 
@@ -65,7 +66,10 @@ title: Elasticsearch Connection
   </tr>
 </table>
 
-<h3 id="elasticsearch-rotating">Rotating Index Mapping</h3>
+<h3 id="elasticsearch-rotating">
+  Rotating Index Mapping
+  <a class="link-to" href="{{ page.short_url }}#elasticsearch-rotating"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <pre><code class="language-yaml">
 type: rotating
@@ -102,7 +106,10 @@ maxWriteIndices: 1
   </tr>
 </table>
 
-<h3 id="elasticsearch-single">Single Index Mapping</h3>
+<h3 id="elasticsearch-single">
+  Single Index Mapping
+  <a class="link-to" href="{{ page.short_url }}#elasticsearch-single"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <pre><code class="language-yaml">
 type: single
@@ -124,7 +131,10 @@ index: metadata
   </tr>
 </table>
 
-<h3 id="elasticsearch-transport">Transport Client</h3>
+<h3 id="elasticsearch-transport">
+  Transport Client
+  <a class="link-to" href="{{ page.short_url }}#elasticsearch-transport"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <p>
   The transport client connects to the cluster from the outside using the transport protocol.
@@ -155,7 +165,10 @@ seeds:
   </tr>
 </table>
 
-<h3 id="elasticsearch-node">Node Client</h3>
+<h3 id="elasticsearch-node">
+  Node Client
+  <a class="link-to" href="{{ page.short_url }}#elasticsearch-node"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <p>
   A node client joins the cluster as a node.
@@ -190,7 +203,10 @@ seeds:
   </tr>
 </table>
 
-<h3 id="elasticsearch-standalone">Standalone Client</h3>
+<h3 id="elasticsearch-standalone">
+  Standalone Client
+  <a class="link-to" href="{{ page.short_url }}#elasticsearch-standalone"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <p>
   Standalone client setup configures a complete local Elasticsearch node.

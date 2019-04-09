@@ -1,5 +1,6 @@
 ---
 title: Heroic Shell
+short_url: docs/shell
 ---
 <h2>{{ page.title }}</h2>
 
@@ -52,7 +53,10 @@ $ java com.spotify.heroic.HeroicShell --help
   From now on we will be referring to starting the shell from the heroic project directory, which includes the helper script <code language="bash">tools/heroic-shell</code>.
 </p>
 
-<h3 id="remote-shell">Remote Shell</h3>
+<h3 id="remote-shell">
+  Remote Shell
+  <a class="link-to" href="{{ page.short_url }}#remote-shell"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <p>
   Assuming you are in the heroic project directory, you can invoke the shell like the following.
@@ -66,14 +70,20 @@ $ tools/heroic-shell --connect &lt;host&gt;[:port]
   At this point you should be connected to the heroic instance, and can invoke any tasks available in it.
 </p>
 
-<h3 id="standalone-shell">Standalone Shell</h3>
+<h3 id="standalone-shell">
+  Standalone Shell
+  <a class="link-to" href="{{ page.short_url }}#standalone-shell"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <p>
   Standalone shells includes the heroic service running in the background and the shell is directly connected to this instance.
   This is typically useful when trying out specific heroic features, specifically in combination with the <a ui-sref="{'#': 'memory-profile'}">memory profile</a>
 </p>
 
-<h3 id="profiles">Profiles</h3>
+<h3 id="profiles">
+  Profiles
+  <a class="link-to" href="{{ page.short_url }}#profiles"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <p>
   Profiles are small pieces of configuration which can be activated with the <code language="bash">-P &lt;name&gt;</code> switch.<br />
@@ -99,10 +109,10 @@ Available Extra Parameters:
       Automatically configure the Elasticsearch backend
 
 Available Profiles (activate with: -P &lt;profile&gt;):
-  generated - Configures a metric backend containing generated data (does 
+  generated - Configures a metric backend containing generated data (does
   not support writes)
 
-  memory - Configures in-memory backends for everything (useful for 
+  memory - Configures in-memory backends for everything (useful for
   integration/performance testing)
 
   cassandra - Configures a metric backend for Cassandra
@@ -112,7 +122,10 @@ Available Profiles (activate with: -P &lt;profile&gt;):
         Seeds to use when configuring backend
 </code></pre>
 
-<h4 id="memory-profile">Memory Profile</h4>
+<h4 id="memory-profile">
+  Memory Profile
+  <a class="link-to" href="{{ page.short_url }}#memory-profile"><span class="glyphicon glyphicon-link"></span></a>
+</h4>
 
 <p>
   The <em>memory</em> profile is special, since it configures a complete service instance <em>in memory</em>.

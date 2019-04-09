@@ -1,5 +1,6 @@
 ---
 title: Configure Cluster
+short_url: docs/getting_started/configuration
 ---
 <h2>{{ page.title }}</h2>
 
@@ -16,7 +17,10 @@ title: Configure Cluster
   <li><a ui-sref=".({'#': 'heroic'})">Configuring Heroic</a></li>
 </ul>
 
-<h3 id="cassandra">Configuring Cassandra</h3>
+<h3 id="cassandra">
+  Configuring Cassandra
+  <a class="link-to" href="{{ page.short_url }}#cassandra"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <p>
   Heroic (by default) uses the <code>heroic</code> keyspace, which can be
@@ -29,7 +33,10 @@ tools/heroic-shell -P cassandra -X cassandra.seeds=&lt;seeds&gt; -X datastax.con
 heroic> configure
 </code></pre>
 
-<h3 id="bigtable">Configuring Bigtable</h3>
+<h3 id="bigtable">
+  Configuring Bigtable
+  <a class="link-to" href="{{ page.short_url }}#bigtable"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <p>
   If you want to use Google Cloud Bigtable to store metrics, you can configure it with the following command.
@@ -45,7 +52,10 @@ tools/heroic-shell -P bigtable \
 heroic> configure
 </code></pre>
 
-<h3 id="elasticsearch">Configuring ElasticSearch</h3>
+<h3 id="elasticsearch">
+  Configuring ElasticSearch
+  <a class="link-to" href="{{ page.short_url }}#elasticsearch"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <p>
   Elasticsearch is also configured using the <a ui-sref="^.^.shell">Heroic shell</a>.
@@ -76,7 +86,10 @@ script:
   </p>
 </div>
 
-<h3 id="heroic">Configuring Heroic</h3>
+<h3 id="heroic">
+  Configuring Heroic
+  <a class="link-to" href="{{ page.short_url }}#heroic"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <p>
   The following configuration assumes that you've managed to either download or
@@ -109,7 +122,10 @@ script:
   </p>
 </div>
 
-<h4 id="heroic-api-node">API Node</h4>
+<h4 id="heroic-api-node">
+  API Node
+  <a class="link-to" href="{{ page.short_url }}#heroic-api-node"><span class="glyphicon glyphicon-link"></span></a>
+</h4>
 
 <p>
   API nodes are nodes designated to receive user traffic over HTTP.
@@ -129,7 +145,10 @@ cluster:
       - "grpc://localhost"
 </pre></code>
 
-<h4 id="heroic-data-node">Data Node</h4>
+<h4 id="heroic-data-node">
+  Data Node
+  <a class="link-to" href="{{ page.short_url }}#heroic-data-node"><span class="glyphicon glyphicon-link"></span></a>
+</h4>
 
 <p>
   Data nodes are designated to process requests for the API nodes.
@@ -188,7 +207,10 @@ suggest:
   For more details in how the service can be configured, see the <a ui-sref="^.^.config">Configuration Section</a>.
 </p>
 
-<h4 id="heroic-data-node">Consumer Node</h4>
+<h4 id="heroic-data-node">
+  Consumer Node
+  <a class="link-to" href="{{ page.short_url }}#heroic-data-node"><span class="glyphicon glyphicon-link"></span></a>
+</h4>
 
 <p>
   A consumer node is responsible for reading data from kafka, and writing it

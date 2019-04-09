@@ -1,5 +1,6 @@
 ---
 title: Heroic Query Language
+short_url: docs/query_language
 ---
 <h2>{{ page.title }}</h2>
 
@@ -60,7 +61,10 @@ average by host | sum by site
   with size=5m
 </code></pre>
 
-<h3 id="json-dsl">JSON vs HQL</h3>
+<h3 id="json-dsl">
+  JSON vs HQL
+  <a class="link-to" href="{{ page.short_url }}#json-dsl"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <p>
   JSON is typically used when a query is built programatically because the structure is unambigious in terms of precedence and escaping.
@@ -330,7 +334,10 @@ heroic> parse-query --no-indent "average by host | sum by site"
 </table>
 </div>
 
-<h4 id="special-variables">Special Variables</h4>
+<h4 id="special-variables">
+  Special Variables
+  <a class="link-to" href="{{ page.short_url }}#special-variables"><span class="glyphicon glyphicon-link"></span></a>
+</h4>
 
 <div class="table-responsive">
 <table class="table table-bordered">
@@ -346,7 +353,10 @@ heroic> parse-query --no-indent "average by host | sum by site"
 </table>
 </div>
 
-<h4 id="duration">Durations</h4>
+<h4 id="duration">
+  Durations
+  <a class="link-to" href="{{ page.short_url }}#duration"><span class="glyphicon glyphicon-link"></span></a>
+</h4>
 
 <p>
   Durations are represented as a numeric component with a suffix, like <code language="hql">3H</code>
