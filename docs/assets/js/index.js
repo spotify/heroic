@@ -188,44 +188,4 @@
     };
   });
 
-  /**
-   * Helper directive for creating indented code blocks.
-   *
-   * Will setup, and compile a code block containing <pre><code language=...>.
-   *
-   * @param content Specify dynamic content of the code block.
-   * @param language Specify the language of the code block.
-   */
-  m.directive('codeblock', function($compile) {
-    return {
-      link: function($scope, $element, $attr) {
-        var children = $element.children();
-        var pre = angular.element('<pre>');
-        var code = angular.element('<code>');
-
-        if (!!$attr.language)
-          code.attr('language', $attr.language);
-
-        pre.append(code);
-
-        if (!!$attr.content) {
-          $element.replaceWith(pre);
-
-          $scope.$watch($attr.content, function(content) {
-            content = content || '';
-            code.text(content);
-            $compile(pre)($scope);
-          });
-
-          return;
-        }
-
-        var text = stripText($element, true);
-
-        $element.replaceWith(pre);
-        code.text(text);
-        $compile(pre)($scope);
-      }
-    };
-  });
 })();

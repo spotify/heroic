@@ -11,7 +11,7 @@ title: Cluster Configuration
   A typical configuration looks something like this.
 </p>
 
-<codeblock language="yaml">
+<pre><code class="language-yaml">
 cluster:
   tags:
     site: london
@@ -26,13 +26,13 @@ cluster:
       - "grpc://heroic-stockholm-b"
       - "grpc://heroic-london-a"
       - "grpc://heroic-london-b"
-</codeblock>
+</code></pre>
 
 <h3 id="tags"><code>tags</code></h3>
 
-<codeblock language="yaml">
+<pre><code class="language-yaml">
 site: london
-</codeblock>
+</code></pre>
 
 <p>
   Defines a set of tags that identifies which part of the cluster this node belongs to.
@@ -49,10 +49,10 @@ site: london
 
 <h4>grpc</h4>
 
-<codeblock language="yaml">
+<pre><code class="language-yaml">
 host: &lt;host&gt;
 port: &lt;port&gt;
-</codeblock>
+</code></pre>
 
 <table class="table">
   <tr>
@@ -71,10 +71,10 @@ port: &lt;port&gt;
 
 <h4>nativerpc</h4>
 
-<codeblock language="yaml">
+<pre><code class="language-yaml">
 host: &lt;host&gt;
 port: &lt;port&gt;
-</codeblock>
+</code></pre>
 
 <table class="table">
   <tr>
@@ -137,11 +137,11 @@ port: &lt;port&gt;
 
 <h4>static</h4>
 
-<codeblock language="yaml">
+<pre><code class="language-yaml">
 nodes:
   - &lt;url&gt;
   - ..
-</codeblock>
+</code></pre>
 
 <table class="table">
   <tr>

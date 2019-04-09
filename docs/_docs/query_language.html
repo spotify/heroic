@@ -20,21 +20,21 @@ title: Heroic Query Language
   Queries have the following structure.
 </p>
 
-<codeblock language="hql">
+<pre><code class="language-hql">
 &lt;aggregation&gt;
   [from &lt;source&gt;]
   [where &lt;filter&gt;]
   [as &lt;key&gt;=&lt;value&gt;[,&lt;key&gt;=&lt;value&gt;]]
   [with &lt;key&gt;=&lt;value&gt;[,&lt;key&gt;=&lt;value&gt;]];
-</codeblock>
+</code></pre>
 
 <p>
   References have the following structures.
 </p>
 
-<codeblock language="hql">
+<pre><code class="language-hql">
 let $&lt;name&gt; = &lt;query&gt;;
-</codeblock>
+</code></pre>
 
 <p>
   <em>Complex Queries</em> are queries referencing other queries through a
@@ -42,23 +42,23 @@ let $&lt;name&gt; = &lt;query&gt;;
   The following is an example of this
 </p>
 
-<codeblock language="hql">
+<pre><code class="language-hql">
 let $a = average by host | sum by site;
 
 $a / shift($a, -7d) - 1.0
   where what = cpu-usage and role = heroic;
-</codeblock>
+</code></pre>
 
 <p>
   The following is a complete example of a HQL-based query:
 </p>
 
-<codeblock language="hql">
+<pre><code class="language-hql">
 average by host | sum by site
   from points(1d)
   where role=heroic and what=cpu-idle
   with size=5m
-</codeblock>
+</code></pre>
 
 <h3 id="json-dsl">JSON vs HQL</h3>
 
@@ -91,12 +91,12 @@ $key = "hello kitty" and host = foo.example.com
   To test this principle you can fire up the <a ui-sref="^.shell">Heroic Shell</a> and run the following commands:
 </p>
 
-<codeblock language="bash">
+<pre><code class="language-bash">
 $ tools/heroic-shell
 
 heroic> parse-query --no-indent "average by host | sum by site"
 {"aggregation":{"type":"chain","chain":[{"type":"group","of":["host"],"each":{"type":"sum"}},{"type":"average"}]}}
-</codeblock>
+</code></pre>
 
 <h3>Aggregations</h3>
 
@@ -113,14 +113,14 @@ heroic> parse-query --no-indent "average by host | sum by site"
 <table class="table table-bordered">
   <tr>
     <td>
-      <codeblock language="hql">
+      <pre><code class="language-hql">
       sum(3m)
-      </codeblock>
+      </code></pre>
     </td>
     <td>
-      <codeblock language="json">
+      <pre><code class="language-json">
       {"type": "sum", "size": "3m"}
-      </codeblock>
+      </code></pre>
     </td>
   </tr>
 </table>
@@ -137,24 +137,24 @@ heroic> parse-query --no-indent "average by host | sum by site"
 <table class="table table-bordered">
   <tr>
     <td>
-      <codeblock language="hql">
+      <pre><code class="language-hql">
       empty by host
-      </codeblock>
+      </code></pre>
     </td>
     <td>
-      <codeblock language="json">
+      <pre><code class="language-json">
       {"type": "group", "of": ["host"], "each": {"type": "empty"}}
-      </codeblock>
+      </code></pre>
     </td>
   </tr>
   <tr>
     <td>
-      <codeblock language="hql">
+      <pre><code class="language-hql">
       average(size=5m) | sum(size=10m)
-      </codeblock>
+      </code></pre>
     </td>
     <td>
-      <codeblock language="json">
+      <pre><code class="language-json">
       {
         "type": "chain",
         "chain": [
@@ -162,7 +162,7 @@ heroic> parse-query --no-indent "average by host | sum by site"
           {"type": "sum", "size": "10m"}
         ]
       }
-      </codeblock>
+      </code></pre>
     </td>
   </tr>
 </table>
@@ -373,6 +373,6 @@ heroic> parse-query --no-indent "average by host | sum by site"
   The following is a valid expression:
 </p>
 
-<codeblock language="hql">
+<pre><code class="language-hql">
 $now - (1d + 1H)
-</codeblock>
+</code></pre>

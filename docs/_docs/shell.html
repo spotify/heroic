@@ -21,9 +21,9 @@ title: Heroic Shell
   For more details, see <a ui-sref="^.config.shell_server">Shell Server Configuration</a>.
 </p>
 
-<codeblock language="yaml">
+<pre><code class="language-yaml">
 shellServer: {}
-</codeblock>
+</code></pre>
 
 <p>
   The shell can be run in two different modes; <a ui-sref="{'#': 'remote-shell'}"><em>remote</em></a>, and <a ui-sref="{'#': 'standalone-shell'}"><em>standalone</em></a>.
@@ -44,9 +44,9 @@ shellServer: {}
   Assuming you have heroic in your class path, the following is an example of how to do that.
 </p>
 
-<codeblock language="bash">
+<pre><code class="language-bash">
 $ java com.spotify.heroic.HeroicShell --help
-</codeblock>
+</code></pre>
 
 <p>
   From now on we will be referring to starting the shell from the heroic project directory, which includes the helper script <code language="bash">tools/heroic-shell</code>.
@@ -58,9 +58,9 @@ $ java com.spotify.heroic.HeroicShell --help
   Assuming you are in the heroic project directory, you can invoke the shell like the following.
 </p>
 
-<codeblock language="bash">
+<pre><code class="language-bash">
 $ tools/heroic-shell --connect &lt;host&gt;[:port]
-</codeblock>
+</code></pre>
 
 <p>
   At this point you should be connected to the heroic instance, and can invoke any tasks available in it.
@@ -84,7 +84,7 @@ $ tools/heroic-shell --connect &lt;host&gt;[:port]
   All available set of profiles and options can be found by at the end of the help command (<code language="bash">--help</code>).
 </p>
 
-<codeblock language="bash">
+<pre><code class="language-bash">
 $ tools/heroic-shell --help
 ... skip documentation about switches
 
@@ -110,7 +110,7 @@ Available Profiles (activate with: -P &lt;profile&gt;):
         Type of backend to use, valid values are: legacy, ng
     cassandra.seeds=&lt;host&gt;[:&lt;port&gt;][,..]
         Seeds to use when configuring backend
-</codeblock>
+</code></pre>
 
 <h4 id="memory-profile">Memory Profile</h4>
 
@@ -120,9 +120,9 @@ Available Profiles (activate with: -P &lt;profile&gt;):
   You can start the memory profile with the following command.
 </p>
 
-<codeblock language="bash">
+<pre><code class="language-bash">
 $ tools/heroic-shell --server -P memory -X configure
-</codeblock>
+</code></pre>
 
 <p>
   <code language="bash">--server</code> means that the shell will start heroic in server mode, which will accept http requests on port 8080.<br />

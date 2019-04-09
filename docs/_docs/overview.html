@@ -102,19 +102,19 @@ title: Overview
   Assuming you are interested in which <code>what</code> tags exist for a given role, you could do the following:
 </p>
 
-<codeblock language="bash">
+<pre><code class="language-bash">
 $ curl -H "Content-Type: application/json" &lt;url&gt;/metadata/suggest-tag -d \
   '{"filter": ["=", "role", "heroic"], "key": "what", "value": "us"}'
-</codeblock>
+</code></pre>
 
-<codeblock language="json">
+<pre><code class="language-json">
 {
   "suggestions": [
     {"score": "1.0", "key": "what", "value": "cpu-usage"},
     {"score": "1.0", "key": "what", "value": "disk-used-percentage"}
   ]
 }
-</codeblock>
+</code></pre>
 
 <p>
   Take note on the partial matching of <code>us</code> in <code>cpu-usage</code> and <code>disk-used-percentage</code>.

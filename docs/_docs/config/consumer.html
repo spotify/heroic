@@ -12,7 +12,7 @@ title: Consumer Configuration
   The following is an example configuration showcasing some options.
 </p>
 
-<codeblock language="yaml">
+<pre><code class="language-yaml">
 consumers:
   - type: kafka
     schema: com.spotify.heroic.consumer.schemas.Spotify100
@@ -27,7 +27,7 @@ consumers:
   - type: collectd
     hostPattern:
       pattern: "%{role}.%{site}.%{domain}"
-</codeblock>
+</code></pre>
 
 <ul>
   <li><a ui-sref="{'#': 'kafka'}">Kafka</a></li>
@@ -36,7 +36,7 @@ consumers:
 
 <h3 id="kafka">Kafka</h3>
 
-<codeblock language="yaml">
+<pre><code class="language-yaml">
 type: kafka
 schema: com.spotify.heroic.consumer.schemas.Spotify100
 topics:
@@ -47,7 +47,7 @@ config:
   zookeeper.connect: zookeeper1.example.com,zookeeper2.example.com,zookeeper3.example.com/heroic
   auto.offset.reset: largest
   auto.commit.enable: true
-</codeblock>
+</code></pre>
 
 <p>
   A kafka consumer that reads and parses data out of a Kafka queue.
@@ -88,12 +88,12 @@ config:
   Support is very early stage, and tags are typically generated which are sub-optimal.
 </p>
 
-<codeblock language="yaml">
+<pre><code class="language-yaml">
 host: "0.0.0.0"
 port: 25826
 hostPattern:
   pattern: "%{role}.%{site}.%{domain}"
-</codeblock>
+</code></pre>
 
 <p>
   Metrics collected this way will have the following tags unless <a ui-sref="{'#': 'explicit-mapping'}">explicitly mapped</a>:

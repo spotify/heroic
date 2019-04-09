@@ -13,9 +13,9 @@ title: Profiles
   using the shell, and the <code>memory</code> profile:
 </p>
 
-<codeblock language="bash">
+<pre><code class="language-bash">
 $> tools/heroic-shell --server -P memory
-</codeblock>
+</code></pre>
 
 <p>
   A list of all available profiles and their options can be seen with the
@@ -34,33 +34,33 @@ $> tools/heroic-shell --server -P memory
   data for the last week to play around with.
 </p>
 
-<codeblock language="bash">
+<pre><code class="language-bash">
 heroic&gt; load-generated
 ...
-</codeblock>
+</code></pre>
 
 <p>
   You can also manually write some data into the the local instance:
 </p>
 
-<codeblock language="bash">
+<pre><code class="language-bash">
 heroic&gt; write --series '{"key": "test", "tags": {"host": "a", "what": "foo"}}' -p 00:00=1 -p 00:01=2
 heroic&gt; write --series '{"key": "test", "tags": {"host": "a", "what": "bar"}}' -p 00:00=3 -p 00:01=4
-</codeblock>
+</code></pre>
 
 <p>
   We can fetch the data back out:
 </p>
 
-<codeblock language="bash">
+<pre><code class="language-bash">
 heroic&gt; fetch --series '{"key": "test", "tags": {"host": "a", "what": "bar"}}' --start 00:00 --end 00:02
-</codeblock>
+</code></pre>
 
 <p>
   We can also query the data:
 </p>
 
-<codeblock language="bash">
+<pre><code class="language-bash">
 heroic&gt; query average from points(1d) where $key = test;
 heroic&gt; query average from points(1d) where $key = test and what=bar;
-</codeblock>
+</code></pre>

@@ -17,7 +17,7 @@ title: Configuring Suggestions
   This section will document how suggestions are configured in heroic.
 </p>
 
-<codeblock language="yaml">
+<pre><code class="language-yaml">
 suggest:
   backends:
     - type: elasticsearch
@@ -25,7 +25,7 @@ suggest:
         index:
           type: rotating
           pattern: heroic-a-%s
-</codeblock>
+</code></pre>
 
 
 <p>
@@ -119,10 +119,10 @@ suggest:
 <p>
   Example of what the stored suggestions look like.
 </p>
-<codeblock language="json">
+<pre><code class="language-json">
 
 {'_index': 'heroic-1536192000000', '_type': 'series', '_id': '447939eaf69475f685518dc2c179ddaf', '_version': 1, 'found': True, '_source': {'key': 'apollo', 'tags': ['component\x00memcache-client', 'operation\x00get', 'what\x00memcache-results'], 'tag_keys': [component', 'operation', 'what'], 'series_id': '447939eaf69475f685518dc2c179ddaf'}}
 
 {'_index': 'heroic-1536192000000', '_type': 'tag', '_id': '447939eaf69475f685518dc2c179ddaf:687d7854', '_version': 1, 'found': True, '_source': {'key': 'apollo', 'tags': ['component\x00memcache-client', 'what\x00memcache-results', 'operation\x00get'], 'tag_keys': ['component', 'what', 'operation'], 'series_id': '447939eaf69475f685518dc2c179ddaf', 'skey': 'component', 'sval': 'memcache-client', 'kv': 'component\x00memcache-client'}}
 
-</codeblock>
+</code></pre>

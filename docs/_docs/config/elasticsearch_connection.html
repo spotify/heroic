@@ -67,13 +67,13 @@ title: Elasticsearch Connection
 
 <h3 id="elasticsearch-rotating">Rotating Index Mapping</h3>
 
-<codeblock language="yaml">
+<pre><code class="language-yaml">
 type: rotating
 pattern: metadata-%s
 interval: 1w
 maxReadIndices: 2
 maxWriteIndices: 1
-</codeblock>
+</code></pre>
 
 <p>
   Mapping that maps to the same single index.
@@ -104,10 +104,10 @@ maxWriteIndices: 1
 
 <h3 id="elasticsearch-single">Single Index Mapping</h3>
 
-<codeblock language="yaml">
+<pre><code class="language-yaml">
 type: single
 index: metadata
-</codeblock>
+</code></pre>
 
 <p>
   Mapping that maps to the same single index.
@@ -131,12 +131,12 @@ index: metadata
   This is the most lightweight method of interacting with the Elasticsearch cluster.
 </p>
 
-<codeblock language="yaml">
+<pre><code class="language-yaml">
 type: transport
 clusterName: heroic
 seeds:
   - localhost
-</codeblock>
+</code></pre>
 
 <table class="table">
   <tr>
@@ -166,12 +166,12 @@ seeds:
   It is typically recommended against, due the complexity involved in the client.
 </p>
 
-<codeblock language="yaml">
+<pre><code class="language-yaml">
 type: node
 clusterName: heroic
 seeds:
   - localhost
-</codeblock>
+</code></pre>
 
 <table class="table">
   <tr>
@@ -197,11 +197,11 @@ seeds:
   This is typically used when running a fully in-memory configuration of heroic.
 </p>
 
-<codeblock language="yaml">
+<pre><code class="language-yaml">
 type: standalone
 clusterName: heroic-standalone
 root: /tmp/heroic-standalone
-</codeblock>
+</code></pre>
 
 <table class="table">
   <tr>

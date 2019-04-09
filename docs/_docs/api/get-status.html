@@ -13,7 +13,7 @@
   <api-response status="200">
     <h4>Example <span class="status">200</span> Response</h4>
 
-    <codeblock language="json">
+    <pre><code class="language-json">
     {
       "ok": true,
       "service": {
@@ -45,7 +45,7 @@
         "offlineNodes": 0
       }
     }
-    </codeblock>
+    </code></pre>
   </api-response>
 
   <api-response status="503">
@@ -59,7 +59,7 @@
       The below document shows that there is something wrong with the configured consumers, in this case it is because the number of <code>consumingThreads</code> is not the same as the <code>totalThreads</code>
     </p>
 
-    <codeblock language="json">
+    <pre><code class="language-json">
     {
       "ok": false,
       "consumers": {
@@ -72,6 +72,6 @@
       },
       ...
     }
-    </codeblock>
+    </code></pre>
   </api-response>
 </api-endpoint>

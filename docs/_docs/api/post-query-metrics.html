@@ -47,13 +47,13 @@
 
     <h4>Example Request</h4>
 
-    <codeblock language="json">
+    <pre><code class="language-json">
     {
       "range": {"type": "relative", "unit": "HOURS", "value": 2},
       "filter": ["and", ["key", "foo"], ["=", "foo", "bar"], ["+", "role"]],
       "groupBy": ["site"]
     }
-    </codeblock>
+    </code></pre>
   </api-accept>
 
   <api-response>
@@ -82,7 +82,7 @@
 
     <h4>Example Response</h4>
 
-    <codeblock language="json">
+    <pre><code class="language-json">
     {
       "errors": [
         {
@@ -118,6 +118,6 @@
       },
       "statistics": {}
     }
-    </codeblock>
+    </code></pre>
   </api-response>
 </api-endpoint>

@@ -17,25 +17,25 @@ title: Query Logging Configuration
   A typical configuration looks something like this.
 </p>
 
-<codeblock language="yaml">
+<pre><code class="language-yaml">
 queryLogging:
   type: slf4j
   name: "com.spotify.heroic.query_logging"
-</codeblock>
+</code></pre>
 
 <h4>Field definitions</h4>
 
-<codeblock language="yaml">
+<pre><code class="language-yaml">
 type: slf4j
-</codeblock>
+</code></pre>
 
 <p>
   Defines which type of logger that should be used for query logging. Currently only supports 'slf4j'. Without this line, query logging is disabled.
 </p>
 
-<codeblock language="yaml">
+<pre><code class="language-yaml">
 name: "com.spotify.heroic.query_logging"
-</codeblock>
+</code></pre>
 
 <p>
   Defines the Slf4j logger to use when logging. A matching logger needs to be defined in the Slf4j configuration file to actually get some output.
@@ -52,7 +52,7 @@ name: "com.spotify.heroic.query_logging"
   Add the following clientContext snippet to the query:
 </p>
 
-<codeblock language="yaml">
+<pre><code class="language-yaml">
 {
   "clientContext": {
     "dashboardId": "my-system-metrics",
@@ -60,13 +60,13 @@ name: "com.spotify.heroic.query_logging"
   }
   "filter": ...
 }
-</codeblock>
+</code></pre>
 
 <p>
   You'll get the following output in the query log:
 </p>
 
-<codeblock language="yaml">
+<pre><code class="language-yaml">
 {
   "component": ...,
   "queryId": "ed6fe51c-afba-4320-a859-a88795c15175",
@@ -77,7 +77,7 @@ name: "com.spotify.heroic.query_logging"
   "type": ...,
   "data": ...
 }
-</codeblock>
+</code></pre>
 
 
 <h3>Query log output</h3>
@@ -86,7 +86,7 @@ name: "com.spotify.heroic.query_logging"
   Each successful query will result in several output entries in the query log. Entries from different stages of the query. Example output:
 </p>
 
-<codeblock language="yaml">
+<pre><code class="language-yaml">
 {
   "component": ...,
   "queryId": "ed6fe51c-afba-4320-a859-a88795c15175",
@@ -97,45 +97,45 @@ name: "com.spotify.heroic.query_logging"
   "type": ...,
   "data": ...
 }
-</codeblock>
+</code></pre>
 
 <h4>Field definitions</h4>
 
-<codeblock language="yaml">
+<pre><code class="language-yaml">
   "component": ...
-</codeblock>
+</code></pre>
 
 <p>
   Specifies the internal component in Heroic that outputs this query log output.
 </p>
 
-<codeblock language="yaml">
+<pre><code class="language-yaml">
   "queryId": ...
-</codeblock>
+</code></pre>
 
 <p>
   Generated id that is unique for this particular query. Can be used to group query log entries together. The queryId is also returned in the final query response.
 </p>
 
-<codeblock language="yaml">
+<pre><code class="language-yaml">
   "clientContext": ...
-</codeblock>
+</code></pre>
 
 <p>
   The contextual information supplied by user. See the Contextual Information section above.
 </p>
 
-<codeblock language="yaml">
+<pre><code class="language-yaml">
   "type": ...
-</codeblock>
+</code></pre>
 
 <p>
   Specifies the query stage at which this particular query log entry was generated.
 </p>
 
-<codeblock language="yaml">
+<pre><code class="language-yaml">
   "data": ...
-</codeblock>
+</code></pre>
 
 <p>
   Contains data relevant to this query stage. This might for example be the original query, a partial response or the final response.

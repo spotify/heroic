@@ -37,25 +37,25 @@ title: Features Configuration
   A typical configuration looks something like this.
 </p>
 
-<codeblock language="yaml">
+<pre><code class="language-yaml">
 features:
   - com.spotify.heroic.shift_range
   - -com.spotify.heroic.distributed_aggregations
-</codeblock>
+</code></pre>
 
 <p>
   When added to a query, they are added to the <code>.features</code> section
   like this:
 </p>
 
-<codeblock language="json">
+<pre><code class="language-json">
 {
   "features": [
     "com.spotify.heroic.shift_range",
     "-com.spotify.heroic.distributed_aggregations"
   ]
 }
-</codeblock>
+</code></pre>
 
 <h3 id="available-features">Available Features</h3>
 
