@@ -45,12 +45,12 @@
         </div>
 
         <ul class="nav navbar-nav">
-          <li class="active">
+          <li {% if page.collection == 'docs' %}class="active"{% endif %}>
             <a href="docs/overview">Documentation</a>
           </li>
 
-          <li ui-sref-active="active">
-            <a ui-sref="tutorial.index">Tutorials</a>
+          <li {% if page.collection == 'tutorials' %}class="active"{% endif %}>
+            <a href="tutorial/index">Tutorials</a>
           </li>
         </ul>
 

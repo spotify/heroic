@@ -2,3 +2,15 @@ baseurl: /heroic
 collections:
   docs:
     output: true
+  tutorials:
+    output: true
+
+defaults:
+  - scope:
+      type: docs
+    values:
+      layout: documentation
+  - scope:
+      type: tutorials
+    values:
+      layout: tutorial
