@@ -13,4 +13,4 @@ defaults:
   - scope:
       type: tutorials
     values:
-      layout: tutorial
+      layout: default

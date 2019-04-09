@@ -1,0 +1,115 @@
+---
+---
+<h2>Consuming metrics over Kafka</h2>
+
+<blockquote cite="http://kafka.apache.org/">
+  <p>Kafka has a modern cluster-centric design that offers strong durability and
+  fault-tolerance guarantees.</p>
+  <footer><cite title="Source Title"><a href="http://kafka.apache.org/">http://kafka.apache.org/</a></cite></footer>
+</blockquote>
+
+<p>
+  Kafka is an excellent choice for transporting metrics.
+  It's not a simple system, so you will find yourself digging through the
+  <a href="http://kafka.apache.org/documentation.html">official documentation</a>
+  from time-to-time.
+  It is resilient towards the failure of individual nodes, and it supports
+  <a href="">log retention</a> that could potentially give you some breathing
+  room in the face of problems with other components without worrying about the
+  permanent loss of metrics.
+</p>
+
+<p>
+  A Kafka cluster consists of the following parts:
+</p>
+
+<ul>
+  <li>A <a href="https://zookeeper.apache.org/">ZooKeeper</a> cluster</li>
+  <li>A <a href="http://kafka.apache.org/">Kafka</a> cluster</li>
+  <li>(Strongly Recommended) <a href="https://github.com/yahoo/kafka-manager">Kafka Manager</a></li>
+</ul>
+
+<p>
+  You should follow the <a href="http://kafka.apache.org/documentation.html#introduction">Kafka introduction</a> for getting started.
+  On top of this, it is important that you configure the <a href="http://kafka.apache.org/documentation.html#brokerconfigs">num.partitions</a> option on the broker to be a larger number, like <code>100</code>.
+</p>
+
+<pre><code>
+# server.properties
+num.partitions=100
+</code></pre>
+
+<p>
+  The exact number is not important, but the number of partitions used for a particular topic is the limiting factor for distributing load.
+  So, if you have a topic with only <em>two</em> partitions, this would limit the number of active Heroic consumers you have to two as well.
+</p>
+
+<h3>Configuring Heroic Consumers</h3>
+
+<p>
+  The following is a complete example configuration for a Kafka consumer.
+  Take note of <code>group.id</code> below.
+  Two consumers belonging to the same <code>group.id</code> will balance the responsibility between them.
+  Therefore you can operate as many consumers as you need to support your desired throughput and redundancy with the same configuration.
+</p>
+
+<pre><code class="language-yaml">
+# heroic.yaml
+
+port: 8080
+
+consumers:
+  - type: kafka
+    schema: com.spotify.heroic.consumer.schemas.Spotify100
+    topics:
+      - "metrics-pod1"
+    config:
+      group.id: heroic-consumer
+      zookeeper.connect: zookeeper1.example.com,zookeeper2.example.com,zookeeper3.example.com/heroic
+      auto.offset.reset: smallest
+      auto.commit.enable: true
+</code></pre>
+
+<p>
+  Using the above configuration as skeleton you need to fill in at least the <a href="docs/config/metrics">metric</a>, and <a href="docs/config/metadata">metadata</a> backends.
+  At this point, you now have a consumer configuration that can be used to spawn one or more Heroic instances faithfully consuming your metrics.
+</p>
+
+<h3>Configuring ffwd-java</h3>
+
+<p>
+  <a href="https://github.com/spotify/ffwd-java">ffwd-java</a> is a metrics forwarding agent developed at Spotify.
+  It has first-class support for sending metrics into Kafka, and the following will detail how this is configured.
+</p>
+
+<p>
+  Kafka uses partitions to distribute load, each producer decides which partition a particular message should be sent to.
+  ffwd-java supports partitioning (see <a href="http://kafka.apache.org/documentation.html#introduction">"Topics and Logs" in the Kafka documentation</a>) per-host using the following output plugin:
+</p>
+
+<pre><code class="language-yaml">
+# ffwd.yaml
+
+attributes:
+  host: database.example.com
+  pod: pod1
+
+output:
+  plugins:
+    - type: "kafka"
+      flushInterval: 10000
+      serializer:
+        type: spotify100
+      router:
+        type: attribute
+        attribute: pod
+      producer:
+        metadata.broker.list: "kafka1.example.com,kafka2.example.com,kafka3.example.com"
+        request.required.acks: 1
+        request.timeout.ms: 1000
+</code></pre>
+
+<p>
+  The above will instruct ffwd-java to send metrics to kafka, the topic will be determined (routed) to the <code>metrics-&lt;pod&gt;</code> topic, where <code>&lt;pod&gt;</code> is the <code>pod</code> attribute in the metric.
+  A host-based partitioner by default, so metrics sent from a single given host will all end up on the same partition.
+</p>
