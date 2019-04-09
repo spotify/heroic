@@ -1,7 +1,6 @@
 /* global Prism */
 
 (function () {
-
   Prism.languages.hql = {
     'string': /("(?!:)(\\?[^'"])*?"(?!:)|\b[a-z\.]+\b)/g
   };
