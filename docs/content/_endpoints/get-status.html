@@ -1,0 +1,16 @@
+---
+method: GET
+endpoint: /status
+help: Get the state of the service
+description: Query for the status of an instance.
+empty: true
+responses:
+- file: get-status.json
+  status: 200
+- file: get-status-failed.html
+  status: 503
+---
+<p>
+  The status code <span class="status">503</span> is used to indicate to load balancers that a service is
+  not available for requests right now.
+</p>

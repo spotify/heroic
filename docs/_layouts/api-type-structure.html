@@ -1,0 +1,34 @@
+---
+layout: documentation
+---
+<div class="api-type">
+  <h3>{{ page.type_name }}</h3>
+
+  <div class="doc">
+    {{ content }}
+  </div>
+
+  <div class="structure-doc">
+    <div class="table-responsive">
+    <table class="table table-bordered">
+      <tr>
+        <th>Structure</th>
+        <th>Purpose</th>
+      </tr>
+
+      {%- for field in page.fields %}
+      <tr>
+        <td>{% include api-field-type.html field=field %}</td>
+        <td>
+          {%- if field.purpose %}
+          {{ field.purpose }}
+          {%- else %}
+          {% include fields/{{ page.slug }}/{{ field.name }}.html %}
+          {%- endif %}
+        </td>
+      </tr>
+      {%- endfor %}
+    </table>
+    </div>
+  </div>
+</div>

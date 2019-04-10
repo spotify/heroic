@@ -1,0 +1,22 @@
+<p>
+  A <span class="status">503</span> will still return a response body, however the root key <code>.ok</code> will have the value <code>false</code>.
+</p>
+
+<p>
+  The below document shows that there is something wrong with the configured consumers, in this case it is because the number of <code>consumingThreads</code> is not the same as the <code>totalThreads</code>
+</p>
+
+<pre><code class="language-json">
+  {
+    "ok": false,
+    "consumers": {
+      "ok": false,
+      "available": 0,
+      "ready": 0,
+      "errors": 0,
+      "consumingThreads": 0,
+      "totalThreads": 1
+    },
+    ...
+  }
+</code></pre>

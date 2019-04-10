@@ -1,0 +1,6 @@
+{
+  "key": "role",
+  "value": "hero con",
+  "filter": ["=", "site", "lon"],
+  "limit": 10
+}

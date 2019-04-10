@@ -1,0 +1,37 @@
+{% assign content_type = {{ include.content_type | default: 'application/json' }} -%}
+{% capture default_curl_data %}{% raw %}{}{% endraw %}{% endcapture -%}
+{% assign curl_data = include.curl_data | default: page.curl_data | default: default_curl_data -%}
+
+<div class="api-accept">
+  <span class="icon glyphicon glyphicon-upload" title="Accept"></span>
+  {%- if include.empty %}
+  <span>
+    <em>Does not accept a body</em>
+    <span
+      class="glyphicon glyphicon-question-sign"
+      popover="Sending a body will cause a 400 error to be returned"
+      popover-title="Request body is not supported"
+      popover-trigger="mouseenter" />
+  </span>
+  {% else %}
+  <span class="content-type">{{ content_type }}</span>
+
+  <div class="accept-doc">
+    {{ include.contents }}
+  </div>
+  {%- endif %}
+
+  <div>
+    <h4>Example Curl</h4>
+    <pre><code class="language-bash">
+        {%- capture headers %}
+        {%- unless include.empty %}-H "Content-Type: {{ content_type }}" {% endunless %}
+        {%- endcapture %}
+        $ curl -X{{ page.method }} {{ headers -}}
+        http://localhost:8080{{ page.endpoint }}
+        {%- unless include.empty %} \
+          -d '{{ curl_data }}'
+        {%- endunless %}
+    </code></pre>
+  </div>
+</div>

@@ -80,9 +80,12 @@ layout: default
         <a href="docs/api">API</a>
 
         <ul class="nav endpoints">
-          <li ng-repeat="e in endpoints" class="endpoint-{{e.method | lowercase}} {% if page.title == e.method + ': ' + e.url %}active{% endif %}">
-            <a href="docs/api/{{e.sref}}">{{e.method}}: {{e.url}}</a>
+          {%- assign endpoints = site.endpoints | sort: 'endpoint' | reverse %}
+          {% for item in endpoints %}
+          <li class="endpoint-{{ item.method | downcase }} {% if page.url == item.url %}active{% endif %}">
+            <a href="{{ item.url | relative_url  }}">{{ item.method }}: {{ item.endpoint }}</a>
           </li>
+          {% endfor %}
         </ul>
       </li>
 

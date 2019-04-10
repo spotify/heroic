@@ -1,0 +1,19 @@
+{% assign field = include.field %}
+
+{%- if field.type_name %}
+{%- assign type_page = site.api_types | where: 'type_name', field.type_name | first %}
+<a href="{{ type_page.url | relative_url }}">
+  <code>
+    {%- if field.type_array %}
+    [{{ field.type_name }}, ...]
+    {%- else %}
+    {{ field.type_name }}
+    {%- endif %}
+  </code>
+  <small><span class="glyphicon glyphicon-link"></span></small>
+</a>
+{%- elsif field.type_json %}
+<code class="language-json">{{ field.type_json }}</code>
+{%- else %}
+<em>no type</em>
+{%- endif %}

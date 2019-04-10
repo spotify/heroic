@@ -1,0 +1,42 @@
+<div class="api-type">
+  <div class="doc">
+    {{ include.content }}
+  </div>
+
+  <div class="structure-doc">
+    <h5>{{ include.name | default: page.type_name | default: 'Structure' }}</h5>
+
+    <div class="table-responsive">
+    <table class="table table-bordered">
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Purpose</th>
+      </tr>
+
+      {%- assign fields = include.fields | default: page.fields %}
+      {%- for field in fields %}
+      <tr>
+        <td>
+          <code>{{ field.name }}</code>&nbsp;
+          {%- if field.required %}
+          <small>
+            <em class="sr-only">required</em>
+            <span class="glyphicon glyphicon-check" popover="required field" popover-trigger="mouseenter"></span>
+          </small>
+          {%- endif %}
+        </td>
+        <td>{% include api-field-type.html field=field %}</td>
+        <td>
+          {%- if field.purpose %}
+          {{ field.purpose }}
+          {%- else %}
+          {% include fields/{{ page.slug }}/{{ field.name }}.html %}
+          {%- endif %}
+        </td>
+      </tr>
+      {%- endfor %}
+    </table>
+    </div>
+  </div>
+</div>

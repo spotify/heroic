@@ -1,0 +1,42 @@
+{
+  "a": {
+    "errors": [],
+    "result": [
+      {
+        "hash": "deadbeef",
+        "tags": {"foo": "bar"},
+        "values": [[1300000000000, 42.0]]
+      },
+      {
+        "hash": "beefdead",
+        "tags": {"foo": "baz"},
+        "values": [[1300000000000, 42.0]]
+      }
+    ],
+    "range": {
+      "end": 1469816790000,
+      "start": 1469809590000
+    },
+    "statistics": {}
+  },
+  "b": {
+    "errors": [],
+    "result": [
+      {
+        "hash": "deadbeef",
+        "tags": {"foo": "bar"},
+        "values": [[1300000000000, 42.0]]
+      },
+      {
+        "hash": "beefdead",
+        "tags": {"foo": "baz"},
+        "values": [[1300000000000, 42.0]]
+      }
+    ],
+    "range": {
+      "end": 1469816790000,
+      "start": 1469809590000
+    },
+    "statistics": {}
+  }
+}
