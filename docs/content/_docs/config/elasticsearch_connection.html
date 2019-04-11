@@ -42,8 +42,8 @@ short_url: docs/config/elasticsearch_connection
       The following types of index mappings are available.
 
       <ul>
-        <li><a ui-sref="{'#': 'elasticsearch-rotating'}">rotating</a> - a rotating index mapping, where indexes rotate over time.</li>
-        <li><a ui-sref="{'#': 'elasticsearch-single'}">single</a> - a single index mapping, where the same index is used indefinitely.</li>
+        <li><a href="{{ page.url | relative_url }}#elasticsearch-rotating">rotating</a> - a rotating index mapping, where indexes rotate over time.</li>
+        <li><a href="{{ page.url | relative_url }}#elasticsearch-single">single</a> - a single index mapping, where the same index is used indefinitely.</li>
       </ul>
     </td>
   </tr>
@@ -58,9 +58,9 @@ short_url: docs/config/elasticsearch_connection
       The following types are available.
 
       <ul>
-        <li><a ui-sref="{'#': 'elasticsearch-transport'}">transport</a> - a transport client, which connects to the cluster using the transport protocol.</li>
-        <li><a ui-sref="{'#': 'elasticsearch-node'}">node</a> - the node client, which joins the cluster as a non-data, non-leader node.</li>
-        <li><a ui-sref="{'#': 'elasticsearch-standalone'}">standalone</a> - standalone mode, which create a complete local cluster.</li>
+        <li><a href="{{ page.url | relative_url }}#elasticsearch-transport">transport</a> - a transport client, which connects to the cluster using the transport protocol.</li>
+        <li><a href="{{ page.url | relative_url }}#elasticsearch-node">node</a> - the node client, which joins the cluster as a non-data, non-leader node.</li>
+        <li><a href="{{ page.url | relative_url }}#elasticsearch-standalone">standalone</a> - standalone mode, which create a complete local cluster.</li>
       </ul>
     </td>
   </tr>

@@ -113,7 +113,7 @@ metrics:
     <td><code>schema</code></td>
     <td>
       Configures which data schema to use.
-      Defaults to <a ui-sref="{'#': 'schema-ng'}">Next Generation</a>.
+      Defaults to <a href="{{ page.url | relative_url }}#schema-ng">Next Generation</a>.
     </td>
   </tr>
 </table>
@@ -216,8 +216,8 @@ credentials:
       Can be one of:
 
       <ul>
-        <li><a ui-sref="{'#':'json-credentials'}">JSON Credentials</a></li>
-        <li><a ui-sref="{'#':'compute-engine-credentials'}">Compute Engine Credentials</a></li>
+        <li><a href="{{ page.url | relative_url }}#json-credentials">JSON Credentials</a></li>
+        <li><a href="{{ page.url | relative_url }}#compute-engine-credentials">Compute Engine Credentials</a></li>
       </ul>
     </td>
   </tr>

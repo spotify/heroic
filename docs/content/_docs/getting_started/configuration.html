@@ -7,14 +7,14 @@ short_url: docs/getting_started/configuration
 <p>
   In this section we'll be configuring all the components that make up a Heroic
   cluster.
-  These should have been installed in the <a ui-sref="^.installation">previous step</a>.
+  These should have been installed in the <a href="docs/getting_started/installation">previous step</a>.
 </p>
 
 <ul>
-  <li><a ui-sref=".({'#': 'cassandra'})">Configuring Cassandra</a></li>
-  <li><a ui-sref=".({'#': 'bigtable'})">Configuring Bigtable</a></li>
-  <li><a ui-sref=".({'#': 'elasticsearch'})">Configuring Elasticsearch</a></li>
-  <li><a ui-sref=".({'#': 'heroic'})">Configuring Heroic</a></li>
+  <li><a href="{{ page.url | relative_url }}#cassandra">Configuring Cassandra</a></li>
+  <li><a href="{{ page.url | relative_url }}#bigtable">Configuring Bigtable</a></li>
+  <li><a href="{{ page.url | relative_url }}#elasticsearch">Configuring Elasticsearch</a></li>
+  <li><a href="{{ page.url | relative_url }}#heroic">Configuring Heroic</a></li>
 </ul>
 
 <h3 id="cassandra">
@@ -24,7 +24,7 @@ short_url: docs/getting_started/configuration
 
 <p>
   Heroic (by default) uses the <code>heroic</code> keyspace, which can be
-  configured using the <a ui-sref="^.^.shell">Heroic shell</a>.
+  configured using the <a href="docs/shell">Heroic shell</a>.
 </p>
 
 <pre><code class="language-bash">
@@ -58,7 +58,7 @@ heroic> configure
 </h3>
 
 <p>
-  Elasticsearch is also configured using the <a ui-sref="^.^.shell">Heroic shell</a>.
+  Elasticsearch is also configured using the <a href="docs/shell">Heroic shell</a>.
 </p>
 
 <pre><code class="language-bash">
@@ -102,9 +102,9 @@ script:
 </p>
 
 <ul>
-  <li>An <a href="#heroic-api-node">API Node</a>, designated to receive user traffic</li>
-  <li>A <a href="#heroic-data-node">Data Node</a>, designated to process requests received by the API nodes</li>
-  <li>A <a href="#heroic-consumer-node">Consumer Node</a>, designated to consume data from Kafka topics</li>
+  <li>An <a href="{{ page.url | relative_url }}#heroic-api-node">API Node</a>, designated to receive user traffic</li>
+  <li>A <a href="{{ page.url | relative_url }}#heroic-data-node">Data Node</a>, designated to process requests received by the API nodes</li>
+  <li>A <a href="{{ page.url | relative_url }}#heroic-consumer-node">Consumer Node</a>, designated to consume data from Kafka topics</li>
 </ul>
 
 <p>
@@ -204,7 +204,7 @@ suggest:
 </code></pre>
 
 <p>
-  For more details in how the service can be configured, see the <a ui-sref="^.^.config">Configuration Section</a>.
+  For more details in how the service can be configured, see the <a href="docs/config">Configuration Section</a>.
 </p>
 
 <h4 id="heroic-data-node">

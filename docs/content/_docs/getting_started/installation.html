@@ -9,9 +9,9 @@ short_url: docs/getting_started/installation
 </p>
 
 <ul>
-  <li><a ui-sref=".({'#': 'cassandra'})">A Cassandra 2.x cluster</a></li>
-  <li><a ui-sref=".({'#': 'elasticsearch'})">An Elasticsearch cluster</a></li>
-  <li><a ui-sref=".({'#': 'kafka'})">A Kafka Cluster</a></li>
+  <li><a href="{{ page.url | relative_url }}#cassandra">A Cassandra 2.x cluster</a></li>
+  <li><a href="{{ page.url | relative_url }}#elasticsearch">An Elasticsearch cluster</a></li>
+  <li><a href="{{ page.url | relative_url }}#kafka">A Kafka Cluster</a></li>
 </ul>
 
 <div class="callout callout-danger">
@@ -60,7 +60,7 @@ cd apache-cassandra-&lt;version&gt;</code></pre>
 <pre><code class="language-bash">bin/cassandra -f</code></pre>
 
 <p>
-  Next you should read how to <a ui-sref="^.configuration({'#': 'cassandra'})">configure cassandra</a>.
+  Next you should read how to <a href="docs/configuration#cassandra">configure cassandra</a>.
 </p>
 
 <h3 id="elasticsearch">

@@ -92,7 +92,7 @@ $key = "hello kitty" and host = foo.example.com
 </code></pre>
 
 <p>
-  To test this principle you can fire up the <a ui-sref="^.shell">Heroic Shell</a> and run the following commands:
+  To test this principle you can fire up the <a href="docs/shell">Heroic Shell</a> and run the following commands:
 </p>
 
 <pre><code class="language-bash">
@@ -105,12 +105,12 @@ heroic> parse-query --no-indent "average by host | sum by site"
 <h3>Aggregations</h3>
 
 <p>
-  Main Article: <a ui-sref="^.aggregations">Aggregations</a>
+  Main Article: <a href="docs/aggregations">Aggregations</a>
 </p>
 
 <p>
   Aggregations are expressed as function calls, or typed documents.
-  See the following example using the <a ui-sref="^.aggregations({'#': 'sum'})">sum</a> aggregation.
+  See the following example using the <a href="docs/aggregations#sum">sum</a> aggregation.
 </p>
 
 <div class="table-responsive">
@@ -132,8 +132,8 @@ heroic> parse-query --no-indent "average by host | sum by site"
 
 <p>
   There is also syntactic sugar for the special
-  <a ui-sref="^.aggregations({'#': 'group'})">group</a> and
-  <a ui-sref="^.aggregations({'#': 'chain'})">chain</a>
+  <a href="docs/aggregations#group">group</a> and
+  <a href="docs/aggregations#chain">chain</a>
   aggregations.
 </p>
 
@@ -175,7 +175,7 @@ heroic> parse-query --no-indent "average by host | sum by site"
 <h3>Filters</h3>
 
 <p>
-  A filter reduces the number of selected time series, if no filter (or the <a ui-sref="{'#':'filter-true'}">true filter</a>) is used, then it is implied that <em>all</em> time series in the database is selected.
+  A filter reduces the number of selected time series, if no filter (or the <a href="{{ page.url | relative_url }}#filter-true">true filter</a>) is used, then it is implied that <em>all</em> time series in the database is selected.
 </p>
 
 <img style="width: 100%;" src="images/filter-dsl.svg"></img>
@@ -292,7 +292,7 @@ heroic> parse-query --no-indent "average by host | sum by site"
     <th scope="row">Simple String</th>
     <td>
       String made up of a limited set of characters for convenience.
-      It must not match a <a href="#parsed-keyword">parsed keyword</a>.
+      It must not match a <a href="{{ page.url | relative_url }}#parsed-keyword">parsed keyword</a>.
     </td>
     <td>
       <pre><code class="language-hql">hello.world</code></pre>

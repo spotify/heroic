@@ -18,8 +18,8 @@ short_url: docs/shell
 </p>
 
 <p>
-  You can configure an heroic instance to enable <em>local</em> shell connections by adding the following snippet to your <a ui-sref="docs.config">heroic.yml</a>.
-  For more details, see <a ui-sref="^.config.shell_server">Shell Server Configuration</a>.
+  You can configure an heroic instance to enable <em>local</em> shell connections by adding the following snippet to your <a href="docs/config">heroic.yml</a>.
+  For more details, see <a href="docs/config/shell_server">Shell Server Configuration</a>.
 </p>
 
 <pre><code class="language-yaml">
@@ -27,12 +27,12 @@ shellServer: {}
 </code></pre>
 
 <p>
-  The shell can be run in two different modes; <a ui-sref="{'#': 'remote-shell'}"><em>remote</em></a>, and <a ui-sref="{'#': 'standalone-shell'}"><em>standalone</em></a>.
-  It is also possible to activate <a ui-sref="{'#': 'profiles'}"><em>profiles</em></a>, which effects the configuration of the service.
+  The shell can be run in two different modes; <a href="{{ page.url | relative_url }}#remote-shell"><em>remote</em></a>, and <a href="{{ page.url | relative_url }}#standalone-shell"><em>standalone</em></a>.
+  It is also possible to activate <a href="{{ page.url | relative_url }}#profiles"><em>profiles</em></a>, which effects the configuration of the service.
 </p>
 
 <p>
-  In <em>remote</em> mode, you connect to an already running heroic instance which is <a ui-sref="^.config.shell_server">configured to accept shell connection</a>.
+  In <em>remote</em> mode, you connect to an already running heroic instance which is <a href="docs/config/shell_server">configured to accept shell connection</a>.
 </p>
 
 <p>
@@ -77,7 +77,7 @@ $ tools/heroic-shell --connect &lt;host&gt;[:port]
 
 <p>
   Standalone shells includes the heroic service running in the background and the shell is directly connected to this instance.
-  This is typically useful when trying out specific heroic features, specifically in combination with the <a ui-sref="{'#': 'memory-profile'}">memory profile</a>
+  This is typically useful when trying out specific heroic features, specifically in combination with the <a href="{{ page.url | relative_url }}#memory-profile">memory profile</a>
 </p>
 
 <h3 id="profiles">

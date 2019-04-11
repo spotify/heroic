@@ -31,8 +31,8 @@ consumers:
 </code></pre>
 
 <ul>
-  <li><a ui-sref="{'#': 'kafka'}">Kafka</a></li>
-  <li><a ui-sref="{'#': 'collectd'}">Collectd</a></li>
+  <li><a href="{{ page.url | relative_url }}#kafka">Kafka</a></li>
+  <li><a href="{{ page.url | relative_url }}#collectd">Collectd</a></li>
 </ul>
 
 <h3 id="kafka">
@@ -103,7 +103,7 @@ hostPattern:
 </code></pre>
 
 <p>
-  Metrics collected this way will have the following tags unless <a ui-sref="{'#': 'explicit-mapping'}">explicitly mapped</a>:
+  Metrics collected this way will have the following tags unless <a href="{{ page.url | relative_url }}#explicit-mapping">explicitly mapped</a>:
 </p>
 
 <table class="table">
