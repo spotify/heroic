@@ -102,7 +102,10 @@ heroic> parse-query --no-indent "average by host | sum by site"
 {"aggregation":{"type":"chain","chain":[{"type":"group","of":["host"],"each":{"type":"sum"}},{"type":"average"}]}}
 </code></pre>
 
-<h3>Aggregations</h3>
+<h3 id="aggregations">
+  Aggregations
+  <a class="link-to" href="{{ page.short_url }}#aggregations"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <p>
   Main Article: <a href="docs/aggregations">Aggregations</a>
@@ -138,41 +141,44 @@ heroic> parse-query --no-indent "average by host | sum by site"
 </p>
 
 <div class="table-responsive">
-<table class="table table-bordered">
-  <tr>
-    <td>
-      <pre><code class="language-hql">
-      empty by host
-      </code></pre>
-    </td>
-    <td>
-      <pre><code class="language-json">
-      {"type": "group", "of": ["host"], "each": {"type": "empty"}}
-      </code></pre>
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <pre><code class="language-hql">
-      average(size=5m) | sum(size=10m)
-      </code></pre>
-    </td>
-    <td>
-      <pre><code class="language-json">
-      {
-        "type": "chain",
-        "chain": [
-          {"type": "average", "size": "5m"},
-          {"type": "sum", "size": "10m"}
-        ]
-      }
-      </code></pre>
-    </td>
-  </tr>
-</table>
+  <table class="table table-bordered">
+    <tr>
+      <td>
+        <pre><code class="language-hql">
+            empty by host
+        </code></pre>
+      </td>
+      <td>
+        <pre><code class="language-json">
+            {"type": "group", "of": ["host"], "each": {"type": "empty"}}
+        </code></pre>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <pre><code class="language-hql">
+            average(size=5m) | sum(size=10m)
+        </code></pre>
+      </td>
+      <td>
+        <pre><code class="language-json">
+            {
+              "type": "chain",
+              "chain": [
+                {"type": "average", "size": "5m"},
+                {"type": "sum", "size": "10m"}
+              ]
+            }
+        </code></pre>
+      </td>
+    </tr>
+  </table>
 </div>
 
-<h3>Filters</h3>
+<h3 id="filters">
+  Filters
+  <a class="link-to" href="{{ page.short_url }}#filters"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <p>
   A filter reduces the number of selected time series, if no filter (or the <a href="{{ page.url | relative_url }}#filter-true">true filter</a>) is used, then it is implied that <em>all</em> time series in the database is selected.
@@ -282,7 +288,10 @@ heroic> parse-query --no-indent "average by host | sum by site"
 </table>
 </div>
 
-<h3>The HQL Language</h3>
+<h3 id="hql">
+  The HQL Language
+  <a class="link-to" href="{{ page.short_url }}#hql"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <h4>Primitives</h4>
 
