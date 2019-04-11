@@ -1,0 +1,61 @@
+---
+group_name: QueryDateRange
+layout: documentation
+fields: []
+---
+<!-- anchor to use when linking to QueryDateRange -->
+<span api-type-id="QueryDateRange"></span>
+
+{% capture content %}
+<p>Java Class: {% include github-link.html module='heroic-component' name='QueryDateRange' %}</p>
+<p>An absolute time span.</p>
+{% endcapture %}
+
+{% assign fields = page.fields %}
+{% include mkhash.inc required=true name="type" type_json='"absolute"' purpose='Type of the absolute date range.' %}
+{% assign fields = fields | push: hash %}
+{% include mkhash.inc required=true name="start" type_json='&lt;number&gt;' purpose='Starting timestamp in milliseconds from the unix epoch.' %}
+{% assign fields = fields | push: hash %}
+{% include mkhash.inc required=true name="end" type_json='&lt;number&gt;' purpose='Ending timestamp in milliseconds from the unix epoch.' %}
+{% assign fields = fields | push: hash %}
+{% include api-type.html fields=fields content=content type_name='QueryDateRange.Absolute' %}
+
+
+{% capture content %}
+<p>Java Class: {% include github-link.html module='heroic-component' name='QueryDateRange' %}</p>
+
+<p>
+  Relative date ranges range from <em>the current</em> time, to a specific
+  point in the past.
+</p>
+
+<p>This object tells the distance to the point in the past.</p>
+{% endcapture %}
+
+{% assign fields = page.fields %}
+{% include mkhash.inc required=true name="type" type_json='"relative"' purpose='Type of the relative date range.' %}
+{% assign fields = fields | push: hash %}
+{% capture purpose %}
+<p>
+  Unit to use for <code>value</code>
+</p>
+
+<p>
+  <code>unit</code> must be one of.
+</p>
+
+<ul class="list-inline">
+  <li><code class="language-json">"MILLISECONDS"</code></li>
+  <li><code class="language-json">"SECONDS"</code></li>
+  <li><code class="language-json">"MINUTES"</code></li>
+  <li><code class="language-json">"HOURS"</code></li>
+  <li><code class="language-json">"DAYS"</code></li>
+  <li><code class="language-json">"WEEKS"</code></li>
+  <li><code class="language-json">"MONTHS"</code></li>
+</ul>
+{% endcapture %}
+{% include mkhash.inc name="unit" type_json='&lt;string&gt;' purpose=purpose %}
+{% assign fields = fields | push: hash %}
+{% include mkhash.inc name="value" type_json='&lt;number&gt;' purpose='How many <code>unit</code> timespans back in time this date starts.' %}
+{% assign fields = fields | push: hash %}
+{% include api-type.html fields=fields content=content  type_name='QueryDateRange.Relative' %}

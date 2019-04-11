@@ -3,7 +3,6 @@ method: POST
 endpoint: /query/metrics
 help: Query for metrics
 description: Query and aggregate metrics.
-type_name: Query
 fields:
 - name: range
   required: true

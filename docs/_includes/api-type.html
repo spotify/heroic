@@ -1,10 +1,12 @@
 <div class="api-type">
+  <h3>{{ include.type_name | default: page.type_name }}</h3>
+
   <div class="doc">
     {{ include.content }}
   </div>
 
   <div class="structure-doc">
-    <h5>{{ include.name | default: page.type_name | default: 'Structure' }}</h5>
+    <h5>{{ include.name | default: 'Structure' }}</h5>
 
     <div class="table-responsive">
     <table class="table table-bordered">
@@ -15,6 +17,10 @@
       </tr>
 
       {%- assign fields = include.fields | default: page.fields %}
+      {%- if include.field %}
+      {%- assign fields = fields | push: include.field %}
+      {%- endif %}
+
       {%- for field in fields %}
       <tr>
         <td>

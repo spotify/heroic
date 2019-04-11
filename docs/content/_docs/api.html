@@ -18,7 +18,7 @@ layout: documentation
 
 {%- for item in site.api_types %}
 <div>
-  <h4><a href="{{ item.url | relative_url }}">{{ item.type_name }}</a></h4>
+  <h4><a href="{{ item.url | relative_url }}">{{ item.group_name | default: item.type_name }}</a></h4>
   {%- if item.help %}
   <p>{{ item.help }}</p>
   {%- endif %}

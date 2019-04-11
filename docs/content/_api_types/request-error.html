@@ -1,0 +1,57 @@
+---
+group_name: RequestError
+layout: documentation
+fields: []
+---
+{% capture content %}
+  Java Class: {% include github-link.html module='heroic-component' name='metric.RequestError' %}
+{% endcapture %}
+
+{% include mkhash.inc required=true name="type" type_json='"node"|"shard"|"query"' purpose='Type of the error. The different error types have different sets of information associated with them.' %}
+{% include api-type.html field=hash content=content type_name='RequestError' %}
+
+
+{% capture content %}
+  Java Class: {% include github-link.html module='heroic-component' name='metric.NodeError' %}
+{% endcapture %}
+
+{% assign fields = page.fields %}
+{% include mkhash.inc required=true name="type" type_json='"node"' purpose='' %}
+{% assign fields = fields | push: hash %}
+{% include mkhash.inc required=true name="error" type_json='&lt;string&gt;' purpose='An error message.' %}
+{% assign fields = fields | push: hash %}
+{% include mkhash.inc required=true name="nodeId" type_json='&lt;string&gt;' purpose='UUID of the failing node.' %}
+{% assign fields = fields | push: hash %}
+{% include mkhash.inc required=true name="node" type_json='&lt;string&gt;' purpose='String-representation of the failing node.' %}
+{% assign fields = fields | push: hash %}
+{% include mkhash.inc required=true name="tags" type_json='{&lt;string&gt;: &lt;string&gt;, ..}' purpose='<a href="docs/config/cluster#tags">Cluster tags</a> of the failing node.' %}
+{% assign fields = fields | push: hash %}
+{% include api-type.html fields=fields content=content type_name='NodeError' %}
+
+
+{% capture content %}
+  Java Class: {% include github-link.html module='heroic-component' name='metric.ShardError' %}
+{% endcapture %}
+
+{% assign fields = page.fields %}
+{% include mkhash.inc required=true name="type" type_json='"shard"' purpose='' %}
+{% assign fields = fields | push: hash %}
+{% include mkhash.inc required=true name="error" type_json="&lt;string&gt;" purpose='A human readable message indicating what went wrong.' %}
+{% assign fields = fields | push: hash %}
+{% include mkhash.inc required=true name="nodes" type_json="[&lt;string&gt;, ...]" purpose='A list of nodes belonging to the shard where the error originated.' %}
+{% assign fields = fields | push: hash %}
+{% include mkhash.inc required=true name="shard" type_json="{&lt;string&gt;: &lt;string&gt;, ...}" purpose='The shard tags associated with the error, all nodes in <code>nodes</code> belong to this shard.' %}
+{% assign fields = fields | push: hash %}
+{% include api-type.html fields=fields content=content type_name='ShardError' %}
+
+
+{% capture content %}
+  Java Class: {% include github-link.html module='heroic-component' name='metric.QueryError' %}
+{% endcapture %}
+
+{% assign fields = page.fields %}
+{% include mkhash.inc required=true name="type" type_json='"series"' purpose='' %}
+{% assign fields = fields | push: hash %}
+{% include mkhash.inc required=true name="error" type_json='&lt;string&gt;' purpose='A human readable message indicating what went wrong.' %}
+{% assign fields = fields | push: hash %}
+{% include api-type.html fields=fields content=content type_name='QueryError' %}
