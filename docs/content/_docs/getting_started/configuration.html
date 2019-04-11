@@ -27,7 +27,7 @@ short_url: docs/getting_started/configuration
   configured using the <a ui-sref="^.^.shell">Heroic shell</a>.
 </p>
 
-<pre><code language="bash">
+<pre><code class="language-bash">
 tools/heroic-shell -P cassandra -X cassandra.seeds=&lt;seeds&gt; -X datastax.configure
 ...
 heroic> configure
@@ -42,7 +42,7 @@ heroic> configure
   If you want to use Google Cloud Bigtable to store metrics, you can configure it with the following command.
 </p>
 
-<pre><code language="bash">
+<pre><code class="language-bash">
 tools/heroic-shell -P bigtable \
   -X bigtable.project=&lt;project&gt; \
   -X bigtable.instance=&lt;instance&gt; \
@@ -61,7 +61,7 @@ heroic> configure
   Elasticsearch is also configured using the <a ui-sref="^.^.shell">Heroic shell</a>.
 </p>
 
-<pre><code language="bash">
+<pre><code class="language-bash">
 tools/heroic-shell -P elasticsearch-suggest -P elasticsearch-metadata -X elasticsearch.seeds=&lt;seeds&gt;
 ...
 heroic> configure
@@ -72,7 +72,7 @@ heroic> configure
   adding the following to your elasticsearch.yml
 </p>
 
-<pre><code language="yaml">
+<pre><code class="language-yaml">
 script:
   disable_dynamic: false
 </pre></code>
@@ -132,7 +132,7 @@ script:
   The following is the minimal required configuration in order to set one up.
 </p>
 
-<pre><code language="yaml">
+<pre><code class="language-yaml">
 # heroic.yaml
 port: 8080
 
@@ -223,7 +223,7 @@ suggest:
   consumer.
 </p>
 
-<pre><code language="yaml">
+<pre><code class="language-yaml">
 # heroic.yaml
 port: 8080
 
@@ -243,7 +243,7 @@ consumers:
 
 <h4>Run a Heroic Node</h4>
 
-<pre><code language="bash">
+<pre><code class="language-bash">
 $ java -cp heroic.jar com.spotify.heroic.HeroicService heroic.yaml
 </code></pre>
 
@@ -254,9 +254,9 @@ $ java -cp heroic.jar com.spotify.heroic.HeroicService heroic.yaml
   Healthy instances should produce a output like the following.
 </p>
 
-<pre><code language="bash">
+<pre><code class="language-bash">
 $ curl http://localhost:8080/status
-</code><code language="json">
+</code><code class="language-json">
 {
   "ok": true,
   "consumers": {

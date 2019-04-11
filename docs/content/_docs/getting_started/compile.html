@@ -21,7 +21,7 @@ title: Compile Heroic
   Get the Heroic source from GitHub:
 </p>
 
-<pre><code language="bash">
+<pre><code class="language-bash">
 $ git clone https://github.com/spotify/heroic.git
 </code></pre>
 
@@ -29,7 +29,7 @@ $ git clone https://github.com/spotify/heroic.git
   Go to the cloned directory and run Maven:
 </p>
 
-<pre><code language="bash">
+<pre><code class="language-bash">
 $ cd heroic
 $ tools/install-repackaged
 $ mvn clean package
@@ -40,6 +40,6 @@ $ mvn clean package
   use to run Heroic through <a git-href-java="heroic-dist">com.spotify.heroic.HeroicService</a>.
 </p>
 
-<pre><code language="bash">
+<pre><code class="language-bash">
 $ java -cp heroic-dist/target/heroic-dist-0.0.1-SNAPSHOT-shaded.jar com.spotify.heroic.HeroicService &lt;config&gt;
 </code></pre>

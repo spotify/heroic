@@ -50,7 +50,7 @@ $ java com.spotify.heroic.HeroicShell --help
 </code></pre>
 
 <p>
-  From now on we will be referring to starting the shell from the heroic project directory, which includes the helper script <code language="bash">tools/heroic-shell</code>.
+  From now on we will be referring to starting the shell from the heroic project directory, which includes the helper script <code class="language-bash">tools/heroic-shell</code>.
 </p>
 
 <h3 id="remote-shell">
@@ -86,12 +86,12 @@ $ tools/heroic-shell --connect &lt;host&gt;[:port]
 </h3>
 
 <p>
-  Profiles are small pieces of configuration which can be activated with the <code language="bash">-P &lt;name&gt;</code> switch.<br />
-  Extra options can be passed into profiles using the <code language="bash">-X &lt;option&gt;[=&lt;value&gt;]</code> switch.
+  Profiles are small pieces of configuration which can be activated with the <code class="language-bash">-P &lt;name&gt;</code> switch.<br />
+  Extra options can be passed into profiles using the <code class="language-bash">-X &lt;option&gt;[=&lt;value&gt;]</code> switch.
 </p>
 
 <p>
-  All available set of profiles and options can be found by at the end of the help command (<code language="bash">--help</code>).
+  All available set of profiles and options can be found by at the end of the help command (<code class="language-bash">--help</code>).
 </p>
 
 <pre><code class="language-bash">
@@ -138,6 +138,6 @@ $ tools/heroic-shell --server -P memory -X configure
 </code></pre>
 
 <p>
-  <code language="bash">--server</code> means that the shell will start heroic in server mode, which will accept http requests on port 8080.<br />
-  <code language="bash">-X configure</code> will cause all backends to be automatically configured, saving you the need to do it yourself with the <code>configure</code> task.
+  <code class="language-bash">--server</code> means that the shell will start heroic in server mode, which will accept http requests on port 8080.<br />
+  <code class="language-bash">-X configure</code> will cause all backends to be automatically configured, saving you the need to do it yourself with the <code>configure</code> task.
 </p>

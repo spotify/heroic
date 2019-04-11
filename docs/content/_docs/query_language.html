@@ -73,7 +73,7 @@ average by host | sum by site
 
 <p>
   The HQL was developed to make it easier for humans to express queries or filters in a manner which is more convenient.
-  The language is infix, and simple strings do not have to be escaped (e.g. <code language="hql">host</code> vs. <code language="hql">&quot;host&quot;</code>)
+  The language is infix, and simple strings do not have to be escaped (e.g. <code class="language-hql">host</code> vs. <code class="language-hql">&quot;host&quot;</code>)
 </p>
 
 <p>
@@ -85,9 +85,9 @@ average by host | sum by site
   The following is an example filter expressed both in a JSON, and in the HQL.
 </p>
 
-<pre><code language="hql">
+<pre><code class="language-hql">
 $key = "hello kitty" and host = foo.example.com
-</code><code language="json">
+</code><code class="language-json">
 ["and", ["$key", "hello kitty"], ["=", "host", "foo.example.com"]]
 </code></pre>
 
@@ -195,23 +195,23 @@ heroic> parse-query --no-indent "average by host | sum by site"
 
   <tr>
     <th scope="row">And</th>
-    <td>Matches if all child statements match. <code language="hql">true</code> if empty.</td>
-    <td><pre><code language="hql">&lt;a&gt; and &lt;b&gt;</code></pre></td>
-    <td><pre><code language="json">["and", &lt;a&gt;, &lt;b&gt;]</code></pre></td>
+    <td>Matches if all child statements match. <code class="language-hql">true</code> if empty.</td>
+    <td><pre><code class="language-hql">&lt;a&gt; and &lt;b&gt;</code></pre></td>
+    <td><pre><code class="language-json">["and", &lt;a&gt;, &lt;b&gt;]</code></pre></td>
   </tr>
 
   <tr>
     <th scope="row">Or</th>
-    <td>Matches if any child statements match. <code language="hql">false</code> if empty.</td>
-    <td><pre><code language="hql">&lt;a&gt; or &lt;b&gt;</code></pre></td>
-    <td><pre><code language="json">["or", &lt;a&gt;, &lt;b&gt;]</code></pre></td>
+    <td>Matches if any child statements match. <code class="language-hql">false</code> if empty.</td>
+    <td><pre><code class="language-hql">&lt;a&gt; or &lt;b&gt;</code></pre></td>
+    <td><pre><code class="language-json">["or", &lt;a&gt;, &lt;b&gt;]</code></pre></td>
   </tr>
 
   <tr>
     <th scope="row">Not</th>
     <td>Matches if child statement does not match.</td>
-    <td><pre><code language="hql">!&lt;a&gt;</code></pre></td>
-    <td><pre><code language="json">["not", &lt;a&gt;]</code></pre></td>
+    <td><pre><code class="language-hql">!&lt;a&gt;</code></pre></td>
+    <td><pre><code class="language-json">["not", &lt;a&gt;]</code></pre></td>
   </tr>
 </table>
 </div>
@@ -228,56 +228,56 @@ heroic> parse-query --no-indent "average by host | sum by site"
 
   <tr>
     <th scope="row">Tag Matches</th>
-    <td><pre><code language="hql">&lt;a&gt; = &lt;b&gt;</code></pre></td>
-    <td><pre><code language="json">["=", &lt;a&gt;, &lt;b&gt;]</code></pre></td>
+    <td><pre><code class="language-hql">&lt;a&gt; = &lt;b&gt;</code></pre></td>
+    <td><pre><code class="language-json">["=", &lt;a&gt;, &lt;b&gt;]</code></pre></td>
   </tr>
 
   <tr>
     <th scope="row">Tag Does Not Match</th>
-    <td><pre><code language="hql">&lt;a&gt; != &lt;b&gt;</code></pre></td>
-    <td><pre><code language="json">["not", ["=", &lt;a&gt;, &lt;b&gt;]]</code></pre></td>
+    <td><pre><code class="language-hql">&lt;a&gt; != &lt;b&gt;</code></pre></td>
+    <td><pre><code class="language-json">["not", ["=", &lt;a&gt;, &lt;b&gt;]]</code></pre></td>
   </tr>
 
   <tr>
     <th scope="row">Tag Starts With</th>
-    <td><pre><code language="hql">&lt;a&gt; ^ &lt;b&gt;</code></pre></td>
-    <td><pre><code language="json">["^", &lt;a&gt;, &lt;b&gt;]</code></pre></td>
+    <td><pre><code class="language-hql">&lt;a&gt; ^ &lt;b&gt;</code></pre></td>
+    <td><pre><code class="language-json">["^", &lt;a&gt;, &lt;b&gt;]</code></pre></td>
   </tr>
 
   <tr>
     <th scope="row">Tag Does Not Start With</th>
-    <td><pre><code language="hql">&lt;a&gt; !^ &lt;b&gt;</code></pre></td>
-    <td><pre><code language="json">["not", ["^", &lt;a&gt;, &lt;b&gt;]]</code></pre></td>
+    <td><pre><code class="language-hql">&lt;a&gt; !^ &lt;b&gt;</code></pre></td>
+    <td><pre><code class="language-json">["not", ["^", &lt;a&gt;, &lt;b&gt;]]</code></pre></td>
   </tr>
 
   <tr>
     <th scope="row">Key Matches</th>
-    <td><pre><code language="hql">$key = &lt;a&gt;</code></pre></td>
-    <td><pre><code language="json">["key", &lt;a&gt;]</code></pre></td>
+    <td><pre><code class="language-hql">$key = &lt;a&gt;</code></pre></td>
+    <td><pre><code class="language-json">["key", &lt;a&gt;]</code></pre></td>
   </tr>
 
   <tr>
     <th scope="row">Key Does Not Match</th>
-    <td><pre><code language="hql">$key != &lt;a&gt;</code></pre></td>
-    <td><pre><code language="json">["not", ["key", &lt;a&gt;]]</code></pre></td>
+    <td><pre><code class="language-hql">$key != &lt;a&gt;</code></pre></td>
+    <td><pre><code class="language-json">["not", ["key", &lt;a&gt;]]</code></pre></td>
   </tr>
 
   <tr>
     <th scope="row">Tag Exists</th>
-    <td><pre><code language="hql">+&lt;a&gt;</code></pre></td>
-    <td><pre><code language="json">["+", &lt;a&gt;]</code></pre></td>
+    <td><pre><code class="language-hql">+&lt;a&gt;</code></pre></td>
+    <td><pre><code class="language-json">["+", &lt;a&gt;]</code></pre></td>
   </tr>
 
   <tr>
     <th scope="row">Tag In</th>
-    <td><pre><code language="hql">&lt;a&gt; in [&lt;b&gt;, ..]</code></pre></td>
-    <td><pre><code language="json">["or", ["=", &lt;a&gt;, &lt;b&gt;], ..]</code></pre></td>
+    <td><pre><code class="language-hql">&lt;a&gt; in [&lt;b&gt;, ..]</code></pre></td>
+    <td><pre><code class="language-json">["or", ["=", &lt;a&gt;, &lt;b&gt;], ..]</code></pre></td>
   </tr>
 
   <tr>
     <th scope="row">Tag Not In</th>
-    <td><pre><code language="hql">&lt;a&gt; not in [&lt;b&gt;, ..]</code></pre></td>
-    <td><pre><code language="json">["not", ["or", ["=", &lt;a&gt;, &lt;b&gt;], ..]]</code></pre></td>
+    <td><pre><code class="language-hql">&lt;a&gt; not in [&lt;b&gt;, ..]</code></pre></td>
+    <td><pre><code class="language-json">["not", ["or", ["=", &lt;a&gt;, &lt;b&gt;], ..]]</code></pre></td>
   </tr>
 </table>
 </div>
@@ -295,7 +295,7 @@ heroic> parse-query --no-indent "average by host | sum by site"
       It must not match a <a href="#parsed-keyword">parsed keyword</a>.
     </td>
     <td>
-      <pre><code language="hql">hello.world</code></pre>
+      <pre><code class="language-hql">hello.world</code></pre>
     </td>
   </tr>
 
@@ -303,7 +303,7 @@ heroic> parse-query --no-indent "average by host | sum by site"
     <th scope="row">Quoted String</th>
     <td>String which is quoted to support <em>any</em> set of characters. Supports the same <a href="https://docs.oracle.com/javase/tutorial/java/data/characters.html">escape sequences as Java</a>.</td>
     <td>
-      <pre><code language="hql">"hello world"</code></pre>
+      <pre><code class="language-hql">"hello world"</code></pre>
     </td>
   </tr>
 </table>
@@ -315,20 +315,20 @@ heroic> parse-query --no-indent "average by host | sum by site"
 <table class="table table-bordered">
   <tr>
     <th scope="row">Addition</th>
-    <td><pre><code language="hql">&lt;a&gt; + &lt;b&gt;</code></pre></td>
+    <td><pre><code class="language-hql">&lt;a&gt; + &lt;b&gt;</code></pre></td>
     <td>
       Valid operands are:
-      <code language="hql">&lt;string&gt; + &lt;string&gt;</code>,
-      and <code language="hql">&lt;number&gt; + &lt;number&gt;</code>.
+      <code class="language-hql">&lt;string&gt; + &lt;string&gt;</code>,
+      and <code class="language-hql">&lt;number&gt; + &lt;number&gt;</code>.
     </td>
   </tr>
 
   <tr>
     <th scope="row">Subtraction</th>
-    <td><pre><code language="hql">&lt;a&gt; - &lt;b&gt;</code></pre></td>
+    <td><pre><code class="language-hql">&lt;a&gt; - &lt;b&gt;</code></pre></td>
     <td>
       Valid operands are:
-      <code language="hql">&lt;number&gt; - &lt;number&gt;</code>.
+      <code class="language-hql">&lt;number&gt; - &lt;number&gt;</code>.
     </td>
   </tr>
 </table>
@@ -342,12 +342,12 @@ heroic> parse-query --no-indent "average by host | sum by site"
 <div class="table-responsive">
 <table class="table table-bordered">
   <tr>
-    <td><code language="hql">$key</code></td>
+    <td><code class="language-hql">$key</code></td>
     <td>Can be used in most places a tag is expected. It indicates that the given expression should match the special field <em>key</em> instead of a tag.</td>
   </tr>
 
   <tr>
-    <td><code language="hql">$now</code></td>
+    <td><code class="language-hql">$now</code></td>
     <td>Expands to the current (server-side) timestamp in milliseconds.</td>
   </tr>
 </table>
@@ -359,7 +359,7 @@ heroic> parse-query --no-indent "average by host | sum by site"
 </h4>
 
 <p>
-  Durations are represented as a numeric component with a suffix, like <code language="hql">3H</code>
+  Durations are represented as a numeric component with a suffix, like <code class="language-hql">3H</code>
 </p>
 
 <p>

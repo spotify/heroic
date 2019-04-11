@@ -50,14 +50,14 @@ short_url: docs/getting_started/installation
   Unpack and run (replace <code>&lt;version&gt;</code> with the actual 2.x version)
 </p>
 
-<pre><code language="bash">tar -xvf apache-cassandra-&lt;version&gt;-bin.tar.gz
+<pre><code class="language-bash">tar -xvf apache-cassandra-&lt;version&gt;-bin.tar.gz
 cd apache-cassandra-&lt;version&gt;</code></pre>
 
 <p>
-  Run cassandra (<code language="bash">-f</code> keeps it in the foreground)
+  Run cassandra (<code class="language-bash">-f</code> keeps it in the foreground)
 </p>
 
-<pre><code language="bash">bin/cassandra -f</code></pre>
+<pre><code class="language-bash">bin/cassandra -f</code></pre>
 
 <p>
   Next you should read how to <a ui-sref="^.configuration({'#': 'cassandra'})">configure cassandra</a>.
@@ -82,7 +82,7 @@ cd apache-cassandra-&lt;version&gt;</code></pre>
 
 <p>
   Now you may start the service:
-<pre><code language="bash">sudo systemctl start elasticsearch</code></pre>
+<pre><code class="language-bash">sudo systemctl start elasticsearch</code></pre>
 </p>
 
 <h4>
@@ -98,14 +98,14 @@ cd apache-cassandra-&lt;version&gt;</code></pre>
   Unpack and run (replace <code>&lt;version&gt;</code> with the actual version)
 </p>
 
-<pre><code language="bash">tar -xvf elasticsearch-&lt;version&gt;-bin.tar.gz
+<pre><code class="language-bash">tar -xvf elasticsearch-&lt;version&gt;-bin.tar.gz
 cd elasticsearch-&lt;version&gt;</code></pre>
 
 <p>
   Run Elasticsearch
 </p>
 
-<pre><code language="bash">bin/elasticsearch</code></pre>
+<pre><code class="language-bash">bin/elasticsearch</code></pre>
 
 <h3 id="kafka">
   Kafka
@@ -125,12 +125,12 @@ cd elasticsearch-&lt;version&gt;</code></pre>
   Unpack and run (replace <code>&lt;scala-version&gt;</code>, and <code>&lt;version&gt;</code> with the actual versions)
 </p>
 
-<pre><code language="bash">tar -xvf kafka_&lt;scala-version&gt;-&lt;version&gt;.tgz
+<pre><code class="language-bash">tar -xvf kafka_&lt;scala-version&gt;-&lt;version&gt;.tgz
 cd kafka_&lt;scala-version&gt;-&lt;version&gt;</code></pre>
 
 <p>
   Run ZooKeeper and Kafka.
 </p>
 
-<pre><code language="bash">bin/zookeeper-server-start.sh config/zookeeper.properties
+<pre><code class="language-bash">bin/zookeeper-server-start.sh config/zookeeper.properties
 bin/kafka-server-start.sh config/server.properties</code></pre>
