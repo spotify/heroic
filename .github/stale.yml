@@ -2,7 +2,7 @@ pulls:
   daysUntilStale: 30
   # Comment to post when marking a PR as stale.
   markComment: >
-    This PR has been automatically marked as stale because it has not been updated for at least one month. If you believe this is still important, leave a comment to prevent the PR from being closed.
+    ⚠ This PR has been automatically marked as stale because it has not been updated for at least one month. If you believe this is still important, leave a comment to prevent the PR from being closed.
 
     This PR will automatically be closed in ten days if no further activity occurs. Thank you for all your contributions.
 
@@ -10,7 +10,7 @@ issues:
   daysUnilStale: 60
   # Comment to post when marking an issue as stale.
   markComment: >
-    This issue has been automatically marked as stale because it has not been updated for at least two months.
+    ⚠ This issue has been automatically marked as stale because it has not been updated for at least two months.
 
     If this is a bug and you can still reproduce this error on the master branch, please reply with all of the information you have about it in order to keep the issue open.
 
