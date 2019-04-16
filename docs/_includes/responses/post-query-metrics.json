@@ -1,0 +1,35 @@
+{
+  "errors": [
+    {
+      "type": "node",
+      "nodeId": "abcd-efgh",
+      "nodeUri": "http://example.com",
+      "tags": {"site": "lon"},
+      "error": "Connection refused",
+      "internal": true
+    },
+    {
+      "type": "series",
+      "tags": {"site": "lon"},
+      "error": "Aggregation too heavy, too many rows from the database would have to be fetched to satisfy the request!",
+      "internal": true
+    }
+  ],
+  "result": [
+    {
+      "hash": "deadbeef",
+      "tags": {"foo": "bar"},
+      "values": [[1300000000000, 42.0]]
+    },
+    {
+      "hash": "beefdead",
+      "tags": {"foo": "baz"},
+      "values": [[1300000000000, 42.0]]
+    }
+  ],
+  "range": {
+    "end": 1469816790000,
+    "start": 1469809590000
+  },
+  "statistics": {}
+}

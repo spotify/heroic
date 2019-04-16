@@ -1,0 +1,21 @@
+---
+title: Federated Clusters
+---
+<h2>{{ page.title }}</h2>
+
+<p>
+  Heroic has support for federating requests, which allows multiple independent
+  clusters to serve clients through a single, global interface.
+</p>
+
+<p>
+  In a federated cluster, requests are routed to <em>shards</em>, and each
+  shard is responsible for a distinct chunk of the available data.
+  If all nodes in a single shard become unavailable, the data for that shard is
+  unavailable.
+  Shards are identified by a set of tags, two nodes are said to belong to the
+  same shard if their cluster tags are identical. You can see more about this
+  in the <a href="docs/config/cluster">cluster documentation</a>.
+</p>
+
+{% include federation-tail.html %}

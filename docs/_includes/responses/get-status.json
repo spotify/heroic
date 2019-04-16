@@ -1,0 +1,31 @@
+{
+  "ok": true,
+  "service": {
+    "name": "The Heroic Time Series Database",
+    "version": "master (git: aaccddee)",
+    "id": "api"
+  },
+  "consumers": {
+    "ok": true,
+    "available": 0,
+    "ready": 0,
+    "errors": 0,
+    "consumingThreads": 1,
+    "totalThreads": 1
+  },
+  "backends": {
+    "ok": true,
+    "available": 0,
+    "ready": 0
+  },
+  "metadataBackends": {
+    "ok": true,
+    "available": 0,
+    "ready": 0
+  },
+  "cluster": {
+    "ok": true,
+    "onlineNodes": 1,
+    "offlineNodes": 0
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "errors": [],
+  "suggestions": [
+    {"score": 1.5, "key": "role", "value": "heroic-consumer"}
+    {"score": 0.9, "key": "role", "value": "heroic-api"},
+  ]
+}

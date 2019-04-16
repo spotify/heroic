@@ -1,0 +1,58 @@
+---
+---
+@import 'theme';
+@import 'bootstrap';
+
+.jumbotron {
+  .lead {
+    text-align: center;
+    margin-top: 1em;
+    margin-bottom: 0;
+  }
+}
+
+.callout {
+  border: 1px solid #eee;
+  border-left-width: 5px;
+  border-radius: 3px;
+  padding: 20px;
+  margin: 20px 0;
+
+  &-danger {
+    border-left-color: $state-danger-bg;
+
+    h4 {
+      color: $state-danger-bg;
+    }
+  }
+
+  &-warning {
+    border-left-color: $state-warning-bg;
+
+    h4 {
+      color: $state-warning-bg;
+    }
+  }
+
+  &-info {
+    border-left-color: $state-info-bg;
+
+    h4 {
+      color: $state-info-bg;
+    }
+  }
+}
+
+p.next {
+  margin: 1em 0;
+  font-size: 120%;
+}
+
+a.link-to {
+  margin-left: .4em;
+  font-size: 80%;
+}
+
+h5 {
+  font-weight: bold;
+}

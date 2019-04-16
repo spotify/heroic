@@ -1,0 +1,9 @@
+<div class="api-response">
+  <span class="icon glyphicon glyphicon-download" title="Response {{ include.status }}"></span>
+  <span class="status">Status: {{ include.status | default: '200' }},</span>
+  <span class="content-type">Content-Type: {{ include.content_type | default: 'application/json' }}</span>
+
+  <div class="response-doc">
+    {{ include.response }}
+  </div>
+</div>

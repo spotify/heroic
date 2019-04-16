@@ -1,0 +1,32 @@
+---
+---
+@import 'theme';
+
+.nav {
+  li {
+    &.active {
+      & > a {
+        font-weight: bold;
+      }
+    }
+
+    .nav {
+      margin-left: 10px;
+
+      li {
+        &.active {
+          & > a {
+            font-weight: 100;
+            border-left: 2px solid #eeeeee;
+            padding-left: 13px;
+            border-left-color: $state-info-bg;
+          }
+        }
+
+        a {
+          padding: 5px 15px;
+        }
+      }
+    }
+  }
+}

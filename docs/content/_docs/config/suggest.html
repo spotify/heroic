@@ -1,0 +1,128 @@
+---
+title: Configuring Suggestions
+---
+<h2>{{ page.title }}</h2>
+
+<p>
+  The ability to perform suggestions is an important usability feature.
+  It makes the difference for your system to be a complete black box, to giving your developers the ability to find and make use of time series on their own.
+  Suggests are fairly expensive in terms of data storage and indexing operations. As each tag that is part of a metric is indexed.
+</p>
+
+<p>
+  Suggestions is an optional feature of heroic.
+</p>
+
+<p>
+  This section will document how suggestions are configured in heroic.
+</p>
+
+<pre><code class="language-yaml">
+suggest:
+  backends:
+    - type: elasticsearch
+      connection:
+        index:
+          type: rotating
+          pattern: heroic-a-%s
+</code></pre>
+
+
+<p>
+  <b>WARNINGS</b> There are ElasticSearch settings and mappings that must be configured before indexing operations are processed. These are required to make the reads efficient. At Spotify
+  these settings are added when setting up the ElasticSearch cluster with Puppet.
+
+<a href="https://github.com/spotify/heroic/tree/7ff07a654048ce760e867835e11f230cd7c5a4ee/suggest/elasticsearch/src/main/resources/com.spotify.heroic.suggest.elasticsearch/kv">
+  settings/mappings are here</a>
+</p>
+
+<table class="table">
+  <tr>
+    <td><code>backends</code></td>
+    <td>A list of suggest backend configurations</td>
+  </tr>
+  <tr>
+    <td><code>defaultBackends</code></td>
+    <td>
+      A list of backend group names that are part of the default group.
+      The default group is the group of backends that are used for operations unless a specified group is used.
+      The default behavior is to include <em>all configured backends</em> in the default group.
+    </td>
+  </tr>
+</table>
+
+<h4>Elasticsearch</h4>
+
+<table class="table">
+  <tr>
+    <td><code>type</code></td>
+    <td><code>"elasticsearch"</code></td>
+  </tr>
+  <tr>
+    <td><code>id</code></td>
+    <td>
+      Specify which id this backend has that is used to uniquely identify this backend.
+      If not specified, the id will be generated.
+    </td>
+  </tr>
+  <tr>
+    <td><code>groups</code></td>
+    <td>
+      Specify which group, or list groups, this backend should be part of.
+    </td>
+  </tr>
+  <tr>
+    <td><code>connection</code></td>
+    <td>
+      An elasticsearch connection specification.
+      For details, see <a href="docs/elasticsearch_connection">Elasticsearch Connection</a>.
+    </td>
+  </tr>
+  <tr>
+    <td><code>writesPerSecond</code></td>
+    <td>
+      The number of writes this backend allows per second before rate-limiting kicks in.
+    </td>
+  </tr>
+  <tr>
+    <td><code>writeCacheDurationMinutes</code></td>
+    <td>
+      The number of minutes a write will be cached for.
+    </td>
+  </tr>
+  <tr>
+    <td><code>templateName</code></td>
+    <td>
+      Default name of the template that will be configured in elasticsearch for this backend.
+    </td>
+  </tr>
+  <tr>
+    <td><code>backendType</code></td>
+    <td>
+      Which backend configuration to use, has an effect on the schema and how tags are accessed.
+      Currently, the following types are available.
+
+      <ul>
+        <li>
+          <b>v1</b> - which is the first generation backend schema.
+        </li>
+        <li>
+          <b>kv</b> - a backend type based of a flattening the key-value context into a single array.
+          We've shown that it is more efficient, but have to support both since some users rely on the first generation schema.
+        </li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+
+<p>
+  Example of what the stored suggestions look like.
+</p>
+<pre><code class="language-json">
+
+{'_index': 'heroic-1536192000000', '_type': 'series', '_id': '447939eaf69475f685518dc2c179ddaf', '_version': 1, 'found': True, '_source': {'key': 'apollo', 'tags': ['component\x00memcache-client', 'operation\x00get', 'what\x00memcache-results'], 'tag_keys': [component', 'operation', 'what'], 'series_id': '447939eaf69475f685518dc2c179ddaf'}}
+
+{'_index': 'heroic-1536192000000', '_type': 'tag', '_id': '447939eaf69475f685518dc2c179ddaf:687d7854', '_version': 1, 'found': True, '_source': {'key': 'apollo', 'tags': ['component\x00memcache-client', 'what\x00memcache-results', 'operation\x00get'], 'tag_keys': ['component', 'what', 'operation'], 'series_id': '447939eaf69475f685518dc2c179ddaf', 'skey': 'component', 'sval': 'memcache-client', 'kv': 'component\x00memcache-client'}}
+
+</code></pre>

@@ -1,0 +1,136 @@
+---
+title: Install Dependencies
+short_url: docs/getting_started/installation
+---
+<h2>{{ page.title }}</h2>
+
+<p>
+  For getting start, you'll need the following systems in place.
+</p>
+
+<ul>
+  <li><a href="{{ page.url | relative_url }}#cassandra">A Cassandra 2.x cluster</a></li>
+  <li><a href="{{ page.url | relative_url }}#elasticsearch">An Elasticsearch cluster</a></li>
+  <li><a href="{{ page.url | relative_url }}#kafka">A Kafka Cluster</a></li>
+</ul>
+
+<div class="callout callout-danger">
+  <h4>This page does not describe industry best practices</h4>
+  <p>
+    You should consider the result of this an <em>experiment</em>, it is not recommended to operate the system like this in a production infrastructure.
+  </p>
+</div>
+
+<h3>
+</h3>
+
+<h3 id="cassandra">
+  Cassandra 2.x
+<h3>
+
+<h4>
+  <img src="images/debian.25.png"></img>
+  Install on Debian
+</h4>
+
+<p>
+  Follow <a href="https://wiki.apache.org/cassandra/DebianPackaging">instructions on the Cassandra Wiki</a>
+</p>
+
+<h4>
+  <img src="images/tux.25.png"></img>
+  Other Linux
+</h4>
+
+<p>
+  Download .tar.gz from <a href="https://cassandra.apache.org/download/">https://cassandra.apache.org/download/</a>
+</p>
+
+<p>
+  Unpack and run (replace <code>&lt;version&gt;</code> with the actual 2.x version)
+</p>
+
+<pre><code class="language-bash">tar -xvf apache-cassandra-&lt;version&gt;-bin.tar.gz
+cd apache-cassandra-&lt;version&gt;</code></pre>
+
+<p>
+  Run cassandra (<code class="language-bash">-f</code> keeps it in the foreground)
+</p>
+
+<pre><code class="language-bash">bin/cassandra -f</code></pre>
+
+<p>
+  Next you should read how to <a href="docs/configuration#cassandra">configure cassandra</a>.
+</p>
+
+<h3 id="elasticsearch">
+  Elasticsearch
+<h3>
+
+<h4>
+  <img src="images/debian.25.png"></img>
+  Debian
+</h4>
+
+<p>
+  Follow instructions on <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/setup-repositories.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/setup-repositories.html</a>
+</p>
+
+<p>
+  After you have the package installed, edit the configuration file <em>/etc/default/elasticsearch</em> and uncomment the lines defining variables LOG_DIR, DATA_DIR, WORK_DIR, CONF_DIR and CONF_FILE.
+</p>
+
+<p>
+  Now you may start the service:
+<pre><code class="language-bash">sudo systemctl start elasticsearch</code></pre>
+</p>
+
+<h4>
+  <img src="images/tux.25.png"></img>
+  Generic Linux
+</h4>
+
+<p>
+  Download .tar.gz from <a href="https://www.elastic.co/downloads/elasticsearch">https://www.elastic.co/downloads/elasticsearch</a>
+</p>
+
+<p>
+  Unpack and run (replace <code>&lt;version&gt;</code> with the actual version)
+</p>
+
+<pre><code class="language-bash">tar -xvf elasticsearch-&lt;version&gt;-bin.tar.gz
+cd elasticsearch-&lt;version&gt;</code></pre>
+
+<p>
+  Run Elasticsearch
+</p>
+
+<pre><code class="language-bash">bin/elasticsearch</code></pre>
+
+<h3 id="kafka">
+  Kafka
+  <a class="link-to" href="{{ page.short_url }}#kafka"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
+
+<h4>
+  <img src="images/tux.25.png"></img>
+  Generic Linux
+</h4>
+
+<p>
+  Download .tgz from <a href="http://kafka.apache.org/downloads.html">http://kafka.apache.org/downloads.html</a>
+</p>
+
+<p>
+  Unpack and run (replace <code>&lt;scala-version&gt;</code>, and <code>&lt;version&gt;</code> with the actual versions)
+</p>
+
+<pre><code class="language-bash">tar -xvf kafka_&lt;scala-version&gt;-&lt;version&gt;.tgz
+cd kafka_&lt;scala-version&gt;-&lt;version&gt;</code></pre>
+
+<p>
+  Run ZooKeeper and Kafka.
+</p>
+
+<pre><code class="language-bash">bin/zookeeper-server-start.sh config/zookeeper.properties
+bin/kafka-server-start.sh config/server.properties</code></pre>

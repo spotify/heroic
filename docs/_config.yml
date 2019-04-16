@@ -1,1 +1,38 @@
 baseurl: /heroic
+collections_dir: content
+collections:
+  docs:
+    output: true
+  tutorials:
+    output: true
+  endpoints:
+    output: true
+    permalink: /docs/api/:name
+  api_types:
+    output: true
+    permalink: /docs/api/types/:name
+
+
+defaults:
+  - scope:
+      type: docs
+    values:
+      layout: documentation
+  - scope:
+      type: tutorials
+    values:
+      layout: default
+  - scope:
+      type: endpoints
+    values:
+      layout: api-endpoint
+      responses:
+        - status: 200
+  - scope:
+      type: api_types
+    values:
+      layout: api-type
+
+sass:
+  sass_dir: assets/_sass
+  style: compressed

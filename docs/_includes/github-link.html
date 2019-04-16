@@ -1,0 +1,4 @@
+{%- assign path = include.name | replace: '.', '/' %}
+<a href="https://github.com/spotify/heroic/blob/{{ include.branch | default: 'master' }}/{{ include.module | default: 'heroic-component' }}/src/main/java/com/spotify/heroic/{{ path }}.java">
+  com.spotify.heroic.{{ include.name }}
+</a>

@@ -1,0 +1,7 @@
+{
+  "result": {
+    "role": ["database", "webfrontend"],
+    "host": ["database.example.com", "webfrontend.example.com"]
+  },
+  "sampleSize": 2
+}

@@ -1,0 +1,9 @@
+<p>
+  Will create several result groups from the given keys.
+  Series will be aggregated on a per-group basis.
+</p>
+
+<h5>Example 1.</h5>
+
+Given time series <code class="language-json">{"a": 1, "b": 2}</code> and <code class="language-json">{"b": 3, "c": 4}</code>, and a <code>groupBy</code> of <code class="language-json">["a", "b"]</code>
+the returned result groups would be <code class="language-json">[{"a": 1, "b": 2}, {"a": null, "b": 3}]</code>.

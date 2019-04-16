@@ -1,0 +1,26 @@
+---
+title: API
+layout: documentation
+---
+<h1>{{ page.title }}</h1>
+
+<h2>Endpoints</h2>
+
+{%- assign endpoints = site.endpoints | sort: 'endpoint' | reverse %}
+{%- for item in endpoints %}
+<div>
+  <h4><a href="{{ item.url | relative_url }}">{{ item.method }} {{item.endpoint}}</a></h4>
+  <p>{{item.help}}</p>
+</div>
+{%- endfor %}
+
+<h2>Types</h2>
+
+{%- for item in site.api_types %}
+<div>
+  <h4><a href="{{ item.url | relative_url }}">{{ item.type_name }}</a></h4>
+  {%- if item.help %}
+  <p>{{ item.help }}</p>
+  {%- endif %}
+</div>
+{%- endfor %}

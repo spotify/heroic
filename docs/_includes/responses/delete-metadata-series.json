@@ -1,0 +1,4 @@
+[
+  {"key": "foo", "tags": {"site": "lon"}},
+  {"key": "foo", "tags": {"site": "sto"}}
+]

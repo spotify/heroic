@@ -1,0 +1,97 @@
+---
+---
+
+@import 'theme';
+
+.api-endpoint {
+  margin: 10px 0;
+
+  p {
+    margin: 14px 0;
+  }
+
+  .heading {
+    padding: 10px;
+    border-bottom: 4px solid;
+    padding-bottom: 6px;
+
+    &.get {
+      border-color: #B9D7B7;
+    }
+
+    &.post {
+      border-color: #AAA5BE;
+    }
+
+    &.delete {
+      border-color: #FDD7D8;
+    }
+
+    .path {
+      font-family: $font-family-monospace;
+    }
+  }
+
+  .status {
+    font-family: $font-family-monospace;
+  }
+
+  .content-type {
+    font-family: $font-family-monospace;
+  }
+
+  .api-response {
+     margin-bottom: 20px;
+
+    .icon {
+    }
+
+    .status {
+      margin-left: 5px;
+    }
+
+    .content-type {
+      margin-left: 5px;
+    }
+
+    .btn-doc {
+      margin-left: 5px;
+    }
+
+    .response-doc {
+      margin: 10px 0;
+    }
+  }
+
+  .api-accept {
+     margin-bottom: 20px;
+
+    .status {
+      margin-left: 5px;
+    }
+
+    .content-type {
+      margin-left: 5px;
+    }
+
+    .btn-doc {
+      margin-left: 5px;
+    }
+
+    .btn-curl {
+      margin-left: 5px;
+    }
+
+    .accept-doc {
+      margin: 10px 0;
+    }
+  }
+}
+
+.api-type {
+  margin: 10px 0;
+
+  .btn-structure-doc {
+    margin-left: 5px;
+  }
+}

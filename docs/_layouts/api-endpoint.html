@@ -1,0 +1,82 @@
+---
+layout: documentation
+---
+<div class="api-endpoint">
+  <h3 class="heading {{ page.method | downcase}}">
+    <span class="method">{{ page.method }}</span>: <span class="path">{{ page.endpoint }}</span>
+  </h3>
+
+  <p>{{ page.description }}</p>
+
+  {{ content }}
+
+  {%- if page.fields %}
+  <span class="icon glyphicon glyphicon-upload" title="Accept"></span>
+  <span class="content-type">application/json</span>
+  {% include api-type.html %}
+  {% endif %}
+
+  {% assign json_slug = page.slug | append: ".json" -%}
+  {% unless page.empty -%}
+  {% capture request %}{% include requests/{{ page.request | default: json_slug }} %}{% endcapture %}
+  {% endunless -%}
+
+  <div class="api-accept">
+    {%- if page.empty %}
+    <span>
+      <em>Does not accept a body</em>
+      <span
+        class="glyphicon glyphicon-question-sign"
+        popover="Sending a body will cause a 400 error to be returned"
+        popover-title="Request body is not supported"
+        popover-trigger="mouseenter" />
+    </span>
+    {%- else %}
+    <div class="accept-doc">
+      <h4>Example Request</h4>
+      <pre><code class="language-json">
+          {{ request }}
+      </code></pre>
+    </div>
+    {%- endif %}
+
+    <div>
+      <h4>Example Curl</h4>
+      <pre><code class="language-bash">
+          {%- capture headers %}
+          {%- unless page.empty %}-H "Content-Type: application/json" {% endunless %}
+          {%- endcapture %}
+          $ curl -X{{ page.method }} {{ headers -}}
+          http://localhost:8080{{ page.endpoint }}
+          {%- unless page.empty %} \
+          -d '{{ request | normalize_whitespace }}'
+          {%- endunless %}
+      </code></pre>
+    </div>
+  </div>
+
+  {%- for response in page.responses %}
+  {%- assign status = response.status | default: 200 %}
+  {%- assign file = response.file | default: json_slug %}
+  <div class="api-response">
+    <div class="response-doc">
+      <h4>Example <span class="status">{{ status }}</span> Response</h4>
+      <span class="icon glyphicon glyphicon-download" title="Response {{ status }}"></span>
+      <span class="status">Status: {{ status }},</span>
+      <span class="content-type">Content-Type: application/json</span>
+
+      {%- if page.response_fields %}
+      {% include api-type.html fields=page.response_fields %}
+      {%- endif %}
+
+      {%- if file contains ".json" %}
+      <pre><code class="language-json">
+          {% include responses/{{ file }} %}
+      </code></pre>
+      {%- else %}
+      {% include responses/{{ file }} %}
+      {%- endif %}
+    </div>
+  </div>
+  {%- endfor %}
+</div>

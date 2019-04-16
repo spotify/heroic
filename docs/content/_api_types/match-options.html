@@ -1,0 +1,21 @@
+---
+type_name: MatchOptions
+fields:
+- name: fuzzy
+  type_json: '&lt;boolean&gt;'
+  purpose: If set, perform elasticsearch fuzzy matching (very slow).
+- name: tokenize
+  type_json: '&lt;boolean&gt;'
+  purpose: If set, perform additional server-side tokenization.
+---
+<p>
+  Java Class: {% include github-link.html module='heroic-component' name='suggest.MatchOptions' %}
+</p>
+
+<div class="callout callout-warning">
+  These are a set of experimental match options that are typically set during
+  suggest queries.
+
+  None of them should typically be enabled unless an experiment is being
+  performed since they might severely impact the performance of the service.
+</div>

@@ -1,0 +1,284 @@
+---
+title: Configure Cluster
+short_url: docs/getting_started/configuration
+---
+<h2>{{ page.title }}</h2>
+
+<p>
+  In this section we'll be configuring all the components that make up a Heroic
+  cluster.
+  These should have been installed in the <a href="docs/getting_started/installation">previous step</a>.
+</p>
+
+<ul>
+  <li><a href="{{ page.url | relative_url }}#cassandra">Configuring Cassandra</a></li>
+  <li><a href="{{ page.url | relative_url }}#bigtable">Configuring Bigtable</a></li>
+  <li><a href="{{ page.url | relative_url }}#elasticsearch">Configuring Elasticsearch</a></li>
+  <li><a href="{{ page.url | relative_url }}#heroic">Configuring Heroic</a></li>
+</ul>
+
+<h3 id="cassandra">
+  Configuring Cassandra
+  <a class="link-to" href="{{ page.short_url }}#cassandra"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
+
+<p>
+  Heroic (by default) uses the <code>heroic</code> keyspace, which can be
+  configured using the <a href="docs/shell">Heroic shell</a>.
+</p>
+
+<pre><code class="language-bash">
+tools/heroic-shell -P cassandra -X cassandra.seeds=&lt;seeds&gt; -X datastax.configure
+...
+heroic> configure
+</code></pre>
+
+<h3 id="bigtable">
+  Configuring Bigtable
+  <a class="link-to" href="{{ page.short_url }}#bigtable"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
+
+<p>
+  If you want to use Google Cloud Bigtable to store metrics, you can configure it with the following command.
+</p>
+
+<pre><code class="language-bash">
+tools/heroic-shell -P bigtable \
+  -X bigtable.project=&lt;project&gt; \
+  -X bigtable.instance=&lt;instance&gt; \
+  -X bigtable.credentials=default \
+  -X bigtable.configure
+...
+heroic> configure
+</code></pre>
+
+<h3 id="elasticsearch">
+  Configuring ElasticSearch
+  <a class="link-to" href="{{ page.short_url }}#elasticsearch"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
+
+<p>
+  Elasticsearch is also configured using the <a href="docs/shell">Heroic shell</a>.
+</p>
+
+<pre><code class="language-bash">
+tools/heroic-shell -P elasticsearch-suggest -P elasticsearch-metadata -X elasticsearch.seeds=&lt;seeds&gt;
+...
+heroic> configure
+</code></pre>
+
+<p>
+  Heroic suggest also requires dynamic scripting to be enabled, you do this by
+  adding the following to your elasticsearch.yml
+</p>
+
+<pre><code class="language-yaml">
+script:
+  disable_dynamic: false
+</pre></code>
+
+<div class="callout callout-danger">
+  <h4>Enabling Dynamic Scripting</h4>
+  <p>
+    Enabling dynamic scripting for a public Elasticsearch instance is a
+    security risk. Make sure that your server is on a private network.
+    See <a href="https://github.com/elastic/elasticsearch/issues/10091">issue #10091</a>
+  </p>
+</div>
+
+<h3 id="heroic">
+  Configuring Heroic
+  <a class="link-to" href="{{ page.short_url }}#heroic"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
+
+<p>
+  The following configuration assumes that you've managed to either download or
+  build the heroic project.
+</p>
+
+<p>
+  We will look into setting up three different <em>kinds</em> of heroic nodes,
+  each with a different purpose.
+</p>
+
+<ul>
+  <li>An <a href="{{ page.url | relative_url }}#heroic-api-node">API Node</a>, designated to receive user traffic</li>
+  <li>A <a href="{{ page.url | relative_url }}#heroic-data-node">Data Node</a>, designated to process requests received by the API nodes</li>
+  <li>A <a href="{{ page.url | relative_url }}#heroic-consumer-node">Consumer Node</a>, designated to consume data from Kafka topics</li>
+</ul>
+
+<p>
+  All the different node types run the same code, the only difference is how
+  they are configured.
+</p>
+
+<div class="callout callout-info">
+  <h4>One, or more roles?</h4>
+  <p>
+    All the nodes use the same type of configuration, but they are configured
+    to do different things.
+    A single node can have one or more role, the exact setup depends on how you
+    wish to scale the system.
+  </p>
+</div>
+
+<h4 id="heroic-api-node">
+  API Node
+  <a class="link-to" href="{{ page.short_url }}#heroic-api-node"><span class="glyphicon glyphicon-link"></span></a>
+</h4>
+
+<p>
+  API nodes are nodes designated to receive user traffic over HTTP.
+  The following is the minimal required configuration in order to set one up.
+</p>
+
+<pre><code class="language-yaml">
+# heroic.yaml
+port: 8080
+
+cluster:
+  protocols:
+    - type: grpc
+  discovery:
+    type: static
+    nodes:
+      - "grpc://localhost"
+</pre></code>
+
+<h4 id="heroic-data-node">
+  Data Node
+  <a class="link-to" href="{{ page.short_url }}#heroic-data-node"><span class="glyphicon glyphicon-link"></span></a>
+</h4>
+
+<p>
+  Data nodes are designated to process requests for the API nodes.
+  They are responsible for fetching and aggregating metrics from a backend.
+</p>
+
+<p>
+  Data nodes must have the <code>QUERY</code> node capability, as seen in
+  <code>cluster.capabilities</code>.
+</p>
+
+<p>
+  The following configuration shows how to setup a data nodes that fetches
+  metrics from Cassandra, and uses Elasticsearch for metadata and suggestions.
+</p>
+
+<pre><code class="language-yaml">
+# heroic.yaml
+port: 8080
+
+cluster:
+  protocols:
+    - type: grpc
+  discovery:
+    type: static
+    nodes:
+      - "grpc://localhost"
+
+# This showcases two different metric backends, choose which one you want.
+metrics:
+  backends:
+    - type: datastax
+      seeds:
+        - localhost
+    - type: bigtable
+      instance: heroic
+      credentials:
+        type: default
+
+metadata:
+  backends:
+    - type: elasticsearch
+      connection:
+        seeds:
+          - localhost
+
+suggest:
+  backends:
+    - type: elasticsearch
+      connection:
+        seeds:
+          - localhost
+</code></pre>
+
+<p>
+  For more details in how the service can be configured, see the <a href="docs/config">Configuration Section</a>.
+</p>
+
+<h4 id="heroic-data-node">
+  Consumer Node
+  <a class="link-to" href="{{ page.short_url }}#heroic-data-node"><span class="glyphicon glyphicon-link"></span></a>
+</h4>
+
+<p>
+  A consumer node is responsible for reading data from kafka, and writing it
+  into the configured backends.
+</p>
+
+<p>
+  The below configuration is just an extension to the data node configuration
+  above, by adding consumers you are instructing the service to act as a
+  consumer.
+</p>
+
+<pre><code class="language-yaml">
+# heroic.yaml
+port: 8080
+
+# Data Node configuration...
+
+consumers:
+  - type: kafka
+    schema: com.spotify.heroic.consumer.schemas.Spotify100
+    topics:
+      - "metrics"
+    config:
+      group.id: heroic-consumer
+      zookeeper.connect: localhost
+      auto.offset.reset: smallest
+      auto.commit.enable: true
+</pre></code>
+
+<h4>Run a Heroic Node</h4>
+
+<pre><code class="language-bash">
+$ java -cp heroic.jar com.spotify.heroic.HeroicService heroic.yaml
+</code></pre>
+
+<h4>Testing that a node Works</h4>
+
+<p>
+  Test that the node is running properly.
+  Healthy instances should produce a output like the following.
+</p>
+
+<pre><code class="language-bash">
+$ curl http://localhost:8080/status
+</code><code class="language-json">
+{
+  "ok": true,
+  "consumers": {
+    "ok": true,
+    "available": 0,
+    "ready": 0,
+    "errors": 0
+  },
+  "backends": {
+    "ok": true,
+    "available": 0,
+    "ready": 0
+  },
+  "metadataBackends": {
+    "ok": true,
+    "available": 0,
+    "ready": 0
+  },
+  "cluster": {
+    "ok": true,
+    "onlineNodes": 1,
+    "offlineNodes": 0
+  }
+}
+</code></pre>

@@ -1,0 +1,7 @@
+{
+  "errors": [],
+  "suggestions": [
+    {"score": 1.5, "key": "foobar"},
+    {"score": 0.9, "key": "folly"}
+  ]
+}
