@@ -59,7 +59,7 @@ public class WriteResource {
     public void metrics(
         @Suspended final AsyncResponse response, @QueryParam("group") String group,
         WriteMetricRequest write
-    ) throws Exception {
+    ) {
         final IngestionGroup ingestionGroup = ingestion.useGroup(group);
 
         final AsyncFuture<Ingestion> future = write
