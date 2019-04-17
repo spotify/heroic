@@ -11,6 +11,7 @@ shadowJar {
     classifier 'shaded'
     zip64 true
 
+    append 'META-INF/services/org.eclipse.jetty.http.HttpFieldPreEncoder'
     // required for lucene
     append 'META-INF/services/org.apache.lucene.codecs.Codec'
     append 'META-INF/services/org.apache.lucene.codecs.DocValuesFormat'
