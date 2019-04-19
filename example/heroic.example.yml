@@ -243,29 +243,33 @@ metadata:
 #  type: slf4j
 
 ## Tracing configuration
-#tracing:
-#  # Probability, between 0.0 and 1.0, of sampling each trace.
-#  # @default 0.01
-#  #probability: 0.01
-#  # Local port to expose zpages on. Traces are accessible at http://localhost:{port}/tracez
-#  # @default empty
-#  #zpagesPort: 9090
-#  #lightstep:
-#  #  # Collector host running the satellite (required)
-#  #  collectorHost: "lightstep-satellite.services.heroic"
-#  #  # Lightstep access token (required)
-#  #  accessToken: "lightstep_token"
-#  #  # Reporting interval (ms)
-#  #  # @default 1000
-#  #  reportingIntervalMs: 1_000
-#  #  # Max buffered spans
-#  #  # @default 1000
-#  #  maxBufferedSpans: 1_000
-#  #  GRPC round robin
-#  #  # @default true
-#  #  #grpcRoundRobin: true
-#  #  GRPC reset client
-#  #  # @default false
-#  #  #grpcResetClient: false
-#  #  GRPC Collector Target (required)
-#  #  #grpcCollectorTarget: "dns:///foo.googleapis:8282"
+tracing:
+  # Probability, between 0.0 and 1.0, of sampling each trace.
+  probability: 0.01 # @default 0.01
+
+  # Local port to expose zpages on. Traces are accessible at http://localhost:{port}/tracez
+  #zpagesPort: 9090 # @default empty
+
+  lightstep:
+  # Either a collectorHost or grpcCollectorTarget must be defined
+  # GRPC Collector Target. Will distribute requests to all satellites returned by the DNS record
+  #grpcCollectorTarget: "dns:///lightstep-satellite.example.com:8282"
+
+  # Collector host running the lightstep satellite, will take priority over grpcCollectorTarget
+  #collectorHost: "lightstep-satellite.example.com"
+  # Collector port to be used in conjunction with the collector host
+  #collectorPort: 8282 # @default 8282
+
+  # Lightstep access token (required)
+  accessToken: "lightstep_token"
+
+  # Component name will set the "service" name in the Lightstep UI
+  # componentName: heroic # @defaults heroic
+  # Reporting interval (ms)
+  #reportingIntervalMs: 1_000 # @default 1000
+  # Max buffered spans
+  #maxBufferedSpans: 1_000 # @default 1000
+  # GRPC round robin between all hosts returned by grpcCollectorTarget
+  #grpcRoundRobin: true # @default true
+  # GRPC reset client
+  #grpcResetClient: false # @default false
