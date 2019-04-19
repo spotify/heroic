@@ -135,10 +135,12 @@ public class HeroicCore implements HeroicConfiguration {
     static final boolean DEFAULT_DISABLE_BACKENDS = false;
     static final boolean DEFAULT_SETUP_SHELL_SERVER = true;
 
+    private static final int DEFAULT_LIGHTSTEP_COLLECTOR_PORT = 8282;
+    private static final String DEFAULT_LIGHTSTEP_COMPONENT_NAME = "heroic";
     private static final int DEFAULT_LIGHTSTEP_REPORTING_MS = 1_000;
-    private static final int DEFAULT_LIGHTSTEP_MAX_SPANS = 1_000;
-    private static final boolean DEFAULT_GRPC_ROUNDROBIN = true;
-    private static final boolean DEFAULT_GRPC_RESETCLIENT = false;
+    private static final int DEFAULT_LIGHTSTEP_MAX_BUFFERED_SPANS = 1_000;
+    private static final boolean DEFAULT_LIGHTSTEP_GRPC_ROUNDROBIN = true;
+    private static final boolean DEFAULT_LIGHTSTEP_GRPC_RESET_CLIENT = false;
 
     static final UncaughtExceptionHandler uncaughtExceptionHandler = (Thread t, Throwable e) -> {
         try {
@@ -306,33 +308,51 @@ public class HeroicCore implements HeroicConfiguration {
         final Object lightstepConfig = config.get("lightstep");
         if (lightstepConfig != null) {
             final Map<String, String> configMap = (Map) lightstepConfig;
+
+            // a collectorHost being defined takes priority over a grpcCollectorTarget
             final String collectorHost = configMap.get("collectorHost");
+            final Integer collectorPort = (Integer) config.getOrDefault("collectorPort",
+              DEFAULT_LIGHTSTEP_COLLECTOR_PORT);
+            final String grpcCollectorTarget = configMap.get("grpcCollectorTarget");
+
             final String accessToken = configMap.get("accessToken");
+            final String componentName = (String) config.getOrDefault("componentName",
+              DEFAULT_LIGHTSTEP_COMPONENT_NAME);
             final Integer reportingIntervalMs = (Integer) config.getOrDefault("reportingIntervalMs",
                 DEFAULT_LIGHTSTEP_REPORTING_MS);
             final Integer maxBufferedSpans = (Integer) config.getOrDefault("maxBufferedSpans",
-                DEFAULT_LIGHTSTEP_MAX_SPANS);
+              DEFAULT_LIGHTSTEP_MAX_BUFFERED_SPANS);
             final Boolean grpcRoundRobin = (Boolean) config.getOrDefault("grpcRoundRobin",
-                DEFAULT_GRPC_ROUNDROBIN);
+              DEFAULT_LIGHTSTEP_GRPC_ROUNDROBIN);
             final Boolean grpcResetClient = (Boolean) config.getOrDefault("grpcResetClient",
-                DEFAULT_GRPC_RESETCLIENT);
-            final String grpcCollectorTarget = configMap.get("grpcCollectorTarget");
+              DEFAULT_LIGHTSTEP_GRPC_RESET_CLIENT);
 
 
-            if (collectorHost == null || accessToken == null || grpcCollectorTarget == null) {
-                throw new IllegalArgumentException("Configuration for Lightstep is incomplete");
+            if (accessToken == null) {
+                throw new IllegalArgumentException("Lightstep accessToken must be defined");
+            }
+
+            if (collectorHost == null && grpcCollectorTarget == null) {
+                throw new IllegalArgumentException(
+                  "Lightstep collectorHost or grpcCollectorTarget must be defined");
             }
 
             final Options.OptionsBuilder optionsBuilder = new Options.OptionsBuilder()
                 .withAccessToken(accessToken)
                 .withMaxReportingIntervalMillis(reportingIntervalMs)
                 .withMaxBufferedSpans(maxBufferedSpans)
-                .withCollectorHost(collectorHost)
                 .withCollectorProtocol("http")
                 .withGrpcRoundRobin(grpcRoundRobin)
                 .withResetClient(grpcResetClient)
-                .withGrpcCollectorTarget(grpcCollectorTarget)
-                .withComponentName("heroic");
+                .withComponentName(componentName);
+
+            if (collectorHost != null) {
+                optionsBuilder.withCollectorHost(collectorHost);
+                optionsBuilder.withCollectorPort(collectorPort);
+            } else {
+                optionsBuilder.withGrpcCollectorTarget(grpcCollectorTarget);
+            }
+
 
             final Options options;
             try {
