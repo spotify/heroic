@@ -192,6 +192,7 @@ public class Spotify100 implements ConsumerSchema {
                     version = Version.parse(versionNode.asText());
                 } catch (final Exception e) {
                     span.setStatus(Status.INVALID_ARGUMENT.withDescription("Bad version"));
+                    span.end();
                     throw new ConsumerSchemaValidationException("Bad version: " + versionNode);
                 }
 
