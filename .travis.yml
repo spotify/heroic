@@ -21,7 +21,7 @@ env:
     - PUBSUB_EMULATOR_HOST=localhost:8085
 
 before_install:
-  - curl https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-214.0.0-linux-x86_64.tar.gz | tar xzf -
+  - curl https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-243.0.0-linux-x86_64.tar.gz | tar xzf -
   - ./google-cloud-sdk/install.sh --quiet --usage-reporting false --additional-components pubsub-emulator beta
 
 install:
