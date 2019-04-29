@@ -3,10 +3,9 @@
 [![Build Status](https://travis-ci.org/spotify/heroic.svg?branch=master)](https://travis-ci.org/spotify/heroic)
 [![Codecov](https://img.shields.io/codecov/c/github/spotify/heroic.svg)](https://codecov.io/gh/spotify/heroic)
 [![License](https://img.shields.io/github/license/spotify/heroic.svg)](LICENSE)
-[![Join the chat at https://gitter.im/spotify/heroic](https://badges.gitter.im/spotify/heroic.svg)](https://gitter.im/spotify/heroic)
 
 A scalable time series database based on Bigtable, Cassandra, and Elasticsearch.
-Go to https://spotify.github.io/heroic/ for documentation, please join [`#heroic at Freenode`](irc://freenode.net/heroic) if you need help or want to chat.
+Go to https://spotify.github.io/heroic/ for documentation.
 
 This project adheres to the [Open Code of Conduct](https://github.com/spotify/code-of-conduct/blob/master/code-of-conduct.md).
 By participating, you are expected to honor this code.
