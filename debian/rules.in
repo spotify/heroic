@@ -6,7 +6,7 @@ JAVA_HOME=/usr/lib/jvm/default-java
 MVN=$(CURDIR)/debian/mvn.sh
 GRADLE=$(CURDIR)/gradlew
 
-BUILD=debian-build
+BUILD=build
 
 HEROIC_JAR=$(BUILD)/heroic-full.jar
 HEROIC=$(BUILD)/heroic-RELEASE
@@ -24,7 +24,7 @@ override_dh_auto_clean:
 	GRADLE_USER_HOME=$(BUILD_HOME) $(GRADLE) clean
 
 override_dh_auto_build: repackaged
-	GRADLE_USER_HOME=$(BUILD_HOME) $(GRADLE) -D heroic.version="${DEB_VERSION} (RELEASE)" assemble
+	GRADLE_USER_HOME=$(BUILD_HOME) $(GRADLE) -D heroic.version="${DEB_VERSION} (RELEASE)" assemble -PMAVEN_HOME=$(BUILD_HOME)
 	mkdir -p $(BUILD)
 	cp heroic-dist/build/libs/heroic-dist-0.0.1-SNAPSHOT-shaded.jar $(HEROIC_JAR)
 	cp debian/bin/heroic $(HEROIC)
