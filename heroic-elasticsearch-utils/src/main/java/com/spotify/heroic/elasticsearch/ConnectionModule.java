@@ -133,9 +133,6 @@ public class ConnectionModule {
         private Boolean sniff;
         private String nodeSamplerInterval;
         private Boolean nodeClient;
-        private Integer concurrentBulkRequests;
-        private Integer flushInterval;
-        private Integer bulkActions;
         private IndexMapping index;
         private String templateName;
         private ClientSetup clientSetup;
@@ -162,21 +159,6 @@ public class ConnectionModule {
 
         public Builder nodeClient(Boolean nodeClient) {
             this.nodeClient = nodeClient;
-            return this;
-        }
-
-        public Builder nodeClient(Integer concurrentBulkRequests) {
-            this.concurrentBulkRequests = concurrentBulkRequests;
-            return this;
-        }
-
-        public Builder flushInterval(Integer flushInterval) {
-            this.flushInterval = flushInterval;
-            return this;
-        }
-
-        public Builder bulkActions(Integer bulkActions) {
-            this.bulkActions = bulkActions;
             return this;
         }
 
