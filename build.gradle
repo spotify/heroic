@@ -35,6 +35,13 @@ allprojects {
     repositories {
         mavenLocal()
         mavenCentral()
+
+        // Needed for finding the repackaged jars when building the debian package
+        if (project.hasProperty('MAVEN_HOME')) {
+            maven {
+                url "${MAVEN_HOME}/.m2/repository"
+            }
+        }
     }
 
     sourceSets {
