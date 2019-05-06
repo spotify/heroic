@@ -196,7 +196,7 @@ allprojects {
                 entry 'slf4j-api'
             }
 
-            dependencySet(group: 'org.eclipse.jetty', version: '9.4.12.v20180830') {
+            dependencySet(group: 'org.eclipse.jetty', version: '9.4.17.v20190418') {
                 entry 'jetty-webapp'
                 entry 'jetty-server'
                 entry 'jetty-rewrite'
@@ -327,5 +327,3 @@ task jacocoRootReport(type: JacocoReport) {
         executionData = files(executionData.findAll { it.exists() })
     }
 }
-
-
