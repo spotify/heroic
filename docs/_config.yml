@@ -12,12 +12,11 @@ collections:
     output: true
     permalink: /docs/api/types/:name
 
-
 defaults:
   - scope:
       type: docs
     values:
-      layout: documentation
+      layout: sidebar
   - scope:
       type: tutorials
     values:
