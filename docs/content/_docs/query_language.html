@@ -285,6 +285,12 @@ heroic> parse-query --no-indent "average by host | sum by site"
     <td><pre><code class="language-hql">&lt;a&gt; not in [&lt;b&gt;, ..]</code></pre></td>
     <td><pre><code class="language-json">["not", ["or", ["=", &lt;a&gt;, &lt;b&gt;], ..]]</code></pre></td>
   </tr>
+
+  <tr>
+    <th scope="row">RegEx On Tag</th>
+    <td><pre><code class="language-hql">&lt;a&gt; ~ &lt;b&gt;</code></pre></td>
+    <td><pre><code class="language-json">["~", &lt;a&gt;, &lt;b&gt;]</code></pre></td>
+  </tr>
 </table>
 </div>
 
