@@ -1,0 +1,107 @@
+<?xml-model encoding="UTF-8"
+  schematypens="http://relaxng.org/ns/structure/1.0"
+  href="https://raw.githubusercontent.com/rakhimov/scram/master/share/input.rng"
+?>
+<opsa-mef>
+  <define-fault-tree name="PubSubConsumer">
+    <define-gate name="temp">
+      <or>
+        <event name="MetadataConsumer" />
+        <event name="MetricConsumer" />
+      </or>
+    </define-gate>
+
+    <define-gate name="MetadataConsumer">
+      <label>Single metadata consumer failure</label>
+      <or>
+        <event name="Host" />
+        <event name="ElasticsearchCluster" />
+      </or>
+    </define-gate>
+    <define-gate name="MetricConsumer">
+      <label>Single metric consumer failure</label>
+      <or>
+        <event name="Host" />
+        <event name="ZonalBigtable" />
+      </or>
+    </define-gate>
+
+    <!-- Probability of elasticsearch failing -->
+    <define-gate name="ElasticsearchCluster">
+      <label>Elasticsearch cluster failure</label>
+      <!-- TODO
+           node_failure * replication_factor = failed shard
+           failed shard == failed cluster? not strictly true
+      -->
+      <event name="ElasticsearchNode" />
+    </define-gate>
+    <define-gate name="ElasticsearchNode">
+      <label>Elasticsearch single node failure</label>
+      <or>
+        <event name="Host" />
+        <event name="Disk" />
+      </or>
+    </define-gate>
+
+    <define-gate name="Host">
+      <label>Single general host failure</label>
+      <or>
+        <event name="GCEInstance" />
+        <event name="OS" />
+      </or>
+    </define-gate>
+  </define-fault-tree>
+
+  <!-- Probabilities are for monthly failure rates  -->
+  <model-data>
+    <!-- <define-parameter name="ElasticsearchReplication"> -->
+    <!--   <label>Elasticsearch replication factor</label> -->
+    <!--   <int value="2" /> -->
+    <!-- </define-parameter> -->
+
+    <!-- Events based on GCP SLAs -->
+    <!-- https://cloud.google.com/compute/sla -->
+    <define-basic-event name="GCEInstance">
+      <label>GCE instance failure</label>
+      <float value="0.0001" />
+    </define-basic-event>
+    <!-- https://cloud.google.com/pubsub/sla -->
+    <define-basic-event name="PubSub">
+      <label>PubSub failure</label>
+      <float value="0.0005" />
+    </define-basic-event>
+    <!-- https://cloud.google.com/bigtable/sla  -->
+    <define-basic-event name="ZonalBigtable">
+      <label>Bigtable failure - zonal instance</label>
+      <float value="0.001" />
+    </define-basic-event>
+    <define-basic-event name="SingleClusterBigtable">
+      <label>Bigtable failure - single-cluster replication</label>
+      <float value="0.001" />
+    </define-basic-event>
+    <define-basic-event name="MultiClusterBigtable">
+      <label>Bigtable failure - multi-cluster replication</label>
+      <float value="0.0001" />
+    </define-basic-event>
+
+    <!-- Basic, generalized computing failures -->
+    <define-basic-event name="Disk">
+      <label>Disk failure</label>
+      <float value="0.003"/>
+    </define-basic-event>
+    <define-basic-event name="SSD">
+      <label>SSD failure</label>
+      <float value="0.0007"/>
+    </define-basic-event>
+    <define-basic-event name="OS">
+      <label>OS fault</label>
+      <!-- Roughly 1% annualized -->
+      <float value="0.0008" />
+    </define-basic-event>
+    <define-basic-event name="Network">
+      <label>Network partition</label>
+      <!-- Roughly 2% annualized -->
+      <float value="0.0017" />
+    </define-basic-event>
+  </model-data>
+</opsa-mef>
