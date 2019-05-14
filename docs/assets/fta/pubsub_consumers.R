@@ -13,7 +13,7 @@ metrics_per_second <- 1000000
 ## number of metrics each consumer can process per second
 consumer_capacity <- 30000
 ## number of consumers. if using autoscaling, set this to the autoscaler max
-consumers <- 35
+consumers <- 75
 ################################################################################
 
 capacity_max <- ceiling(consumers - (metrics_per_second / consumer_capacity))
@@ -60,26 +60,16 @@ tree <- addDuplicate(tree, at="ElasticsearchData", dup_id="Host", collapse=TRUE)
 tree <- addProbability(tree, at="BigtableCluster", tag="ZonalBT", name="Zonal cluster failure", prob=0.001)
 tree <- addDuplicate(tree, at="BigtableCluster", dup_id="Capacity", collapse=TRUE)
 
-
-## TODO: this displays all probabilities in scientic notation. It would be nice to make them into percentages.
 tree <- ftree.calc(tree)
-for (p in tree$PBF) {
-    (1 - p)  * 100
-}
 
 ## SCRAM will calculate probability through a Binary Decision Diagram algorithmn, giving the accepted exact
 ## probability. It will almost certainly differ than the number shown from `ftree.calc`.
 ##
 ## NB: using a voting logic gate prevents us from using SCRAM for calculations. We could
 ## use addAtLeast but that doesn't work with `ftree.calc`.
-##
-## TODO: output the scram results
-## max_slo <- (1 - scram.probability(tree)) * 100
-## importance <- scram.importance(tree)
 
 ## Output the result.
 ftree2html(tree, write_file=TRUE)
-## browseURL("tree.html")
 
 ## TODO: look into using other types for basic events:
 ## addExposed, addLatent, addDemand
