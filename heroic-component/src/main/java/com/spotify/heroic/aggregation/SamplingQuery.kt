@@ -31,7 +31,7 @@ import com.spotify.heroic.common.TimeUtils
 data class SamplingQuery(var size: Duration?, var extent: Duration?) {
 
     @JsonCreator
-    constructor(unit: String, @JsonProperty("value") size: Duration?, extent: Duration?) :
+    constructor(unit: String?, @JsonProperty("value") size: Duration?, extent: Duration?) :
         this(size, extent ?: size)
     {
         val u = TimeUtils.parseTimeUnit(unit)
