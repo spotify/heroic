@@ -113,8 +113,10 @@ public class ClusterManagerModule {
     @ClusterScope
     public List<Pair<String, RpcProtocolComponent>> protocolComponents(
         final NodeMetadataProvider metadataProvider,
-        @Named("local") final ClusterNode localClusterNode, final PrimaryComponent primary,
-        final MetricComponent metric, final MetadataComponent metadata,
+        @Named("local") final ClusterNode localClusterNode,
+        final PrimaryComponent primary,
+        final MetricComponent metric,
+        final MetadataComponent metadata,
         final SuggestComponent suggest
     ) {
         final ImmutableList.Builder<Pair<String, RpcProtocolComponent>> protocolComponents =

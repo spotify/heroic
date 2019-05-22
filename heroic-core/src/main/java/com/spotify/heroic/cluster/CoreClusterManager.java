@@ -93,14 +93,20 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
 
     final Object updateRegistryLock = new Object();
 
-    @Inject
-    public CoreClusterManager(
-        AsyncFramework async, ClusterDiscovery discovery, NodeMetadata localMetadata,
-        Map<String, RpcProtocol> protocols, Scheduler scheduler,
-        @Named("useLocal") Boolean useLocal, HeroicConfiguration options, LocalClusterNode local,
-        HeroicContext context, @Named("topology") Set<Map<String, String>> expectedTopology,
-        final QueryReporter reporter
-    ) {
+  @Inject
+  public CoreClusterManager(
+      AsyncFramework async,
+      ClusterDiscovery discovery,
+      NodeMetadata localMetadata,
+      Map<String, RpcProtocol> protocols,
+      Scheduler scheduler,
+      @Named("useLocal") Boolean useLocal,
+      HeroicConfiguration options,
+      LocalClusterNode local,
+      HeroicContext context,
+      @Named("topology") Set<Map<String, String>> expectedTopology,
+
+      final QueryReporter reporter) {
         this.async = async;
         this.discovery = discovery;
         this.localMetadata = localMetadata;

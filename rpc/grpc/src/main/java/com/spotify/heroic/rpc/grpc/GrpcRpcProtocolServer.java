@@ -79,12 +79,16 @@ public class GrpcRpcProtocolServer implements LifeCycles {
 
     @Inject
     public GrpcRpcProtocolServer(
-        AsyncFramework async, MetricManager metrics, MetadataManager metadata,
-        SuggestManager suggest, NodeMetadataProvider metadataProvider,
+        AsyncFramework async,
+        MetricManager metrics,
+        MetadataManager metadata,
+        SuggestManager suggest,
+        NodeMetadataProvider metadataProvider,
         @Named("application/json+internal") ObjectMapper mapper,
         @Named("bindFuture") ResolvableFuture<InetSocketAddress> bindFuture,
         @Named("grpcBindAddress") InetSocketAddress address,
-        @Named("maxFrameSize") int maxFrameSize, @Named("boss") NioEventLoopGroup bossGroup,
+        @Named("maxFrameSize") int maxFrameSize,
+        @Named("boss") NioEventLoopGroup bossGroup,
         @Named("worker") NioEventLoopGroup workerGroup
     ) {
         this.async = async;

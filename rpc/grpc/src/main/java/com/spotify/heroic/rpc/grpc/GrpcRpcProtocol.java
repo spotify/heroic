@@ -88,9 +88,11 @@ public class GrpcRpcProtocol implements RpcProtocol {
 
     @Inject
     public GrpcRpcProtocol(
-        AsyncFramework async, @Named("application/json+internal") ObjectMapper mapper,
+        AsyncFramework async,
+        @Named("application/json+internal") ObjectMapper mapper,
         @Named("bindFuture") ResolvableFuture<InetSocketAddress> bindFuture,
-        @Named("defaultPort") int defaultPort, @Named("maxFrameSize") int maxFrameSize,
+        @Named("defaultPort") int defaultPort,
+        @Named("maxFrameSize") int maxFrameSize,
         @Named("worker") NioEventLoopGroup workerGroup
     ) {
         this.async = async;
