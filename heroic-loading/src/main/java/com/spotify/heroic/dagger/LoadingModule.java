@@ -173,8 +173,10 @@ public class LoadingModule {
     @LoadingScope
     @Named("loading")
     LifeCycle loadingLifeCycles(
-        @Named("internal") LifeCycleRegistry registry, final AsyncFramework async,
-        final ScheduledExecutorService scheduler, final ExecutorService executor
+        @Named("internal") LifeCycleRegistry registry,
+        final AsyncFramework async,
+        final ScheduledExecutorService scheduler,
+        final ExecutorService executor
     ) {
         return () -> {
             registry.scoped("loading scheduler").stop(() -> async.call(() -> {

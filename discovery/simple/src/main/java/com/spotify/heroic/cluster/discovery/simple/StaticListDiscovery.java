@@ -35,7 +35,8 @@ public class StaticListDiscovery implements ClusterDiscovery {
 
     @Inject
     public StaticListDiscovery(
-        AsyncFramework async, @Named("nodes") List<URI> nodes
+        AsyncFramework async,
+        @Named("nodes") List<URI> nodes
     ) {
         this.async = async;
         this.nodes = nodes;

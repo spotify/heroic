@@ -39,8 +39,7 @@ import org.xbill.DNS.SRVRecord;
 import org.xbill.DNS.Type;
 
 public class SrvRecordDiscovery implements ClusterDiscovery {
-    public static final String DEFAULT_PROTOCOL = "nativerpc";
-    public static final int DEFAULT_PORT = 1394;
+    public static final String DEFAULT_PROTOCOL = "grpc";
     private static final Logger log = LoggerFactory.getLogger(SrvRecordDiscovery.class);
 
     private final AsyncFramework async;
@@ -50,9 +49,9 @@ public class SrvRecordDiscovery implements ClusterDiscovery {
 
     @Inject
     public SrvRecordDiscovery(
-        AsyncFramework async, @Named("records") List<String> records,
+        AsyncFramework async,
+        @Named("records") List<String> records,
         @Named("protocol") Optional<String> protocol,
-
         @Named("port") Optional<Integer> port
     ) {
         this.async = async;
@@ -84,7 +83,7 @@ public class SrvRecordDiscovery implements ClusterDiscovery {
                     for (final Record a : result) {
                         final SRVRecord srv = (SRVRecord) a;
                         results.add(new URI(protocol.orElse(DEFAULT_PROTOCOL) + "://" +
-                            srv.getTarget().canonicalize() + ":" + port.orElse(DEFAULT_PORT)));
+                            srv.getTarget().canonicalize() + ":" + port.orElse(srv.getPort())));
                     }
                 }
 

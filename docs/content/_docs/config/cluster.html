@@ -18,8 +18,6 @@ cluster:
     site: london
   protocols:
     - type: grpc
-  capabilities:
-    - QUERY
   discovery:
     type: static
     nodes:
@@ -45,7 +43,31 @@ site: london
   See the <a href="docs/federation">federation</a> section for more details.
 </p>
 
-<h3><code>protocols</code></h3>
+
+<h3 id="topology">
+  <code>topology</code>
+  <a class="link-to" href="{{ page.short_url }}#topology"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
+
+<pre><code class="language-yaml">
+topology:
+  - site: london
+</code></pre>
+
+<p>
+  Actual topology (shards) is detected based on the metadata coming from the nodes.
+  Expected topology is specified in the optional 'topology'. This specifies the minimum
+  shards expected, i.e. additional shards may also exist. If an expected shard is not responding the
+  response will be include which shard was failing.
+
+  See the <a href="docs/federation">federation</a> section for more details.
+</p>
+
+
+<h3>
+  <code>protocols</code>
+  <a class="link-to" href="{{ page.short_url }}#protocols"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <p>
   Contains a list of protocols that this node can speak.
@@ -56,6 +78,8 @@ site: london
 <pre><code class="language-yaml">
 host: &lt;host&gt;
 port: &lt;port&gt;
+maxFrameSize: &lt;maxFrameSize&gt;
+
 </code></pre>
 
 <table class="table">
@@ -66,6 +90,10 @@ port: &lt;port&gt;
   <tr>
     <td><code>port</code></td>
     <td>the port number that this node will bind to.</td>
+  </tr>
+  <tr>
+    <td><code>maxFrameSize</code></td>
+    <td>frame size limit in bytes.</td>
   </tr>
 </table>
 
@@ -73,74 +101,16 @@ port: &lt;port&gt;
     <a href="https://grpc.io">gRPC</a> is an open source RPC protocol.
 </p>
 
-<h4>nativerpc</h4>
-
-<pre><code class="language-yaml">
-host: &lt;host&gt;
-port: &lt;port&gt;
-</code></pre>
-
-<table class="table">
-  <tr>
-    <td><code>host</code></td>
-    <td>the address of the interface that this node will bind to.</td>
-  </tr>
-  <tr>
-    <td><code>port</code></td>
-    <td>the port number that this node will bind to.</td>
-  </tr>
-</table>
-
-<p>
-  nativerpc is a protocol specifically designed to combat timeout and keep-alive issues that exists in HTTP.
-  A TCP connection might decide to stall for arbitrary periods of time, and most HTTP clients have a hard time detecting if this happens <em>after</em> a request has been received by the server.
-</p>
-
-<p>
-  A typical HTTP client supports two times of timeouts, <em>connection</em> and <em>read</em>.
-</p>
-
-<ul>
-  <li>The <em>connection</em> timeout is typically the time it takes to establish an open TCP connection.</li>
-  <li>The <em>read</em> timeout is typically the time it takes to send and receive a response from the remote server.</li>
-</ul>
-
-<p>
-  A common error scenario arises when a client cannot predict how long a request will be running for.
-  Given that we are dealing with cross-site traffic this is very bad, because a broken flow will leave the client hanging until it triggers its <em>read</em> timeout.
-</p>
-
-<p>
-  <b>nativerpc</b> solves this by using <em>heartbeats</em>.
-  The client communicates at which interval it expects to receive heartbeats, and as long as the server is actively processing the request it is expected to keep sending them.
-</p>
-
-<p>
-  This simple mechanism allows the client to detect broken flows, regardless of cause.
-  And allows the request to fail faster than what is permitted by HTTP.
-</p>
-
-<h3><code>capabilities</code></h3>
-
-<p>
-  This is a list of capabilities that is supported by this node.
-  Capabilities restrict what other nodes perceive this node to be capable of doing.
-  The current set of capabilities available right now are.
-</p>
-
-<ul>
-  <li><code>QUERY</code> - the node is capable of receiving queries, this needs to be set if you intend for this node to receive queries over the cluster.</li>
-  <li><code>WRITE</code> - the node is capable of receiving writes, this needs to be set if you intend for this node to receive writes over the cluster.</li>
-</ul>
-
-<h3><code>discovery</code></h3>
+<h3>
+  <code>discovery</code>
+  <a class="link-to" href="{{ page.short_url }}#discovery"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
 
 <p>
   The mechanism used to discover nodes in the cluster.
 </p>
 
 <h4>static</h4>
-
 <pre><code class="language-yaml">
 nodes:
   - &lt;url&gt;
@@ -163,4 +133,41 @@ nodes:
   It takes a list of nodes that may, or may not be reachable at the moment.
 
   This list will be queried at a given interval, and any that responds to a metadata request will be added to the local list of known members.
+</p>
+
+<h4>srv</h4>
+<pre><code class="language-yaml">
+records:
+  - &lt;srv record&gt;
+  - ..
+</code></pre>
+
+<table class="table">
+  <tr>
+    <th>records</th>
+    <td>
+      Is the list of srv records that this node will attempt to resolve and add  to its cluster registry.
+    </td>
+  </tr>
+
+  <tr>
+    <th>protocol</th>
+    <td>
+      Protocol to use when building the URI. Defaults to grpc.
+    </td>
+  </tr>
+
+  <tr>
+    <th>port</th>
+    <td>
+      Port to use when building the URI. Defaults to using the port specified in the SRV record unless the port is explicitly defined in the config.
+    </td>
+  </tr>
+</table>
+
+<p>
+  Srv records are useful when running Heroic on more ephemeral environments like kubernetes.
+
+  It takes a list srv records and resolves each one at a given interval, and any that responds to a metadata
+  request will be added to the local list of known members.
 </p>

@@ -42,31 +42,21 @@ import lombok.Data;
 
 @Data
 public class GrpcRpcProtocolModule implements RpcProtocolModule {
-    private static final Object PARENT = new Object();
-
     private static final String DEFAULT_HOST = "0.0.0.0";
     private static final int DEFAULT_PORT = 9698;
-    private static final int DEFAULT_PARENT_THREADS = 2;
-    private static final int DEFAULT_CHILD_THREADS = 100;
-    private static final int DEFAULT_MAX_FRAME_SIZE = 10 * 1000000;
-    private static final long DEFAULT_SEND_TIMEOUT = 5000;
+    private static final int DEFAULT_MAX_FRAME_SIZE = 10 * 1_000_000;
 
     private final InetSocketAddress address;
-    private final int parentThreads;
-    private final int childThreads;
     private final int maxFrameSize;
 
     @JsonCreator
     public GrpcRpcProtocolModule(
-        @JsonProperty("host") String host, @JsonProperty("port") Integer port,
-        @JsonProperty("parentThreads") Integer parentThreads,
-        @JsonProperty("childThreads") Integer childThreads,
+        @JsonProperty("host") String host,
+        @JsonProperty("port") Integer port,
         @JsonProperty("maxFrameSize") Integer maxFrameSize
     ) {
         this.address = new InetSocketAddress(Optional.ofNullable(host).orElse(DEFAULT_HOST),
             Optional.ofNullable(port).orElse(DEFAULT_PORT));
-        this.parentThreads = Optional.ofNullable(parentThreads).orElse(DEFAULT_PARENT_THREADS);
-        this.childThreads = Optional.ofNullable(childThreads).orElse(DEFAULT_CHILD_THREADS);
         this.maxFrameSize = Optional.ofNullable(maxFrameSize).orElse(DEFAULT_MAX_FRAME_SIZE);
     }
 
@@ -156,8 +146,6 @@ public class GrpcRpcProtocolModule implements RpcProtocolModule {
     public static class Builder {
         private String host = DEFAULT_HOST;
         private int port = DEFAULT_PORT;
-        private int parentThreads = DEFAULT_PARENT_THREADS;
-        private int childThreads = DEFAULT_CHILD_THREADS;
         private int maxFrameSize = DEFAULT_MAX_FRAME_SIZE;
 
         public Builder host(final String host) {
@@ -170,23 +158,13 @@ public class GrpcRpcProtocolModule implements RpcProtocolModule {
             return this;
         }
 
-        public Builder parentThreads(final int parentThreads) {
-            this.parentThreads = parentThreads;
-            return this;
-        }
-
-        public Builder childThreads(final int childThreads) {
-            this.childThreads = childThreads;
-            return this;
-        }
-
         public Builder maxFrameSize(final int maxFrameSize) {
             this.maxFrameSize = maxFrameSize;
             return this;
         }
 
         public GrpcRpcProtocolModule build() {
-            return new GrpcRpcProtocolModule(host, port, parentThreads, childThreads, maxFrameSize);
+            return new GrpcRpcProtocolModule(host, port, maxFrameSize);
         }
     }
 }
