@@ -32,13 +32,13 @@ import com.spotify.heroic.statistics.StatisticsModule;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 import com.spotify.metrics.ffwd.FastForwardReporter;
+import com.spotify.metrics.jvm.CpuGaugeSet;
 import com.spotify.metrics.jvm.GarbageCollectorMetricSet;
 import com.spotify.metrics.jvm.MemoryUsageGaugeSet;
 import com.spotify.metrics.jvm.ThreadStatesMetricSet;
 import dagger.Module;
 import dagger.Provides;
 import eu.toolchain.async.AsyncFramework;
-
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
@@ -74,6 +74,7 @@ public class SemanticStatisticsModule implements StatisticsModule {
         registry.register(gauges, new ThreadStatesMetricSet());
         registry.register(gauges, new GarbageCollectorMetricSet());
         registry.register(gauges, new MemoryUsageGaugeSet());
+        registry.register(gauges, CpuGaugeSet.create());
 
         final MetricId metric =
             MetricId.build("heroic").tagged("service", "heroic", "heroic_id", info.getId());
