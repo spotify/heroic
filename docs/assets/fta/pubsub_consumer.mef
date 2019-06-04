@@ -1,39 +1,62 @@
-<?xml-model encoding="UTF-8"
-  schematypens="http://relaxng.org/ns/structure/1.0"
-  href="https://raw.githubusercontent.com/rakhimov/scram/master/share/input.rng"
-?>
 <opsa-mef>
   <define-fault-tree name="PubSubConsumer">
-    <define-gate name="temp">
+    <define-gate name="PubSubConsumer">
+      <label>PubSub consumer pipeline failure</label>
       <or>
-        <event name="MetadataConsumer" />
-        <event name="MetricConsumer" />
+        <event name="MetadataCluster" />
+        <event name="MetricCluster" />
       </or>
     </define-gate>
 
-    <define-gate name="MetadataConsumer">
-      <label>Single metadata consumer failure</label>
+    <!-- Overall cluster failure -->
+    <define-gate name="MetadataCluster">
+      <label>Metadata cluster failure</label>>
       <or>
-        <event name="Host" />
-        <event name="ElasticsearchCluster" />
+        <event name="PubSub" />
+        <event name="ConsumerCapacity" />
+        <event name="ElasticsearchQuorum" />
+        <event name="ElasticsearchShard" />
       </or>
     </define-gate>
-    <define-gate name="MetricConsumer">
-      <label>Single metric consumer failure</label>
+    <define-gate name="MetricCluster">
+      <label>Metric cluster failure</label>>
       <or>
-        <event name="Host" />
         <event name="ZonalBigtable" />
+        <event name="ConsumerCapacity" />
+        <event name="PubSub" />
       </or>
+    </define-gate>
+
+    <!-- Individual consumer failures -->
+    <define-gate name="ConsumerCapacity">
+      <label>Consumer capacity failure</label>
+      <!-- total is number of consumers. if using autoscaling, set this to the autoscaler max
+           min is based on metrics processed per second. assumption for below is each consumer can process
+           30kps, with 1m incoming per second; so a minimum of 34 nodes is needed to keep up. min for ATLEAST gates
+           is the minimum that can fail, so its total minus the minimum capacity
+      -->
+      <atleast min="41" total="75">
+        <event name="Host" />
+      </atleast>
     </define-gate>
 
     <!-- Probability of elasticsearch failing -->
-    <define-gate name="ElasticsearchCluster">
-      <label>Elasticsearch cluster failure</label>
-      <!-- TODO
-           node_failure * replication_factor = failed shard
-           failed shard == failed cluster? not strictly true
+    <define-gate name="ElasticsearchShard">
+      <label>Elasticsearch shard failure</label>
+      <!-- min is the replication factor, total is the number of data nodes.
+           an assumptions is made that if any two nodes fail, the shard will fail.
+           that's definitely possible, but its the most pessimistic case - the specific nodes containing
+           the data for that shard would have to be the ones to fail.
       -->
-      <event name="ElasticsearchNode" />
+      <atleast min="2" total="40">
+        <event name="ElasticsearchNode" />
+      </atleast>
+    </define-gate>
+    <define-gate name="ElasticsearchQuorum">
+      <label>Elasticsearch quorum lost</label>
+      <atleast min="2" total="3">
+        <event name="ElasticsearchNode" />
+      </atleast>
     </define-gate>
     <define-gate name="ElasticsearchNode">
       <label>Elasticsearch single node failure</label>
@@ -48,16 +71,13 @@
       <or>
         <event name="GCEInstance" />
         <event name="OS" />
+        <event name="Network" />
       </or>
     </define-gate>
   </define-fault-tree>
 
   <!-- Probabilities are for monthly failure rates  -->
   <model-data>
-    <!-- <define-parameter name="ElasticsearchReplication"> -->
-    <!--   <label>Elasticsearch replication factor</label> -->
-    <!--   <int value="2" /> -->
-    <!-- </define-parameter> -->
 
     <!-- Events based on GCP SLAs -->
     <!-- https://cloud.google.com/compute/sla -->
