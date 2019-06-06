@@ -1,0 +1,216 @@
+{
+
+    "type": "or",
+    "source": null,
+    "probability": "0.002551470528693874704158602159",
+    "parent": null,
+    "name": "PubSubConsumer",
+    "id": 9,
+    "description": "PubSub consumer pipeline failure",
+    "children": [
+        {
+            "type": "or",
+            "source": null,
+            "probability": "0.001499500000000000000000000000",
+            "parent": "PubSubConsumer",
+            "name": "MetricCluster",
+            "id": 11,
+            "description": "Metric cluster failure",
+            "children": [
+                {
+                    "type": "atleast",
+                    "source": null,
+                    "probability": "1.689834619194608709197100395E-106",
+                    "parent": "MetricCluster",
+                    "name": "ConsumerCapacity",
+                    "id": 12,
+                    "description": "Consumer capacity failure",
+                    "children": [
+                        {
+                            "type": "transfer",
+                            "source": "Host",
+                            "probability": "0.002598390136",
+                            "parent": "ConsumerCapacity",
+                            "name": "Host",
+                            "id": 17,
+                            "description": null,
+                            "children": [ ],
+                            "atleast": null
+                        }
+                    ],
+                    "atleast": {
+                        "n": 75,
+                        "k": 41
+                    }
+                },
+                {
+                    "type": "basic",
+                    "source": null,
+                    "probability": "0.001",
+                    "parent": "MetricCluster",
+                    "name": "ZonalBigtable",
+                    "id": 2,
+                    "description": "Bigtable failure - zonal instance",
+                    "children": [ ],
+                    "atleast": null
+                },
+                {
+                    "type": "basic",
+                    "source": null,
+                    "probability": "0.0005",
+                    "parent": "MetricCluster",
+                    "name": "PubSub",
+                    "id": 1,
+                    "description": "PubSub failure",
+                    "children": [ ],
+                    "atleast": null
+                }
+            ],
+            "atleast": null
+        },
+        {
+            "type": "or",
+            "source": null,
+            "probability": "0.001053550327409825737852512001",
+            "parent": "PubSubConsumer",
+            "name": "MetadataCluster",
+            "id": 10,
+            "description": "Metadata cluster failure",
+            "children": [
+                {
+                    "type": "transfer",
+                    "source": "PubSub",
+                    "probability": "0.0005",
+                    "parent": "MetadataCluster",
+                    "name": "PubSub",
+                    "id": 20,
+                    "description": null,
+                    "children": [ ],
+                    "atleast": null
+                },
+                {
+                    "type": "transfer",
+                    "source": "ConsumerCapacity",
+                    "probability": "1.689834619194608709197100395E-106",
+                    "parent": "MetadataCluster",
+                    "name": "ConsumerCapacity",
+                    "id": 19,
+                    "description": null,
+                    "children": [ ],
+                    "atleast": null
+                },
+                {
+                    "type": "atleast",
+                    "source": null,
+                    "probability": "0.00004679476177416918882215718844",
+                    "parent": "MetadataCluster",
+                    "name": "ElasticsearchQuorum",
+                    "id": 14,
+                    "description": "Elasticsearch quorum lost",
+                    "children": [
+                        {
+                            "type": "or",
+                            "source": null,
+                            "probability": "0.005590594965592",
+                            "parent": "ElasticsearchQuorum",
+                            "name": "ElasticsearchNode",
+                            "id": 15,
+                            "description": "Elasticsearch single node failure",
+                            "children": [
+                                {
+                                    "type": "or",
+                                    "source": null,
+                                    "probability": "0.002598390136",
+                                    "parent": "ElasticsearchNode",
+                                    "name": "Host",
+                                    "id": 16,
+                                    "description": "Single general host failure",
+                                    "children": [
+                                        {
+                                            "type": "basic",
+                                            "source": null,
+                                            "probability": "0.0017",
+                                            "parent": "Host",
+                                            "name": "Network",
+                                            "id": 8,
+                                            "description": "Network partition",
+                                            "children": [ ],
+                                            "atleast": null
+                                        },
+                                        {
+                                            "type": "basic",
+                                            "source": null,
+                                            "probability": "0.0008",
+                                            "parent": "Host",
+                                            "name": "OS",
+                                            "id": 7,
+                                            "description": "OS fault",
+                                            "children": [ ],
+                                            "atleast": null
+                                        },
+                                        {
+                                            "type": "basic",
+                                            "source": null,
+                                            "probability": "0.0001",
+                                            "parent": "Host",
+                                            "name": "GCEInstance",
+                                            "id": 0,
+                                            "description": "GCE instance failure",
+                                            "children": [ ],
+                                            "atleast": null
+                                        }
+                                    ],
+                                    "atleast": null
+                                },
+                                {
+                                    "type": "basic",
+                                    "source": null,
+                                    "probability": "0.003",
+                                    "parent": "ElasticsearchNode",
+                                    "name": "Disk",
+                                    "id": 5,
+                                    "description": "Disk failure",
+                                    "children": [ ],
+                                    "atleast": null
+                                }
+                            ],
+                            "atleast": null
+                        }
+                    ],
+                    "atleast": {
+                        "n": 3,
+                        "k": 2
+                    }
+                },
+                {
+                    "type": "atleast",
+                    "source": null,
+                    "probability": "0.0005070562068305764701702512531",
+                    "parent": "MetadataCluster",
+                    "name": "ElasticsearchShard",
+                    "id": 13,
+                    "description": "Elasticsearch shard failure",
+                    "children": [
+                        {
+                            "type": "transfer",
+                            "source": "ElasticsearchNode",
+                            "probability": "0.005590594965592",
+                            "parent": "ElasticsearchShard",
+                            "name": "ElasticsearchNode",
+                            "id": 18,
+                            "description": null,
+                            "children": [ ],
+                            "atleast": null
+                        }
+                    ],
+                    "atleast": {
+                        "n": 40,
+                        "k": 2
+                    }
+                }
+            ],
+            "atleast": null
+        }
+    ],
+    "atleast": null
+}
