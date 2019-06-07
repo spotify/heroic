@@ -28,10 +28,13 @@ import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.CompletionCallback;
 import javax.ws.rs.container.ConnectionCallback;
 import javax.ws.rs.core.Response;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
 
-@Slf4j
 public final class CoreJavaxRestFramework implements JavaxRestFramework {
+
+    private static final Logger log =
+        org.slf4j.LoggerFactory.getLogger(CoreJavaxRestFramework.class);
+
     @Override
     public <T> void bind(final AsyncResponse response, final AsyncFuture<T> callback) {
         this.<T, T>bind(response, callback, this.<T>passthrough());

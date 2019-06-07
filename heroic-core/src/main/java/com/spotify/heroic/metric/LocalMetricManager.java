@@ -72,18 +72,16 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.inject.Inject;
 import javax.inject.Named;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.NotImplementedException;
+import org.slf4j.Logger;
 
-@Slf4j
-@ToString(of = {})
 @MetricScope
 public class LocalMetricManager implements MetricManager {
     private static final QueryTrace.Identifier QUERY =
         QueryTrace.identifier(LocalMetricManager.class, "query");
     private static final QueryTrace.Identifier FETCH =
         QueryTrace.identifier(LocalMetricManager.class, "fetch");
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(LocalMetricManager.class);
 
     private final OptionalLimit groupLimit;
     private final OptionalLimit seriesLimit;
@@ -145,7 +143,10 @@ public class LocalMetricManager implements MetricManager {
         return new Group(groupSet.useOptionalGroup(group), metadata.useDefaultGroup());
     }
 
-    @ToString
+    public String toString() {
+        return "LocalMetricManager()";
+    }
+
     private class Group extends AbstractMetricBackend implements MetricBackendGroup {
         private final SelectedGroup<MetricBackend> backends;
         private final MetadataBackend metadata;
@@ -164,6 +165,12 @@ public class LocalMetricManager implements MetricManager {
         @Override
         public boolean isEmpty() {
             return backends.isEmpty();
+        }
+
+        public String toString() {
+            return "LocalMetricManager.Group(backends=" + this.backends + ", metadata="
+                   + this.metadata
+                   + ")";
         }
 
         private class Transform implements LazyTransform<FindSeries, FullQuery> {

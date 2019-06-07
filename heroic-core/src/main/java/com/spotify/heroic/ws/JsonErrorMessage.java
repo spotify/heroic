@@ -21,12 +21,9 @@
 
 package com.spotify.heroic.ws;
 
-import lombok.Getter;
-
 import javax.ws.rs.core.Response;
 
 public class JsonErrorMessage extends InternalErrorMessage {
-    @Getter
     private final String path;
 
     public JsonErrorMessage(final String message, final Response.Status status, final String path) {
@@ -37,5 +34,9 @@ public class JsonErrorMessage extends InternalErrorMessage {
     @Override
     public String getType() {
         return "json-error";
+    }
+
+    public String getPath() {
+        return this.path;
     }
 }

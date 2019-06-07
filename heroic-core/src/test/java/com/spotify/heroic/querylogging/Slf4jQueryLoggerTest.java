@@ -11,7 +11,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.spotify.heroic.Query;
-import com.spotify.heroic.common.Histogram;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.FullQuery;
 import com.spotify.heroic.metric.QueryMetrics;

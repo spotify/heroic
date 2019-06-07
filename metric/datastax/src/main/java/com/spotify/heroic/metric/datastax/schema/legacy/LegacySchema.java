@@ -32,14 +32,12 @@ import com.spotify.heroic.metric.datastax.schema.SchemaInstance;
 import com.spotify.heroic.metric.datastax.schema.ng.NextGenSchema;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.extern.slf4j.Slf4j;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.io.IOException;
 import java.util.Map;
+import javax.inject.Inject;
+import javax.inject.Named;
+import org.slf4j.Logger;
 
-@Slf4j
 public class LegacySchema extends AbstractCassandraSchema implements Schema {
     public static final String CREATE_KEYSPACE_CQL =
         NextGenSchema.class.getPackage().getName() + "/keyspace.cql";
@@ -59,6 +57,7 @@ public class LegacySchema extends AbstractCassandraSchema implements Schema {
             "DELETE FROM {{keyspace}}.metrics WHERE metric_key = ?";
     private static final String COUNT_METRICS_CQL =
             "SELECT count(*) FROM {{keyspace}}.metrics WHERE metric_key = ?";
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(LegacySchema.class);
     // @formatter:on
 
     private final String keyspace;

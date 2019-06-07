@@ -44,10 +44,8 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import java.util.Optional;
 import javax.inject.Inject;
-import lombok.ToString;
 
 @ClusterScope
-@ToString(exclude = {"async", "metrics", "metadata", "suggest"})
 public class LocalClusterNode implements ClusterNode {
     private final AsyncFramework async;
     private final NodeMetadata localMetadata;
@@ -85,6 +83,10 @@ public class LocalClusterNode implements ClusterNode {
     @Override
     public Group useOptionalGroup(final Optional<String> group) {
         return new LocalGroup(group);
+    }
+
+    public String toString() {
+        return "LocalClusterNode(localMetadata=" + this.localMetadata + ")";
     }
 
     private final class LocalGroup implements Group {

@@ -29,20 +29,16 @@ import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.Data;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Collection;
-import java.util.List;
 import java.util.Optional;
+import javax.inject.Inject;
+import javax.inject.Named;
+import org.slf4j.Logger;
 
 /**
  * Component that executes a startup 'ping' after the service has started.
@@ -52,9 +48,9 @@ import java.util.Optional;
  *
  * @author udoprog
  */
-@Slf4j
-@ToString(of = {"ping", "id"})
 public class HeroicStartupPinger implements LifeCycles {
+
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(HeroicStartupPinger.class);
     private final Optional<HttpServer> server;
     private final ObjectMapper mapper;
     private final HeroicContext context;
@@ -101,12 +97,10 @@ public class HeroicStartupPinger implements LifeCycles {
     }
 
     private void sendStartupPing(PingMessage p) throws IOException {
-        switch (ping.getScheme()) {
-            case "udp":
-                sendUDP(p);
-                break;
-            default:
-                throw new IllegalArgumentException("Startup URL scheme: " + ping.getScheme());
+        if ("udp".equals(ping.getScheme())) {
+            sendUDP(p);
+        } else {
+            throw new IllegalArgumentException("Startup URL scheme: " + ping.getScheme());
         }
     }
 
@@ -125,10 +119,7 @@ public class HeroicStartupPinger implements LifeCycles {
         }
     }
 
-    @Data
-    public static final class PingMessage {
-        private final int port;
-        private final String id;
-        private final List<String> protocols;
+    public String toString() {
+        return "HeroicStartupPinger(ping=" + this.ping + ", id=" + this.id + ")";
     }
 }

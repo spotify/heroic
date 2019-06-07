@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,27 +19,11 @@
  * under the License.
  */
 
-package com.spotify.heroic.ws;
+package com.spotify.heroic.querylogging.format
 
-import javax.inject.Inject;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.ext.ExceptionMapper;
-import javax.ws.rs.ext.Provider;
-import org.slf4j.Logger;
+import com.fasterxml.jackson.annotation.JsonProperty
 
-@Provider
-public class ErrorExceptionMapper implements ExceptionMapper<Error> {
-
-    private static final Logger log = org.slf4j.LoggerFactory.getLogger(ErrorExceptionMapper.class);
-
-    @Inject
-    public ErrorExceptionMapper() {
-    }
-
-    @Override
-    public Response toResponse(Error e) {
-        log.error("Fatal exception thrown in handler", e);
-        System.exit(1);
-        return null;
-    }
-}
+data class LogFormat<T>(
+    @JsonProperty("@timestamp") val timestamp: String,
+    @JsonProperty("@message") val message: MessageFormat<T>
+)

@@ -29,11 +29,13 @@ import com.spotify.heroic.querylogging.HttpContext;
 import com.spotify.heroic.querylogging.QueryContext;
 import com.spotify.heroic.querylogging.QueryLogger;
 import com.spotify.heroic.querylogging.QueryLoggingScope;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
 
 @QueryLoggingScope
-@Slf4j
 public class NoopQueryLogger implements QueryLogger {
+
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(NoopQueryLogger.class);
+
     @Override
     public void logHttpQueryText(
         final QueryContext context, final String query
