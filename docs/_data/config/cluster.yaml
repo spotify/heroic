@@ -1,0 +1,63 @@
+- name: id
+  example: 88b3f090-49f8-43fe-b30e-5ce0e3889884
+  description: Local ID for the node. Defaults to a generated UUID.
+- name: useLocal
+  description: When communicating with self, avoid using the network. Defaults to false.
+- name: tags
+  example: |2
+
+      site: london
+  description: |
+    Defines a set of tags that identifies which part of the cluster this node belongs to.
+    It's defined as an object like <code class="language-json">{"site": "london"}</code>.
+    Nodes that have an identical set of tags are said to be part of the same <em>shard</em>.
+    See the <a href="docs/federation">federation</a> section for more details.
+- name: topology
+  example: |2
+
+      - site: london
+  description: |
+    Actual topology (shards) is detected based on the metadata coming from the nodes.
+    Expected topology is specified in the optional 'topology'. This specifies the minimum
+    shards expected, i.e. additional shards may also exist. If an expected shard is not responding the
+    response will be include which shard was failing.
+
+    See the <a href="docs/federation">federation</a> section for more details.
+- name: protocols
+  description: List of protocols that this node can speak.
+  types:
+    - name: grpc
+      example: |
+        - type: grpc
+          host: 0.0.0.0
+          port: 9698
+          maxFrameSize: 10000000
+      description: <a href="https://grpc.io">gRPC</a> is an open source RPC protocol.
+      parameters:
+        host: the address of the interface that this node will bind to.
+        port: the port number that this node will bind to.
+        maxFrameSize: frame size limit in bytes.
+- name: discovery
+  description: The mechanism used to discover nodes in the cluster.
+  types:
+    - name: static
+      description: Static is the simplest possible form of discovery. It takes a list of nodes that may, or may not be reachable at the moment. This list will be queried at a given interval, and any that responds to a metadata request will be added to the local list of known members.
+      example: |
+        type: static
+        nodes:
+          - grpc://localhost:8698
+      parameters:
+        nodes: The list of nodes that this node will attempt to add to its cluster registry. A valid url has the form <code>protocol://host[:port]</code>.
+    - name: srv
+      example: |
+        type: srv
+        records:
+          - srv-record-1.example.com
+      description: |
+        SRV records are useful when running Heroic on more ephemeral environments, like Kubernetes.
+        It takes a list of SRV records and resolves each one at a given interval. Any that respond to a metadata
+        request will be added to the local list of known members.
+      parameters:
+        records: Is the list of srv records that this node will attempt to resolve and add  to its cluster registry.
+        protocol: Protocol to use when building the URI. Defaults to grpc.
+        port: Port to use when building the URI. Defaults to using the port specified in the SRV record unless the port is explicitly defined in the config.

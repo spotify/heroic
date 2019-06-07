@@ -3,36 +3,17 @@ port: 8080
 
 # Cluster configuration.
 cluster:
-  # Local ID.
-  # @default Generated UUID.
-  #id: 88b3f090-49f8-43fe-b30e-5ce0e3889884
-  # When communicating with self, avoid using the network.
-  # @default false
-  #useLocal: false
-
-  # Discovery mechanism
   discovery:
-    ## Static discovery mechanism.
     type: static
     nodes:
       - grpc://localhost:9698
-
-    ## SRV discovery mechanism. The port will be read from the SRV record.
-    # type: srv
-    # records:
-    # - srv-record-1.example.com
-    # - srv-record-2.example.com
-
-  # RPC mechanism
   protocols:
     - type: grpc
       host: 0.0.0.0
       port: 9698
       maxFrameSize: 10000000
-
   tags:
     site: london
-
   topology:
     - site: london
 
