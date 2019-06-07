@@ -97,7 +97,8 @@ public final class DatastaxMetricModule implements MetricModule, DynamicModuleId
 
     @JsonCreator
     public DatastaxMetricModule(
-        @JsonProperty("id") Optional<String> id, @JsonProperty("groups") Optional<Groups> groups,
+        @JsonProperty("id") Optional<String> id,
+        @JsonProperty("groups") Optional<Groups> groups,
         @JsonProperty("seeds") Optional<Set<String>> seeds,
         @JsonProperty("schema") Optional<SchemaModule> schema,
         @JsonProperty("configure") Optional<Boolean> configure,

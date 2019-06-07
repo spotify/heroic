@@ -1,4 +1,3 @@
-# vim: filetype=yaml
 port: 8080
 
 # Cluster configuration.
@@ -9,9 +8,6 @@ cluster:
       - grpc://localhost:9698
   protocols:
     - type: grpc
-      host: 0.0.0.0
-      port: 9698
-      maxFrameSize: 10000000
   tags:
     site: london
   topology:
@@ -20,23 +16,6 @@ cluster:
 # Metrics configuration.
 metrics:
   backends:
-    ## Cassandra 2 backend.
-    #- type: cassandra2
-    #  # Unique id for this backend.
-    #  # @default Generated.
-    #  #id: null
-    #  # Backend group name.
-    #  # @default "heroic"
-    #  #group: heroic
-    #  # Keyspace.
-    #  # @default "heroic"
-    #  #keyspace: heroic
-    #  # Seeds.
-    #  # @default empty
-    #  #seeds:
-    #  #  - localhost
-    #  # Max number of connections per host in cluster.
-    #  #maxConnectionsPerHost: 50
     ## Generated (infinite) metrics.
     # The generator is consistent so the same queried time series will always
     # result in the same generated values (given the same configuration here!).
