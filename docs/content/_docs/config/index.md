@@ -1,5 +1,6 @@
 ---
 title: Configuration
+short_url: docs/config
 ---
 
 # Configuration
@@ -107,11 +108,11 @@ queryLogging:
 tracing: {}
 ```
 
-### `<discovery_config>`
+### [`<discovery_config>`]({{ page.short_url }}#discovery_config)
 
 The mechanism used to discover nodes in the cluster. Only one disovery type can be set at a time.
 
-#### static
+#### [static]({{ page.short_url }}#static)
 
 Static is the simplest possible form of discovery. It takes a list of nodes that may, or may not be reachable at the moment.
 This list will be queried at a given interval, and any that responds to a metadata request will be added to the local list of known members.
@@ -125,7 +126,7 @@ nodes:
   - ...
 ```
 
-#### srv
+#### [srv]({{ page.short_url }}#srv)
 
 SRV records are useful when running Heroic on more ephemeral environments, like Kubernetes.
 It takes a list of SRV records and resolves each one at a given interval. Any that respond to a metadata
@@ -146,11 +147,11 @@ protocol: <string> default = grpc
 port: <int> default = result from SRV
 ```
 
-### `<protocol_config>`
+### [`<protocol_config>`]({{ page.short_url }}#protocol_config)
 
 Protocols that the node can speak to other nodes. Multiple protocols can be enabled at once.
 
-#### grpc
+#### [grpc]({{ page.short_url }}#grpc)
 
 [gRPC](https://grpc.io) is an open source RPC protocol.
 
@@ -167,7 +168,7 @@ port: <int> default = 9698
 maxFrameSize: <int> default = 10000000
 ```
 
-#### jvm
+#### [jvm]({{ page.short_url }}#jvm)
 
 Communicate directly between multiple JVMs running on the same host.
 
@@ -178,11 +179,30 @@ type: jvm
 bindName: <string> default = heroic-jvm
 ```
 
-### `<metrics_backend>`
+### [`<metrics_backend>`]({{ page.short_url }}#metrics_backend)
 
 The metric backends are responsible for storing and fetching metrics to and from various data stores.
 
-#### Cassandra
+#### [Memory]({{ page.short_url }}#memory)
+
+An in-memory datastore. This is intended only for testing and is definitely not something you should run in production.
+
+```yaml
+type: memory
+
+# ID used to uniquely identify this backend.
+id: <string> default = generated UUID
+
+# Which groups this backend should be part of.
+groups:
+  - <string> default = memory
+  ...
+
+# If true, synchronized storage for happens-before behavior.
+synchronizedStorage: <bool> default = false
+```
+
+#### [Cassandra]({{ page.short_url }}#cassandra)
 
 ```yaml
 type: datastax
@@ -253,4 +273,72 @@ poolingOptions:
 
   # Interval after which a message is sent on an idle connection to make sure it's still alive.
   heartbeatIntervalSeconds: <int> default = 30
+```
+
+#### [Bigtable]({{ page.short_url }}#bigtable)
+
+Store metrics in [Google's Cloud Bigtable](https://cloud.google.com/bigtable/).
+
+A note on sending metrics with the same timestamp and/or duplicate metrics. These metric values will not be duplicated within the row, since Heroic is mutating rows and not appending to the column family. In Bigtable each timestamp + value is a column within the row.
+
+```yaml
+type: bigtable
+
+# ID used to uniquely identify this backend.
+id: <string> default = generated UUID
+
+# Which groups this backend should be part of.
+groups:
+  - <string> default = bigtable
+  ...
+
+# The Google Cloud Project the backend should connect to.
+project: <string> required
+
+# The Bigtable instance the backend should connect to.
+instance: <string> default = heroic
+
+# Which Bigtable table the backend should use.
+table: <string> default = metrics
+
+# Credentials used to authenticate. If this is not set, automatic authentication will be attempted
+# as detailed at https://cloud.google.com/docs/authentication/production#finding_credentials_automatically
+credentials: <bigtable_credentials> default = automatic discovery
+
+# Automatically configure the database.
+configure: <bool> default = false
+
+# This will cause each individual write to be performed as a single request.
+disableBulkMutations: <bool> default = false
+
+# When bulk mutations are enabled, this is the maximum amount of time a single batch will collect data for.
+flushIntervalSeconds: <int> default = 2
+
+# When bulk mutations are enabled, this is the maximum size of a single batch.
+batchSize: <int>
+
+# If set, no actual connections will be made to Bigtable.
+fake: <bool> default = false
+```
+
+##### `<bigtable_credentials>`
+
+One of the following credential configurations can be set to explicitly define how to authenticate.
+
+```yaml
+# Compute Engine Credentials
+type: compute-engine
+```
+
+```yaml
+# Default Credentials
+type: default
+```
+
+```yaml
+# JSON Credentials
+type: json
+
+# Path to credentials file to use.
+path: <string>
 ```

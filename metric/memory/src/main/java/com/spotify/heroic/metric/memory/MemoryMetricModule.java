@@ -48,7 +48,8 @@ public final class MemoryMetricModule implements MetricModule, DynamicModuleId {
 
     @JsonCreator
     public MemoryMetricModule(
-        @JsonProperty("id") Optional<String> id, @JsonProperty("groups") Optional<Groups> groups,
+        @JsonProperty("id") Optional<String> id,
+        @JsonProperty("groups") Optional<Groups> groups,
         @JsonProperty("synchronizedStorage") Optional<Boolean> synchronizedStorage
     ) {
         this.id = id;
