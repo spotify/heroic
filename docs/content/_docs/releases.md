@@ -1,6 +1,5 @@
 ---
 title: Release Notes
-short_url: docs/releases
 ---
 
 # {{ page.title }}

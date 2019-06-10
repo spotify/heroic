@@ -16,8 +16,8 @@ title: Overview
 <ul>
   <li>An architecture that scales with you, large or small.</li>
   <li>Indefinite retention, as long as you have the hardware spend.</li>
-  <li>A rich <a href="docs/query_language">query and filtering language</a>, driven by Elasticsearch.</li>
-  <li><a href="docs/federation">Federation support</a> to connect multiple Heroic clusters into a global interface.</li>
+  <li>A rich <a href="query_language">query and filtering language</a>, driven by Elasticsearch.</li>
+  <li><a href="federation">Federation support</a> to connect multiple Heroic clusters into a global interface.</li>
 </ul>
 
 <p>
@@ -31,7 +31,7 @@ title: Overview
 </p>
 
 <p>
-  We support consuming over <a href="docs/config/consumer#kafka">Kafka</a>, the <a href="docs/config/consumer#collectd">collectd protocol</a>, and over <a href="docs/api#post-write">HTTP</a>.
+  We support consuming over <a href="config/consumer#kafka">Kafka</a>, the <a href="config/consumer#collectd">collectd protocol</a>, and over <a href="api#post-write">HTTP</a>.
 </p>
 
 <p>
@@ -44,7 +44,7 @@ title: Overview
 </p>
 
 <ul>
-  <li><a href="tutorials/kafka_consumer">Consuming metrics over Kafka</a></li>
+  <li><a href="{{ 'tutorials/kafka_consumer' | relative_url }}">Consuming metrics over Kafka</a></li>
 </ul>
 
 <h3>Metrics</h3>
@@ -71,14 +71,14 @@ title: Overview
 </p>
 
 <p>
-  For more information, see the section detailing how to configure <a href="docs/config/metrics">metrics backends</a>.
+  For more information, see the section detailing how to configure <a href="config/metrics">metrics backends</a>.
 </p>
 
 <h3>Metadata</h3>
 
 <p>
   We use Elasticsearch to store and make metadata available to a heroic
-  cluster. It is the primary component that drives Heroic's <a href="docs/query_language">Query Language</a>.
+  cluster. It is the primary component that drives Heroic's <a href="query_language">Query Language</a>.
 </p>
 
 <p>
@@ -87,14 +87,14 @@ title: Overview
 </p>
 
 <p>
-  For more information, see the section detailing how to configure <a href="docs/config/metadata">metadata backends</a>.
+  For more information, see the section detailing how to configure <a href="config/metadata">metadata backends</a>.
 </p>
 
 <h3>Suggestions</h3>
 
 <p>
   When building Heroic it was quickly realized that navigating millions, or hundreads of millions of time series without context is hard.
-  To address this, a specialized Elasticsearch backend was built to handle <a href="docs/config/suggest">suggestions</a>.
+  To address this, a specialized Elasticsearch backend was built to handle <a href="config/suggest">suggestions</a>.
 </p>
 
 <p>
@@ -126,13 +126,13 @@ $ curl -H "Content-Type: application/json" &lt;url&gt;/metadata/suggest-tag -d \
 <p>
   Suggestions are different from Metadata since it uses more intensive indexing techniques to analyze your tags.
   Having it as a separate module is useful since they are not critical to the operation of Heroic.
-  Or to be more specific, its <a href="docs/query_language">Query Language</a>.
+  Or to be more specific, its <a href="query_language">Query Language</a>.
 </p>
 
 <h3>Clustering and Federation</h3>
 
 <p>
-  Main article: <a href="docs/federation">Federated Clusters</a>
+  Main article: <a href="federation">Federated Clusters</a>
 </p>
 
 <p>

@@ -1,11 +1,15 @@
 ---
 title: Configuration
-short_url: docs/config
 ---
+
+{::options toc_levels="3..4" /}
 
 # Configuration
 
 Heroic is divided up into a few components, each whose configuration will affect the service in different ways. Each component has its own sub-section in the configuration file.
+
+* TOC
+{:toc}
 
 ## Configuration file
 
@@ -107,7 +111,7 @@ queryLogging: <query_logging_config>
 tracing: <tracing_config>
 ```
 
-### [`<feature>`]({{ page.short_url }}#feature)
+### [`<feature>`](#feature)
 
 Features are a way to modify the behaviour of the service. They are implemented as flags namespaced to Heroic.
 
@@ -122,42 +126,48 @@ Precedence for each flag is defined as the following:
 The following features are available:
 
 #### com.spotify.heroic.deterministic_aggregations
+{:.no_toc}
 
 Enable feature to only perform aggregations that can be performed with limited resources. Disabled by default.
 
 Aggregations are commonly performed per-shard, and the result concatenated. This enabled experimental support for distributed aggregations which behave transparently across shards.
 
 #### com.spotify.heroic.distributed_aggregations
+{:.no_toc}
 
 Enable feature to perform distributed aggregations. Disabled by default.
 
 Aggregations are commonly performed per-shard, and the result concatenated. This enables experimental support for distributed aggregations which behave transparently across shards. Typically this will cause more data to be transported across shards for each request.
 
 #### com.spotify.heroic.shift_range
+{:.no_toc}
 
 Enable feature to cause range to be rounded on the current cadence. Enabled by default.
 
 This will assert that there are data outside of the range queried for and that the range is aligned to the queried cadence. Which is a useful feature when using a dashboarding system.
 
 #### com.spotify.heroic.sliced_data_fetch
+{:.no_toc}
 
 Enable feature to cause data to be fetched in slices. Enabled by default.
 
 This will cause data to be fetched and consumed by the aggregation framework in pieces avoiding having to load all data into memory before starting to consume it.
 
 #### com.spotify.heroic.end_bucket_stategy
+{:.no_toc}
 
 Enabled by default.
 
 Use the legacy bucket strategy by default where the resulting value is at the end of the timestamp of the bucket.
 
 #### com.spotify.heroic.cache_query
+{:.no_toc}
 
 Disabled by default.
 
 Permit caching of the query results.
 
-### [`<feature_request_condition>`]({{ page.short_url }}#feature_request_condition)
+### [`<feature_request_condition>`](#feature_request_condition)
 
 Features can be conditionally enabled and disabled by matching properties of the request. Specific conditions can be combined using the `all` or `any` conditions shown below.
 
@@ -193,7 +203,7 @@ type: userAgent
 userAgent: <string>
 ```
 
-### [`<cluster_config>`]({{ page.short_url }}#cluster_config)
+### [`<cluster_config>`](#cluster_config)
 
 Configuration related to the cluster of Heroic nodes.
 
@@ -228,11 +238,11 @@ topology:
   - ...
 ```
 
-### [`<discovery_config>`]({{ page.short_url }}#discovery_config)
+### [`<discovery_config>`](#discovery_config)
 
 The mechanism used to discover nodes in the cluster. Only one disovery type can be set at a time.
 
-#### [static]({{ page.short_url }}#static)
+#### [static](#static)
 
 Static is the simplest possible form of discovery. It takes a list of nodes that may, or may not be reachable at the moment.
 This list will be queried at a given interval, and any that responds to a metadata request will be added to the local list of known members.
@@ -246,7 +256,7 @@ nodes:
   - ...
 ```
 
-#### [srv]({{ page.short_url }}#srv)
+#### [srv](#srv)
 
 SRV records are useful when running Heroic on more ephemeral environments, like Kubernetes.
 It takes a list of SRV records and resolves each one at a given interval. Any that respond to a metadata
@@ -267,11 +277,11 @@ protocol: <string> default = grpc
 port: <int> default = result from SRV
 ```
 
-### [`<protocol_config>`]({{ page.short_url }}#protocol_config)
+### [`<protocol_config>`](#protocol_config)
 
 Protocols that the node can speak to other nodes. Multiple protocols can be enabled at once.
 
-#### [grpc]({{ page.short_url }}#grpc)
+#### [grpc](#grpc)
 
 [gRPC](https://grpc.io) is an open source RPC protocol.
 
@@ -288,7 +298,7 @@ port: <int> default = 9698
 maxFrameSize: <int> default = 10000000
 ```
 
-#### [jvm]({{ page.short_url }}#jvm)
+#### [jvm](#jvm)
 
 Communicate directly between multiple JVMs running on the same host.
 
@@ -299,7 +309,7 @@ type: jvm
 bindName: <string> default = heroic-jvm
 ```
 
-### [`<metrics_config>`]({{ page.short_url }}#metrics_config)
+### [`<metrics_config>`](#metrics_config)
 
 Configuration for reading and writing metrics. At least one backend must be configured for the node to interact with metrics.
 
@@ -339,11 +349,11 @@ failOnLimits: <bool> default = false
 smallQueryThreshold: <int> default = 200000
 ```
 
-### [`<metrics_backend>`]({{ page.short_url }}#metrics_backend)
+### [`<metrics_backend>`](#metrics_backend)
 
 The metric backends are responsible for storing and fetching metrics to and from various data stores.
 
-#### [Memory]({{ page.short_url }}#memory)
+#### [Memory](#memory)
 
 An in-memory datastore. This is intended only for testing and is definitely not something you should run in production.
 
@@ -362,7 +372,7 @@ groups:
 synchronizedStorage: <bool> default = false
 ```
 
-#### [Cassandra]({{ page.short_url }}#cassandra)
+#### [Cassandra](#cassandra)
 
 ```yaml
 type: datastax
@@ -435,7 +445,7 @@ poolingOptions:
   heartbeatIntervalSeconds: <int> default = 30
 ```
 
-#### [Bigtable]({{ page.short_url }}#bigtable)
+#### [Bigtable](#bigtable)
 
 Store metrics in [Google's Cloud Bigtable](https://cloud.google.com/bigtable/).
 
@@ -503,13 +513,13 @@ type: json
 path: <string>
 ```
 
-### [`<metadata_backend>`]({{ page.short_url }}#metadata_backend)
+### [`<metadata_backend>`](#metadata_backend)
 
 Metadata acts as the index to time series data, it is the driving force behind our [Query Language](docs/query_language).
 
 Metadata resolution is important since it allows operators to specify a subset of known metadata, and resolve it into a set of matching time series. Without metadata, the burden of keeping track of time series would lie solely in the client.
 
-#### [Elasticsearch]({{ page.short_url }}#elasticsearch)
+#### [Elasticsearch](#elasticsearch)
 
 Elasticsearch based metadata. Example of the stored metadata:
 
@@ -664,7 +674,7 @@ nodeSamplerInterval: <duration> default = 30s
 ```
 
 
-#### [Memory]({{ page.short_url }}#memory)
+#### [Memory](#memory)
 
 An in-memory datastore. This is intended only for testing and is definitely not something you should run in production.
 
@@ -683,13 +693,13 @@ groups:
 synchronizedStorage: <bool> default = false
 ```
 
-### [`<suggest_backend>`]({{ page.short_url }}#suggest_backend)
+### [`<suggest_backend>`](#suggest_backend)
 
 The ability to perform suggestions is an important usability feature. It makes the difference for your system to be a complete black box, to giving your developers the ability to find and make use of time series on their own. Suggests are fairly expensive in terms of data storage and indexing operations as each tag that is part of a metric is indexed.
 
 Suggestions is an optional feature of heroic.
 
-#### [Elasticsearch]({{ page.short_url }}#elasticsearch)
+#### [Elasticsearch](#elasticsearch)
 
 **WARNING** There are ElasticSearch settings and mappings that must be configured before indexing operations are processed. These are required to make the reads efficient. At Spotify these settings are added when setting up the ElasticSearch cluster with Puppet. [settings/mappings are here](https://github.com/spotify/heroic/tree/7ff07a654048ce760e867835e11f230cd7c5a4ee/suggest/elasticsearch/src/main/resources/com.spotify.heroic.suggest.elasticsearch/kv).
 
@@ -746,7 +756,7 @@ templateName: <string> default = heroic-suggest
 configure: <bool> default = false
 ```
 
-#### [Memory]({{ page.short_url }}#memory)
+#### [Memory](#memory)
 
 An in-memory datastore. This is intended only for testing and is definitely not something you should run in production.
 
@@ -762,11 +772,11 @@ groups:
   ...
 ```
 
-### [`<consumer_config>`]({{ page.short_url }}#consumer_config)
+### [`<consumer_config>`](#consumer_config)
 
 A consumer is a component responsible for ingesting metrics and introducing them into a Heroic cluster.
 
-#### [Kafka]({{ page.short_url }}#kafka)
+#### [Kafka](#kafka)
 
 A Kafka consumer that reads and parses data out of a Kafka queue.
 
@@ -804,7 +814,7 @@ transactional: <bool> default = false
 transactionCommitInterval: <int> default = 30000
 ```
 
-#### [PubSub]({{ page.short_url }}#pubsub)
+#### [PubSub](#pubsub)
 
 Utilize [Google Cloud Pub/Sub](https://cloud.google.com/pubsub/docs/overview) for ingesting messages.
 
@@ -847,7 +857,7 @@ maxInboundMessageSize: <int> default = 20971520
 keepAlive: <int> default = 300
 ```
 
-### [`<cache_backend>`]({{ page.short_url }}#cache_backend)
+### [`<cache_backend>`](#cache_backend)
 
 Caching for aggregations.
 
@@ -875,7 +885,7 @@ addresses:
 maxTtl: <duration>
 ```
 
-### [`<analytics_config>`]({{ page.short_url }}#analytics_config)
+### [`<analytics_config>`](#analytics_config)
 
 Configure a backend to store analytics about queries served by Heroic. Currently Bigtable is the only supported backend.
 
@@ -897,7 +907,7 @@ credentials: <bigtable_credentials> default = automatic discovery
 maxPendingReports: <int> default = 1000
 ```
 
-### [`<query_logging_config>`]({{ page.short_url }}#query_logging_config)
+### [`<query_logging_config>`](#query_logging_config)
 
 Defines which type of logger that should be used for detailed query logging. Currently only slf4j is supported.
 
@@ -914,6 +924,7 @@ level: <string> default = TRACE
 ```
 
 #### Query log output
+{:.no_toc}
 
 Each successful query will result in several output entries in the query log. Entries from different stages of the query. Example output:
 
@@ -939,6 +950,7 @@ Each successful query will result in several output entries in the query log. En
 | `data` | Contains data relevant to this query stage. This might for example be the original query, a partial response or the final response.
 
 #### Contextual information
+{:.no_toc}
 
 It's possible to supply contextual information in the query. This information will then be included in the query log, to ease mapping of performed query to the query log output.
 
@@ -969,7 +981,7 @@ You'll get the following output in the query log:
 }
 ```
 
-### [`<tracing_config>`]({{ page.short_url }}#tracing_config)
+### [`<tracing_config>`](#tracing_config)
 
 Enable distributed tracing output of Heroic's operations. Tracing is instrumented using [OpenCensus](https://opencensus.io/).
 
