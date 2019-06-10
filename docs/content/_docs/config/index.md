@@ -156,16 +156,23 @@ shellServer:
 # Optionally store analytic data about processed queries.
 analytics: <analytics_config>
 
-generator: ?
+# Generate internal metrics from the operation of Heroic.
+# Disabled by defaults, the only valid option is semantic.
+statistics:
+  type: semantic
 
-statistics: ?
-
-# Detailed query logging
+# Detailed query logging.
+# Disabled by default, the only valid option is slf4j.
 queryLogging:
   type: slf4j
+  # Name for the slf4j logger.
+  name: <string> default = com.spotify.heroic.query_logging
+  # Level to log at, from most verbose to least:
+  # TRACE, DEBUG, INFO, WARN, ERROR
+  level: <string> default = TRACE
 
-# Distributed tracing output.
-tracing: {}
+# Enable distributed tracing of Heroic's operations.
+tracing: <tracing_config>
 ```
 
 ### [`<feature>`]({{ page.short_url }}#feature)
@@ -881,4 +888,44 @@ credentials: <bigtable_credentials> default = automatic discovery
 # Limit the number of pending reports that are allowed at the same time to avoid resource
 # starvation. Simultaneous reports above this threshold will be dropped.
 maxPendingReports: <int> default = 1000
+```
+
+### [`<tracing_config>`]({{ page.short_url }}#tracing_config)
+
+Enable distributed tracing output of Heroic's operations. Tracing is instrumented using [OpenCensus](https://opencensus.io/).
+
+```yaml
+# Probability, between 0.0 and 1.0, of sampling each trace.
+probability: <float> default = 0.01
+
+# Local port to expose zpages on. Traces are accessible at http://localhost:{port}/tracez
+zpagesPort: <int>
+
+# Configuration for exporting traces to LightStep. Either a collectorHost or grpcCollectorTarget must be defined.
+lightstep:
+  # Will distribute requests to all satellites returned by the DNS record over gRPC.
+  grpcCollectorTarget: <string>
+
+  # Collector host and port running the Lightstep satellite. Will take priority over grpcCollectorTarget.
+  collectorHost: <string>
+  collectorPort: <int> default = 8282
+
+  # Lightstep access token
+  accessToken: <string> required
+
+  # Component name will set the "service" name in the Lightstep UI
+  componentName: <string> default = heroic
+
+  # Reporting interval in millseconds.
+  reportingIntervalMs: <int> default = 1000
+
+  # Max buffered spans
+  maxBufferedSpans: <int> default = 1000
+
+  # Perform round robin between all hosts returned by grpcCollectorTarget.
+  grpcRoundRobin: <bool> default = true
+
+  # If enabled, the gRPC client connection will be reset at regular intervals.
+  # Used to load balance on server side.
+  grpcResetClient: <bool> default = false
 ```
