@@ -48,71 +48,10 @@ conditionalFeatures:
     - ...
 
 # Clustering and federation to support global interfaces.
-cluster:
-  # Local ID for the node.
-  id: <string> default = a generated UUID
-
-  # When communicating with self, avoid using the network.
-  useLocal: <bool> default = false
-
-  # The mechanism used to discover nodes in the cluster.
-  discovery: <discovery_config>
-
-  # Protocols that that node can use to communicate with other Heroic nodes.
-  protocols:
-    - <protocol_config>
-    - ...
-
-  # Defines a set of tags that identifies which part of the cluster this node belongs to.
-  # Nodes that have an identical set of tags are said to be part of the same shard.
-  # See the federation section for more details.
-  tags:
-    <string>: <string>
-    ...
-
-  # Actual topology (shards) is detected based on the metadata coming from the nodes.
-  # Expected topology is specified in the optional 'topology' list. This specifies the minimum
-  # shards expected, i.e. additional shards may also exist. If an expected shard is not responding the
-  # response will include which shard was failing. See the federation section for more details.
-  topology:
-    - <string>: <string>
-    - ...
+cluster: <cluster_config>
 
 # Persistent storage of metrics.
-metrics:
-  backends:
-    - <metrics_backend>
-    ...
-  # A list of backend group names that are part of the default group. The default group is the group of backends
-  # that are used for operations unless a specified group is used.
-  defaultBackends: default = all configured backends
-    - <string>
-    - ...
-
-  # Maximum number of distinct groups a single result group may contains.
-  groupLimit: <int>
-
-  # Maximum amount of time series a single request is allowed to fetch.
-  seriesLimit: <int>
-
-  # Maximum number of data points a single aggregation is allowed to output.
-  aggregationLimit: <int>
-
-  # Maximum number of data points a single request may fetch from the backends.
-  dataLimit: <int>
-
-  # Limit how many concurrent queries that the MetricManager will accept. When this level is
-  # reached, the result will be back-off so that another node in the cluster can be used instead.
-  concurrentQueriesBackoff: <int>
-
-  # How many fetches are allowed to be performed in parallel for each request.
-  fetchParallelism: <int> default = 100
-
-  # When true, any limits applied will be reported as a failure.
-  failOnLimits: <bool> default = false
-
-  # hreshold for defining a "small" query, measured in pre-aggregation sample size.
-  smallQueryThreshold: <int> default = 200000
+metrics: <metrics_config>
 
 # Metadata backends responsible for indexing the active time
 # series to support filtering.
@@ -254,6 +193,41 @@ type: userAgent
 userAgent: <string>
 ```
 
+### [`<cluster_config>`]({{ page.short_url }}#cluster_config)
+
+Configuration related to the cluster of Heroic nodes.
+
+```yaml
+# Local ID for the node.
+id: <string> default = a generated UUID
+
+# When communicating with self, avoid using the network.
+useLocal: <bool> default = false
+
+# The mechanism used to discover nodes in the cluster.
+discovery: <discovery_config>
+
+# Protocols that that node can use to communicate with other Heroic nodes.
+protocols:
+  - <protocol_config>
+  - ...
+
+# Defines a set of tags that identifies which part of the cluster this node belongs to.
+# Nodes that have an identical set of tags are said to be part of the same shard.
+# See the federation section for more details.
+tags:
+  <string>: <string>
+  ...
+
+# Actual topology (shards) is detected based on the metadata coming from the nodes.
+# Expected topology is specified in the optional 'topology' list. This specifies the minimum
+# shards expected, i.e. additional shards may also exist. If an expected shard is not responding the
+# response will include which shard was failing. See the federation section for more details.
+topology:
+  - <string>: <string>
+  - ...
+```
+
 ### [`<discovery_config>`]({{ page.short_url }}#discovery_config)
 
 The mechanism used to discover nodes in the cluster. Only one disovery type can be set at a time.
@@ -323,6 +297,46 @@ type: jvm
 
 # Unique name for this JVM instance.
 bindName: <string> default = heroic-jvm
+```
+
+### [`<metrics_config>`]({{ page.short_url }}#metrics_config)
+
+Configuration for reading and writing metrics. At least one backend must be configured for the node to interact with metrics.
+
+```yaml
+backends:
+  - <metrics_backend>
+  ...
+# A list of backend group names that are part of the default group. The default group is the group of backends
+# that are used for operations unless a specified group is used.
+defaultBackends: default = all configured backends
+  - <string>
+  - ...
+
+# Maximum number of distinct groups a single result group may contains.
+groupLimit: <int>
+
+# Maximum amount of time series a single request is allowed to fetch.
+seriesLimit: <int>
+
+# Maximum number of data points a single aggregation is allowed to output.
+aggregationLimit: <int>
+
+# Maximum number of data points a single request may fetch from the backends.
+dataLimit: <int>
+
+# Limit how many concurrent queries that the MetricManager will accept. When this level is
+# reached, the result will be back-off so that another node in the cluster can be used instead.
+concurrentQueriesBackoff: <int>
+
+# How many fetches are allowed to be performed in parallel for each request.
+fetchParallelism: <int> default = 100
+
+# When true, any limits applied will be reported as a failure.
+failOnLimits: <bool> default = false
+
+# hreshold for defining a "small" query, measured in pre-aggregation sample size.
+smallQueryThreshold: <int> default = 200000
 ```
 
 ### [`<metrics_backend>`]({{ page.short_url }}#metrics_backend)
