@@ -48,7 +48,6 @@ cluster:
 
 # Persistent storage of metrics.
 metrics:
-  # Metric backend configurations.
   backends:
     - <metrics_backend>
     ...
@@ -86,7 +85,6 @@ metrics:
 # Metadata backends responsible for indexing the active time
 # series to support filtering.
 metadata:
-  # Metadata backend configurations.
   backends:
     - <metadata_backend>
     ...
@@ -98,7 +96,15 @@ metadata:
 
 # Suggest backends that provide feedback on which tags
 # and time series are available.
-suggest: {}
+suggest:
+  backends:
+    - <suggest_backend>
+    ...
+  # A list of backend group names that are part of the default group. The default group is the group of backends
+  # that are used for operations unless a specified group is used.
+  defaultBackends: default = all configured backends
+    - <string>
+    - ...
 
 # Consumers that ingest raw data.
 consumers: []
@@ -414,11 +420,6 @@ deleteParallelism: <int> default = 20
 # Default name of the template that will be configured in Elasticsearch for this backend.
 templateName: <string> default = heroic-metadata
 
-# Which backend configuration to use, has an effect on the schema and how tags are accessed.
-# Currently, only one type is available:
-#   kv - an Elasticsearch based backend based of a flattening the key-value context into a single array.
-backendType: <string> default = kv
-
 # Automatically configure the database.
 configure: <bool> default = false
 ```
@@ -535,4 +536,83 @@ groups:
 
 # If true, synchronized storage for happens-before behavior.
 synchronizedStorage: <bool> default = false
+```
+
+### [`<suggest_backend>`]({{ page.short_url }}#suggest_backend)
+
+The ability to perform suggestions is an important usability feature. It makes the difference for your system to be a complete black box, to giving your developers the ability to find and make use of time series on their own. Suggests are fairly expensive in terms of data storage and indexing operations as each tag that is part of a metric is indexed.
+
+Suggestions is an optional feature of heroic.
+
+#### [Elasticsearch]({{ page.short_url }}#elasticsearch)
+
+**WARNING** There are ElasticSearch settings and mappings that must be configured before indexing operations are processed. These are required to make the reads efficient. At Spotify these settings are added when setting up the ElasticSearch cluster with Puppet. [settings/mappings are here](https://github.com/spotify/heroic/tree/7ff07a654048ce760e867835e11f230cd7c5a4ee/suggest/elasticsearch/src/main/resources/com.spotify.heroic.suggest.elasticsearch/kv).
+
+Example of stored suggestion in Elasticsearch:
+
+```json
+{'_index': 'heroic-1536192000000', '_type': 'series', '_id': '447939eaf69475f685518dc2c179ddaf', '_version': 1, 'found': True, '_source': {'key': 'apollo', 'tags': ['component\x00memcache-client', 'operation\x00get', 'what\x00memcache-results'], 'tag_keys': [component', 'operation', 'what'], 'series_id': '447939eaf69475f685518dc2c179ddaf'}}
+
+{'_index': 'heroic-1536192000000', '_type': 'tag', '_id': '447939eaf69475f685518dc2c179ddaf:687d7854', '_version': 1, 'found': True, '_source': {'key': 'apollo', 'tags': ['component\x00memcache-client', 'what\x00memcache-results', 'operation\x00get'], 'tag_keys': ['component', 'what', 'operation'], 'series_id': '447939eaf69475f685518dc2c179ddaf', 'skey': 'component', 'sval': 'memcache-client', 'kv': 'component\x00memcache-client'}}
+```
+
+```yaml
+type: elasticsearch
+
+# ID used to uniquely identify this backend.
+id: <string> default = generated UUID
+
+# Which groups this backend should be part of.
+groups:
+  - <string> default = elasticsearch
+  ...
+
+# Settings specific to the Elasticsearch connection.
+connection:
+  # Elasticsearch index settings.
+  index: <es_index_config> default = rotating
+
+  # The Elasticsearch client configuration to use.
+  client: <es_client_config> default = transport
+
+# The number of writes this backend allows per second before rate-limiting kicks in.
+writesPerSecond: <int> default = 3000
+
+# The duration where the rate limiter ramps up its rate before reaching the rate set in writesPerSecond.
+rateLimitSlowStartSeconds: <int> default = 0
+
+# The number of minutes a write will be cached for.
+writeCacheDurationMinutes: <int> default = 240
+
+# Guides the allowed concurrency among update operations for the write cache.
+writeCacheConcurrency: <int> default = 4
+
+# Specifies the maximum number of entries the write cache may contain.
+writeCacheMaxSize: <int> default = 30000000
+
+# SRV record used to lookup a memcached cluster. If set, memcached will be used
+# for limiting writes to Elasticsearch in addition to a local in-memory write cache.
+distributedCacheSrvRecord: <string> default = empty string
+
+# Default name of the template that will be configured in Elasticsearch for this backend.
+templateName: <string> default = heroic-suggest
+
+# Automatically configure the database.
+configure: <bool> default = false
+```
+
+#### [Memory]({{ page.short_url }}#memory)
+
+An in-memory datastore. This is intended only for testing and is definitely not something you should run in production.
+
+```yaml
+type: memory
+
+# ID used to uniquely identify this backend.
+id: <string> default = generated UUID
+
+# Which groups this backend should be part of.
+groups:
+  - <string> default = memory
+  ...
 ```

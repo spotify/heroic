@@ -49,7 +49,8 @@ public final class MemorySuggestModule implements SuggestModule, DynamicModuleId
 
     @JsonCreator
     public MemorySuggestModule(
-        @JsonProperty("id") Optional<String> id, @JsonProperty("groups") Optional<Groups> groups
+        @JsonProperty("id") Optional<String> id,
+        @JsonProperty("groups") Optional<Groups> groups
     ) {
         this.id = id;
         this.groups = groups.orElseGet(Groups::empty).or(DEFAULT_GROUP);
