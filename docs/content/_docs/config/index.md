@@ -31,7 +31,21 @@ enableCors: <bool> default = true
 # Allowed CORS origin for the HTTP API. Has no effect unless enableCors is true.
 corsAllowOrigin: <string> default = "*"
 
-features: []
+# Flags used to enable/disable features.
+features:
+  - <feature>
+  - ...
+
+# Used to enable/disable feature flags based on request parameters.
+conditionalFeatures:
+  type: list
+  list:
+    - type: match
+      features:
+        - <feature>
+        - ...
+      condition: <feature_request_condition>
+    - ...
 
 # Clustering and federation to support global interfaces.
 cluster:
@@ -144,10 +158,94 @@ statistics: ?
 queryLogging:
   type: slf4j
 
-conditionalFeatures: ?
-
 # Distributed tracing output.
 tracing: {}
+```
+
+### [`<feature>`]({{ page.short_url }}#feature)
+
+Features are a way to modify the behaviour of the service. They are implemented as flags namespaced to Heroic.
+
+Features can be configured either on a per-query basis, or in the configuration section `features` to apply it to all queries by default. They can either be enabled or disabled. To enable a flag, you specify its name. To disable it, you specify it's name prefixed with a minux sign: `-<feature>`.
+
+Precedence for each flag is defined as the following:
+
+- Query
+- Configuration
+- Default
+
+The following features are available:
+
+#### com.spotify.heroic.deterministic_aggregations
+
+Enable feature to only perform aggregations that can be performed with limited resources. Disabled by default.
+
+Aggregations are commonly performed per-shard, and the result concatenated. This enabled experimental support for distributed aggregations which behave transparently across shards.
+
+#### com.spotify.heroic.distributed_aggregations
+
+Enable feature to perform distributed aggregations. Disabled by default.
+
+Aggregations are commonly performed per-shard, and the result concatenated. This enables experimental support for distributed aggregations which behave transparently across shards. Typically this will cause more data to be transported across shards for each request.
+
+#### com.spotify.heroic.shift_range
+
+Enable feature to cause range to be rounded on the current cadence. Enabled by default.
+
+This will assert that there are data outside of the range queried for and that the range is aligned to the queried cadence. Which is a useful feature when using a dashboarding system.
+
+#### com.spotify.heroic.sliced_data_fetch
+
+Enable feature to cause data to be fetched in slices. Enabled by default.
+
+This will cause data to be fetched and consumed by the aggregation framework in pieces avoiding having to load all data into memory before starting to consume it.
+
+#### com.spotify.heroic.end_bucket_stategy
+
+Enabled by default.
+
+Use the legacy bucket strategy by default where the resulting value is at the end of the timestamp of the bucket.
+
+#### com.spotify.heroic.cache_query
+
+Disabled by default.
+
+Permit caching of the query results.
+
+### [`<feature_request_condition>`]({{ page.short_url }}#feature_request_condition)
+
+Features can be conditionally enabled and disabled by matching properties of the request. Specific conditions can be combined using the `all` or `any` conditions shown below.
+
+`all` matches if any child condition match.
+
+```yaml
+type: any
+conditions:
+  - <feature_request_condition>
+  - ...
+```
+
+`any` matches if all of the child condition match.
+
+```yaml
+type: any
+conditions:
+  - <feature_request_condition>
+  - ...
+```
+
+`clientId` match a given client id. Only exact matches are supported.
+
+```yaml
+type: clientId
+clientId: <string>
+```
+
+`userAgent` matches against the request user agent. Only exact matches are supported.
+
+```yaml
+type: userAgent
+userAgent: <string>
 ```
 
 ### [`<discovery_config>`]({{ page.short_url }}#discovery_config)
