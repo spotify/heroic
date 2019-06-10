@@ -144,7 +144,8 @@ consumers:
   - ...
 
 # Caching for aggregations.
-cache: {}
+cache:
+  backend: <cache_backend>
 
 shellServer: ?
 
@@ -825,4 +826,32 @@ maxInboundMessageSize: <int> default = 20971520
 
 # The time without read activity before sending a keepalive ping.
 keepAlive: <int> default = 300
+```
+
+### [`<cache_backend>`]({{ page.short_url }}#cache_backend)
+
+Caching for aggregations.
+
+#### Memory
+
+An in-memory only cache.
+
+```yaml
+type: memory
+```
+
+#### Memcached
+
+Cache in a distributed memcached cluster.
+
+```yaml
+type: memcached
+
+# List of addresses of memcached nodes
+addresses:
+  - <string> default = localhost:11211
+  - ...
+
+# Maximum time that a value should be cached.
+maxTtl: <duration>
 ```

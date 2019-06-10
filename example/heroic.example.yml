@@ -38,22 +38,11 @@ consumers:
    subscription: heroic-consumer
    schema: com.spotify.heroic.consumer.schemas.Spotify100
 
-## Aggregation cache.
-#cache:
-#  backend:
-#    ## In-memory based aggregation cache.
-#    #type: memory
-#    ## Cassandra based cache.
-#    #type: cassandra2
-#    #  # Keyspace.
-#    #  # @default "heroic"
-#    #  #keyspace: heroic
-#    #  # Seeds.
-#    #  # @default empty
-#    #  #seeds:
-#    #  #  - localhost
-#    #  # Max number of connections per host in cluster.
-#    #  #maxConnectionsPerHost: 50
+# Aggregation cache.
+cache:
+  backend:
+    # In-memory based aggregation cache.
+    type: memory
 
 ## Detailed Query Logging
 #queryLogging:
