@@ -153,7 +153,8 @@ shellServer:
   host: <string> default = localhost
   port: <int> default = 9190
 
-analytics: ?
+# Optionally store analytic data about processed queries.
+analytics: <analytics_config>
 
 generator: ?
 
@@ -858,4 +859,26 @@ addresses:
 
 # Maximum time that a value should be cached.
 maxTtl: <duration>
+```
+
+### [`<analytics_config>`]({{ page.short_url }}#analytics_config)
+
+Configure a backend to store analytics about queries served by Heroic. Currently Bigtable is the only supported backend.
+
+```yaml
+type: bigtable
+
+# The Google Cloud Project the backend should connect to.
+project: <string> required
+
+# The Bigtable instance the backend should connect to.
+instance: <string> default = heroic
+
+# Credentials used to authenticate. If this is not set, automatic authentication will be attempted
+# as detailed at https://cloud.google.com/docs/authentication/production#finding_credentials_automatically
+credentials: <bigtable_credentials> default = automatic discovery
+
+# Limit the number of pending reports that are allowed at the same time to avoid resource
+# starvation. Simultaneous reports above this threshold will be dropped.
+maxPendingReports: <int> default = 1000
 ```
