@@ -162,14 +162,7 @@ statistics:
   type: semantic
 
 # Detailed query logging.
-# Disabled by default, the only valid option is slf4j.
-queryLogging:
-  type: slf4j
-  # Name for the slf4j logger.
-  name: <string> default = com.spotify.heroic.query_logging
-  # Level to log at, from most verbose to least:
-  # TRACE, DEBUG, INFO, WARN, ERROR
-  level: <string> default = TRACE
+queryLogging: <query_logging_config>
 
 # Enable distributed tracing of Heroic's operations.
 tracing: <tracing_config>
@@ -888,6 +881,78 @@ credentials: <bigtable_credentials> default = automatic discovery
 # Limit the number of pending reports that are allowed at the same time to avoid resource
 # starvation. Simultaneous reports above this threshold will be dropped.
 maxPendingReports: <int> default = 1000
+```
+
+### [`<query_logging_config>`]({{ page.short_url }}#query_logging_config)
+
+Defines which type of logger that should be used for detailed query logging. Currently only slf4j is supported.
+
+```yaml
+type: slf4j
+
+# Defines the Slf4j logger to use when logging. A matching logger needs to be defined
+# in the Slf4j configuration file to actually get some output.
+name: <string> default = com.spotify.heroic.query_logging
+
+# Level to log at. From most verbose to least, the possible options are:
+# TRACE, DEBUG, INFO, WARN, ERROR
+level: <string> default = TRACE
+```
+
+#### Query log output
+
+Each successful query will result in several output entries in the query log. Entries from different stages of the query. Example output:
+
+```json
+{
+  "component": ...,
+  "queryId": "ed6fe51c-afba-4320-a859-a88795c15175",
+  "clientContext": {
+    "dashboardId": "my-system-metrics",
+    "user": "my-user"
+  },
+  "type": ...,
+  "data": ...
+}
+```
+
+| Field | Description
+| --- | ---
+| `component` | Specifies the internal component in Heroic that outputs this query log output.
+| `queryId` | Generated id that is unique for this particular query. Can be used to group query log entries together. The queryId is also returned in the final query response.
+| `clientContext` | The contextual information supplied by user. See the Contextual Information section below.
+| `type` | Specifies the query stage at which this particular query log entry was generated.
+| `data` | Contains data relevant to this query stage. This might for example be the original query, a partial response or the final response.
+
+#### Contextual information
+
+It's possible to supply contextual information in the query. This information will then be included in the query log, to ease mapping of performed query to the query log output.
+
+Add the following clientContext snippet to the query:
+
+```json
+{
+  "clientContext": {
+    "dashboardId": "my-system-metrics",
+    "user": "my-user"
+  }
+  "filter": ...
+}
+```
+
+You'll get the following output in the query log:
+
+```json
+{
+  "component": ...,
+  "queryId": "ed6fe51c-afba-4320-a859-a88795c15175",
+  "clientContext": {
+    "dashboardId": "my-system-metrics",
+    "user": "my-user"
+  },
+  "type": ...,
+  "data": ...
+}
 ```
 
 ### [`<tracing_config>`]({{ page.short_url }}#tracing_config)
