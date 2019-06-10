@@ -182,7 +182,8 @@ public class CollectdConsumerModule implements ConsumerModule {
 
         @JsonCreator
         public Builder(
-            @JsonProperty("id") Optional<String> id, @JsonProperty("host") Optional<String> host,
+            @JsonProperty("id") Optional<String> id,
+            @JsonProperty("host") Optional<String> host,
             @JsonProperty("port") Optional<Integer> port,
             @JsonProperty("hostPattern") Optional<GrokProcessor> hostPattern,
             @JsonProperty("types") Optional<CollectdTypes> types

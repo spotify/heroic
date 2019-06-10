@@ -106,8 +106,10 @@ suggest:
     - <string>
     - ...
 
-# Consumers that ingest raw data.
-consumers: []
+# List of consumers that ingest raw data.
+consumers:
+  - <consumer_config>
+  - ...
 
 # Caching for aggregations.
 cache: {}
@@ -615,4 +617,89 @@ id: <string> default = generated UUID
 groups:
   - <string> default = memory
   ...
+```
+
+### [`<consumer_config>`]({{ page.short_url }}#consumer_config)
+
+A consumer is a component responsible for ingesting metrics and introducing them into a Heroic cluster.
+
+#### [Kafka]({{ page.short_url }}#kafka)
+
+A Kafka consumer that reads and parses data out of a Kafka queue.
+
+```yaml
+type: kafka
+
+# ID used to uniquely identify this backend.
+id: <string> default = generated UUID
+
+# The schema to use when decoding messages. Expected to be a class name
+# that implements com.spotify.heroic.consumer.ConsumerSchema
+# Possible options:
+#   com.spotify.heroic.consumer.schemas.Spotify100 - JSON based schema
+#   com.spotify.heroic.consumer.schemas.Spotify100Proto - Protocol buffer based schema
+schema: <string> required
+
+# A list of topics to read from.
+topics:
+  - <string>
+  ...
+
+# Number of threads to use for each topic when consuming.
+threadsPerTopic: <int> default = 2
+
+# An object that will be provided to the Kafka consumer as configuration.
+# See the official documentation for what is expected:
+# https://kafka.apache.org/08/configuration.html#consumerconfigs
+config: {}
+
+# If enabled, consumer offsets will be committed periodically. All threads are paused so there are no in-progress
+# requests while the commit is occurring.
+transactional: <bool> default = false
+
+# How often to commit the offets when `transactional` is enabled, in milliseconds.
+transactionCommitInterval: <int> default = 30000
+```
+
+#### [PubSub]({{ page.short_url }}#pubsub)
+
+Utilize [Google Cloud Pub/Sub](https://cloud.google.com/pubsub/docs/overview) for ingesting messages.
+
+```yaml
+type: pubsub
+
+# ID used to uniquely identify this backend.
+id: <string> default = generated UUID
+
+# Number of threads to use for each subscription when consuming.
+threadsPerSubscription: <int> default = 8
+
+# The schema to use when decoding messages. Expected to be a class name
+# that implements com.spotify.heroic.consumer.ConsumerSchema
+# Possible options:
+#   com.spotify.heroic.consumer.schemas.Spotify100 - JSON based schema
+#   com.spotify.heroic.consumer.schemas.Spotify100Proto - Protocol buffer based schema
+schema: <string> required
+
+# The Google Cloud Project the backend should connect to.
+project: <string> required
+
+# The PubSub topic where messages are being published. If it does not exist, Heroic will attempt to create it.
+topic: <string> required
+
+# The PubSub subscription to consume from. If it does not exist, Heroic will attempt to create it.
+subscription: <string> required
+
+# Maximum messages a consumer can read off a subscription before acking them.
+maxOutstandingElementCount: <int> default = 20000
+
+# Maximum amount of bytes a consumer can read off a subscription before acking.
+maxOutstandingRequestBytes: <int> default = 1000000000
+
+# The maximum message size allowed to be received on the channel. The PubSub API has a limit of 20MB, so this
+# value cannot exceed that.
+maxInboundMessageSize: <int> default = 20971520
+
+# The time without read activity before sending a keepalive ping.
+keepAlive: <int> default = 300
 ```
