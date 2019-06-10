@@ -147,7 +147,11 @@ consumers:
 cache:
   backend: <cache_backend>
 
-shellServer: ?
+# Binding settings for the Heroic shell server. This allows full control over the Heroic node and should
+# be restricted.
+shellServer:
+  host: <string> default = localhost
+  port: <int> default = 9190
 
 analytics: ?
 
