@@ -55,21 +55,6 @@ consumers:
 #    #  # Max number of connections per host in cluster.
 #    #  #maxConnectionsPerHost: 50
 
-## Http client configuration.
-#client:
-#  # Number of threads to use for client requests.
-#  # @default 100
-#  #threads: 100
-#  # Max amounts of pending requests, if all client threads are occupied.
-#  # @default 100
-#  #queueSize: 100
-#  # Timeout in milliseconds for establishing a client connection.
-#  # @default 2000
-#  #connectTimeout: 2000
-#  # Timeout in milliseconds for reading from a server.
-#  # @default 120000
-#  #readTimeout: 120000
-
 ## Detailed Query Logging
 #queryLogging:
 #  type: slf4j

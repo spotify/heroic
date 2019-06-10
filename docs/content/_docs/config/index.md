@@ -12,8 +12,26 @@ Heroic is divided up into a few components, each whose configuration will affect
 The configuration for Heroic is loaded from [a YAML file](https://en.wikipedia.org/wiki/YAML) at runtime. A valid example file can be found [in the example directory on GitHub](https://github.com/spotify/heroic/blob/master/example/heroic.example.yml).
 
 ```yaml
-# Port to listen on for the admin API.
-port: <int>
+# id, version, and service are used as metadata for the node.
+id: <string> default = heroic
+version: <string> default = loaded from build artifact
+service: <string> default = The Heroic Time Series Database
+
+# The time to wait for all services to start/stop before throwing an exception.
+startTimeout: <duration> default = 5m
+stopTimeout: <duration> default = 1m
+
+# Host and port to listen on for the HTTP API.
+host: <string> default = 0.0.0.0
+port: <int> default = 8080
+
+# Enable CORS for the HTTP API.
+enableCors: <bool> default = true
+
+# Allowed CORS origin for the HTTP API. Has no effect unless enableCors is true.
+corsAllowOrigin: <string> default = "*"
+
+features: []
 
 # Clustering and federation to support global interfaces.
 cluster:
@@ -114,12 +132,19 @@ consumers:
 # Caching for aggregations.
 cache: {}
 
-# HTTP client configuration.
-client: {}
+shellServer: ?
+
+analytics: ?
+
+generator: ?
+
+statistics: ?
 
 # Detailed query logging
 queryLogging:
   type: slf4j
+
+conditionalFeatures: ?
 
 # Distributed tracing output.
 tracing: {}

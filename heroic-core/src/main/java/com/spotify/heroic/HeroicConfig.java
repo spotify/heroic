@@ -106,7 +106,6 @@ public abstract class HeroicConfig {
     }
 
     private static final org.slf4j.Logger log = LoggerFactory.getLogger(HeroicConfig.class);
-    public static final List<ConsumerModule> DEFAULT_CONSUMERS = ImmutableList.of();
     public static final boolean DEFAULT_ENABLE_CORS = true;
     public static final Duration DEFAULT_START_TIMEOUT = Duration.of(5, TimeUnit.MINUTES);
     public static final Duration DEFAULT_STOP_TIMEOUT = Duration.of(1, TimeUnit.MINUTES);
