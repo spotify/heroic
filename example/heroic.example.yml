@@ -14,90 +14,19 @@ cluster:
 # Metrics configuration.
 metrics:
   backends:
+    # In-memory only
     - type: memory
 
 # Metadata backend configuration.
 metadata:
   backends:
-    ## Lucene metadata.
-    - type: lucene
-      seed:
-        ## Randomly generated metadata.
-        type: random
-        # Random seed, set if you want consistency.
-        # @default Randomly generated.
-        seed: 0
-
-    ## ElasticSearch-based metadata.
-    # - type: elasticsearch
-    #   backendType: kv
-    #   type: elasticsearch
-    #   # Backend id, if not specified it will be generated.
-    #   # @default null
-    #   id: null
-    #   # Settings specific to the elasticsearch connection.
-    #   connection:
-    #     # Name of elasticsearch cluster.
-    #     # @default "elasticsearch"
-    #     clusterName: elasticsearch
-    #     # ElasticSearch index.
-    #     # @default "heroic"
-    #
-    #     # Dynamically sniff new nodes. Defaults false
-    #     sniff: false
-    #
-    #     How often to sniff for new nodes. Defaults 30 seconds
-    #     nodeSamplerInterval: 30s
-    #
-    #     index:
-    #       # Index mapping to use
-    #       # @default "single": only operates on a single index.
-    #       # "rotating": creates new indices over time.
-    #       type: single
-    #       ### single only
-    #       # Name of the index
-    #       # @default "heroic"
-    #       index: heroic
-    #       ###
-    #       ### rotating only
-    #       # Pattern to use when creating index.
-    #       # The pattern must contain a single '%s' that will be
-    #       # replaced with the base time stamp of the index.
-    #       # @default "heroic-%s"
-    #       pattern: heroic-%s
-    #       # Interval in milliseconds that each index is valid.
-    #       # @default: 604800000 (one week)
-    #       interval: 604800000
-    #       # Maximum indices to read at a time. Minimum of 1.
-    #       # @default 2
-    #       maxReadIndices: 2
-    #       # Maximum indices to write to at a time. Minumum of 1.
-    #       # @default 1
-    #       maxWriteIndices: 1
-    #       ###
-    #     # Use node client transport.
-    #     # If true, heroic will join ElasticSearch as a read-only node.
-    #     # @default false
-    #     nodeClient: false
-    #     # The template name to use for templates created by this backend.
-    #     # @default "heroic-metadata"
-    #     templateName: heroic-metadata
-    #     # The elasticsearch client configuration to use.
-    #     # One of:
-    #     #   "standalone": complete local cluster
-    #     #   "node": join the cluster as a non-data, non-leader node
-    #     #   "transport": connect using the transport protocol
-    #     # @default "transport"
-    #     client: transport
-    #     # Initial nodes in the cluster to connect to (required).
-    #     seeds:
-    #       - localhost:9200
-    #   # The number of writes this backend allows per second before rate-limiting kicks in.
-    #   # @default 3000
-    #   writesPerSecond: 3000
-    #   # The number of minutes a write will be cached for.
-    #   # @Default 240
-    #   writeCacheDurationMinutes: 240
+    # ElasticSearch-based metadata.
+    - type: elasticsearch
+      connection:
+        client:
+          type: standalone
+          seeds:
+            - localhost:9200
 
 # Data consumers.
 #consumers:

@@ -40,10 +40,6 @@ import java.util.Map;
 
 @Module
 public class ConnectionModule {
-    public static final String DEFAULT_CLUSTER_NAME = "elasticsearch";
-    public static final List<String> DEFAULT_SEEDS = ImmutableList.of("localhost");
-    public static final Map<String, Object> DEFAULT_SETTINGS = ImmutableMap.of();
-
     private final String clusterName;
     private final List<String> seeds;
     private final Boolean sniff;
@@ -64,19 +60,21 @@ public class ConnectionModule {
         @JsonProperty("templateName") String templateName,
         @JsonProperty("client") ClientSetup clientSetup
     ) {
-        this.clusterName = ofNullable(clusterName).orElse(DEFAULT_CLUSTER_NAME);
-        this.seeds = ofNullable(seeds).orElse(DEFAULT_SEEDS);
+        this.clusterName = ofNullable(clusterName).orElse(TransportClientSetup.DEFAULT_CLUSTER_NAME);
+        this.seeds = ofNullable(seeds).orElse(TransportClientSetup.DEFAULT_SEEDS);
         this.sniff = ofNullable(sniff).orElse(TransportClientSetup.DEFAULT_SNIFF);
         this.nodeSamplerInterval = ofNullable(nodeSamplerInterval).orElse(
             TransportClientSetup.DEFAULT_NODE_SAMPLER_INTERVAL);
         this.nodeClient = ofNullable(nodeClient).orElse(false);
         this.index = ofNullable(index).orElseGet(RotatingIndexMapping.builder()::build);
+        // templateName defaults to the value from the backend config, and doesn't have to also
+        // be set under these connection params
         this.templateName = templateName;
         this.clientSetup = ofNullable(clientSetup).orElseGet(this::defaultClientSetup);
     }
 
     /**
-     * Setup the defualt client setup to be backwards compatible.
+     * Setup the default client setup to be backwards compatible.
      */
     private ClientSetup defaultClientSetup() {
         if (nodeClient) {

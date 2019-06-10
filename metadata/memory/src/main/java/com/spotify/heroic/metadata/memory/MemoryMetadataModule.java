@@ -56,7 +56,8 @@ public final class MemoryMetadataModule implements MetadataModule, DynamicModule
 
     @JsonCreator
     public MemoryMetadataModule(
-        @JsonProperty("id") Optional<String> id, @JsonProperty("groups") Optional<Groups> groups,
+        @JsonProperty("id") Optional<String> id,
+        @JsonProperty("groups") Optional<Groups> groups,
         @JsonProperty("synchronizedStorage") Optional<Boolean> synchronizedStorage
     ) {
         this.id = id;

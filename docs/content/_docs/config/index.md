@@ -85,7 +85,16 @@ metrics:
 
 # Metadata backends responsible for indexing the active time
 # series to support filtering.
-metadata: {}
+metadata:
+  # Metadata backend configurations.
+  backends:
+    - <metadata_backend>
+    ...
+  # A list of backend group names that are part of the default group. The default group is the group of backends
+  # that are used for operations unless a specified group is used.
+  defaultBackends: default = all configured backends
+    - <string>
+    - ...
 
 # Suggest backends that provide feedback on which tags
 # and time series are available.
@@ -341,4 +350,189 @@ type: json
 
 # Path to credentials file to use.
 path: <string>
+```
+
+### [`<metadata_backend>`]({{ page.short_url }}#metadata_backend)
+
+Metadata acts as the index to time series data, it is the driving force behind our [Query Language](docs/query_language).
+
+Metadata resolution is important since it allows operators to specify a subset of known metadata, and resolve it into a set of matching time series. Without metadata, the burden of keeping track of time series would lie solely in the client.
+
+#### [Elasticsearch]({{ page.short_url }}#elasticsearch)
+
+Elasticsearch based metadata. Example of the stored metadata:
+
+```json
+{'_index': 'heroic-1535587200000', '_type': 'metadata', '_id': '447939eaf69475f685518dc2c179ddaf', '_version': 1, 'found': True, '_source': {'key': 'apollo', 'tags': ['component\x00memcache-client', 'operation\x00get', 'what\x00memcache-results'], 'tag_keys': ['component', 'operation', 'what']}}
+```
+
+**WARNING** There are ElasticSearch settings and mappings that must be configured before indexing operations are processed. These are required to make the reads efficient. At Spotify these settings are added when setting up the ElasticSearch cluster with Puppet. [settings/mappings are here](https://github.com/spotify/heroic/blob/7ff07a654048ce760e867835e11f230cd7c5a4ee/metadata/elasticsearch/src/main/resources/com.spotify.heroic.metadata.elasticsearch/kv/metadata.json)
+
+The settings `clusterName`, `seeds`, `sniff`, `nodeSamplerInterval`, and `nodeClient` used to be found under `connection` but are deprecated. The behavior they enabled is now set by configuring an `<es_client_config>` in the `connection`.
+
+```yaml
+type: elasticsearch
+
+# ID used to uniquely identify this backend.
+id: <string> default = generated UUID
+
+# Which groups this backend should be part of.
+groups:
+  - <string> default = elasticsearch
+  ...
+
+# Settings specific to the Elasticsearch connection.
+connection:
+  # Elasticsearch index settings.
+  index: <es_index_config> default = rotating
+
+  # The Elasticsearch client configuration to use.
+  client: <es_client_config> default = transport
+
+# The number of writes this backend allows per second before rate-limiting kicks in.
+writesPerSecond: <int> default = 3000
+
+# The duration where the rate limiter ramps up its rate before reaching the rate set in writesPerSecond.
+rateLimitSlowStartSeconds: <int> default = 0
+
+# The number of minutes a write will be cached for.
+writeCacheDurationMinutes: <int> default = 240
+
+# Guides the allowed concurrency among update operations for the write cache.
+writeCacheConcurrency: <int> default = 4
+
+# Specifies the maximum number of entries the write cache may contain.
+writeCacheMaxSize: <int> default = 30000000
+
+# SRV record used to lookup a memcached cluster. If set, memcached will be used
+# for limiting writes to Elasticsearch in addition to a local in-memory write cache.
+distributedCacheSrvRecord: <string> default = empty string
+
+# Concurrent operations allowed when deleting series from Elasticsearch.
+deleteParallelism: <int> default = 20
+
+# Default name of the template that will be configured in Elasticsearch for this backend.
+templateName: <string> default = heroic-metadata
+
+# Which backend configuration to use, has an effect on the schema and how tags are accessed.
+# Currently, only one type is available:
+#   kv - an Elasticsearch based backend based of a flattening the key-value context into a single array.
+backendType: <string> default = kv
+
+# Automatically configure the database.
+configure: <bool> default = false
+```
+
+##### `<es_index_config>`
+
+Index mapping to use.
+
+###### single
+
+```yaml
+# Only operate on one index.
+type: single
+
+# Name of the index.
+index: <string> default = heroic
+```
+
+###### rotating
+
+```yaml
+# Create new indices over time.
+type: rotating
+
+# Interval in milliseconds that each index is valid.
+interval: <duration> default = 7d
+
+# Maximum indices to read at a time. Minimum of 1.
+maxReadIndices: <int> default = 2
+
+# Maximum indices to write to at a time. Minumum of 1.
+maxWriteIndices: <int> default = 1
+
+# Pattern to use when creating an index. The pattern must contain a single '%s' that will be
+# replaced with the base time stamp of the index.
+pattern: <string> default = heroic-%s
+```
+
+##### `<es_client_config>`
+
+The Elasticsearch client configuration to use.
+
+###### standalone
+
+Complete local cluster. This is typically used when running a fully in-memory configuration of Heroic.
+
+```yaml
+type: standalone
+
+# The name of the cluster to setup.
+clusterName: <string> default = heroic-standalone
+
+# Root directory where indexes will be stored.
+# If omitted, will create a temporary root directory.
+root: <string>
+```
+
+###### node
+
+Join the cluster as a non-data, non-leader node. This can yield better performance since index lookups and aggregations can be performed without having to 'hop' to another node.
+
+However, due the complexity involved in the client this mode is typically recommended against.
+
+```yaml
+type: node
+
+# The name of the cluster to setup.
+clusterName: <string> default = elasticsearch
+
+# Initial nodes in the cluster to connect to.
+seeds:
+  - <string>
+  ...
+```
+
+###### transport
+
+Connect using the transport protocol. This is the most lightweight method of interacting with the Elasticsearch cluster.
+
+```yaml
+type: transport
+
+# The name of the cluster to setup.
+clusterName: <string> default = heroic-standalone
+
+# Initial nodes in the cluster to connect to. Any hosts without a port specified
+# are assumed to use port 9300. Useful to have masters that rarely change as seeds.
+seeds:
+  - <string> default = localhost:9300
+  ...
+
+# Dynamically sniff new nodes.
+sniff: <bool> default = false
+
+# How often to sniffpoll for new nodes when `sniff` is enabled.
+nodeSamplerInterval: <duration> default = 30s
+```
+
+
+#### [Memory]({{ page.short_url }}#memory)
+
+An in-memory datastore. This is intended only for testing and is definitely not something you should run in production.
+
+```yaml
+type: memory
+
+# ID used to uniquely identify this backend.
+id: <string> default = generated UUID
+
+# Which groups this backend should be part of.
+groups:
+  - <string> default = memory
+  ...
+
+# If true, synchronized storage for happens-before behavior.
+synchronizedStorage: <bool> default = false
 ```
