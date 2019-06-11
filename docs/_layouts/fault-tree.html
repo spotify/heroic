@@ -1,0 +1,35 @@
+---
+layout: sidebar
+---
+{% assign name = page.id | split: "/" | last %}
+
+<h2>
+  {{ page.title }} Fault Tree Analysis
+</h2>
+
+<p>
+  The diagram below shows the <a href="https://en.wikipedia.org/wiki/Fault_tree_analysis">fault tree analysis</a> for {{ page.components }}. This is a useful tool for reasoning about reliability of the system and determining reasonable SLOs.
+</p>
+
+{{ content }}
+
+<p>
+  Click and drag the diagram to pan around. Branches can be collapsed/expanded by clicking on a node, and hovering over a node will show a longer description.
+</p>
+
+<script>
+  window.data = {{ site.data.fta[name] | jsonify }};
+</script>
+
+<div id="fault-tree"></div>
+
+<h3>Input Data</h3>
+
+<p>The source data used to generate the fault tree can be downloaded here: <a href="assets/fta/{{ name }}.mef">{{ name }}.mef</a></p>
+<p>
+  The input is in the <a href="https://open-psa.github.io/mef/">Open-PSA Model Exchange Format</a> and was rendered using <a href="https://github.com/hexedpackets/fault_tree/">https://github.com/hexedpackets/fault_tree/</a>
+</p>
+
+<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+<script src="assets/js/fault-tree-graph.js" type="text/javascript"></script>
+<link rel="stylesheet" href="assets/css/fault-tree.css" />

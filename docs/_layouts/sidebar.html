@@ -108,6 +108,20 @@ layout: default
       <li {% if page.title == 'Federated Clusters' %}class="active"{% endif %}>
         <a href="docs/federation">Federation</a>
       </li>
+
+      <li {% if page.title == 'Reliability' %}class="active"{% endif %}>
+        <a href="docs/reliability">Reliability</a>
+
+        <ul class="nav">
+          {%- assign ftas = site.fault_tree | sort: 'name' | reverse %}
+          {%- for item in ftas %}
+          <li {% if page.title == item.title %}class="active"{% endif %}>
+            <a href="{{ item.url | relative_url }}">{{ item.title }}</a>
+          </li>
+          {%- endfor %}
+        </ul>
+      </li>
+
     </ul>
   </div>
 
