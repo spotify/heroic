@@ -300,7 +300,7 @@ maxFrameSize: <int> default = 10000000
 
 #### [jvm](#jvm)
 
-Communicate directly between multiple JVMs running on the same host.
+Communicate directly between multiple JVMs running on the same host. This is generally only used for testing purposes.
 
 ```yaml
 type: jvm
