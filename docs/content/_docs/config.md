@@ -115,7 +115,7 @@ tracing: <tracing_config>
 
 Features are a way to modify the behaviour of the service. They are implemented as flags namespaced to Heroic.
 
-Features can be configured either on a per-query basis, or in the configuration section `features` to apply it to all queries by default. They can either be enabled or disabled. To enable a flag, you specify its name. To disable it, you specify it's name prefixed with a minux sign: `-<feature>`.
+Features can be configured either on a per-query basis, or in the configuration section `features` to apply it to all queries by default. They can either be enabled or disabled. To enable a flag, you specify its name. To disable it, you specify it's name prefixed with a minus sign: `-<feature>`.
 
 Precedence for each flag is defined as the following:
 
@@ -345,7 +345,7 @@ fetchParallelism: <int> default = 100
 # When true, any limits applied will be reported as a failure.
 failOnLimits: <bool> default = false
 
-# hreshold for defining a "small" query, measured in pre-aggregation sample size.
+# Threshold for defining a "small" query, measured in pre-aggregation sample size.
 smallQueryThreshold: <int> default = 200000
 ```
 
@@ -669,7 +669,7 @@ seeds:
 # Dynamically sniff new nodes.
 sniff: <bool> default = false
 
-# How often to sniffpoll for new nodes when `sniff` is enabled.
+# How often to poll for new nodes when `sniff` is enabled.
 nodeSamplerInterval: <duration> default = 30s
 ```
 
