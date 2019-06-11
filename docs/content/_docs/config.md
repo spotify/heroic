@@ -859,7 +859,7 @@ keepAlive: <int> default = 300
 
 ### [`<cache_backend>`](#cache_backend)
 
-Caching for aggregations.
+Caching for aggregations. By default no cache is enabled.
 
 #### Memory
 
