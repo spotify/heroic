@@ -76,7 +76,8 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
 
     @JsonCreator
     public BigtableMetricModule(
-        @JsonProperty("id") Optional<String> id, @JsonProperty("groups") Optional<Groups> groups,
+        @JsonProperty("id") Optional<String> id,
+        @JsonProperty("groups") Optional<Groups> groups,
         @JsonProperty("project") Optional<String> project,
         @JsonProperty("instance") Optional<String> instance,
         @JsonProperty("table") Optional<String> table,

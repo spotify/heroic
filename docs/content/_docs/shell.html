@@ -1,6 +1,5 @@
 ---
 title: Heroic Shell
-short_url: docs/shell
 ---
 <h2>{{ page.title }}</h2>
 
@@ -18,8 +17,7 @@ short_url: docs/shell
 </p>
 
 <p>
-  You can configure an heroic instance to enable <em>local</em> shell connections by adding the following snippet to your <a href="docs/config">heroic.yml</a>.
-  For more details, see <a href="docs/config/shell_server">Shell Server Configuration</a>.
+  You can configure an heroic instance to enable <em>local</em> shell connections by adding the following snippet to your <a href="config">heroic.yml</a>.
 </p>
 
 <pre><code class="language-yaml">
@@ -27,12 +25,12 @@ shellServer: {}
 </code></pre>
 
 <p>
-  The shell can be run in two different modes; <a href="{{ page.url | relative_url }}#remote-shell"><em>remote</em></a>, and <a href="{{ page.url | relative_url }}#standalone-shell"><em>standalone</em></a>.
-  It is also possible to activate <a href="{{ page.url | relative_url }}#profiles"><em>profiles</em></a>, which effects the configuration of the service.
+  The shell can be run in two different modes; <a href="#remote-shell"><em>remote</em></a>, and <a href="#standalone-shell"><em>standalone</em></a>.
+  It is also possible to activate <a href="#profiles"><em>profiles</em></a>, which effects the configuration of the service.
 </p>
 
 <p>
-  In <em>remote</em> mode, you connect to an already running heroic instance which is <a href="docs/config/shell_server">configured to accept shell connection</a>.
+  In <em>remote</em> mode, you connect to an already running heroic instance which is configured to accept shell connection.
 </p>
 
 <p>
@@ -55,7 +53,7 @@ $ java com.spotify.heroic.HeroicShell --help
 
 <h3 id="remote-shell">
   Remote Shell
-  <a class="link-to" href="{{ page.short_url }}#remote-shell"><span class="glyphicon glyphicon-link"></span></a>
+  <a class="link-to" href="#remote-shell"><span class="glyphicon glyphicon-link"></span></a>
 </h3>
 
 <p>
@@ -72,17 +70,17 @@ $ tools/heroic-shell --connect &lt;host&gt;[:port]
 
 <h3 id="standalone-shell">
   Standalone Shell
-  <a class="link-to" href="{{ page.short_url }}#standalone-shell"><span class="glyphicon glyphicon-link"></span></a>
+  <a class="link-to" href="#standalone-shell"><span class="glyphicon glyphicon-link"></span></a>
 </h3>
 
 <p>
   Standalone shells includes the heroic service running in the background and the shell is directly connected to this instance.
-  This is typically useful when trying out specific heroic features, specifically in combination with the <a href="{{ page.url | relative_url }}#memory-profile">memory profile</a>
+  This is typically useful when trying out specific heroic features, specifically in combination with the <a href="#memory-profile">memory profile</a>
 </p>
 
 <h3 id="profiles">
   Profiles
-  <a class="link-to" href="{{ page.short_url }}#profiles"><span class="glyphicon glyphicon-link"></span></a>
+  <a class="link-to" href="#profiles"><span class="glyphicon glyphicon-link"></span></a>
 </h3>
 
 <p>
@@ -124,7 +122,7 @@ Available Profiles (activate with: -P &lt;profile&gt;):
 
 <h4 id="memory-profile">
   Memory Profile
-  <a class="link-to" href="{{ page.short_url }}#memory-profile"><span class="glyphicon glyphicon-link"></span></a>
+  <a class="link-to" href="#memory-profile"><span class="glyphicon glyphicon-link"></span></a>
 </h4>
 
 <p>

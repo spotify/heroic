@@ -1,6 +1,5 @@
 ---
 title: Aggregations
-short_url: docs/aggregations
 ---
 <h2>{{ page.title }}</h2>
 
@@ -16,13 +15,13 @@ short_url: docs/aggregations
 </p>
 
 <ul>
-  <li><a href="{{ page.short_url }}#min">Minimum Aggregation</a></li>
-  <li><a href="{{ page.short_url }}#max">Maximum Aggregation</a></li>
-  <li><a href="{{ page.short_url }}#average">Average Aggregation</a></li>
-  <li><a href="{{ page.short_url }}#sum">Sum Aggregation</a></li>
-  <li><a href="{{ page.short_url }}#chain">Chain Aggregation</a></li>
-  <li><a href="{{ page.short_url }}#group">Group Aggregation</a></li>
-  <li><a href="{{ page.short_url }}#filtering">TopK/BottomK/AboveK/BelowK Aggregation</a></li>
+  <li><a href="#min">Minimum Aggregation</a></li>
+  <li><a href="#max">Maximum Aggregation</a></li>
+  <li><a href="#average">Average Aggregation</a></li>
+  <li><a href="#sum">Sum Aggregation</a></li>
+  <li><a href="#chain">Chain Aggregation</a></li>
+  <li><a href="#group">Group Aggregation</a></li>
+  <li><a href="#filtering">TopK/BottomK/AboveK/BelowK Aggregation</a></li>
 </ul>
 
 <h3>Size and Extent</h3>
@@ -46,18 +45,18 @@ The following graphics represents what data will be sampled to generate the samp
   <span style="color: #648cff">The blue bar</span> is the <em>extent</em>, and <span style="color: #ff8282;">the red bar</span> is the <em>size</em>.
 </p>
 
-<img style="width: 100%;" src="images/size_extent.svg"></img>
+<img style="width: 100%;" src="{{ 'images/size_extent.svg' | relative_url }}"></img>
 
 <p>
   The next point we'll sample for is <code>3</code>.
   This applies the same principle as above.
 </p>
 
-<img style="width: 100%;" src="images/size_extent_3.svg"></img>
+<img style="width: 100%;" src="{{ 'images/size_extent_3.svg' | relative_url }}"></img>
 
 <h3 id="min">
   Min Aggregation
-  <a class="link-to" href="{{ page.short_url }}#min"><span class="glyphicon glyphicon-link"></span></a>
+  <a class="link-to" href="#min"><span class="glyphicon glyphicon-link"></span></a>
 </h3>
 
 <h5>JSON</h5>
@@ -78,11 +77,11 @@ min(size=&lt;duration&gt;, extent=&lt;duration&gt;)
   The min aggregation picks the <em>smallest</em> numerical value seen in the given extent.
 </p>
 
-<img style="width: 100%;" src="images/aggregation_min.svg"></img>
+<img style="width: 100%;" src="{{ 'images/aggregation_min.svg' | relative_url }}"></img>
 
 <h3 id="max">
   Max Aggregation
-  <a class="link-to" href="{{ page.short_url }}#max"><span class="glyphicon glyphicon-link"></span></a>
+  <a class="link-to" href="#max"><span class="glyphicon glyphicon-link"></span></a>
 </h3>
 
 <h5>JSON</h5>
@@ -103,11 +102,11 @@ max(size=&lt;duration&gt;, extent=&lt;duration&gt;)
   The max aggregation picks the <em>largest</em> numerical value seen in the given extent.
 </p>
 
-<img style="width: 100%;" src="images/aggregation_max.svg"></img>
+<img style="width: 100%;" src="{{ 'images/aggregation_max.svg' | relative_url }}"></img>
 
 <h3 id="average">
   Average Aggregation
-  <a class="link-to" href="{{ page.short_url }}#average"><span class="glyphicon glyphicon-link"></span></a>
+  <a class="link-to" href="#average"><span class="glyphicon glyphicon-link"></span></a>
 </h3>
 
 <h5>JSON</h5>
@@ -128,11 +127,11 @@ average(size=&lt;duration&gt;, extent=&lt;duration&gt;)
   The average aggregation takes all samples in a given extent, and calculates the average value over them.
 </p>
 
-<img style="width: 100%;" src="images/aggregation_average.svg"></img>
+<img style="width: 100%;" src="{{ 'images/aggregation_average.svg' | relative_url }}"></img>
 
 <h3 id="sum">
   Sum Aggregation
-  <a class="link-to" href="{{ page.short_url }}#sum"><span class="glyphicon glyphicon-link"></span></a>
+  <a class="link-to" href="#sum"><span class="glyphicon glyphicon-link"></span></a>
 </h3>
 
 <h5>JSON</h5>
@@ -153,11 +152,11 @@ sum(size=&lt;duration&gt;, extent=&lt;duration&gt;)
   The sum aggregation sums the values of all points in a given extent.
 </p>
 
-<img style="width: 100%;" src="images/aggregation_sum.svg"></img>
+<img style="width: 100%;" src="{{ 'images/aggregation_sum.svg' | relative_url }}"></img>
 
 <h3 id="chain">
   Chain Aggregation
-  <a class="link-to" href="{{ page.short_url }}#chain"><span class="glyphicon glyphicon-link"></span></a>
+  <a class="link-to" href="#chain"><span class="glyphicon glyphicon-link"></span></a>
 </h3>
 
 <h5>JSON</h5>
@@ -179,7 +178,7 @@ sum(size=&lt;duration&gt;, extent=&lt;duration&gt;)
 
 <h3 id="group">
   Group Aggregation
-  <a class="link-to" href="{{ page.short_url }}#group"><span class="glyphicon glyphicon-link"></span></a>
+  <a class="link-to" href="#group"><span class="glyphicon glyphicon-link"></span></a>
 </h3>
 
 <h5>JSON</h5>
@@ -209,7 +208,7 @@ sum(size=&lt;duration&gt;, extent=&lt;duration&gt;)
   and that the blue points come from the host <span style="color: #0000ff;"><b>load-balancer3</b></span>
 </p>
 
-<img style="width: 100%;" src="images/aggregation_group.svg"></img>
+<img style="width: 100%;" src="{{ 'images/aggregation_group.svg' | relative_url }}"></img>
 
 <p>
   Group aggregations are special, they don't have a <em>size</em> or <em>extent</em>.
@@ -217,14 +216,14 @@ sum(size=&lt;duration&gt;, extent=&lt;duration&gt;)
 </p>
 
 <p>
-  The below example is the <a href="{{ page.short_url }}#average">average</a> aggregation applied to each group.
+  The below example is the <a href="#average">average</a> aggregation applied to each group.
 </p>
 
-<img style="width: 100%;" src="images/aggregation_group_average.svg"></img>
+<img style="width: 100%;" src="{{ 'images/aggregation_group_average.svg' | relative_url }}"></img>
 
 <h3 id="filtering">
   TopK/BottomK/AboveK/BelowK Aggregation
-  <a class="link-to" href="{{ page.short_url }}#filtering"><span class="glyphicon glyphicon-link"></span></a>
+  <a class="link-to" href="#filtering"><span class="glyphicon glyphicon-link"></span></a>
 </h3>
 
 <h5>JSON</h5>

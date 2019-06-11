@@ -1,287 +1,48 @@
-# vim: filetype=yaml
 port: 8080
 
 # Cluster configuration.
 cluster:
-  # Local ID.
-  # @default Generated UUID.
-  #id: 88b3f090-49f8-43fe-b30e-5ce0e3889884
-  # When communicating with self, avoid using the network.
-  # @default false
-  #useLocal: false
-
-  # Discovery mechanism
   discovery:
-    ## Static discovery mechanism.
     type: static
     nodes:
       - grpc://localhost:9698
-
-    ## SRV discovery mechanism. The port will be read from the SRV record.
-    # type: srv
-    # records:
-    # - srv-record-1.example.com
-    # - srv-record-2.example.com
-
-  # RPC mechanism
   protocols:
     - type: grpc
-      host: 0.0.0.0
-      port: 9698
-      maxFrameSize: 10000000
-
   tags:
     site: london
-
-  topology:
-    - site: london
 
 # Metrics configuration.
 metrics:
   backends:
-    ## Cassandra 2 backend.
-    #- type: cassandra2
-    #  # Unique id for this backend.
-    #  # @default Generated.
-    #  #id: null
-    #  # Backend group name.
-    #  # @default "heroic"
-    #  #group: heroic
-    #  # Keyspace.
-    #  # @default "heroic"
-    #  #keyspace: heroic
-    #  # Seeds.
-    #  # @default empty
-    #  #seeds:
-    #  #  - localhost
-    #  # Max number of connections per host in cluster.
-    #  #maxConnectionsPerHost: 50
-    ## Generated (infinite) metrics.
-    # The generator is consistent so the same queried time series will always
-    # result in the same generated values (given the same configuration here!).
-    - type: generated
-      generator:
-        ## Generate a consistent random time series.
-        type: random
-        # Minimum y-position.
-        # @default -100
-        #min: -100
-        # Maximum y-position.
-        # @default 1000
-        #max: 1000
-        # Step between each data point in milliseconds.
-        # @default 10 seconds (in milliseconds)
-        #step: 10000
-        # Range around y-position that a value can be randomly generated.
-        # @default 50
-        #range: 50
-        ## Generate a consistent sine curve time series.
-        #type: sine
-        # Absolute peak value.
-        # @default 1000
-        #magnitude: 1000d
-        # How long time in milliseconds for a complete sine curve.
-        # @default One day (in milliseconds).
-        #period: 86400000
+    # In-memory only
+    - type: memory
 
 # Metadata backend configuration.
 metadata:
   backends:
-    ## Lucene metadata.
-    - type: lucene
-      seed:
-        ## Randomly generated metadata.
-        type: random
-        # Random seed, set if you want consistency.
-        # @default Randomly generated.
-        seed: 0
-
-    ## ElasticSearch-based metadata.
-    # - type: elasticsearch
-    #   backendType: kv
-    #   type: elasticsearch
-    #   # Backend id, if not specified it will be generated.
-    #   # @default null
-    #   id: null
-    #   # Settings specific to the elasticsearch connection.
-    #   connection:
-    #     # Name of elasticsearch cluster.
-    #     # @default "elasticsearch"
-    #     clusterName: elasticsearch
-    #     # ElasticSearch index.
-    #     # @default "heroic"
-    #
-    #     # Dynamically sniff new nodes. Defaults false
-    #     sniff: false
-    #
-    #     How often to sniff for new nodes. Defaults 30 seconds
-    #     nodeSamplerInterval: 30s
-    #
-    #     index:
-    #       # Index mapping to use
-    #       # @default "single": only operates on a single index.
-    #       # "rotating": creates new indices over time.
-    #       type: single
-    #       ### single only
-    #       # Name of the index
-    #       # @default "heroic"
-    #       index: heroic
-    #       ###
-    #       ### rotating only
-    #       # Pattern to use when creating index.
-    #       # The pattern must contain a single '%s' that will be
-    #       # replaced with the base time stamp of the index.
-    #       # @default "heroic-%s"
-    #       pattern: heroic-%s
-    #       # Interval in milliseconds that each index is valid.
-    #       # @default: 604800000 (one week)
-    #       interval: 604800000
-    #       # Maximum indices to read at a time. Minimum of 1.
-    #       # @default 2
-    #       maxReadIndices: 2
-    #       # Maximum indices to write to at a time. Minumum of 1.
-    #       # @default 1
-    #       maxWriteIndices: 1
-    #       ###
-    #     # Use node client transport.
-    #     # If true, heroic will join ElasticSearch as a read-only node.
-    #     # @default false
-    #     nodeClient: false
-    #     # The template name to use for templates created by this backend.
-    #     # @default "heroic-metadata"
-    #     templateName: heroic-metadata
-    #     # The elasticsearch client configuration to use.
-    #     # One of:
-    #     #   "standalone": complete local cluster
-    #     #   "node": join the cluster as a non-data, non-leader node
-    #     #   "transport": connect using the transport protocol
-    #     # @default "transport"
-    #     client: transport
-    #     # Initial nodes in the cluster to connect to (required).
-    #     seeds:
-    #       - localhost:9200
-    #   # The number of writes this backend allows per second before rate-limiting kicks in.
-    #   # @default 3000
-    #   writesPerSecond: 3000
-    #   # The number of minutes a write will be cached for.
-    #   # @Default 240
-    #   writeCacheDurationMinutes: 240
+    # ElasticSearch-based metadata.
+    - type: elasticsearch
+      connection:
+        client:
+          type: standalone
+          seeds:
+            - localhost:9200
 
 # Data consumers.
-#consumers:
-#  - type: kafka
-#    # Id for consumer.
-#    # @default Generated
-#    #id: null
-#    # Topics to consume from (required).
-#    topics:
-#      - "metrics"
-#    # Schema to use when consuming (required).
-#    # The fully qualified class name of a schema implementation for consuming.
-#    #schema: com.spotify.heroic.consumer.schemas.Spotify100
-#    # Threads per topic.
-#    # @default 2
-#    #threadsPerTopic: 2
-#    # Kafka configuration.
-#    # The provided map will be passed in directly as the kafka configuration.
-#    # For available configuration options, see:
-#    #   https://kafka.apache.org/08/configuration.html#consumerconfigs
-#    #config:
-#    #  zookeeper.connect: localhost:2181
-#    #  group.id: heroic
-#  - type: pubsub
-#    # Id for consumer
-#    # @default Generated
-#    id: null
-#    # Topic to consume from (required.) Will be created if it doesn't exist.
-#    topic: metrics
-#    # GCP project to consume from (required.)
-#    project: heroic
-#    # Subscription name to consume from (required.) Will be created if it doesn't exist.
-#    subscription: heroic-consumer
-#    # Schema to use when consuming (required).
-#    # The fully qualified class name of a schema implementation for consuming.
-#    #schema: com.spotify.heroic.consumer.schemas.Spotify100
-#    # Threads per topic.
-#    # @default 8
-#    #threadsPerTopic: 2
-#    # Maximum number of messages the consumer can have unacked.
-#    # @default 10000
-#    #maxOutStandingElementCount: 50000
-#    # Maximum byte size of messages the consumer can have unacked.
-#    # @default 1000000000
-#    #maxOutstandingRequestBytes: 2000000000
-#    # Maxiumum size of a single incoming message, in bytes. 20MB is the highest allowed by the API.
-#    # @default 20971520
-#    #maxInboundMessageSize: 40960000
-#    # Amount of time to keep the PubSub connection alive, in seconds.
-#    # @default 300
-#    #keepAlive: 600
+consumers:
+ - type: pubsub
+   # Topic and subscription will be created within the project if they don't exist,
+   # assuming Heroic has appropriate GCP permissions.
+   project: heroic
+   topic: metrics
+   subscription: heroic-consumer
+   schema: com.spotify.heroic.consumer.schemas.Spotify100
 
-## Aggregation cache.
-#cache:
-#  backend:
-#    ## In-memory based aggregation cache.
-#    #type: memory
-#    ## Cassandra based cache.
-#    #type: cassandra2
-#    #  # Keyspace.
-#    #  # @default "heroic"
-#    #  #keyspace: heroic
-#    #  # Seeds.
-#    #  # @default empty
-#    #  #seeds:
-#    #  #  - localhost
-#    #  # Max number of connections per host in cluster.
-#    #  #maxConnectionsPerHost: 50
+# Aggregation cache.
+cache:
+  backend:
+    # In-memory based aggregation cache.
+    type: memory
 
-## Http client configuration.
-#client:
-#  # Number of threads to use for client requests.
-#  # @default 100
-#  #threads: 100
-#  # Max amounts of pending requests, if all client threads are occupied.
-#  # @default 100
-#  #queueSize: 100
-#  # Timeout in milliseconds for establishing a client connection.
-#  # @default 2000
-#  #connectTimeout: 2000
-#  # Timeout in milliseconds for reading from a server.
-#  # @default 120000
-#  #readTimeout: 120000
-
-## Detailed Query Logging
-#queryLogging:
-#  type: slf4j
-
-## Tracing configuration
-tracing:
-  # Probability, between 0.0 and 1.0, of sampling each trace.
-  probability: 0.01 # @default 0.01
-
-  # Local port to expose zpages on. Traces are accessible at http://localhost:{port}/tracez
-  #zpagesPort: 9090 # @default empty
-
-  lightstep:
-  # Either a collectorHost or grpcCollectorTarget must be defined
-  # GRPC Collector Target. Will distribute requests to all satellites returned by the DNS record
-  #grpcCollectorTarget: "dns:///lightstep-satellite.example.com:8282"
-
-  # Collector host running the lightstep satellite, will take priority over grpcCollectorTarget
-  #collectorHost: "lightstep-satellite.example.com"
-  # Collector port to be used in conjunction with the collector host
-  #collectorPort: 8282 # @default 8282
-
-  # Lightstep access token (required)
-  accessToken: "lightstep_token"
-
-  # Component name will set the "service" name in the Lightstep UI
-  # componentName: heroic # @defaults heroic
-  # Reporting interval (ms)
-  #reportingIntervalMs: 1_000 # @default 1000
-  # Max buffered spans
-  #maxBufferedSpans: 1_000 # @default 1000
-  # GRPC round robin between all hosts returned by grpcCollectorTarget
-  #grpcRoundRobin: true # @default true
-  # GRPC reset client
-  #grpcResetClient: false # @default false
+statistics:
+  type: semantic
