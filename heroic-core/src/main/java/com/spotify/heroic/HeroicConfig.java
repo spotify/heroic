@@ -79,7 +79,6 @@ public abstract class HeroicConfig {
         Optional<String> host,
         Optional<Integer> port,
         List<JettyServerConnector> connectors,
-        Optional<Boolean> disableMetrics,
         boolean enableCors,
         Optional<String> corsAllowOrigin,
         FeatureSet features,
@@ -101,7 +100,7 @@ public abstract class HeroicConfig {
         String service
     ) {
         return new AutoValue_HeroicConfig(id, startTimeout, stopTimeout, host, port, connectors,
-            disableMetrics, enableCors, corsAllowOrigin, features, cluster, metric, metadata,
+            enableCors, corsAllowOrigin, features, cluster, metric, metadata,
             suggest, cache, ingestion, consumers, shellServer, analytics, generator, statistics,
             queryLogging, conditionalFeatures, tracing, version, service);
     }
@@ -133,7 +132,6 @@ public abstract class HeroicConfig {
     public abstract Optional<String> host();
     public abstract Optional<Integer> port();
     public abstract List<JettyServerConnector> connectors();
-    public abstract Optional<Boolean> disableMetrics();
     public abstract boolean enableCors();
     public abstract Optional<String> corsAllowOrigin();
     public abstract FeatureSet features();
@@ -213,7 +211,6 @@ public abstract class HeroicConfig {
         private Optional<String> host = empty();
         private Optional<Integer> port = empty();
         private Optional<List<JettyServerConnector.Builder>> connectors = empty();
-        private Optional<Boolean> disableMetrics = empty();
         private Optional<Boolean> enableCors = empty();
         private Optional<String> corsAllowOrigin = empty();
         private Optional<FeatureSet> features = empty();
@@ -246,7 +243,6 @@ public abstract class HeroicConfig {
             @JsonProperty("host") Optional<String> host,
             @JsonProperty("port") Optional<Integer> port,
             @JsonProperty("connectors") Optional<List<JettyServerConnector.Builder>> connectors,
-            @JsonProperty("disableMetrics") Optional<Boolean> disableMetrics,
             @JsonProperty("enableCors") Optional<Boolean> enableCors,
             @JsonProperty("corsAllowOrigin") Optional<String> corsAllowOrigin,
             @JsonProperty("features") Optional<FeatureSet> features,
@@ -273,7 +269,6 @@ public abstract class HeroicConfig {
             this.host = host;
             this.port = port;
             this.connectors = connectors;
-            this.disableMetrics = disableMetrics;
             this.enableCors = enableCors;
             this.corsAllowOrigin = corsAllowOrigin;
             this.features = features;
@@ -307,11 +302,6 @@ public abstract class HeroicConfig {
 
         public Builder stopTimeout(Duration stopTimeout) {
             this.stopTimeout = of(stopTimeout);
-            return this;
-        }
-
-        public Builder disableMetrics(boolean disableMetrics) {
-            this.disableMetrics = of(disableMetrics);
             return this;
         }
 
@@ -405,7 +395,6 @@ public abstract class HeroicConfig {
                 pickOptional(host, o.host),
                 pickOptional(port, o.port),
                 mergeOptionalList(connectors, o.connectors),
-                pickOptional(disableMetrics, o.disableMetrics),
                 pickOptional(enableCors, o.enableCors),
                 pickOptional(corsAllowOrigin, o.corsAllowOrigin),
                 mergeOptional(features, o.features, FeatureSet::combine),
@@ -446,7 +435,6 @@ public abstract class HeroicConfig {
                 host,
                 port,
                 connectors,
-                disableMetrics,
                 enableCors.orElse(DEFAULT_ENABLE_CORS),
                 corsAllowOrigin,
                 features.orElseGet(FeatureSet::empty),
