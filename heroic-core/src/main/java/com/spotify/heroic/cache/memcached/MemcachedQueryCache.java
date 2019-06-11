@@ -54,9 +54,8 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 import javax.inject.Inject;
 import javax.inject.Named;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
 
-@Slf4j
 @CacheScope
 public class MemcachedQueryCache implements QueryCache {
     private static final String PREFIX = "query.gz/";
@@ -65,6 +64,7 @@ public class MemcachedQueryCache implements QueryCache {
         QueryTrace.identifier(MemcachedQueryCache.class);
 
     private static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(MemcachedQueryCache.class);
 
     private final Managed<MemcacheClient<byte[]>> client;
     private final ObjectMapper mapper;

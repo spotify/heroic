@@ -21,24 +21,21 @@
 
 package com.spotify.heroic.querylogging;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.Query;
 import com.spotify.heroic.metric.FullQuery;
 import com.spotify.heroic.metric.QueryMetrics;
 import com.spotify.heroic.metric.QueryMetricsResponse;
+import com.spotify.heroic.querylogging.format.LogFormat;
+import com.spotify.heroic.querylogging.format.MessageFormat;
 import java.time.Instant;
-import java.util.Optional;
-import java.util.UUID;
 import java.util.function.Consumer;
-import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
 
 @QueryLoggingScope
-@Slf4j
 public class Slf4jQueryLogger implements QueryLogger {
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(Slf4jQueryLogger.class);
     private final Consumer<String> queryLog;
     private final ObjectMapper objectMapper;
     private final String component;
@@ -127,7 +124,7 @@ public class Slf4jQueryLogger implements QueryLogger {
                     context.httpContext(), type, data);
 
             final String timestamp = Instant.now().toString();
-            final LogFormat logFormat = new LogFormat(timestamp, message);
+            final LogFormat<T> logFormat = new LogFormat<>(timestamp, message);
             try {
                 queryLog.accept(objectMapper.writeValueAsString(logFormat));
             } catch (JsonProcessingException e) {
@@ -142,23 +139,5 @@ public class Slf4jQueryLogger implements QueryLogger {
         } catch (Exception e) {
             log.error("Failed while trying to log query", e);
         }
-    }
-
-    @Data
-    public class LogFormat {
-        @JsonProperty("@timestamp")
-        private final String timestamp;
-        @JsonProperty("@message")
-        private final MessageFormat message;
-    }
-
-    @Data
-    public class MessageFormat<T> {
-        private final String component;
-        private final UUID queryId;
-        private final Optional<JsonNode> clientContext;
-        private final Optional<HttpContext> httpContext;
-        private final String type;
-        private final T data;
     }
 }

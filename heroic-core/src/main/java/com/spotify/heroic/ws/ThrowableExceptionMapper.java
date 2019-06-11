@@ -21,15 +21,17 @@
 
 package com.spotify.heroic.ws;
 
-import lombok.extern.slf4j.Slf4j;
-
 import javax.inject.Inject;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
+import org.slf4j.Logger;
 
-@Slf4j
 public class ThrowableExceptionMapper implements ExceptionMapper<Throwable> {
+
+    private static final Logger log =
+        org.slf4j.LoggerFactory.getLogger(ThrowableExceptionMapper.class);
+
     @Inject
     public ThrowableExceptionMapper() {
     }

@@ -34,7 +34,6 @@ import com.spotify.heroic.statistics.QueryReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.LazyTransform;
-import eu.toolchain.async.Transform;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -45,7 +44,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -55,9 +53,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Named;
-import lombok.Data;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
 
 /**
  * Handles management of cluster state.
@@ -68,11 +64,10 @@ import lombok.extern.slf4j.Slf4j;
  * @author udoprog
  */
 @ClusterScope
-@Slf4j
-@ToString(of = {"useLocal"})
 public class CoreClusterManager implements ClusterManager, LifeCycles {
     public static final QueryTrace.Identifier LOCAL_IDENTIFIER =
         QueryTrace.Identifier.create("[local]");
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(CoreClusterManager.class);
     private final AsyncFramework async;
     private final ClusterDiscovery discovery;
     private final NodeMetadata localMetadata;
@@ -587,98 +582,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
         return async.collectAndDiscard(removals).lazyTransform(v0 -> refreshDiscovery(id));
     }
 
-    /**
-     * A container that contains information about a node update.
-     */
-    interface Update {
-        static Transform<Throwable, Update> error(final URI uri) {
-            return e -> new FailedUpdate(uri, e, Optional.empty());
-        }
-
-        static Transform<Throwable, Update> error(final URI uri, final ClusterNode existingNode) {
-            return e -> new FailedUpdate(uri, e, Optional.of(existingNode));
-        }
-
-        static Transform<Void, Update> cancellation(final URI uri) {
-            return ignore -> new FailedUpdate(uri, new CancellationException(), Optional.empty());
-        }
-
-        /**
-         * Handle the current update.
-         *
-         * @param successful Consumer for an successful update, will be called if the update is
-         * successful
-         * @param error Consumer for a failed update, will be called if the update is failed.
-         */
-        void handle(
-            final Consumer<SuccessfulUpdate> successful, final Consumer<FailedUpdate> error
-        );
-    }
-
-    /**
-     * A successful node update.
-     */
-    @Data
-    static class SuccessfulUpdate implements Update {
-        /**
-         * The URI that was updated.
-         */
-        private final URI uri;
-        /**
-         * If the update is a new addition.
-         */
-        private final boolean added;
-        /**
-         * The cluster node part of the update.
-         */
-        private final ClusterNode node;
-
-        @Override
-        public void handle(
-            final Consumer<SuccessfulUpdate> successful, final Consumer<FailedUpdate> error
-        ) {
-            successful.accept(this);
-        }
-    }
-
-    /**
-     * A failed node update.
-     */
-    @Data
-    static class FailedUpdate implements Update {
-        /**
-         * URI of the node that failed to update.
-         */
-        private final URI uri;
-        /**
-         * The error that caused the failure.
-         */
-        private final Throwable error;
-        /**
-         * The existing node, to be closed
-         */
-        private final Optional<ClusterNode> existingNode;
-
-        @Override
-        public void handle(
-            final Consumer<SuccessfulUpdate> successful, final Consumer<FailedUpdate> error
-        ) {
-            error.accept(this);
-        }
-    }
-
-    /**
-     * A single removed node.
-     */
-    @Data
-    static class RemovedNode {
-        /**
-         * The URI of the removed node.
-         */
-        private final URI uri;
-        /**
-         * The cluster node that was removed.
-         */
-        private final ClusterNode node;
+    public String toString() {
+        return "CoreClusterManager(useLocal=" + this.useLocal + ")";
     }
 }

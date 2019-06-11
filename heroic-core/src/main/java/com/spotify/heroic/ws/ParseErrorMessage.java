@@ -21,18 +21,12 @@
 
 package com.spotify.heroic.ws;
 
-import lombok.Getter;
-
 import javax.ws.rs.core.Response;
 
 public class ParseErrorMessage extends ErrorMessage {
-    @Getter
     private final int line;
-    @Getter
     private final int col;
-    @Getter
     private final int lineEnd;
-    @Getter
     private final int colEnd;
 
     public ParseErrorMessage(
@@ -48,5 +42,21 @@ public class ParseErrorMessage extends ErrorMessage {
 
     public String getType() {
         return "parse-error";
+    }
+
+    public int getLine() {
+        return this.line;
+    }
+
+    public int getCol() {
+        return this.col;
+    }
+
+    public int getLineEnd() {
+        return this.lineEnd;
+    }
+
+    public int getColEnd() {
+        return this.colEnd;
     }
 }

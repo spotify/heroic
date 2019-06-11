@@ -65,13 +65,15 @@ import java.util.Map;
 import java.util.Optional;
 import javax.inject.Inject;
 import lombok.Data;
-import lombok.ToString;
 
-@ToString
 public class Spotify100 implements ConsumerSchema {
     private static final String HOST_TAG = "host";
     private static final ObjectMapper mapper = objectMapper();
     private static final Tracer tracer = Tracing.getTracer();
+
+    public String toString() {
+        return "Spotify100()";
+    }
 
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)

@@ -34,8 +34,14 @@ import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.servlet.ShutdownFilter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
+import java.net.InetSocketAddress;
+import java.util.List;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import javax.inject.Inject;
+import javax.inject.Named;
+import javax.ws.rs.core.MediaType;
 import org.eclipse.jetty.rewrite.handler.RewriteHandler;
 import org.eclipse.jetty.rewrite.handler.RewritePatternRule;
 import org.eclipse.jetty.server.Connector;
@@ -44,29 +50,19 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.Slf4jRequestLog;
 import org.eclipse.jetty.server.handler.HandlerCollection;
-import org.eclipse.jetty.server.handler.gzip.GzipHandler;
 import org.eclipse.jetty.server.handler.RequestLogHandler;
+import org.eclipse.jetty.server.handler.gzip.GzipHandler;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
-
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.ws.rs.core.MediaType;
-import java.net.InetSocketAddress;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.Callable;
-import java.util.function.Function;
-import java.util.function.Supplier;
+import org.slf4j.Logger;
 
 @HttpServerScope
-@Slf4j
-@ToString(of = {"address"})
 public class HttpServer implements LifeCycles {
     public static final String DEFAULT_CORS_ALLOW_ORIGIN = "*";
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(HttpServer.class);
 
     private final InetSocketAddress address;
     private final HeroicCoreInstance instance;
@@ -165,7 +161,7 @@ public class HttpServer implements LifeCycles {
     }
 
     private AsyncFuture<Void> stop() {
-        return async.call((Callable<Void>) () -> {
+        return async.call(() -> {
             final Server s;
 
             synchronized (lock) {
@@ -279,5 +275,9 @@ public class HttpServer implements LifeCycles {
 
         log.info("Loaded {} resource(s)", count);
         return config;
+    }
+
+    public String toString() {
+        return "HttpServer(address=" + this.address + ")";
     }
 }

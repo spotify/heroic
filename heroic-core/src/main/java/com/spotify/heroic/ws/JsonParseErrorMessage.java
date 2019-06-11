@@ -21,14 +21,10 @@
 
 package com.spotify.heroic.ws;
 
-import lombok.Getter;
-
 import javax.ws.rs.core.Response;
 
 public class JsonParseErrorMessage extends ErrorMessage {
-    @Getter
     private final int line;
-    @Getter
     private final int col;
 
     public JsonParseErrorMessage(
@@ -41,5 +37,13 @@ public class JsonParseErrorMessage extends ErrorMessage {
 
     public String getType() {
         return "json-parse-error";
+    }
+
+    public int getLine() {
+        return this.line;
+    }
+
+    public int getCol() {
+        return this.col;
     }
 }

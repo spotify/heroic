@@ -29,9 +29,7 @@ import com.spotify.heroic.common.Statistics;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import java.util.List;
-import lombok.ToString;
 
-@ToString(of = {"backends"})
 public class MetadataBackendGroup implements MetadataBackend {
     private final SelectedGroup<MetadataBackend> backends;
     private final AsyncFramework async;
@@ -140,6 +138,10 @@ public class MetadataBackendGroup implements MetadataBackend {
         }
 
         return results.build();
+    }
+
+    public String toString() {
+        return "MetadataBackendGroup(backends=" + this.backends + ")";
     }
 
     public static interface InternalOperation<T> {
