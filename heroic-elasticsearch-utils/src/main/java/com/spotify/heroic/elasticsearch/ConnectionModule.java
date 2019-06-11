@@ -25,8 +25,6 @@ import static java.util.Optional.ofNullable;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.elasticsearch.index.IndexMapping;
 import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
 import dagger.Module;
@@ -36,7 +34,6 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
 import java.util.List;
-import java.util.Map;
 
 @Module
 public class ConnectionModule {
@@ -60,7 +57,8 @@ public class ConnectionModule {
         @JsonProperty("templateName") String templateName,
         @JsonProperty("client") ClientSetup clientSetup
     ) {
-        this.clusterName = ofNullable(clusterName).orElse(TransportClientSetup.DEFAULT_CLUSTER_NAME);
+        this.clusterName = ofNullable(clusterName)
+            .orElse(TransportClientSetup.DEFAULT_CLUSTER_NAME);
         this.seeds = ofNullable(seeds).orElse(TransportClientSetup.DEFAULT_SEEDS);
         this.sniff = ofNullable(sniff).orElse(TransportClientSetup.DEFAULT_SNIFF);
         this.nodeSamplerInterval = ofNullable(nodeSamplerInterval).orElse(
