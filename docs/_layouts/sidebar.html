@@ -72,7 +72,7 @@ layout: default
       </li>
 
       <li {% if page.title == 'Reliability' %}class="active"{% endif %}>
-        <a href="docs/reliability">Reliability</a>
+        <a href="{{ 'docs/reliability' | relative_url }}">Reliability</a>
 
         <ul class="nav">
           {%- assign ftas = site.fault_tree | sort: 'name' | reverse %}
