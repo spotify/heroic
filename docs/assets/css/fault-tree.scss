@@ -1,0 +1,53 @@
+---
+---
+@import 'theme';
+
+#fault-tree {
+    display: inline-block;
+    position: relative;
+    width: 100%;
+    padding-bottom: 80%;
+    vertical-align: top;
+    overflow: hidden;
+    border: 1px solid $brand-success;
+    border-radius: 16px;
+}
+
+.fault-tree-content {
+    display: inline-block;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.node {
+    cursor: pointer;
+
+    text {
+        font: 10px sans-serif;
+        font-weight: bold;
+
+        &.atleast {
+            font: 8px sans-serif;
+            font-weight: bold;
+        }
+    }
+}
+
+.node-link {
+    fill: none;
+    stroke: #ccc;
+    stroke-width: 1.5px;
+}
+
+div.node-tooltip {
+    position: absolute;
+    text-align: center;
+    width: 120px;
+    padding: 2px;
+    font: 12px sans-serif;
+    background: lightsteelblue;
+    border: 0px;
+    border-radius: 8px;
+    pointer-events: none;
+}

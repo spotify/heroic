@@ -11,6 +11,9 @@ collections:
   api_types:
     output: true
     permalink: /docs/api/types/:name
+  fault_tree:
+    output: true
+    permalink: /docs/fta/:name
 
 defaults:
   - scope:
@@ -31,6 +34,10 @@ defaults:
       type: api_types
     values:
       layout: api-type
+  - scope:
+      type: fault_tree
+    values:
+      layout: fault-tree
 
 sass:
   sass_dir: assets/_sass
