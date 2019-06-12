@@ -150,7 +150,7 @@ allprojects {
                 entry 'grpc-core'
             }
 
-            dependencySet(group: 'io.opencensus', version: '0.19.1') {
+            dependencySet(group: 'io.opencensus', version: '0.22.1') {
                 entry 'opencensus-api'
                 entry 'opencensus-impl'
                 entry 'opencensus-contrib-zpages'
@@ -158,7 +158,7 @@ allprojects {
                 entry 'opencensus-contrib-http-util'
             }
             dependency 'com.lightstep.opencensus:lightstep-opencensus-exporter:0.0.2'
-            dependency 'com.lightstep.tracer:tracer-grpc:0.16.2'
+            dependency 'com.lightstep.tracer:tracer-okhttp:0.16.2'
             dependency 'com.lightstep.tracer:java-common:0.16.2'
             dependency 'com.lightstep.tracer:lightstep-tracer-jre:0.14.8'
 

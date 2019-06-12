@@ -185,7 +185,9 @@ class OpenCensusApplicationEventListener implements ApplicationEventListener {
                     // tracing can occur.
                     event.getContainerRequest().setProperty(
                         OpenCensusFeature.SPAN_CONTEXT_PROPERTY, requestSpan);
-                    resourceSpan.end();
+                    if (resourceSpan != null) {
+                        resourceSpan.end();
+                    }
                     logVerbose("Response filtering started.");
                     break;
 

@@ -992,14 +992,12 @@ probability: <float> default = 0.01
 # Local port to expose zpages on. Traces are accessible at http://localhost:{port}/tracez
 zpagesPort: <int>
 
-# Configuration for exporting traces to LightStep. Either a collectorHost or grpcCollectorTarget must be defined.
+# Configuration for exporting traces to LightStep.
 lightstep:
-  # Will distribute requests to all satellites returned by the DNS record over gRPC.
-  grpcCollectorTarget: <string>
 
-  # Collector host and port running the Lightstep satellite. Will take priority over grpcCollectorTarget.
-  collectorHost: <string>
-  collectorPort: <int> default = 8282
+  # Collector host and port running the Lightstep satellite.
+  collectorHost: <string> required
+  collectorPort: <int> default = 80
 
   # Lightstep access token
   accessToken: <string> required
@@ -1007,16 +1005,13 @@ lightstep:
   # Component name will set the "service" name in the Lightstep UI
   componentName: <string> default = heroic
 
-  # Reporting interval in millseconds.
+  # Reporting interval in milliseconds.
   reportingIntervalMs: <int> default = 1000
 
   # Max buffered spans
   maxBufferedSpans: <int> default = 1000
 
-  # Perform round robin between all hosts returned by grpcCollectorTarget.
-  grpcRoundRobin: <bool> default = true
-
-  # If enabled, the gRPC client connection will be reset at regular intervals.
-  # Used to load balance on server side.
-  grpcResetClient: <bool> default = false
+  # If enabled, the client connection will be reset at regular intervals.
+  # Used to load balance on client side.
+  resetClient: <bool> default = false
 ```

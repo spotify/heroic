@@ -135,12 +135,11 @@ public class HeroicCore implements HeroicConfiguration {
     static final boolean DEFAULT_DISABLE_BACKENDS = false;
     static final boolean DEFAULT_SETUP_SHELL_SERVER = true;
 
-    private static final int DEFAULT_LIGHTSTEP_COLLECTOR_PORT = 8282;
+    private static final int DEFAULT_LIGHTSTEP_COLLECTOR_PORT = 80;
     private static final String DEFAULT_LIGHTSTEP_COMPONENT_NAME = "heroic";
     private static final int DEFAULT_LIGHTSTEP_REPORTING_MS = 1_000;
     private static final int DEFAULT_LIGHTSTEP_MAX_BUFFERED_SPANS = 1_000;
-    private static final boolean DEFAULT_LIGHTSTEP_GRPC_ROUNDROBIN = true;
-    private static final boolean DEFAULT_LIGHTSTEP_GRPC_RESET_CLIENT = false;
+    private static final boolean DEFAULT_LIGHTSTEP_RESET_CLIENT = false;
 
     static final UncaughtExceptionHandler uncaughtExceptionHandler = (Thread t, Throwable e) -> {
         try {
@@ -313,8 +312,6 @@ public class HeroicCore implements HeroicConfiguration {
             final String collectorHost = configMap.get("collectorHost");
             final Integer collectorPort = (Integer) config.getOrDefault("collectorPort",
               DEFAULT_LIGHTSTEP_COLLECTOR_PORT);
-            final String grpcCollectorTarget = configMap.get("grpcCollectorTarget");
-
             final String accessToken = configMap.get("accessToken");
             final String componentName = (String) config.getOrDefault("componentName",
               DEFAULT_LIGHTSTEP_COMPONENT_NAME);
@@ -322,19 +319,17 @@ public class HeroicCore implements HeroicConfiguration {
                 DEFAULT_LIGHTSTEP_REPORTING_MS);
             final Integer maxBufferedSpans = (Integer) config.getOrDefault("maxBufferedSpans",
               DEFAULT_LIGHTSTEP_MAX_BUFFERED_SPANS);
-            final Boolean grpcRoundRobin = (Boolean) config.getOrDefault("grpcRoundRobin",
-              DEFAULT_LIGHTSTEP_GRPC_ROUNDROBIN);
-            final Boolean grpcResetClient = (Boolean) config.getOrDefault("grpcResetClient",
-              DEFAULT_LIGHTSTEP_GRPC_RESET_CLIENT);
+            final Boolean resetClient = (Boolean) config.getOrDefault("resetClient",
+              DEFAULT_LIGHTSTEP_RESET_CLIENT);
 
 
             if (accessToken == null) {
                 throw new IllegalArgumentException("Lightstep accessToken must be defined");
             }
 
-            if (collectorHost == null && grpcCollectorTarget == null) {
+            if (collectorHost == null) {
                 throw new IllegalArgumentException(
-                  "Lightstep collectorHost or grpcCollectorTarget must be defined");
+                  "Lightstep collectorHost must be defined");
             }
 
             final Options.OptionsBuilder optionsBuilder = new Options.OptionsBuilder()
@@ -342,17 +337,10 @@ public class HeroicCore implements HeroicConfiguration {
                 .withMaxReportingIntervalMillis(reportingIntervalMs)
                 .withMaxBufferedSpans(maxBufferedSpans)
                 .withCollectorProtocol("http")
-                .withGrpcRoundRobin(grpcRoundRobin)
-                .withResetClient(grpcResetClient)
-                .withComponentName(componentName);
-
-            if (collectorHost != null) {
-                optionsBuilder.withCollectorHost(collectorHost);
-                optionsBuilder.withCollectorPort(collectorPort);
-            } else {
-                optionsBuilder.withGrpcCollectorTarget(grpcCollectorTarget);
-            }
-
+                .withResetClient(resetClient)
+                .withComponentName(componentName)
+                .withCollectorHost(collectorHost)
+                .withCollectorPort(collectorPort);
 
             final Options options;
             try {
