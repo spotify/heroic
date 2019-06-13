@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,26 +19,6 @@
  * under the License.
  */
 
-package com.spotify.heroic.statistics.semantic;
+package com.spotify.heroic.statistics.semantic
 
-import com.codahale.metrics.Gauge;
-import java.util.concurrent.atomic.AtomicLong;
-import lombok.ToString;
-
-@ToString(of = {})
-public class SimpleGauge implements Gauge<Long> {
-
-    private final AtomicLong value = new AtomicLong(0);
-
-    public SimpleGauge() {
-    }
-
-    public void setValue(final long value) {
-        this.value.set(value);
-    }
-
-    @Override
-    public Long getValue() {
-        return value.get();
-    }
-}
+data class MinMaxEntry(val min: Long, val max: Long)

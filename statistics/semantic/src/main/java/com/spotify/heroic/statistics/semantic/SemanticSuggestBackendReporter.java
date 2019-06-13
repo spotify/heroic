@@ -39,9 +39,7 @@ import eu.toolchain.async.AsyncFuture;
 import io.opencensus.trace.Span;
 import io.opencensus.trace.Tracer;
 import io.opencensus.trace.Tracing;
-import lombok.ToString;
 
-@ToString(of = {"base"})
 public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
     private static final String COMPONENT = "suggest-backend";
     private static final Tracer tracer = Tracing.getTracer();
@@ -101,6 +99,10 @@ public class SemanticSuggestBackendReporter implements SuggestBackendReporter {
     @Override
     public FutureReporter.Context setupWriteReporter() {
         return backendWrite.setup();
+    }
+
+    public String toString() {
+        return "SemanticSuggestBackendReporter()";
     }
 
     private class InstrumentedSuggestBackend implements SuggestBackend {

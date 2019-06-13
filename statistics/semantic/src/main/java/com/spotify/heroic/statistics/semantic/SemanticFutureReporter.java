@@ -26,9 +26,7 @@ import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.HeroicTimer;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
-import lombok.ToString;
 
-@ToString(of = {})
 public class SemanticFutureReporter implements FutureReporter {
     private final SemanticHeroicTimer timer;
     private final Counter failed;
@@ -60,6 +58,10 @@ public class SemanticFutureReporter implements FutureReporter {
         return new SemanticContext(timer.time());
     }
 
+    public String toString() {
+        return "SemanticFutureReporter()";
+    }
+
     private class SemanticContext implements FutureReporter.Context {
         private final HeroicTimer.Context context;
 
@@ -69,21 +71,21 @@ public class SemanticFutureReporter implements FutureReporter {
         }
 
         @Override
-        public void failed(Throwable e) throws Exception {
+        public void failed(Throwable e) {
             pending.dec();
             failed.inc();
             context.stop();
         }
 
         @Override
-        public void resolved(Object result) throws Exception {
+        public void resolved(Object result) {
             pending.dec();
             resolved.inc();
             context.stop();
         }
 
         @Override
-        public void cancelled() throws Exception {
+        public void cancelled() {
             pending.dec();
             cancelled.inc();
             context.stop();

@@ -27,11 +27,7 @@ import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.QueryReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
-@ToString(of = {"base"})
 public class SemanticQueryReporter implements QueryReporter {
     private static final String COMPONENT = "query";
 
@@ -84,5 +80,9 @@ public class SemanticQueryReporter implements QueryReporter {
     @Override
     public void reportClusterNodeRpcCancellation() {
         rpcCancellation.inc();
+    }
+
+    public String toString() {
+        return "SemanticQueryReporter()";
     }
 }

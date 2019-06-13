@@ -44,9 +44,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Supplier;
-import lombok.ToString;
 
-@ToString(of = {})
 public class SemanticHeroicReporter implements HeroicReporter {
     private final SemanticMetricRegistry registry;
 
@@ -126,5 +124,9 @@ public class SemanticHeroicReporter implements HeroicReporter {
             current.add(cacheSize);
             return current;
         });
+    }
+
+    public String toString() {
+        return "SemanticHeroicReporter()";
     }
 }
