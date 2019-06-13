@@ -25,11 +25,12 @@ layout: sidebar
 
 <h3>Input Data</h3>
 
-<p>The source data used to generate the fault tree can be downloaded here: <a href="assets/fta/{{ name }}.mef">{{ name }}.mef</a></p>
+{%- assign source_file = name | append: '.mef' %}
+<p>The source data used to generate the fault tree can be downloaded here: <a href="{{ 'assets/fta/' | append: source_file | relative_url }}">{{ source_file }}</a></p>
 <p>
   The input is in the <a href="https://open-psa.github.io/mef/">Open-PSA Model Exchange Format</a> and was rendered using <a href="https://github.com/hexedpackets/fault_tree/">https://github.com/hexedpackets/fault_tree/</a>
 </p>
 
 <script src="//d3js.org/d3.v3.min.js" charset="utf-8"></script>
-<script src="assets/js/fault-tree-graph.js" type="text/javascript"></script>
-<link rel="stylesheet" href="assets/css/fault-tree.css" />
+<script src="{{ 'assets/js/fault-tree-graph.js' | relative_url }}" type="text/javascript"></script>
+<link rel="stylesheet" href="{{ 'assets/css/fault-tree.css' | relative_url }}" />
