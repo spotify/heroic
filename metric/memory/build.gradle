@@ -1,7 +1,9 @@
+apply plugin: 'kotlin-kapt'
+
 dependencies {
     implementation project(':heroic-component')
     testImplementation project(':heroic-test-it')
-    compileOnly 'org.projectlombok:lombok'
+    kapt 'com.google.dagger:dagger-compiler'
 }
 
 group = 'com.spotify.heroic.metric'
