@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,25 +19,23 @@
  * under the License.
  */
 
-package com.spotify.heroic.rpc.grpc;
+package com.spotify.heroic.rpc.grpc
 
-import lombok.Getter;
-import lombok.ToString;
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.spotify.heroic.common.Grouped
+import com.spotify.heroic.common.UsableGroupManager
+import eu.toolchain.async.AsyncFuture
+import java.util.*
+import java.util.function.BiFunction
 
-import java.net.InetSocketAddress;
-
-@ToString(of = {"address", "message"})
-public class GrpcRpcRemoteException extends Exception {
-    private static final long serialVersionUID = -664905544594225316L;
-
-    @Getter
-    public final InetSocketAddress address;
-
-    public final String message;
-
-    public GrpcRpcRemoteException(InetSocketAddress address, String message) {
-        super(address + ": " + message);
-        this.address = address;
-        this.message = message;
+data class GroupedQuery<T>(
+    @JsonProperty("group") val group: Optional<String>,
+    @JsonProperty("query") val query: T
+) {
+    fun <G : Grouped, R> apply(manager: UsableGroupManager<G>, function: (G, T) -> R): R {
+        return function(
+            group.map(manager::useGroup).orElseGet(manager::useDefaultGroup),
+            query
+        )
     }
 }

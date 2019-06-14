@@ -38,9 +38,7 @@ import io.opencensus.trace.Span;
 import io.opencensus.trace.Tracer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 public class GrpcRpcClient {
     private final AsyncFramework async;
     private final InetSocketAddress address;
