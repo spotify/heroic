@@ -1,6 +1,8 @@
+apply plugin: 'kotlin-kapt'
+
 dependencies {
     implementation project(':heroic-component')
-    compileOnly 'org.projectlombok:lombok'
+    kapt 'com.google.dagger:dagger-compiler'
 }
 
 group = 'com.spotify.heroic.rpc'
