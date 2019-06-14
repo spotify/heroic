@@ -56,11 +56,12 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.inject.Inject;
 import javax.inject.Named;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Slf4j
 public class GrpcRpcProtocolServer implements LifeCycles {
     public static final GrpcRpcEmptyBody EMPTY = new GrpcRpcEmptyBody();
+    private static final Logger log = LoggerFactory.getLogger(GrpcRpcProtocolServer.class);
 
     private final AsyncFramework async;
     private final MetricManager metrics;

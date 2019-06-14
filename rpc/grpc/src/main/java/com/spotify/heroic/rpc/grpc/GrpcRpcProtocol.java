@@ -23,17 +23,12 @@ package com.spotify.heroic.rpc.grpc;
 
 import static io.grpc.MethodDescriptor.generateFullMethodName;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.auto.value.AutoValue;
 import com.google.common.io.ByteStreams;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.cluster.NodeMetadata;
 import com.spotify.heroic.cluster.RpcProtocol;
-import com.spotify.heroic.common.Grouped;
-import com.spotify.heroic.common.UsableGroupManager;
 import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.DeleteSeries;
 import com.spotify.heroic.metadata.FindKeys;
@@ -65,7 +60,6 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiFunction;
 import javax.inject.Inject;
 import javax.inject.Named;
 
@@ -290,32 +284,9 @@ public class GrpcRpcProtocol implements RpcProtocol {
             private <T, R> AsyncFuture<R> request(
                 GrpcDescriptor<GroupedQuery<T>, R> endpoint, T body
             ) {
-                final GroupedQuery<T> grouped = GroupedQuery.create(group, body);
+                final GroupedQuery<T> grouped = new GroupedQuery<>(group, body);
                 return client.request(endpoint, grouped, CallOptions.DEFAULT);
             }
-        }
-    }
-
-    @AutoValue
-    public abstract static class GroupedQuery<T> {
-        @JsonCreator
-        public static <T> GroupedQuery<T> create(
-            @JsonProperty("group") Optional<String> group, @JsonProperty("query") T query
-        ) {
-            return new AutoValue_GrpcRpcProtocol_GroupedQuery<T>(group, query);
-        }
-
-        @JsonProperty
-        public abstract Optional<String> group();
-        @JsonProperty
-        public abstract T query();
-
-        public <G extends Grouped, R> R apply(
-            UsableGroupManager<G> manager, BiFunction<G, T, R> function
-        ) {
-            return function.apply(
-                group().map(manager::useGroup).orElseGet(manager::useDefaultGroup),
-                query());
         }
     }
 
