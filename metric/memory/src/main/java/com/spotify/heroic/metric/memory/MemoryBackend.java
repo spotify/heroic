@@ -35,7 +35,6 @@ import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricReadResult;
-import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.WriteMetric;
 import eu.toolchain.async.AsyncFramework;
@@ -52,13 +51,10 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.function.Consumer;
 import javax.inject.Inject;
-import lombok.Data;
-import lombok.ToString;
 
 /**
  * MetricBackend for Heroic cassandra datastore.
  */
-@ToString(exclude = {"storage", "async"})
 public class MemoryBackend extends AbstractMetricBackend {
     public static final String MEMORY_KEYS = "memory-keys";
 
@@ -167,7 +163,7 @@ public class MemoryBackend extends AbstractMetricBackend {
         final MemoryCell cell =
             storage.computeIfAbsent(key, k -> new MemoryCell(new ConcurrentHashMap<>()));
 
-        final ConcurrentSkipListMap<Long, Metric> metrics = cell.entries
+        final ConcurrentSkipListMap<Long, Metric> metrics = cell.getEntries()
             .computeIfAbsent(request.getSeries().getResource(),
                 k -> new MemoryEntry(new ConcurrentSkipListMap<>()))
             .getMetrics();
@@ -188,9 +184,14 @@ public class MemoryBackend extends AbstractMetricBackend {
             return;
         }
 
-        for (final Map.Entry<SortedMap<String, String>, MemoryEntry> e : cell.entries.entrySet()) {
+        for (final Map.Entry<SortedMap<String, String>, MemoryEntry> e :
+            cell.getEntries().entrySet()
+        ) {
             final Collection<Metric> metrics =
-                e.getValue().metrics.subMap(range.getStart(), false, range.getEnd(), true).values();
+                e.getValue()
+                    .getMetrics()
+                    .subMap(range.getStart(), false, range.getEnd(), true)
+                    .values();
 
             watcher.readData(metrics.size());
 
@@ -200,19 +201,7 @@ public class MemoryBackend extends AbstractMetricBackend {
         }
     }
 
-    @Data
-    public static final class MemoryKey {
-        private final MetricType source;
-        private final SortedMap<String, String> tags;
-    }
-
-    @Data
-    public static final class MemoryEntry {
-        private final ConcurrentSkipListMap<Long, Metric> metrics;
-    }
-
-    @Data
-    public static final class MemoryCell {
-        private final ConcurrentMap<SortedMap<String, String>, MemoryEntry> entries;
+    public String toString() {
+        return "MemoryBackend(groups=" + this.groups + ")";
     }
 }
