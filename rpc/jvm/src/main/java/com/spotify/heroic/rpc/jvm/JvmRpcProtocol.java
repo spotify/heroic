@@ -26,15 +26,10 @@ import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.cluster.RpcProtocol;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
-
+import java.net.URI;
 import javax.inject.Inject;
 import javax.inject.Named;
-import java.net.URI;
 
-@Slf4j
-@ToString(of = {})
 @JvmRpcScope
 public class JvmRpcProtocol implements RpcProtocol {
     private final AsyncFramework async;
@@ -64,5 +59,9 @@ public class JvmRpcProtocol implements RpcProtocol {
     @Override
     public AsyncFuture<String> getListenURI() {
         return async.resolved(bindName);
+    }
+
+    public String toString() {
+        return "JvmRpcProtocol()";
     }
 }

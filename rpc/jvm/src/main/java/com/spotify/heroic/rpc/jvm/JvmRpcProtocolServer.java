@@ -26,12 +26,9 @@ import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.extern.slf4j.Slf4j;
-
 import javax.inject.Inject;
 import javax.inject.Named;
 
-@Slf4j
 public class JvmRpcProtocolServer implements LifeCycles {
     private final AsyncFramework async;
     private final ClusterNode localNode;
