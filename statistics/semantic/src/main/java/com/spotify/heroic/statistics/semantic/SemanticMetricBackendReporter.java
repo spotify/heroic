@@ -51,9 +51,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAccumulator;
 import java.util.function.Consumer;
-import lombok.ToString;
 
-@ToString(of = {"base"})
 public class SemanticMetricBackendReporter implements MetricBackendReporter {
     private static final String COMPONENT = "metric-backend";
 
@@ -202,6 +200,10 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
     @Override
     public FutureReporter.Context reportQueryMetrics() {
         return queryMetrics.setup();
+    }
+
+    public String toString() {
+        return "SemanticMetricBackendReporter()";
     }
 
     private class InstrumentedMetricBackend implements MetricBackend {

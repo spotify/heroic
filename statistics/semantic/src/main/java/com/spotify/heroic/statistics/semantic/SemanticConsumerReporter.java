@@ -28,9 +28,7 @@ import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.HeroicTimer;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
-import lombok.ToString;
 
-@ToString(of = {"base"})
 public class SemanticConsumerReporter implements ConsumerReporter {
     private static final String COMPONENT = "consumer";
 
@@ -172,5 +170,9 @@ public class SemanticConsumerReporter implements ConsumerReporter {
     @Override
     public HeroicTimer.Context reportConsumerCommitPhase2() {
         return consumerCommitPhase2Timer.time();
+    }
+
+    public String toString() {
+        return "SemanticConsumerReporter(base=" + this.base + ")";
     }
 }

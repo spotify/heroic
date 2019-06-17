@@ -25,9 +25,7 @@ import com.codahale.metrics.Counter;
 import com.spotify.heroic.statistics.IngestionManagerReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
-import lombok.ToString;
 
-@ToString(of = {})
 public class SemanticIngestionManagerReporter implements IngestionManagerReporter {
     private static final String COMPONENT = "ingestion-manager";
 
@@ -55,5 +53,9 @@ public class SemanticIngestionManagerReporter implements IngestionManagerReporte
     @Override
     public void decrementConcurrentWrites() {
         concurrentWritesCounter.dec();
+    }
+
+    public String toString() {
+        return "SemanticIngestionManagerReporter()";
     }
 }

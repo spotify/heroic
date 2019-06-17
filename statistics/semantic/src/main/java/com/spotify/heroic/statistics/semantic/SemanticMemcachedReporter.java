@@ -25,9 +25,7 @@ import com.codahale.metrics.Counter;
 import com.spotify.heroic.statistics.MemcachedReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
-import lombok.ToString;
 
-@ToString(of = {})
 public class SemanticMemcachedReporter implements MemcachedReporter {
 
   private static final String COMPONENT = "memcached";
@@ -72,6 +70,10 @@ public class SemanticMemcachedReporter implements MemcachedReporter {
   @Override
   public void reportMemcachedError() {
     memcachedError.inc();
+  }
+
+  public String toString() {
+    return "SemanticMemcachedReporter()";
   }
 }
 

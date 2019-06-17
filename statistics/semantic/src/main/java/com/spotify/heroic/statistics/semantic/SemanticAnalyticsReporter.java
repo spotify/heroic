@@ -25,9 +25,7 @@ import com.codahale.metrics.Counter;
 import com.spotify.heroic.statistics.AnalyticsReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
-import lombok.ToString;
 
-@ToString(of = {})
 public class SemanticAnalyticsReporter implements AnalyticsReporter {
     private static final String COMPONENT = "analytics";
 
@@ -51,5 +49,9 @@ public class SemanticAnalyticsReporter implements AnalyticsReporter {
     @Override
     public void reportFailedFetchSeries() {
         failedFetchSeries.inc();
+    }
+
+    public String toString() {
+        return "SemanticAnalyticsReporter()";
     }
 }

@@ -30,7 +30,6 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import lombok.ToString;
 
 public class MinMaxSlidingTimeReservoir implements Reservoir {
     // max spins until calling Thread.yield()
@@ -81,12 +80,12 @@ public class MinMaxSlidingTimeReservoir implements Reservoir {
         while (true) {
             final MinMaxEntry old = reference.get();
 
-            if (old.min <= value && value <= old.max) {
+            if (old.getMin() <= value && value <= old.getMax()) {
                 break;
             }
 
             final MinMaxEntry newEntry =
-                new MinMaxEntry(Math.min(old.min, value), Math.max(old.max, value));
+                new MinMaxEntry(Math.min(old.getMin(), value), Math.max(old.getMax(), value));
 
             if (reference.compareAndSet(old, newEntry)) {
                 break;
@@ -112,7 +111,9 @@ public class MinMaxSlidingTimeReservoir implements Reservoir {
             .values()
             .stream()
             .map(AtomicReference::get)
-            .reduce((a, b) -> new MinMaxEntry(Math.min(a.min, b.min), Math.max(a.max, b.max)));
+            .reduce((a, b) -> new MinMaxEntry(
+                Math.min(a.getMin(), b.getMin()),
+                Math.max(a.getMax(), b.getMax())));
 
         final Snapshot snapshot = delegate.getSnapshot();
 
@@ -120,8 +121,8 @@ public class MinMaxSlidingTimeReservoir implements Reservoir {
             final long[] values = snapshot.getValues();
 
             if (values.length > 0) {
-                values[0] = Math.min(minMax.min, values[0]);
-                values[values.length - 1] = Math.max(minMax.max, values[values.length - 1]);
+                values[0] = Math.min(minMax.getMin(), values[0]);
+                values[values.length - 1] = Math.max(minMax.getMax(), values[values.length - 1]);
             }
 
             return new UniformSnapshot(values);
@@ -149,16 +150,5 @@ public class MinMaxSlidingTimeReservoir implements Reservoir {
      */
     long calculateFirstBucket() {
         return (clock.getTick() - (step * size)) / step;
-    }
-
-    @ToString
-    private static class MinMaxEntry {
-        private final long min;
-        private final long max;
-
-        private MinMaxEntry(final long min, final long max) {
-            this.min = min;
-            this.max = max;
-        }
     }
 }
