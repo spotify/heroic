@@ -23,13 +23,12 @@ package com.spotify.heroic.scheduler;
 
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Slf4j
-@ToString(exclude = {"scheduler"})
 public class DefaultScheduler implements Scheduler {
     private static final String UNKNOWN = "unknown";
+    private static final Logger log = LoggerFactory.getLogger(DefaultScheduler.class);
 
     private final ScheduledExecutorService scheduler;
 
@@ -79,5 +78,9 @@ public class DefaultScheduler implements Scheduler {
                 log.error("{} task failed", name, e);
             }
         }, value, unit);
+    }
+
+    public String toString() {
+        return "DefaultScheduler()";
     }
 }
