@@ -1000,7 +1000,7 @@ lightstep:
   collectorPort: <int> default = 80
 
   # Lightstep access token
-  accessToken: <string> required
+  accessToken: <string> optional
 
   # Component name will set the "service" name in the Lightstep UI
   componentName: <string> default = heroic
