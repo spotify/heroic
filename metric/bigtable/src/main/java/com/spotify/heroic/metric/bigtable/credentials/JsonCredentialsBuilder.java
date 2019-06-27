@@ -31,9 +31,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
-import lombok.ToString;
 
-@ToString(of = {"path"})
 public class JsonCredentialsBuilder implements CredentialsBuilder {
     public static final String DEFAULT_PATH = "./credentials.json";
 
@@ -54,6 +52,10 @@ public class JsonCredentialsBuilder implements CredentialsBuilder {
 
     public static Builder builder() {
         return new Builder();
+    }
+
+    public String toString() {
+        return "JsonCredentialsBuilder(path=" + this.path + ")";
     }
 
     public static class Builder {

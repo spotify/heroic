@@ -41,36 +41,36 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import lombok.Data;
-import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 @Data
 @JsonSerialize(using = QueryMetricsResponse.Serializer.class)
 public class QueryMetricsResponse {
-    @NonNull
+    @NotNull
     private final UUID queryId;
 
-    @NonNull
+    @NotNull
     private final DateRange range;
 
-    @NonNull
+    @NotNull
     private final List<ShardedResultGroup> result;
 
-    @NonNull
+    @NotNull
     private final Statistics statistics = Statistics.empty();
 
-    @NonNull
+    @NotNull
     private final List<RequestError> errors;
 
-    @NonNull
+    @NotNull
     private final QueryTrace trace;
 
-    @NonNull
+    @NotNull
     private final ResultLimits limits;
 
-    @NonNull
+    @NotNull
     private final Optional<Long> preAggregationSampleSize;
 
-    @NonNull
+    @NotNull
     private final Optional<CacheInfo> cache;
 
     public static class Serializer extends JsonSerializer<QueryMetricsResponse> {

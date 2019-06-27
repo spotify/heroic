@@ -35,10 +35,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 
 @Data
-@EqualsAndHashCode
 public final class ShardedResultGroup {
     // record separator is needed to avoid conflicts
     private static final int RECORD_SEPARATOR = 0;

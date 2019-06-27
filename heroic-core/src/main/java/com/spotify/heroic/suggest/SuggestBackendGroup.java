@@ -30,14 +30,11 @@ import eu.toolchain.async.AsyncFuture;
 import io.opencensus.trace.Span;
 import io.opencensus.trace.Tracer;
 import io.opencensus.trace.Tracing;
-import lombok.Data;
-import lombok.ToString;
-
 import java.util.List;
 import java.util.function.Function;
+import lombok.Data;
 
 @Data
-@ToString(of = {"backends"})
 public class SuggestBackendGroup implements SuggestBackend {
     private final Tracer tracer = Tracing.getTracer();
     private final AsyncFramework async;
@@ -121,5 +118,9 @@ public class SuggestBackendGroup implements SuggestBackend {
 
     private <T> List<T> run(final Function<SuggestBackend, T> op) {
         return ImmutableList.copyOf(backends.stream().map(op).iterator());
+    }
+
+    public String toString() {
+        return "SuggestBackendGroup(backends=" + this.getBackends() + ")";
     }
 }

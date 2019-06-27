@@ -39,9 +39,7 @@ import eu.toolchain.async.AsyncFuture;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.function.Consumer;
-import lombok.ToString;
 
-@ToString
 class BigtableAnalyticsMetricBackend implements MetricBackend {
     private final BigtableMetricAnalytics analytics;
     private final MetricBackend backend;
@@ -135,4 +133,9 @@ class BigtableAnalyticsMetricBackend implements MetricBackend {
     public AsyncObservable<MetricCollection> streamRow(BackendKey key) {
         return backend.streamRow(key);
     }
+
+    public String toString() {
+        return "BigtableAnalyticsMetricBackend(analytics=" + this.analytics + ", backend="
+               + this.backend + ")";
+  }
 }

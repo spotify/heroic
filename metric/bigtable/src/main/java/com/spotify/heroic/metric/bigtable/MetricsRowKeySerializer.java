@@ -38,10 +38,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.SortedMap;
 import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Slf4j
 public class MetricsRowKeySerializer implements RowKeySerializer {
+    private static final Logger log = LoggerFactory.getLogger(MetricsRowKeySerializer.class);
     final SerializerFramework framework;
     final SerializerFramework suffixFramework;
     final RowKeyMinimal_Serializer minimalSerializer;

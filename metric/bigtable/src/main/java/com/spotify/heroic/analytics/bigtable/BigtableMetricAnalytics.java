@@ -42,18 +42,15 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.Managed;
-import lombok.ToString;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.time.LocalDate;
 import java.util.Optional;
 import java.util.concurrent.Semaphore;
+import javax.inject.Inject;
+import javax.inject.Named;
 
 @BigtableScope
-@ToString(exclude = {"async", "mapper", "reporter"})
 public class BigtableMetricAnalytics implements MetricAnalytics, LifeCycles {
     final Managed<BigtableConnection> connection;
     final AsyncFramework async;
@@ -183,5 +180,12 @@ public class BigtableMetricAnalytics implements MetricAnalytics, LifeCycles {
 
     private AsyncFuture<Void> stop() {
         return connection.stop();
+    }
+
+    public String toString() {
+        return "BigtableMetricAnalytics(connection=" + this.connection + ", hitsTableName="
+               + this.hitsTableName + ", hitsColumnFamily=" + this.hitsColumnFamily
+               + ", pendingReports=" + this.pendingReports + ", fetchSeries="
+               + this.fetchSeries + ")";
     }
 }

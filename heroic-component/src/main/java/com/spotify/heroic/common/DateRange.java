@@ -21,23 +21,20 @@
 
 package com.spotify.heroic.common;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.time.Clock;
 import eu.toolchain.serializer.AutoSerialize;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import org.apache.commons.lang3.time.FastDateFormat;
-
 import java.sql.Date;
-
-import static com.google.common.base.Preconditions.checkArgument;
+import lombok.Data;
+import org.apache.commons.lang3.time.FastDateFormat;
 
 @AutoSerialize
 @Data
-@EqualsAndHashCode(of = {"start", "end"})
 public class DateRange implements Comparable<DateRange> {
     private static final FastDateFormat FORMAT =
         FastDateFormat.getInstance("yyyy-MM-dd HH:mm:ss.SSS");

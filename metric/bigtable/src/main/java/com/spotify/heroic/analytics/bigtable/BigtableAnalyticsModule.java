@@ -41,11 +41,8 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
 import java.util.Optional;
-import java.util.concurrent.Callable;
 import javax.inject.Named;
-import lombok.ToString;
 
-@ToString
 @Module
 public class BigtableAnalyticsModule implements AnalyticsModule {
     public static final String DEFAULT_CLUSTER = "heroic";
@@ -92,7 +89,7 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
     public Managed<BigtableConnection> connection(final AsyncFramework async) {
         return async.managed(new ManagedSetup<BigtableConnection>() {
             @Override
-            public AsyncFuture<BigtableConnection> construct() throws Exception {
+            public AsyncFuture<BigtableConnection> construct() {
                 return async.call(
                     new BigtableConnectionBuilder(project, cluster, credentials, async,
                         DEFAULT_DISABLE_BULK_MUTATIONS, DEFAULT_FLUSH_INTERVAL_SECONDS,
@@ -100,13 +97,10 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
             }
 
             @Override
-            public AsyncFuture<Void> destruct(final BigtableConnection value) throws Exception {
-                return async.call(new Callable<Void>() {
-                    @Override
-                    public Void call() throws Exception {
-                        value.close();
-                        return null;
-                    }
+            public AsyncFuture<Void> destruct(final BigtableConnection value) {
+                return async.call(() -> {
+                    value.close();
+                    return null;
                 });
             }
         });
@@ -144,7 +138,13 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
         return new Builder();
     }
 
-    public static class Builder implements AnalyticsModule.Builder {
+    public String toString() {
+      return "BigtableAnalyticsModule(project=" + this.project + ", cluster=" + this.cluster
+             + ", credentials=" + this.credentials + ", maxPendingReports=" + this.maxPendingReports
+             + ")";
+    }
+
+  public static class Builder implements AnalyticsModule.Builder {
         private Optional<String> project = Optional.empty();
         private Optional<String> instance = Optional.empty();
         private Optional<CredentialsBuilder> credentials = Optional.empty();

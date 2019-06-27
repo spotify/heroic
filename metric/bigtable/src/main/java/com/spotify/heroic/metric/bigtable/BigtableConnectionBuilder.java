@@ -38,9 +38,7 @@ import eu.toolchain.async.AsyncFuture;
 import io.grpc.Status;
 import java.util.Optional;
 import java.util.concurrent.Callable;
-import lombok.ToString;
 
-@ToString(of = {"project", "instance", "credentials"})
 public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
     private static final String USER_AGENT = "heroic";
 
@@ -112,7 +110,11 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
             client);
     }
 
-    @ToString(of = {"project", "instance"})
+    public String toString() {
+        return "BigtableConnectionBuilder(project=" + this.project + ", instance=" + this.instance
+               + ", credentials=" + this.credentials + ")";
+    }
+
     public static class GrpcBigtableConnection implements BigtableConnection {
         private final AsyncFramework async;
         private final String project;
@@ -157,6 +159,11 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
             });
 
             return async.collectAndDiscard(ImmutableList.of(mutator.close(), closeSession));
+        }
+
+        public String toString() {
+            return "BigtableConnectionBuilder.GrpcBigtableConnection(project=" + this.project
+                   + ", instance=" + this.instance + ")";
         }
     }
 }

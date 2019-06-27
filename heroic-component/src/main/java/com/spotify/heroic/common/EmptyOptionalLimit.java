@@ -34,9 +34,7 @@ import java.util.SortedSet;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
 import java.util.stream.Stream;
-import lombok.EqualsAndHashCode;
 
-@EqualsAndHashCode
 @JsonSerialize(using = EmptyOptionalLimit.Serializer.class)
 class EmptyOptionalLimit implements OptionalLimit {
     static final OptionalLimit INSTANCE = new EmptyOptionalLimit();
@@ -123,6 +121,30 @@ class EmptyOptionalLimit implements OptionalLimit {
     @Override
     public String toString() {
         return "[empty]";
+    }
+
+    public boolean equals(final Object o) {
+        if (o == this) {
+            return true;
+        }
+        if (!(o instanceof EmptyOptionalLimit)) {
+            return false;
+        }
+        final EmptyOptionalLimit other =
+          (EmptyOptionalLimit) o;
+        if (!other.canEqual(this)) {
+            return false;
+        }
+        return true;
+    }
+
+    protected boolean canEqual(final Object other) {
+        return other instanceof EmptyOptionalLimit;
+    }
+
+    public int hashCode() {
+        int result = 1;
+        return result;
     }
 
     static class Serializer extends JsonSerializer<OptionalLimit> {

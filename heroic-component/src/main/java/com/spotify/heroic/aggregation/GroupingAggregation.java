@@ -41,11 +41,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
 
 @Data
-@EqualsAndHashCode(of = {"of", "each"})
 public abstract class GroupingAggregation implements AggregationInstance {
     private final Optional<List<String>> of;
     private final AggregationInstance each;
@@ -113,7 +110,6 @@ public abstract class GroupingAggregation implements AggregationInstance {
         return String.format("%s(of=%s, each=%s)", getClass().getSimpleName(), of, each);
     }
 
-    @ToString
     private final class GroupSession implements AggregationSession {
         private final ConcurrentMap<Map<String, String>, AggregationSession> sessions =
             new ConcurrentHashMap<>();
@@ -209,6 +205,14 @@ public abstract class GroupingAggregation implements AggregationInstance {
             }
 
             return new AggregationResult(result.build(), statistics);
+        }
+
+        public String toString() {
+            return "GroupingAggregation.GroupSession(sessions=" + this.sessions + ", lock="
+                   + this.lock
+                   + ", range=" + this.range + ", quotaWatcher=" + this.quotaWatcher
+                   + ", bucketStrategy="
+                   + this.bucketStrategy + ")";
         }
     }
 }

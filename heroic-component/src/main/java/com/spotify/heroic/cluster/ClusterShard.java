@@ -39,14 +39,14 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
 
-@Slf4j
 @Data
 public class ClusterShard {
     private static final QueryTrace.Identifier RETRY_BACKOFF =
         QueryTrace.Identifier.create("retry-backoff");
     private static final String DARKLOAD = "darkload";
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(ClusterShard.class);
 
     private final AsyncFramework async;
 

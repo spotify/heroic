@@ -22,12 +22,12 @@
 package com.spotify.heroic.metric.bigtable.api;
 
 import com.google.bigtable.v2.MutateRowRequest;
+import com.google.cloud.bigtable.grpc.async.BulkMutation;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.ByteString;
-import com.google.cloud.bigtable.grpc.async.BulkMutation;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
@@ -37,19 +37,19 @@ import io.opencensus.trace.Span;
 import io.opencensus.trace.Status;
 import io.opencensus.trace.Tracer;
 import io.opencensus.trace.Tracing;
-import lombok.extern.slf4j.Slf4j;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Slf4j
 public class BigtableMutatorImpl implements BigtableMutator {
+    private static final Logger log = LoggerFactory.getLogger(BigtableMutatorImpl.class);
+
     private final AsyncFramework async;
-    private final com.google.cloud.bigtable.grpc.BigtableSession
-        session;
+    private final com.google.cloud.bigtable.grpc.BigtableSession session;
     private final boolean disableBulkMutations;
     private final Map<String, BulkMutation> tableToBulkMutation;
     private final ScheduledExecutorService scheduler;

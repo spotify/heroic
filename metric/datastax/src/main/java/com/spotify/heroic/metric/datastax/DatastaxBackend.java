@@ -81,8 +81,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.inject.Inject;
 import lombok.Data;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 
@@ -90,14 +90,13 @@ import org.slf4j.MarkerFactory;
  * MetricBackend for Heroic cassandra datastore.
  */
 @DatastaxScope
-@Slf4j
-@ToString(of = {"connection"})
 public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles {
     private static final Marker FAILED_METRICS = MarkerFactory.getMarker("FAILED_METRICS");
     public static final QueryTrace.Identifier FETCH_SEGMENT =
         QueryTrace.identifier(DatastaxBackend.class, "fetch_segment");
     public static final QueryTrace.Identifier FETCH =
         QueryTrace.identifier(DatastaxBackend.class, "fetch");
+    private static final Logger log = LoggerFactory.getLogger(DatastaxBackend.class);
 
     private final AsyncFramework async;
     private final Managed<Connection> connection;
@@ -541,6 +540,10 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
         }
 
         return fetches;
+    }
+
+    public String toString() {
+        return "DatastaxBackend(connection=" + this.connection + ")";
     }
 
     private final class RowFetchHelper<R, T> implements FutureDone<ResultSet> {
