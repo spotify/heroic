@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.profile;
 
+import static com.spotify.heroic.ParameterSpecification.parameter;
+
 import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.policies.RetryPolicy;
 import com.google.common.base.Joiner;
@@ -35,17 +37,13 @@ import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.datastax.AggressiveRetryPolicy;
 import com.spotify.heroic.metric.datastax.DatastaxMetricModule;
 import com.spotify.heroic.metric.datastax.schema.SchemaModule;
-import com.spotify.heroic.metric.datastax.schema.legacy.LegacySchemaModule;
 import com.spotify.heroic.metric.datastax.schema.ng.NextGenSchemaModule;
-
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
-
-import static com.spotify.heroic.ParameterSpecification.parameter;
 
 public class CassandraProfile extends HeroicProfileBase {
     private static final Splitter splitter = Splitter.on(',').trimResults();
@@ -54,7 +52,6 @@ public class CassandraProfile extends HeroicProfileBase {
 
     {
         types.put("ng", () -> NextGenSchemaModule.builder().build());
-        types.put("legacy", () -> LegacySchemaModule.builder().build());
     }
 
     @Override
@@ -74,7 +71,7 @@ public class CassandraProfile extends HeroicProfileBase {
 
             module.schema(builder.call());
         } else {
-            module.schema(LegacySchemaModule.builder().build());
+            module.schema(NextGenSchemaModule.builder().build());
         }
 
         module.seeds(params
@@ -114,8 +111,8 @@ public class CassandraProfile extends HeroicProfileBase {
         return "Configures a metric backend for Cassandra";
     }
 
-    public static final int DEFAULT_NUM_RETRIES = 10;
-    public static final int DEFAULT_ROTATE_HOST = 2;
+    private static final int DEFAULT_NUM_RETRIES = 10;
+    private static final int DEFAULT_ROTATE_HOST = 2;
 
     private RetryPolicy convertRetryPolicy(final String policyName, final ExtraParameters params) {
         if ("aggressive".equals(policyName)) {
