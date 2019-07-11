@@ -41,10 +41,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import lombok.ToString;
 
 @AutoSerialize
-@ToString(of = {"key", "tags", "resource"})
 public class Series implements Comparable<Series> {
     static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
 
@@ -315,5 +313,10 @@ public class Series implements Comparable<Series> {
 
         return DSL.dumpString(key) + " " + "{" + TAGS_JOINER.join(tags) + "}" + " " + "{" +
             TAGS_JOINER.join(resource) + "}";
+    }
+
+    public String toString() {
+        return "Series(key=" + this.getKey() + ", tags=" + this.getTags() + ", resource=" + this
+          .getResource() + ")";
     }
 }

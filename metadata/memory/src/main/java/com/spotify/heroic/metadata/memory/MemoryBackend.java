@@ -41,19 +41,16 @@ import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.WriteMetadata;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.ToString;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.inject.Inject;
+import javax.inject.Named;
 
 @MemoryScope
-@ToString(exclude = {"async", "storage"})
 public class MemoryBackend implements MetadataBackend {
     private final AsyncFramework async;
     private final Groups groups;
@@ -198,5 +195,9 @@ public class MemoryBackend implements MetadataBackend {
     private Stream<Series> lookup(final Filter filter, final OptionalLimit limit) {
         final Stream<Series> series = lookupFilter(filter);
         return limit.asLong().map(series::limit).orElse(series);
+    }
+
+    public String toString() {
+        return "MemoryBackend(groups=" + this.groups + ")";
     }
 }

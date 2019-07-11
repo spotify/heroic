@@ -26,15 +26,12 @@ import com.spotify.heroic.proto.ShellMessage.FileEvent;
 import com.spotify.heroic.proto.ShellMessage.FileStream;
 import com.spotify.heroic.proto.ShellMessage.Message;
 import com.spotify.heroic.shell.protocol.SimpleMessageVisitor;
-import java.io.InputStream;
-import java.io.OutputStream;
-import lombok.extern.slf4j.Slf4j;
-
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.Socket;
 
-@Slf4j
 public class ShellConnection implements Closeable {
     private final Socket socket;
     private final InputStream reader;

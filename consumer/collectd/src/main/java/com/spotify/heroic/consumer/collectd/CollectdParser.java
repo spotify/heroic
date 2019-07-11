@@ -25,15 +25,13 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.consumer.collectd.CollectdValue.Counter;
 import io.netty.buffer.ByteBuf;
-import lombok.extern.slf4j.Slf4j;
-
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.IntStream;
+import org.slf4j.Logger;
 
-@Slf4j
 public class CollectdParser {
     public static final int HOST = 0x0000;
     public static final int TIME = 0x0001;
@@ -51,6 +49,7 @@ public class CollectdParser {
     public static final long FACTOR_HR = 1 << 30;
 
     public static final Charset UTF8 = Charsets.UTF_8;
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(CollectdParser.class);
 
     public static Iterator<CollectdSample> parse(final ByteBuf frame) {
         if (frame.readableBytes() < 4) {

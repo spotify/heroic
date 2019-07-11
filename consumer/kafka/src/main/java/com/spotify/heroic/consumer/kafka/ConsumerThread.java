@@ -36,12 +36,12 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.LongAdder;
 import lombok.Setter;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
 
-@Slf4j
 public final class ConsumerThread extends Thread {
     private static final long RETRY_INITIAL_SLEEP = 5;
     private static final long RETRY_MAX_SLEEP = 40;
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(ConsumerThread.class);
 
     private final AsyncFramework async;
     private final Clock clock;

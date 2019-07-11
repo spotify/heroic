@@ -46,7 +46,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 import lombok.Data;
-import lombok.ToString;
 
 @Data
 public class EmptyInstance implements AggregationInstance {
@@ -84,7 +83,6 @@ public class EmptyInstance implements AggregationInstance {
      * A trivial session that collects all values provided to it.
      */
     @Data
-    @ToString(of = {})
     private static final class CollectorSession implements AggregationSession {
         private final ConcurrentMap<Map<String, String>, SubSession> sessions =
             new ConcurrentHashMap<>();
@@ -202,6 +200,10 @@ public class EmptyInstance implements AggregationInstance {
             final Iterator<T> metrics = Iterators.mergeSorted(iterators, Metric.comparator());
 
             return new AggregationOutput(key, series, builder.apply(ImmutableList.copyOf(metrics)));
+        }
+
+        public String toString() {
+            return "EmptyInstance.CollectorSession()";
         }
     }
 

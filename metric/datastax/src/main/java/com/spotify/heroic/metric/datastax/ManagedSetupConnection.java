@@ -36,9 +36,7 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ManagedSetup;
 import java.net.InetSocketAddress;
 import java.util.Collection;
-import lombok.ToString;
 
-@ToString(of = {"seeds"})
 public class ManagedSetupConnection implements ManagedSetup<Connection> {
     private final AsyncFramework async;
     private final Collection<InetSocketAddress> seeds;
@@ -115,5 +113,9 @@ public class ManagedSetupConnection implements ManagedSetup<Connection> {
     @Override
     public AsyncFuture<Void> destruct(final Connection c) {
         return Async.bind(async, c.session.closeAsync()).directTransform(ign -> null);
+    }
+
+    public String toString() {
+        return "ManagedSetupConnection(seeds=" + this.seeds + ")";
     }
 }

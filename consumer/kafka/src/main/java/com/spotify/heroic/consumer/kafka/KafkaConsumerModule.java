@@ -61,9 +61,8 @@ import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
 import kafka.javaapi.consumer.ConsumerConnector;
 import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
 
-@Slf4j
 @Data
 public class KafkaConsumerModule implements ConsumerModule {
     public static final int DEFAULT_THREADS_PER_TOPIC = 2;
@@ -71,6 +70,7 @@ public class KafkaConsumerModule implements ConsumerModule {
     public static final long DEFAULT_COMMIT_INTERVAL = TimeUnit.SECONDS.toMillis(30);
     private static final long COMMIT_INITIAL_DELAY = TimeUnit.SECONDS.toMillis(2);
     private static final String AUTO_COMMIT_ENABLE = "auto.commit.enable";
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(KafkaConsumerModule.class);
 
     private final Optional<String> id;
     private final List<String> topics;

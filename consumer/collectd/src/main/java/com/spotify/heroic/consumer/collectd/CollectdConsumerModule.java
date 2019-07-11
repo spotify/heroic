@@ -45,12 +45,13 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import javax.inject.Named;
 import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
 
-@Slf4j
 @Data
 public class CollectdConsumerModule implements ConsumerModule {
     public static final int DEFAULT_PORT = 25826;
+    private static final Logger log =
+      org.slf4j.LoggerFactory.getLogger(CollectdConsumerModule.class);
 
     private final Optional<String> id;
     private final Optional<String> host;

@@ -24,12 +24,11 @@ package com.spotify.heroic.http.metadata;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.filter.Filter;
-import lombok.Data;
-import lombok.NonNull;
-
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import lombok.Data;
+import org.jetbrains.annotations.NotNull;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -39,34 +38,34 @@ public class MetadataQueryBody {
     /**
      * Only include time series which match the exact key.
      */
-    @NonNull
+    @NotNull
     private final Optional<String> matchKey;
 
     /**
      * Only include time series which matches the exact key/value combination.
      */
-    @NonNull
+    @NotNull
     private final Optional<Map<String, String>> matchTags;
 
     /**
      * Only include time series which has the following tags.
      */
-    @NonNull
+    @NotNull
     private final Optional<Set<String>> hasTags;
 
     /**
      * A general set of filters. If this is combined with the other mechanisms, all the filters will
      * be AND:ed together.
      */
-    @NonNull
+    @NotNull
     private final Optional<Filter> filter;
 
     /**
      * The date range to query for.
      */
-    @NonNull
+    @NotNull
     private final Optional<QueryDateRange> range;
 
-    @NonNull
+    @NotNull
     private final Optional<Integer> limit;
 }

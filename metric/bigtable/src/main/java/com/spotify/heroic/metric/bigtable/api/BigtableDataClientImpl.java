@@ -37,13 +37,10 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
 import java.io.IOException;
 import java.util.List;
-import lombok.ToString;
 
-@ToString
 public class BigtableDataClientImpl implements BigtableDataClient {
     private final AsyncFramework async;
-    private final com.google.cloud.bigtable.grpc.BigtableSession
-        session;
+    private final com.google.cloud.bigtable.grpc.BigtableSession session;
     private final BigtableMutator mutator;
     private final String clusterUri;
 
@@ -218,4 +215,9 @@ public class BigtableDataClientImpl implements BigtableDataClient {
         return future;
     }
 
+    public String toString() {
+        return "BigtableDataClientImpl(async=" + this.async + ", session=" + this.session
+               + ", mutator="
+               + this.mutator + ", clusterUri=" + this.clusterUri + ")";
+    }
 }

@@ -22,10 +22,8 @@
 package com.spotify.heroic.grammar;
 
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 
 @Data
-@EqualsAndHashCode(callSuper = true)
 public class ParseException extends RuntimeException {
     private static final long serialVersionUID = -7313640439644659488L;
 

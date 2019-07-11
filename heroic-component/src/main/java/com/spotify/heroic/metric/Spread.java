@@ -23,10 +23,8 @@ package com.spotify.heroic.metric;
 
 import com.google.common.hash.Hasher;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 
 @Data
-@EqualsAndHashCode(exclude = {"valueHash"})
 public class Spread implements Metric {
     private final long timestamp;
     private final long count;

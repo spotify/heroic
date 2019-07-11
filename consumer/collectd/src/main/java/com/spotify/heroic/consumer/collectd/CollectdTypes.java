@@ -35,9 +35,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
 
-@Slf4j
 public class CollectdTypes {
     private static final Map<String, Mapping> MAPPINGS = new HashMap<>();
 
@@ -49,6 +48,7 @@ public class CollectdTypes {
     public static final Plugin INTERFACE = s -> ImmutableMap.of("interface", s.getPluginInstance());
 
     public static final Plugin LOAD = s -> ImmutableMap.of("interface", s.getPluginInstance());
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(CollectdTypes.class);
 
     static {
         type("disk_latency", mapping(DISK, what("disk-latency-read"), what("disk-latency-write")));

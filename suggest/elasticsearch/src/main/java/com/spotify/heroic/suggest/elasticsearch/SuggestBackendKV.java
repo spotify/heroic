@@ -92,8 +92,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Named;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 import org.elasticsearch.action.DocWriteRequest;
 import org.elasticsearch.action.search.SearchRequestBuilder;
@@ -118,11 +116,10 @@ import org.elasticsearch.search.aggregations.metrics.cardinality.CardinalityAggr
 import org.elasticsearch.search.aggregations.metrics.tophits.TopHits;
 import org.elasticsearch.search.aggregations.metrics.tophits.TopHitsAggregationBuilder;
 
-@Slf4j
 @ElasticsearchScope
-@ToString(of = {"connection"})
 public class SuggestBackendKV extends AbstractElasticsearchBackend
-    implements SuggestBackend, Grouped, LifeCycles {
+  implements SuggestBackend, Grouped, LifeCycles {
+
     private final Tracer tracer = Tracing.getTracer();
     public static final String WRITE_CACHE_SIZE = "write-cache-size";
 
@@ -807,5 +804,9 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
             return new BackendType(mappings, settings, SuggestBackendKV.class);
         };
+    }
+
+    public String toString() {
+        return "SuggestBackendKV(connection=" + this.connection + ")";
     }
 }

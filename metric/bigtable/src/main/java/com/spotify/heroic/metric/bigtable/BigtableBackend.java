@@ -86,14 +86,14 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.inject.Inject;
 import javax.inject.Named;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @BigtableScope
-@ToString(of = {"connection"})
-@Slf4j
 public class BigtableBackend extends AbstractMetricBackend implements LifeCycles {
+    private static final Logger log = LoggerFactory.getLogger(BigtableBackend.class);
+
     /* maxmimum number of cells supported for each batch mutation */
     public static final int MAX_BATCH_SIZE = 10000;
 
@@ -156,8 +156,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         return connection.doto(c -> configureMetricsTable(c.tableAdminClient()));
     }
 
-    private AsyncFuture<Void> configureMetricsTable(final BigtableTableAdminClient admin)
-        throws IOException {
+    private AsyncFuture<Void> configureMetricsTable(final BigtableTableAdminClient admin) {
         return async.call(() -> {
             final Table createdTable =
                 admin.getTable(this.table).orElseGet(() -> admin.createTable(this.table));
@@ -185,7 +184,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
     private AsyncFuture<Table> waitUntilTable(
         final BigtableTableAdminClient admin, final Table table
-    ) throws InterruptedException, java.util.concurrent.ExecutionException {
+    ) {
         return waitUntil(() -> admin
             .getTable(table.getName())
             .orElseThrow(
@@ -194,7 +193,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
     private AsyncFuture<ColumnFamily> waitUntilColumnFamily(
         final BigtableTableAdminClient admin, final Table originalTable, final String columnFamily
-    ) throws InterruptedException, java.util.concurrent.ExecutionException {
+    ) {
         return waitUntil(() -> {
             final Table table = admin
                 .getTable(originalTable.getName())
@@ -574,6 +573,10 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                ((long) (bytes[2] & 0xff) << 8) +
                ((long) (bytes[3] & 0xff) << 0);
         // @formatter:on
+    }
+
+    public String toString() {
+        return "BigtableBackend(connection=" + this.connection + ")";
     }
 
     private static final class PreparedQuery {

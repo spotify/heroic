@@ -47,9 +47,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import javax.inject.Named;
 import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
 
-@Slf4j
 @Data
 public class PubSubConsumerModule implements ConsumerModule {
     private static final int DEFAULT_THREADS_PER_SUBSCRIPTION = 8;
@@ -58,6 +57,7 @@ public class PubSubConsumerModule implements ConsumerModule {
     // 20MB API maximum message size.
     private static final int DEFAULT_MAX_INBOUND_MESSAGE_SIZE = 20 * 1024 * 1024;
     private static final Long DEFAULT_KEEP_ALIVE = 300L;
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(PubSubConsumerModule.class);
 
     private final Optional<String> id;
     private final int threads;

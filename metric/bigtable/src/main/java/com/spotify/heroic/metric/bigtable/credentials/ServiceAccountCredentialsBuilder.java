@@ -27,9 +27,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.cloud.bigtable.config.CredentialOptions;
 import com.spotify.heroic.metric.bigtable.CredentialsBuilder;
-import lombok.ToString;
 
-@ToString(of = {"serviceAccount", "keyFile"})
 public class ServiceAccountCredentialsBuilder implements CredentialsBuilder {
     private final String serviceAccount;
     private final String keyFile;
@@ -50,6 +48,12 @@ public class ServiceAccountCredentialsBuilder implements CredentialsBuilder {
 
     public static Builder builder() {
         return new Builder();
+    }
+
+    public String toString() {
+        return "ServiceAccountCredentialsBuilder(serviceAccount=" + this.serviceAccount
+               + ", keyFile="
+               + this.keyFile + ")";
     }
 
     public static class Builder {

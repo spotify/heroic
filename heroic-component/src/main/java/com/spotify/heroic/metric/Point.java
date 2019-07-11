@@ -23,10 +23,8 @@ package com.spotify.heroic.metric;
 
 import com.google.common.hash.Hasher;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 
 @Data
-@EqualsAndHashCode
 public class Point implements Metric {
     private final long timestamp;
     private final double value;

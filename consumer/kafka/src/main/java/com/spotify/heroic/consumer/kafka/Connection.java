@@ -28,11 +28,12 @@ import eu.toolchain.async.AsyncFuture;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
 
-@Slf4j
 @Data
 public class Connection implements ConsumerThreadCoordinator {
+
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(Connection.class);
     private final AsyncFramework async;
     private final ConsumerReporter reporter;
 

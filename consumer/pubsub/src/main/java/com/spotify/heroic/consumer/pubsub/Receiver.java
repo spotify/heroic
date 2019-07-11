@@ -31,17 +31,18 @@ import com.spotify.heroic.consumer.ConsumerSchema;
 import com.spotify.heroic.consumer.ConsumerSchemaValidationException;
 import com.spotify.heroic.statistics.ConsumerReporter;
 import com.spotify.heroic.statistics.FutureReporter;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.LongAdder;
 import io.opencensus.common.Scope;
 import io.opencensus.trace.Span;
 import io.opencensus.trace.Status;
 import io.opencensus.trace.Tracer;
 import io.opencensus.trace.Tracing;
-import lombok.extern.slf4j.Slf4j;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
+import org.slf4j.Logger;
 
-@Slf4j
 class Receiver implements MessageReceiver {
+
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(Receiver.class);
     private final ConsumerSchema.Consumer consumer;
     private final ConsumerReporter reporter;
     private final AtomicLong errors;

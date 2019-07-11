@@ -40,9 +40,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
 import java.util.stream.Stream;
-import lombok.EqualsAndHashCode;
 
-@EqualsAndHashCode
 @JsonSerialize(using = ValueOptionalLimit.Serializer.class)
 class ValueOptionalLimit implements OptionalLimit {
     private final long limit;
@@ -164,6 +162,36 @@ class ValueOptionalLimit implements OptionalLimit {
         }
 
         return converter.apply(input.stream().limit(limit).iterator());
+    }
+
+    public boolean equals(final Object o) {
+        if (o == this) {
+            return true;
+        }
+        if (!(o instanceof ValueOptionalLimit)) {
+            return false;
+        }
+        final ValueOptionalLimit other =
+          (ValueOptionalLimit) o;
+        if (!other.canEqual((Object) this)) {
+            return false;
+        }
+        if (this.limit != other.limit) {
+            return false;
+        }
+        return true;
+    }
+
+    protected boolean canEqual(final Object other) {
+        return other instanceof ValueOptionalLimit;
+    }
+
+    public int hashCode() {
+        final int prime = 59;
+        int result = 1;
+        final long limit = this.limit;
+        result = result * prime + (int) (limit >>> 32 ^ limit);
+        return result;
     }
 
     static class Serializer extends JsonSerializer<ValueOptionalLimit> {

@@ -27,8 +27,6 @@ import com.spotify.heroic.proto.ShellMessage.FileEvent.Event;
 import com.spotify.heroic.proto.ShellMessage.FileStream.Type;
 import com.spotify.heroic.proto.ShellMessage.Message;
 import com.spotify.heroic.shell.protocol.MessageBuilder;
-import lombok.extern.slf4j.Slf4j;
-
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
@@ -36,10 +34,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.file.Path;
+import org.slf4j.Logger;
 
-@Slf4j
 final class ServerConnection extends ShellConnection {
     public static final int BUFFER_SIZE = (1 << 16);
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(ServerConnection.class);
 
     public ServerConnection(final Socket socket)
         throws IOException {

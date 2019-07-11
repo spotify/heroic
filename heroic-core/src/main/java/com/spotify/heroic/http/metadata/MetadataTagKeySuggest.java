@@ -23,19 +23,18 @@ package com.spotify.heroic.http.metadata;
 
 import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.filter.Filter;
-import lombok.Data;
-import lombok.NonNull;
-
 import java.util.Optional;
+import lombok.Data;
+import org.jetbrains.annotations.NotNull;
 
 @Data
 public class MetadataTagKeySuggest {
     public static final int DEFAULT_LIMIT = 10;
 
-    @NonNull
+    @NotNull
     private final Optional<Filter> filter;
-    @NonNull
+    @NotNull
     private final Optional<QueryDateRange> range;
-    @NonNull
+    @NotNull
     private final Optional<Integer> limit;
 }

@@ -26,13 +26,10 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import com.google.common.hash.Hasher;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-
 import java.util.Map;
+import lombok.Data;
 
 @Data
-@EqualsAndHashCode
 public class Event implements Metric {
     private static final Map<String, String> EMPTY_PAYLOAD = ImmutableMap.of();
 
