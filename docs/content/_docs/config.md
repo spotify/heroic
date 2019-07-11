@@ -392,10 +392,6 @@ seeds:
 
 # Data schema to use.
 schema:
-  # The type of schema to use, either ng or legacy. `ng` stands for next generation and should be used for all new installations.
-  # The initial legacy schema was inherited in part from some of the key composition utilities
-  # made available by datastax, making it a bit awkward to work with for other utilities.
-  type: [ng | legacy] default = ng
   # Name of the Cassandra keyspace to use.
   keyspace: <string> default = heroic
 
