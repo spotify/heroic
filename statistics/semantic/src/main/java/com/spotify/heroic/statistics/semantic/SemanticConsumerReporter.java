@@ -80,9 +80,10 @@ public class SemanticConsumerReporter implements ConsumerReporter {
                 new SemanticHeroicTimerGauge());
     }
 
-    @java.beans.ConstructorProperties({ "base", "messageIn", "metricsIn", "messageError", "messageRetry",
-                                        "consumerSchemaError", "consumerThreadsLiveRatio",
-                                        "messageSize", "messageDrift", "consumer",
+    @java.beans.ConstructorProperties({ "base", "messageIn", "metricsIn", "messageError",
+                                        "messageRetry", "consumerSchemaError",
+                                        "consumerThreadsLiveRatio", "messageSize",
+                                        "messageDrift", "consumer",
                                         "consumerCommitWholeOperationTimer",
                                         "consumerCommitPhase1Timer", "consumerCommitPhase2Timer" })
     public SemanticConsumerReporter(
