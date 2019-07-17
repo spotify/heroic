@@ -249,6 +249,7 @@ public class Spotify100 implements ConsumerSchema {
             final List<Point> points = ImmutableList.of(p);
 
             reporter.reportMessageDrift(clock.currentTimeMillis() - p.getTimestamp());
+            reporter.reportMetricsIn(1);
             AsyncFuture<Ingestion> ingestionFuture =
                 ingestion.write(new Ingestion.Request(series, MetricCollection.points(points)));
 
