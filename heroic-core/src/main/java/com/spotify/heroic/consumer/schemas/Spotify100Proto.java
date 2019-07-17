@@ -104,6 +104,8 @@ public class Spotify100Proto implements ConsumerSchema {
         ingestions.add(ingestion.write(new Ingestion.Request(s, MetricCollection.points(points))));
       }
 
+      reporter.reportMetricsIn(metrics.size());
+
       // Return Void future, to not leak unnecessary information from the backend but just
       // allow monitoring of when the consumption is done.
       return async.collectAndDiscard(ingestions);

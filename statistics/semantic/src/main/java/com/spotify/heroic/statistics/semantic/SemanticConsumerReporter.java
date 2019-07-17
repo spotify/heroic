@@ -35,6 +35,7 @@ public class SemanticConsumerReporter implements ConsumerReporter {
     private final MetricId base;
 
     private final Counter messageIn;
+    private final Counter metricsIn;
     private final Counter messageError;
     private final Counter messageRetry;
     private final Counter consumerSchemaError;
@@ -51,6 +52,7 @@ public class SemanticConsumerReporter implements ConsumerReporter {
         this.base = MetricId.build().tagged("component", COMPONENT, "id", id);
 
         messageIn = registry.counter(base.tagged("what", "message-in", "unit", Units.COUNT));
+        metricsIn = registry.counter(base.tagged("what", "metrics-in", "unit", Units.COUNT));
         messageError = registry.counter(base.tagged("what", "message-error", "unit", Units.COUNT));
         messageRetry = registry.counter(base.tagged("what", "message-retry", "unit", Units.COUNT));
         consumerSchemaError =
@@ -78,14 +80,16 @@ public class SemanticConsumerReporter implements ConsumerReporter {
                 new SemanticHeroicTimerGauge());
     }
 
-    @java.beans.ConstructorProperties({ "base", "messageIn", "messageError", "messageRetry",
-                                        "consumerSchemaError", "consumerThreadsLiveRatio",
-                                        "messageSize", "messageDrift", "consumer",
+    @java.beans.ConstructorProperties({ "base", "messageIn", "metricsIn", "messageError",
+                                        "messageRetry", "consumerSchemaError",
+                                        "consumerThreadsLiveRatio", "messageSize",
+                                        "messageDrift", "consumer",
                                         "consumerCommitWholeOperationTimer",
                                         "consumerCommitPhase1Timer", "consumerCommitPhase2Timer" })
     public SemanticConsumerReporter(
         final MetricId base,
         final Counter messageIn,
+        final Counter metricsIn,
         final Counter messageError,
         final Counter messageRetry,
         final Counter consumerSchemaError,
@@ -99,6 +103,7 @@ public class SemanticConsumerReporter implements ConsumerReporter {
     ) {
         this.base = base;
         this.messageIn = messageIn;
+        this.metricsIn = metricsIn;
         this.messageError = messageError;
         this.messageRetry = messageRetry;
         this.consumerSchemaError = consumerSchemaError;
@@ -115,6 +120,11 @@ public class SemanticConsumerReporter implements ConsumerReporter {
     public void reportMessageSize(int size) {
         messageIn.inc();
         messageSize.update(size);
+    }
+
+    @Override
+    public void reportMetricsIn(int size) {
+        metricsIn.inc(size);
     }
 
     @Override
