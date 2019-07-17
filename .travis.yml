@@ -40,10 +40,3 @@ after_script:
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
-
-deploy:
-  # trigger docker hub build
-  on:
-      tags: true
-  provider: script
-  script: bash .scripts/trigger_docker_hub.sh
