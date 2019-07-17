@@ -34,6 +34,10 @@ public class NoopConsumerReporter implements ConsumerReporter {
     }
 
     @Override
+    public void reportMetricsIn(int size) {
+    }
+
+    @Override
     public void reportMessageError() {
     }
 
