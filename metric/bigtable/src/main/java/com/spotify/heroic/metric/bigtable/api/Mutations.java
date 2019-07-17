@@ -26,9 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import lombok.Data;
-import org.joda.time.DateTime;
 
 public class Mutations {
     private final List<com.google.bigtable.v2.Mutation> mutations;
@@ -68,7 +66,7 @@ public class Mutations {
                     .newBuilder()
                     .setFamilyName(family)
                     .setColumnQualifier(columnQualifier)
-                    .setTimestampMicros(TimeUnit.MILLISECONDS.toMicros(DateTime.now().getMillis()))
+                    .setTimestampMicros(-1)
                     .setValue(value);
 
             mutations.add(
