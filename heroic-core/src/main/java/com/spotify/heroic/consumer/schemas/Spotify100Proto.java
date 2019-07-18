@@ -90,11 +90,6 @@ public class Spotify100Proto implements ConsumerSchema {
             "time: field must be a positive number: " + metric.toString());
         }
 
-        if (metric.getKey().isEmpty()) {
-          throw new ConsumerSchemaValidationException(
-            "key: field must be defined: " + metric.toString());
-        }
-
         final Series s = Series.of(metric.getKey(), metric.getTagsMap(), metric.getResourceMap());
         final Point p = new Point(metric.getTime(), metric.getValue());
         final List<Point> points = ImmutableList.of(p);
