@@ -123,14 +123,16 @@ public class Spotify100ProtoTest {
 
 
   @Test
-  public void testKeyDefinedValidationError() throws Exception {
-    exceptionRule.expect(ConsumerSchemaValidationException.class);
-    exceptionRule.expectMessage("key: field must be defined");
-
+  public void testEmptyKeyIsConsumed() throws Exception {
     final Metric metric = Metric.newBuilder().setTime(1000L).build();
     final Batch batch = Batch.newBuilder().addMetric(metric).build();
 
     consumer.consume(Snappy.compress((batch.toByteArray())));
+
+    final Series s = Series.of(metric.getKey(), metric.getTagsMap(), metric.getResourceMap());
+    final Point p = new Point(metric.getTime(), metric.getValue());
+    final List<Point> points = ImmutableList.of(p);
+    verify(ingestion).write(new Ingestion.Request(s, MetricCollection.points(points)));
   }
 
 }
