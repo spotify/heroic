@@ -66,6 +66,7 @@ public class Mutations {
                     .newBuilder()
                     .setFamilyName(family)
                     .setColumnQualifier(columnQualifier)
+                    .setTimestampMicros(-1)
                     .setValue(value);
 
             mutations.add(

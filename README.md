@@ -106,6 +106,9 @@ parameter. You can use [docs/log4j2-file.xml](/docs/log4j2-file.xml) as a base.
 We run tests with Gradle:
 
 ```
+# Start pubsub emulator
+gcloud beta emulators pubsub start
+
 # run unit tests
 ./gradlew test
 
