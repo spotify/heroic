@@ -37,7 +37,6 @@ import com.spotify.heroic.profile.MemoryProfile;
 import com.spotify.heroic.profile.PubSubConsumerProfile;
 import com.spotify.heroic.profile.QueryLoggingProfile;
 import com.spotify.heroic.profile.WebProfile;
-
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;

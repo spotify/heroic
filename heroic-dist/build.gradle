@@ -23,20 +23,38 @@ shadowJar {
 }
 
 dependencies {
+    api project(':heroic-core')
+    api project(':heroic-component')
+    api project(':heroic-metric-datastax')
+    api project(':heroic-metric-bigtable')
+    api project(':heroic-metric-memory')
+    api project(':heroic-metadata-elasticsearch')
+    api project(':heroic-metadata-memory')
+    api project(':heroic-suggest-elasticsearch')
+    api project(':heroic-suggest-memory')
+    api project(':heroic-discovery-simple')
+    api project(':heroic-aggregation-simple')
+    api project(':heroic-aggregation-cardinality')
+    api project(':heroic-consumer-kafka')
+    api project(':heroic-consumer-collectd')
+    api project(':heroic-consumer-pubsub')
+    api project(':heroic-rpc-grpc')
+    api project(':heroic-rpc-jvm')
+    api project(':heroic-statistics-semantic')
+    api project(':heroic-elasticsearch-utils')
+    
+    implementation 'com.spotify.heroic.repackaged:datastax-driver-core'
     implementation 'org.apache.logging.log4j:log4j-core'
     implementation 'org.apache.logging.log4j:log4j-1.2-api'
     implementation 'org.apache.logging.log4j:log4j-slf4j-impl'
     implementation 'org.slf4j:jcl-over-slf4j'
+    implementation 'org.slf4j:jul-to-slf4j'
     implementation 'args4j:args4j'
     implementation 'com.google.guava:guava'
     implementation 'eu.toolchain.async:tiny-async-core'
     implementation 'jline:jline:2.12'
     implementation 'com.google.protobuf:protobuf-java'
-    
-    api project(':heroic-all')
-    api project(':heroic-core')
-    api project(':heroic-component')
-    
+
     compileOnly 'org.projectlombok:lombok'
 
     testCompileOnly 'org.projectlombok:lombok'

@@ -255,16 +255,11 @@ class which is the central building block for setting up a Heroic instance.
 utilities for interacting with Elasticsearch. This is separate since we have
 more than one backend that needs to talk with elasticsearch.
 
-[`heroic-all`](heroic-all) contains dependencies and references to all modules
-that makes up a Heroic distribution. This is also where profiles are defined
-since they need to have access to all dependencies.
-
 Anything in the [`repackaged`](repackaged) directory is dependencies that
 include one or more Java packages that must be relocated to avoid conflicts.
 These are exported under the `com.spotify.heroic.repackaged` groupId.
 
-Finally there is [`heroic-dist`](heroic-dist), a small project that depends on
-[`heroic-all`](heroic-all). Here is where everything is bound together into a distribution
+Finally there is [`heroic-dist`](heroic-dist), a small project that depends on all module. Here is where everything is bound together into a distribution
 &mdash; a shaded jar. It also provides the entry-point for services, namely
 [`com.spotify.heroic.HeroicService`](heroic-dist/src/main/java/com/spotify/heroic/HeroicService.java)
 or through an interactive shell [`com.spotify.heroic.HeroicShell`](heroic-shell/src/main/java/com/spotify/heroic/HeroicShell.java).
