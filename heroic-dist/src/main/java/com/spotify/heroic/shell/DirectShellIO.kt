@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.shell
 
-import com.spotify.heroic.shell.ShellIO
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
