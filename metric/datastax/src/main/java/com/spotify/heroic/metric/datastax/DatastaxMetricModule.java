@@ -45,6 +45,8 @@ import dagger.Module;
 import dagger.Provides;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.Managed;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 import lombok.Data;
 
 import javax.inject.Named;
@@ -219,6 +221,12 @@ public final class DatastaxMetricModule implements MetricModule, DynamicModuleId
         return id;
     }
 
+    public static List<String> consistencyLevels() {
+        return Arrays.stream(ConsistencyLevel.values())
+          .map(ConsistencyLevel::name)
+          .collect(Collectors.toList());
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -271,14 +279,20 @@ public final class DatastaxMetricModule implements MetricModule, DynamicModuleId
             return this;
         }
 
-        public Builder consistencyLevel(ConsistencyLevel consistencyLevel) {
-            this.consistencyLevel = of(consistencyLevel);
+        public Builder consistencyLevel(String consistencyLevel) {
+            this.consistencyLevel = of(ConsistencyLevel.valueOf(consistencyLevel));
             return this;
         }
 
         public Builder retryPolicy(RetryPolicy retryPolicy) {
             this.retryPolicy = of(retryPolicy);
             return this;
+        }
+
+        public Builder aggressiveRetryPolicy(int numRetries, int rotateHost) {
+            this.retryPolicy = of(new AggressiveRetryPolicy(numRetries, rotateHost));
+            return this;
+
         }
 
         public Builder authentication(DatastaxAuthentication authentication) {

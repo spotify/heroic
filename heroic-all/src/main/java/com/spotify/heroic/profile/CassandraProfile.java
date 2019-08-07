@@ -23,8 +23,6 @@ package com.spotify.heroic.profile;
 
 import static com.spotify.heroic.ParameterSpecification.parameter;
 
-import com.datastax.driver.core.ConsistencyLevel;
-import com.datastax.driver.core.policies.RetryPolicy;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
@@ -34,11 +32,9 @@ import com.spotify.heroic.HeroicConfig;
 import com.spotify.heroic.ParameterSpecification;
 import com.spotify.heroic.metric.MetricManagerModule;
 import com.spotify.heroic.metric.MetricModule;
-import com.spotify.heroic.metric.datastax.AggressiveRetryPolicy;
 import com.spotify.heroic.metric.datastax.DatastaxMetricModule;
 import com.spotify.heroic.metric.datastax.schema.SchemaModule;
 import com.spotify.heroic.metric.datastax.schema.ng.NextGenSchemaModule;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -75,29 +71,27 @@ public class CassandraProfile extends HeroicProfileBase {
         }
 
         module.seeds(params
-            .get("seeds")
-            .map(s -> ImmutableSet.copyOf(splitter.split(s)))
-            .orElseGet(() -> ImmutableSet.of("localhost")));
+          .get("seeds")
+          .map(s -> ImmutableSet.copyOf(splitter.split(s)))
+          .orElseGet(() -> ImmutableSet.of("localhost")));
 
         params.getInteger("fetchSize").ifPresent(module::fetchSize);
         params.getDuration("readTimeout").ifPresent(module::readTimeout);
         params
-            .get("consistencyLevel")
-            .map(ConsistencyLevel::valueOf)
-            .ifPresent(module::consistencyLevel);
+          .get("consistencyLevel")
+          .ifPresent(module::consistencyLevel);
         params
-            .get("retryPolicy")
-            .map(policy -> this.convertRetryPolicy(policy, params))
-            .ifPresent(module::retryPolicy);
+          .get("retryPolicy")
+          .ifPresent(policy -> this.setRetryPolicy(module, policy, params));
 
         // @formatter:off
         return HeroicConfig.builder()
-            .metrics(
-                MetricManagerModule.builder()
-                    .backends(ImmutableList.<MetricModule>of(
-                        module.build()
-                    ))
-            );
+          .metrics(
+            MetricManagerModule.builder()
+              .backends(ImmutableList.<MetricModule>of(
+                module.build()
+              ))
+          );
         // @formatter:on
     }
 
@@ -114,11 +108,13 @@ public class CassandraProfile extends HeroicProfileBase {
     private static final int DEFAULT_NUM_RETRIES = 10;
     private static final int DEFAULT_ROTATE_HOST = 2;
 
-    private RetryPolicy convertRetryPolicy(final String policyName, final ExtraParameters params) {
+    private DatastaxMetricModule.Builder setRetryPolicy(
+      DatastaxMetricModule.Builder module, final String policyName, final ExtraParameters params
+    ) {
         if ("aggressive".equals(policyName)) {
             final int numRetries = params.getInteger("numRetries").orElse(DEFAULT_NUM_RETRIES);
             final int rotateHost = params.getInteger("rotateHost").orElse(DEFAULT_ROTATE_HOST);
-            return new AggressiveRetryPolicy(numRetries, rotateHost);
+            return module.aggressiveRetryPolicy(numRetries, rotateHost);
         }
 
         throw new IllegalArgumentException("Not a valid retry policy: " + policyName);
@@ -138,8 +134,7 @@ public class CassandraProfile extends HeroicProfileBase {
                     "<host>[:<port>][,..]"),
             parameter("fetchSize", "The number of results to fetch per batch", "<int>"),
             parameter("consistencyLevel", "The default consistency level to use",
-                    parameters.join(Arrays.stream(ConsistencyLevel.values()).map(cl -> cl.name())
-                            .iterator())),
+                    parameters.join(DatastaxMetricModule.consistencyLevels())),
             parameter("retryPolicy", "The retry policy to use (useful when migrating " +
                     "data)", "aggressive"),
             parameter("numRetries", "The number of retries to attempt for the current " +
