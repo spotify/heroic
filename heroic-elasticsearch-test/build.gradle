@@ -2,7 +2,8 @@ dependencies {
     implementation project(':heroic-test-it')
     implementation project(':heroic-elasticsearch-utils')
     implementation project(':heroic-component')
-    implementation project(':heroic-component-test')
+    implementation project(path: ':heroic-component', configuration: 'testRuntime')
+
     implementation 'com.google.guava:guava'
 }
 
