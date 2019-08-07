@@ -2,9 +2,9 @@ package com.spotify.heroic.metadata.elasticsearch;
 
 import com.spotify.heroic.elasticsearch.ConnectionModule;
 import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
+import com.spotify.heroic.elasticsearch.test.ElasticsearchTestUtils;
 import com.spotify.heroic.metadata.MetadataModule;
 import com.spotify.heroic.test.AbstractMetadataBackendIT;
-import com.spotify.heroic.test.ElasticsearchTestUtils;
 import java.util.UUID;
 
 public abstract class AbstractElasticsearchMetadataBackendIT extends AbstractMetadataBackendIT {

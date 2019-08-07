@@ -4,7 +4,6 @@ dependencies {
     implementation 'com.spotify.heroic.repackaged:folsom'
     compileOnly 'org.projectlombok:lombok'
 
-    testImplementation project(':heroic-elasticsearch-test')
     implementation project(':heroic-test-it')
     testImplementation 'eu.toolchain.async:tiny-async-core'
     testImplementation 'org.apache.logging.log4j:log4j-api'

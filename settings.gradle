@@ -5,7 +5,6 @@
 rootProject.name = 'heroic-parent'
 include(':heroic-component')
 include(':heroic-elasticsearch-utils')
-include(':heroic-elasticsearch-test')
 include(':heroic-loading')
 include(':heroic-core')
 include(':heroic-test')
