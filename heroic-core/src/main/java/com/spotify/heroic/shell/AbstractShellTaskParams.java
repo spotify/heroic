@@ -21,10 +21,9 @@
 
 package com.spotify.heroic.shell;
 
-import org.kohsuke.args4j.Option;
-
 import java.util.ArrayList;
 import java.util.List;
+import org.kohsuke.args4j.Option;
 
 public abstract class AbstractShellTaskParams implements TaskParameters {
     @Option(name = "-C", aliases = {"--config"},

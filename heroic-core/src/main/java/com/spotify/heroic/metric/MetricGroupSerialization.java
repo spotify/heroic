@@ -23,21 +23,18 @@ package com.spotify.heroic.metric;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.google.common.collect.ImmutableList;
-
 import java.io.IOException;
 
 public class MetricGroupSerialization {
     public static class Deserializer extends JsonDeserializer<MetricGroup> {
         @Override
-        public MetricGroup deserialize(JsonParser p, DeserializationContext c)
-            throws IOException, JsonProcessingException {
+        public MetricGroup deserialize(JsonParser p, DeserializationContext c) throws IOException {
 
             if (p.getCurrentToken() != JsonToken.START_ARRAY) {
                 throw c.mappingException("Expected start of array");
@@ -74,7 +71,7 @@ public class MetricGroupSerialization {
     public static class Serializer extends JsonSerializer<MetricGroup> {
         @Override
         public void serialize(MetricGroup d, JsonGenerator g, SerializerProvider provider)
-            throws IOException, JsonProcessingException {
+          throws IOException {
             g.writeStartArray();
             g.writeNumber(d.getTimestamp());
 

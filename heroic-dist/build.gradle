@@ -37,7 +37,6 @@ dependencies {
 
     testCompileOnly 'org.projectlombok:lombok'
     testImplementation project(':heroic-test')
-    testImplementation project(':heroic-loading')
     testImplementation 'org.hamcrest:java-hamcrest'
     testImplementation 'com.google.cloud:google-cloud-pubsub'
     testImplementation 'io.grpc:grpc-netty'

@@ -19,10 +19,13 @@
  * under the License.
  */
 
-package com.spotify.heroic.common;
+package com.spotify.heroic.dagger;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import javax.inject.Scope;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
-public interface TypeNameMixin {
+@Scope
+@Retention(RetentionPolicy.RUNTIME)
+public @interface LoadingScope {
 }

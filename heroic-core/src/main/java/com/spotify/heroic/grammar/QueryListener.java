@@ -36,36 +36,6 @@ import com.spotify.heroic.filter.OrFilter;
 import com.spotify.heroic.filter.RegexFilter;
 import com.spotify.heroic.filter.StartsWithFilter;
 import com.spotify.heroic.filter.TrueFilter;
-import com.spotify.heroic.grammar.HeroicQueryParser.AggregationByAllContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.AggregationByContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.AggregationPipeContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.ExpressionDurationContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.ExpressionFloatContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.ExpressionIntegerContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.ExpressionListContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.FilterAndContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.FilterBooleanContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.FilterEqContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.FilterHasContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.FilterInContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.FilterKeyEqContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.FilterKeyNotEqContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.FilterNotContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.FilterNotEqContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.FilterNotInContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.FilterNotPrefixContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.FilterNotRegexContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.FilterOrContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.FilterPrefixContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.FilterRegexContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.FromContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.KeyValueContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.QueryContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.SelectAllContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.SourceRangeAbsoluteContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.SourceRangeRelativeContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.StringContext;
-import com.spotify.heroic.grammar.HeroicQueryParser.WhereContext;
 import com.spotify.heroic.metric.MetricType;
 import java.util.ArrayList;
 import java.util.List;
@@ -80,7 +50,7 @@ import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
 
 @SuppressWarnings("unchecked")
-public class QueryListener extends HeroicQueryBaseListener {
+class QueryListener extends HeroicQueryBaseListener {
     private static final Object KEY_VALUES_MARK = new ObjectMark("KEY_VALUES_MARK");
     private static final Object LIST_MARK = new ObjectMark("LIST_MARK");
     private static final Object EXPR_FUNCTION_ENTER = new ObjectMark("EXPR_FUNCTION_ENTER");
@@ -144,12 +114,12 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     @Override
-    public void enterQuery(QueryContext ctx) {
+    public void enterQuery(HeroicQueryParser.QueryContext ctx) {
         push(QueryMark.QUERY);
     }
 
     @Override
-    public void exitQuery(QueryContext ctx) {
+    public void exitQuery(HeroicQueryParser.QueryContext ctx) {
         final Context c = context(ctx);
 
         Optional<Expression> aggregation = Optional.empty();
@@ -250,7 +220,7 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     @Override
-    public void exitFilterIn(FilterInContext ctx) {
+    public void exitFilterIn(HeroicQueryParser.FilterInContext ctx) {
         final Context c = context(ctx);
         final Expression match = pop(c, Expression.class);
         final StringExpression key = pop(c, StringExpression.class);
@@ -259,7 +229,7 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     @Override
-    public void exitFilterNotIn(FilterNotInContext ctx) {
+    public void exitFilterNotIn(HeroicQueryParser.FilterNotInContext ctx) {
         final Context c = context(ctx);
         final ListExpression match = pop(c, ListExpression.class);
         final StringExpression key = pop(c, StringExpression.class);
@@ -268,7 +238,7 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     @Override
-    public void exitSelectAll(final SelectAllContext ctx) {
+    public void exitSelectAll(final HeroicQueryParser.SelectAllContext ctx) {
         pushOptional(Optional.empty());
         push(QueryMark.SELECT);
     }
@@ -282,19 +252,19 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     @Override
-    public void exitWhere(WhereContext ctx) {
+    public void exitWhere(HeroicQueryParser.WhereContext ctx) {
         final Context c = context(ctx);
         push(pop(c, Filter.class));
         push(QueryMark.WHERE);
     }
 
     @Override
-    public void enterExpressionList(ExpressionListContext ctx) {
+    public void enterExpressionList(HeroicQueryParser.ExpressionListContext ctx) {
         stack.push(LIST_MARK);
     }
 
     @Override
-    public void exitExpressionList(ExpressionListContext ctx) {
+    public void exitExpressionList(HeroicQueryParser.ExpressionListContext ctx) {
         final Context c = context(ctx);
         stack.push(new ListExpression(c, popUntil(c, LIST_MARK, Expression.class)));
     }
@@ -353,13 +323,13 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     @Override
-    public void exitKeyValue(KeyValueContext ctx) {
+    public void exitKeyValue(HeroicQueryParser.KeyValueContext ctx) {
         final Expression expression = pop(context(ctx), Expression.class);
         stack.push(new KeywordValue(ctx.getChild(0).getText(), expression));
     }
 
     @Override
-    public void exitFrom(FromContext ctx) {
+    public void exitFrom(HeroicQueryParser.FromContext ctx) {
         final Context context = context(ctx);
 
         final String sourceText = ctx.getChild(1).getText();
@@ -393,7 +363,7 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     @Override
-    public void exitSourceRangeAbsolute(SourceRangeAbsoluteContext ctx) {
+    public void exitSourceRangeAbsolute(HeroicQueryParser.SourceRangeAbsoluteContext ctx) {
         final Context c = context(ctx);
         final Expression end = pop(c, Expression.class);
         final Expression start = pop(c, Expression.class);
@@ -401,7 +371,7 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     @Override
-    public void exitSourceRangeRelative(SourceRangeRelativeContext ctx) {
+    public void exitSourceRangeRelative(HeroicQueryParser.SourceRangeRelativeContext ctx) {
         final Context c = context(ctx);
         final ReferenceExpression now = new ReferenceExpression(c, "now");
         final Expression distance = pop(c, Expression.class);
@@ -410,17 +380,17 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     @Override
-    public void exitExpressionInteger(ExpressionIntegerContext ctx) {
+    public void exitExpressionInteger(HeroicQueryParser.ExpressionIntegerContext ctx) {
         push(new IntegerExpression(context(ctx), Long.parseLong(ctx.getText())));
     }
 
     @Override
-    public void exitExpressionFloat(ExpressionFloatContext ctx) {
+    public void exitExpressionFloat(HeroicQueryParser.ExpressionFloatContext ctx) {
         push(new DoubleExpression(context(ctx), Double.parseDouble(ctx.getText())));
     }
 
     @Override
-    public void exitString(StringContext ctx) {
+    public void exitString(HeroicQueryParser.StringContext ctx) {
         final ParseTree child = ctx.getChild(0);
         final CommonToken token = (CommonToken) child.getPayload();
         final Context c = context(ctx);
@@ -435,7 +405,7 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     @Override
-    public void exitExpressionDuration(ExpressionDurationContext ctx) {
+    public void exitExpressionDuration(HeroicQueryParser.ExpressionDurationContext ctx) {
         final String text = ctx.getText();
 
         final int value;
@@ -455,33 +425,33 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     @Override
-    public void exitFilterHas(FilterHasContext ctx) {
+    public void exitFilterHas(HeroicQueryParser.FilterHasContext ctx) {
         final StringExpression value = pop(context(ctx), StringExpression.class);
 
         push(HasTagFilter.create(value.getString()));
     }
 
     @Override
-    public void exitFilterNot(FilterNotContext ctx) {
+    public void exitFilterNot(HeroicQueryParser.FilterNotContext ctx) {
         push(NotFilter.create(pop(context(ctx), Filter.class)));
     }
 
     @Override
-    public void exitFilterKeyEq(FilterKeyEqContext ctx) {
+    public void exitFilterKeyEq(HeroicQueryParser.FilterKeyEqContext ctx) {
         final StringExpression value = pop(context(ctx), StringExpression.class);
 
         push(MatchKeyFilter.create(value.getString()));
     }
 
     @Override
-    public void exitFilterKeyNotEq(FilterKeyNotEqContext ctx) {
+    public void exitFilterKeyNotEq(HeroicQueryParser.FilterKeyNotEqContext ctx) {
         final StringExpression value = pop(context(ctx), StringExpression.class);
 
         push(NotFilter.create(MatchKeyFilter.create(value.getString())));
     }
 
     @Override
-    public void exitFilterEq(FilterEqContext ctx) {
+    public void exitFilterEq(HeroicQueryParser.FilterEqContext ctx) {
         final StringExpression value = pop(context(ctx), StringExpression.class);
         final StringExpression key = pop(context(ctx), StringExpression.class);
 
@@ -489,7 +459,7 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     @Override
-    public void exitFilterNotEq(FilterNotEqContext ctx) {
+    public void exitFilterNotEq(HeroicQueryParser.FilterNotEqContext ctx) {
         final StringExpression value = pop(context(ctx), StringExpression.class);
         final StringExpression key = pop(context(ctx), StringExpression.class);
 
@@ -497,7 +467,7 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     @Override
-    public void exitFilterPrefix(FilterPrefixContext ctx) {
+    public void exitFilterPrefix(HeroicQueryParser.FilterPrefixContext ctx) {
         final StringExpression value = pop(context(ctx), StringExpression.class);
         final StringExpression key = pop(context(ctx), StringExpression.class);
 
@@ -505,7 +475,7 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     @Override
-    public void exitFilterNotPrefix(FilterNotPrefixContext ctx) {
+    public void exitFilterNotPrefix(HeroicQueryParser.FilterNotPrefixContext ctx) {
         final StringExpression value = pop(context(ctx), StringExpression.class);
         final StringExpression key = pop(context(ctx), StringExpression.class);
 
@@ -513,7 +483,7 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     @Override
-    public void exitFilterRegex(FilterRegexContext ctx) {
+    public void exitFilterRegex(HeroicQueryParser.FilterRegexContext ctx) {
         final StringExpression value = pop(context(ctx), StringExpression.class);
         final StringExpression key = pop(context(ctx), StringExpression.class);
 
@@ -521,7 +491,7 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     @Override
-    public void exitFilterNotRegex(FilterNotRegexContext ctx) {
+    public void exitFilterNotRegex(HeroicQueryParser.FilterNotRegexContext ctx) {
         final StringExpression value = pop(context(ctx), StringExpression.class);
         final StringExpression key = pop(context(ctx), StringExpression.class);
 
@@ -529,7 +499,7 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     @Override
-    public void exitFilterAnd(FilterAndContext ctx) {
+    public void exitFilterAnd(HeroicQueryParser.FilterAndContext ctx) {
         final Context c = context(ctx);
         final Filter b = pop(c, Filter.class);
         final Filter a = pop(c, Filter.class);
@@ -537,7 +507,7 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     @Override
-    public void exitFilterOr(FilterOrContext ctx) {
+    public void exitFilterOr(HeroicQueryParser.FilterOrContext ctx) {
         final Context c = context(ctx);
         final Filter b = pop(c, Filter.class);
         final Filter a = pop(c, Filter.class);
@@ -545,7 +515,7 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     @Override
-    public void exitAggregationBy(final AggregationByContext ctx) {
+    public void exitAggregationBy(final HeroicQueryParser.AggregationByContext ctx) {
         final Context c = context(ctx);
 
         final Expression group = pop(c, Expression.class);
@@ -555,7 +525,7 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     @Override
-    public void exitAggregationByAll(final AggregationByAllContext ctx) {
+    public void exitAggregationByAll(final HeroicQueryParser.AggregationByAllContext ctx) {
         final Context c = context(ctx);
 
         final FunctionExpression left = pop(c, Expression.class).cast(FunctionExpression.class);
@@ -565,12 +535,12 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     @Override
-    public void enterAggregationPipe(AggregationPipeContext ctx) {
+    public void enterAggregationPipe(HeroicQueryParser.AggregationPipeContext ctx) {
         stack.push(PIPE_MARK);
     }
 
     @Override
-    public void exitAggregationPipe(AggregationPipeContext ctx) {
+    public void exitAggregationPipe(HeroicQueryParser.AggregationPipeContext ctx) {
         final Context c = context(ctx);
         final List<Expression> values =
             ImmutableList.copyOf(popUntil(c, PIPE_MARK, Expression.class).stream().iterator());
@@ -578,7 +548,7 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     @Override
-    public void exitFilterBoolean(FilterBooleanContext ctx) {
+    public void exitFilterBoolean(HeroicQueryParser.FilterBooleanContext ctx) {
         final Context c = context(ctx);
         final String literal = ctx.getText();
 
