@@ -18,10 +18,17 @@ dependencies {
     implementation 'io.opencensus:opencensus-contrib-grpc-util'
     implementation 'com.google.protobuf:protobuf-java'
 
-    testImplementation project(':heroic-component-test')
-
     compileOnly 'org.projectlombok:lombok'
     testCompileOnly 'org.projectlombok:lombok'
+}
+
+task testJar(type: Jar) {
+  classifier = 'test'
+  from sourceSets.test.output
+}
+
+artifacts {
+  testRuntime testJar
 }
 
 description = 'Heroic: Component Project'

@@ -14,7 +14,7 @@ dependencies {
     compileOnly 'org.projectlombok:lombok'
 
     testImplementation project(':heroic-test-it')
-    testImplementation project(':heroic-component-test')
+    testImplementation project(path: ':heroic-component', configuration: 'testRuntime')
 }
 
 group = 'com.spotify.heroic.metric'

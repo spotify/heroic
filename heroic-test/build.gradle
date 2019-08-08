@@ -1,6 +1,5 @@
 dependencies {
     implementation project(':heroic-component')
-    implementation project(':heroic-component-test')
     implementation project(':heroic-loading')
 }
 

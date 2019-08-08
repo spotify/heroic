@@ -44,11 +44,11 @@ dependencies {
     implementation 'net.jodah:expiringmap:0.5.1'
 
     testImplementation project(':heroic-test')
-    testImplementation project(':heroic-component-test')
+    testImplementation project(path: ':heroic-component', configuration: 'testRuntime')
 
     compileOnly 'org.projectlombok:lombok'
     compileOnly 'com.google.auto.value:auto-value'
-    
+
 }
 
 description = 'Heroic: Core Project'
