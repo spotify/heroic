@@ -55,12 +55,6 @@ public class FakeModuleLoader {
         this.json = json;
     }
 
-    public FakeModuleLoader load(final Class<? extends HeroicModule> module) {
-        final HeroicModule instance = ReflectionUtils.buildInstance(module);
-        instance.setup(loading).run();
-        return this;
-    }
-
     public ObjectMapper config() {
         return loading.configMapper();
     }

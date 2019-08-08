@@ -13,7 +13,7 @@ dependencies {
     implementation 'eu.toolchain.serializer:tiny-serializer-core'
     compileOnly 'org.projectlombok:lombok'
 
-    testImplementation project(':heroic-test-it')
+    testImplementation project(':heroic-test')
     testImplementation project(path: ':heroic-component', configuration: 'testRuntime')
 }
 

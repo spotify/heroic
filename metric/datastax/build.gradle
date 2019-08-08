@@ -7,7 +7,7 @@ dependencies {
     compileOnly 'org.projectlombok:lombok'
     compileOnly 'eu.toolchain.serializer:tiny-serializer-processor'
 
-    testImplementation project(':heroic-test-it')
+    testImplementation project(':heroic-test')
     testImplementation project(path: ':heroic-component', configuration: 'testRuntime')
 }
 

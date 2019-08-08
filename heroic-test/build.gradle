@@ -1,6 +1,10 @@
 dependencies {
     implementation project(':heroic-component')
     implementation project(':heroic-loading')
+    implementation project(':heroic-core')
+    
+    implementation 'junit:junit'
+    implementation 'org.mockito:mockito-core'
 }
 
 description = 'Heroic: Test Utilities Base Project'

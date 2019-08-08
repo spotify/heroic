@@ -2,7 +2,7 @@ apply plugin: 'kotlin-kapt'
 
 dependencies {
     implementation project(':heroic-component')
-    testImplementation project(':heroic-test-it')
+    testImplementation project(':heroic-test')
     kapt 'com.google.dagger:dagger-compiler'
 }
 
