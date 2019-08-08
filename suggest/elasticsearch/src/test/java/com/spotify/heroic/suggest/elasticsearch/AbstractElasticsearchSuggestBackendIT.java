@@ -2,10 +2,9 @@ package com.spotify.heroic.suggest.elasticsearch;
 
 import com.spotify.heroic.elasticsearch.ConnectionModule;
 import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
+import com.spotify.heroic.elasticsearch.test.ElasticsearchTestUtils;
 import com.spotify.heroic.suggest.SuggestModule;
 import com.spotify.heroic.test.AbstractSuggestBackendIT;
-import com.spotify.heroic.test.ElasticsearchTestUtils;
-
 import java.util.UUID;
 
 public abstract class AbstractElasticsearchSuggestBackendIT extends AbstractSuggestBackendIT {

@@ -19,15 +19,16 @@
  * under the License.
  */
 
-package com.spotify.heroic.test;
+package com.spotify.heroic.elasticsearch.test;
 
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.elasticsearch.ClientSetup;
 import com.spotify.heroic.elasticsearch.StandaloneClientSetup;
 import com.spotify.heroic.elasticsearch.TransportClientSetup;
+import com.spotify.heroic.test.TestProperties;
 
 public class ElasticsearchTestUtils {
-    public static ClientSetup clientSetup() throws Exception {
+    public static ClientSetup clientSetup() {
         final TestProperties properties = TestProperties.ofPrefix("it.elasticsearch");
 
         return properties.getOptionalString("remote").<ClientSetup>map(v -> {
