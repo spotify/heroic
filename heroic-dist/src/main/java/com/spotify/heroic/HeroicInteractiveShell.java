@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ProtocolStringList;
 import com.spotify.heroic.proto.ShellMessage.CommandsResponse.CommandDefinition;
 import com.spotify.heroic.shell.CoreInterface;
+import com.spotify.heroic.shell.DirectShellIO;
 import com.spotify.heroic.shell.QuoteParser;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.Tasks;
