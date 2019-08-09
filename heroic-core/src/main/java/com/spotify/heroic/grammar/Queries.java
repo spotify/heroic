@@ -22,9 +22,8 @@
 package com.spotify.heroic.grammar;
 
 import com.spotify.heroic.Query;
-import lombok.Data;
-
 import java.util.List;
+import lombok.Data;
 
 @Data
 public final class Queries {

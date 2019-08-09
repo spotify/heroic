@@ -23,7 +23,6 @@ package com.spotify.heroic.filter;
 
 import com.spotify.heroic.common.BiConsumerIO;
 import com.spotify.heroic.common.FunctionIO;
-
 import java.io.IOException;
 import java.util.Optional;
 import java.util.function.BiFunction;

@@ -5,11 +5,9 @@
 rootProject.name = 'heroic-parent'
 include(':heroic-component')
 include(':heroic-elasticsearch-utils')
-include(':heroic-loading')
 include(':heroic-core')
 include(':heroic-test')
 include(':heroic-shell')
-include(':heroic-parser')
 include(':heroic-all')
 include(':heroic-metric-datastax')
 include(':heroic-metric-bigtable')

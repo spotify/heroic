@@ -23,22 +23,19 @@ package com.spotify.heroic.metric;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.google.common.collect.ImmutableMap;
-
 import java.io.IOException;
 import java.util.Map;
 
 public class EventSerialization {
     public static class Deserializer extends JsonDeserializer<Event> {
         @Override
-        public Event deserialize(JsonParser p, DeserializationContext c)
-            throws IOException, JsonProcessingException {
+        public Event deserialize(JsonParser p, DeserializationContext c) throws IOException {
 
             if (p.getCurrentToken() != JsonToken.START_ARRAY) {
                 throw c.mappingException(

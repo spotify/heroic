@@ -22,13 +22,11 @@
 package com.spotify.heroic.common;
 
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.google.common.collect.ImmutableSet;
-
 import java.io.IOException;
 import java.util.List;
 
@@ -39,8 +37,7 @@ public class GroupsSerialization {
             };
 
         @Override
-        public Groups deserialize(JsonParser p, DeserializationContext c)
-            throws IOException, JsonProcessingException {
+        public Groups deserialize(JsonParser p, DeserializationContext c) throws IOException {
             /* fallback to default parser if object */
             if (p.getCurrentToken() == JsonToken.START_ARRAY) {
                 final List<String> groups = p.readValueAs(LIST_OF_STRINGS);

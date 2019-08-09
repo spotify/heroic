@@ -255,10 +255,6 @@ class which is the central building block for setting up a Heroic instance.
 utilities for interacting with Elasticsearch. This is separate since we have
 more than one backend that needs to talk with elasticsearch.
 
-[`heroic-parser`](heroic-parser) provides an Antlr4 implementation of
-[`com.spotify.heroic.grammar.QueryParser`](heroic-component/src/main/java/com/spotify/heroic/grammar/QueryParser.java),
-which is used to parse the Heroic DSL.
-
 [`heroic-shell`](heroic-shell) contains
 [`com.spotify.heroic.HeroicShell`](heroic-shell/src/main/java/com/spotify/heroic/HeroicShell.java),
 a shell capable of either running a standalone, or connecting to an existing

@@ -23,6 +23,10 @@ package com.spotify.heroic.grammar;
 
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.MetricType;
+import java.util.List;
+import java.util.Optional;
+import java.util.function.Function;
+import javax.inject.Inject;
 import lombok.Data;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.BailErrorStrategy;
@@ -32,11 +36,6 @@ import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
-
-import javax.inject.Inject;
-import java.util.List;
-import java.util.Optional;
-import java.util.function.Function;
 
 public class CoreQueryParser implements QueryParser {
     @Inject
