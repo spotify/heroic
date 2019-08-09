@@ -1,7 +1,7 @@
 dependencies {
     implementation project(':heroic-component')
     implementation project(':heroic-elasticsearch-utils')
-    implementation 'com.spotify.heroic.repackaged:folsom'
+    implementation 'com.spotify:folsom'
     compileOnly 'org.projectlombok:lombok'
 
     implementation project(':heroic-test')
