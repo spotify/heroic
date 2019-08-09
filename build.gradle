@@ -105,7 +105,7 @@ allprojects {
     dependencyManagement {
         dependencies {
             dependency 'com.spotify.heroic.repackaged:datastax-driver-core:3.2.0'
-            dependency 'com.spotify.heroic.repackaged:folsom:1.2.1'
+            dependency 'com.spotify:folsom:1.6.0'
 
             dependencySet(group: 'com.spotify.metrics', version: '1.0.2') {
                 entry 'semantic-metrics-core'
