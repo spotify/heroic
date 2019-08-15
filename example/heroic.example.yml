@@ -25,8 +25,6 @@ metadata:
       connection:
         client:
           type: standalone
-          seeds:
-            - localhost:9200
 
 # Data consumers.
 consumers:
@@ -40,9 +38,7 @@ consumers:
 
 # Aggregation cache.
 cache:
-  backend:
-    # In-memory based aggregation cache.
-    type: memory
+  type: memory
 
 statistics:
   type: semantic
