@@ -1,0 +1,11 @@
+/.git/
+Dockerfile
+.dockerignore
+.gitignore
+/docs/
+/.idea/
+*.png
+*.md
+build/
+out/
+.gradle
