@@ -9,6 +9,7 @@ dependencies {
     }
     implementation 'io.grpc:grpc-netty'
     implementation 'io.netty:netty-tcnative-boringssl-static:2.0.7.Final'
+    implementation 'com.google.guava:guava'
     implementation project(':heroic-component')
     implementation 'eu.toolchain.serializer:tiny-serializer-core'
     compileOnly 'org.projectlombok:lombok'

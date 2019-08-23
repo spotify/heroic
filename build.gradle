@@ -105,7 +105,7 @@ allprojects {
     dependencyManagement {
         dependencies {
             dependency 'com.spotify.heroic.repackaged:datastax-driver-core:3.2.0'
-            dependency 'com.spotify:folsom:1.6.0'
+            dependency 'com.spotify:folsom:1.6.2'
 
             dependencySet(group: 'com.spotify.metrics', version: '1.0.2') {
                 entry 'semantic-metrics-core'
@@ -178,7 +178,7 @@ allprojects {
             dependency 'javax.mail:mail:1.4.7'
             dependency 'args4j:args4j:2.33'
             dependency 'org.apache.commons:commons-lang3:3.3.2'
-            dependency 'com.google.guava:guava:20.0'
+            dependency 'com.google.guava:guava:28.0-jre'
             dependency 'io.thekraken:grok:0.1.1'
             dependency 'org.jfree:jfreechart:1.0.19'
             dependency 'joda-time:joda-time:2.8.2'
