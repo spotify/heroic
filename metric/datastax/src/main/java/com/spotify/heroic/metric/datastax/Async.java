@@ -24,6 +24,7 @@ package com.spotify.heroic.metric.datastax;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
@@ -45,7 +46,7 @@ public final class Async {
             public void onFailure(Throwable t) {
                 target.fail(t);
             }
-        });
+        }, MoreExecutors.directExecutor());
 
         target.onCancelled(() -> {
             source.cancel(false);

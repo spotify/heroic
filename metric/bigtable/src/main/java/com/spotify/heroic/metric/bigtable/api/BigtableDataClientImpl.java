@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.protobuf.ByteString;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.async.AsyncObserver;
@@ -210,7 +211,7 @@ public class BigtableDataClientImpl implements BigtableDataClient {
             public void onFailure(Throwable t) {
                 future.fail(t);
             }
-        });
+        }, MoreExecutors.directExecutor());
 
         return future;
     }

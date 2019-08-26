@@ -26,6 +26,7 @@ import com.google.cloud.bigtable.grpc.async.BulkMutation;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.ByteString;
 import eu.toolchain.async.AsyncFramework;
@@ -187,7 +188,7 @@ public class BigtableMutatorImpl implements BigtableMutator {
             public void onFailure(Throwable t) {
                 future.fail(t);
             }
-        });
+        }, MoreExecutors.directExecutor());
 
         return future;
     }
