@@ -18,5 +18,5 @@ fields:
 Java Class: {% include github-link.html module='heroic-component' name='filter.Filter' %}
 
 The structure of a filter is explained in detail in
-the [Query Language](docs/query_language) documentation.
+the [Query Language]({{ "/docs/query_language" | relative_url }}) documentation.
 This will only be a brief, syntactical overview.
