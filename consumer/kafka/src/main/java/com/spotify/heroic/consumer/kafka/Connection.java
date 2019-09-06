@@ -27,10 +27,8 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import java.util.ArrayList;
 import java.util.List;
-import lombok.Data;
 import org.slf4j.Logger;
 
-@Data
 public class Connection implements ConsumerThreadCoordinator {
 
     private static final Logger log = org.slf4j.LoggerFactory.getLogger(Connection.class);
@@ -46,7 +44,27 @@ public class Connection implements ConsumerThreadCoordinator {
     private HeroicTimer.Context wholeOperationTimer;
     private HeroicTimer.Context writeCompletionTimer;
 
-    public AsyncFuture<Void> pause() {
+    Connection(
+        AsyncFramework async,
+        ConsumerReporter reporter,
+        KafkaConnection connection,
+        List<ConsumerThread> threads
+    ) {
+        this.async = async;
+        this.reporter = reporter;
+        this.connection = connection;
+        this.threads = threads;
+    }
+
+    KafkaConnection getConnection() {
+        return connection;
+    }
+
+    List<ConsumerThread> getThreads() {
+        return threads;
+    }
+
+    private AsyncFuture<Void> pause() {
         final List<AsyncFuture<Void>> perThread = new ArrayList<>();
         for (final ConsumerThread t : threads) {
             perThread.add(t.pauseConsumption());
@@ -54,7 +72,7 @@ public class Connection implements ConsumerThreadCoordinator {
         return async.collectAndDiscard(perThread);
     }
 
-    public AsyncFuture<Void> resume() {
+    private AsyncFuture<Void> resume() {
         final List<AsyncFuture<Void>> perThread = new ArrayList<>();
         for (final ConsumerThread t : threads) {
             perThread.add(t.resumeConsumption());
