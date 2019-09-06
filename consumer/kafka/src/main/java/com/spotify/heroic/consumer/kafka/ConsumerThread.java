@@ -35,7 +35,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.LongAdder;
-import lombok.Setter;
 import org.slf4j.Logger;
 
 public final class ConsumerThread extends Thread {
@@ -71,7 +70,6 @@ public final class ConsumerThread extends Thread {
     // Thread-local copy of the above timestamp
     private long nextOffsetsCommitTSThreadLocal;
 
-    @Setter
     private ConsumerThreadCoordinator coordinator;
 
     public ConsumerThread(
@@ -315,5 +313,9 @@ public final class ConsumerThread extends Thread {
         active.decrementAndGet();
         shouldStop.await(sleep, TimeUnit.SECONDS);
         active.incrementAndGet();
+    }
+
+    public void setCoordinator(ConsumerThreadCoordinator coordinator) {
+        this.coordinator = coordinator;
     }
 }

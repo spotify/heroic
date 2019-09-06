@@ -60,14 +60,12 @@ import javax.inject.Named;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
 import kafka.javaapi.consumer.ConsumerConnector;
-import lombok.Data;
 import org.slf4j.Logger;
 
-@Data
 public class KafkaConsumerModule implements ConsumerModule {
-    public static final int DEFAULT_THREADS_PER_TOPIC = 2;
+    private static final int DEFAULT_THREADS_PER_TOPIC = 2;
     private static final Boolean DEFAULT_TRANSACTIONAL = false;
-    public static final long DEFAULT_COMMIT_INTERVAL = TimeUnit.SECONDS.toMillis(30);
+    private static final long DEFAULT_COMMIT_INTERVAL = TimeUnit.SECONDS.toMillis(30);
     private static final long COMMIT_INITIAL_DELAY = TimeUnit.SECONDS.toMillis(2);
     private static final String AUTO_COMMIT_ENABLE = "auto.commit.enable";
     private static final Logger log = org.slf4j.LoggerFactory.getLogger(KafkaConsumerModule.class);
@@ -80,6 +78,25 @@ public class KafkaConsumerModule implements ConsumerModule {
     private final Boolean transactional;
     private final long transactionCommitInterval;
     private final Optional<KafkaConnection> fakeKafkaConnection;
+
+    public KafkaConsumerModule(
+        Optional<String> id,
+        List<String> topics,
+        int threads,
+        Map<String, String> config,
+        ConsumerSchema schema, Boolean transactional,
+        long transactionCommitInterval,
+        Optional<KafkaConnection> fakeKafkaConnection
+    ) {
+        this.id = id;
+        this.topics = topics;
+        this.threads = threads;
+        this.config = config;
+        this.schema = schema;
+        this.transactional = transactional;
+        this.transactionCommitInterval = transactionCommitInterval;
+        this.fakeKafkaConnection = fakeKafkaConnection;
+    }
 
     @Override
     public Exposed module(

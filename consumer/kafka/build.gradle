@@ -3,7 +3,6 @@ dependencies {
     implementation('org.apache.kafka:kafka_2.10:0.8.1.1') {
         exclude group: 'log4j', module: 'log4j'
     }
-    compileOnly 'org.projectlombok:lombok'
 }
 
 group = 'com.spotify.heroic.consumer'
