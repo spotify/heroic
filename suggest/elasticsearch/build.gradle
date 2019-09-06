@@ -2,8 +2,7 @@ dependencies {
     implementation project(':heroic-component')
     implementation project(':heroic-elasticsearch-utils')
     implementation 'com.spotify:folsom'
-    compileOnly 'org.projectlombok:lombok'
-    
+
     implementation project(':heroic-test')
     testImplementation 'org.apache.logging.log4j:log4j-api'
     testImplementation 'org.apache.logging.log4j:log4j-core'

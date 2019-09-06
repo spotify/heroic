@@ -43,6 +43,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
@@ -56,7 +57,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
-import lombok.Data;
 
 @MemoryScope
 public class MemoryBackend implements SuggestBackend, Grouped {
@@ -169,8 +169,9 @@ public class MemoryBackend implements SuggestBackend, Grouped {
                     .getLimit()
                     .limitStream(ids.stream())
                     .map(tagIndex::get)
-                    .filter(v -> v != null)
-                    .map(d -> new TagSuggest.Suggestion(SCORE, d.id.key, d.id.value))
+                    .filter(Objects::nonNull)
+                    .map(d -> new TagSuggest.Suggestion(
+                        SCORE, d.getId().getKey(), d.getId().getValue()))
                     .iterator()));
 
             return async.resolved(TagSuggest.of(suggestions));
@@ -207,8 +208,8 @@ public class MemoryBackend implements SuggestBackend, Grouped {
             final List<String> values = request
                 .getLimit()
                 .limitStream(
-                    request.getKey().map(k -> ids.filter(id -> id.key.equals(k))).orElse(ids))
-                .map(id -> id.value)
+                    request.getKey().map(k -> ids.filter(id -> id.getKey().equals(k))).orElse(ids))
+                .map(TagId::getValue)
                 .collect(Collectors.toList());
 
             return async.resolved(TagValueSuggest.of(values, false));
@@ -312,13 +313,17 @@ public class MemoryBackend implements SuggestBackend, Grouped {
     private Stream<KeyDocument> lookupKeys(final Filter filter) {
         final Lock l = lock.readLock();
         l.lock();
-        return keyIndex.values().stream().filter(e -> filter.apply(e.series)).onClose(l::unlock);
+        return keyIndex.values().stream()
+            .filter(e -> filter.apply(e.getSeries()))
+            .onClose(l::unlock);
     }
 
     private Stream<TagDocument> lookupTags(final Filter filter) {
         final Lock l = lock.readLock();
         l.lock();
-        return tagIndex.values().stream().filter(e -> filter.apply(e.series)).onClose(l::unlock);
+        return tagIndex.values().stream()
+            .filter(e -> filter.apply(e.getSeries()))
+            .onClose(l::unlock);
     }
 
     private Stream<Series> lookupSeries(final Filter filter) {
@@ -329,23 +334,5 @@ public class MemoryBackend implements SuggestBackend, Grouped {
 
     public String toString() {
         return "MemoryBackend()";
-    }
-
-    @Data
-    static class TagId {
-        private final String key;
-        private final String value;
-    }
-
-    @Data
-    static class KeyDocument {
-        private final String id;
-        private final Series series;
-    }
-
-    @Data
-    static class TagDocument {
-        private final TagId id;
-        private final Series series;
     }
 }

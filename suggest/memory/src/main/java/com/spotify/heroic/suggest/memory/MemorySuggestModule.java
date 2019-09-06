@@ -21,6 +21,10 @@
 
 package com.spotify.heroic.suggest.memory;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.common.DynamicModuleId;
@@ -31,18 +35,11 @@ import com.spotify.heroic.suggest.SuggestModule;
 import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
-import lombok.Data;
-
 import java.util.Optional;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
-
-@Data
 @ModuleId("elasticsearch")
 public final class MemorySuggestModule implements SuggestModule, DynamicModuleId {
-    public static final String DEFAULT_GROUP = "memory";
+    private static final String DEFAULT_GROUP = "memory";
 
     private final Optional<String> id;
     private final Groups groups;
