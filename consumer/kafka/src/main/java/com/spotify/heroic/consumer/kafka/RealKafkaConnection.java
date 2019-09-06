@@ -27,11 +27,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import kafka.javaapi.consumer.ConsumerConnector;
-import lombok.Data;
 
-@Data
 public class RealKafkaConnection implements KafkaConnection {
     private final ConsumerConnector connector;
+
+    RealKafkaConnection(ConsumerConnector connector) {
+        this.connector = connector;
+    }
 
     @Override
     public Map<String, List<KafkaStream<byte[]>>> createMessageStreams(
