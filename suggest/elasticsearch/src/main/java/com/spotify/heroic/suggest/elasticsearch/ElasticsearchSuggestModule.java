@@ -66,10 +66,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 import javax.inject.Named;
-import lombok.Data;
 import org.apache.commons.lang3.tuple.Pair;
 
-@Data
 @ModuleId("elasticsearch")
 public final class ElasticsearchSuggestModule implements SuggestModule, DynamicModuleId {
     public static final String ELASTICSEARCH_CONFIGURE_PARAM = "elasticsearch.configure";
@@ -81,10 +79,9 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
     private static final int DEFAULT_WRITE_CACHE_CONCURRENCY = 4;
     private static final long DEFAULT_WRITE_CACHE_MAX_SIZE = 30_000_000L;
 
-    public static final String DEFAULT_GROUP = "elasticsearch";
-    public static final String DEFAULT_TEMPLATE_NAME = "heroic-suggest";
-    public static final String DEFAULT_BACKEND_TYPE = "default";
-    public static final boolean DEFAULT_CONFIGURE = false;
+    private static final String DEFAULT_GROUP = "elasticsearch";
+    private static final String DEFAULT_TEMPLATE_NAME = "heroic-suggest";
+    private static final boolean DEFAULT_CONFIGURE = false;
 
     private final Optional<String> id;
     private final Groups groups;
@@ -96,7 +93,6 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
     private final Long writeCacheMaxSize;
     private final String distributedCacheSrvRecord;
     private final String templateName;
-    private final String backendType;
     private final boolean configure;
 
     private static Supplier<BackendType> defaultSetup = SuggestBackendKV.factory();
@@ -107,7 +103,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
         backendTypes.put("kv", defaultSetup);
     }
 
-    public static final List<String> types() {
+    public static List<String> types() {
         return ImmutableList.copyOf(backendTypes.keySet());
     }
 
@@ -144,7 +140,6 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
         this.distributedCacheSrvRecord = distributedCacheSrvRecord.orElse("");
 
         this.templateName = templateName.orElse(DEFAULT_TEMPLATE_NAME);
-        this.backendType = backendType.orElse(DEFAULT_BACKEND_TYPE);
         this.type = backendType.map(this::lookupBackendType).orElse(defaultSetup);
         this.configure = configure.orElse(DEFAULT_CONFIGURE);
     }
