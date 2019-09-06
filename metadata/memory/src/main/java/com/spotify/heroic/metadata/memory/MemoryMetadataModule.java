@@ -21,6 +21,10 @@
 
 package com.spotify.heroic.metadata.memory;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.common.DynamicModuleId;
@@ -32,23 +36,16 @@ import com.spotify.heroic.metadata.MetadataModule;
 import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
-import lombok.Data;
-
-import javax.inject.Named;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
+import javax.inject.Named;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
-
-@Data
 @ModuleId("memory")
 public final class MemoryMetadataModule implements MetadataModule, DynamicModuleId {
-    public static final String DEFAULT_GROUP = "memory";
+    private static final String DEFAULT_GROUP = "memory";
 
     private final Optional<String> id;
     private final Groups groups;
