@@ -34,9 +34,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 import javax.inject.Named;
-import lombok.Data;
 
-@Data
 public class StaticListDiscoveryModule implements ClusterDiscoveryModule {
     private final List<URI> nodes;
 
@@ -71,9 +69,5 @@ public class StaticListDiscoveryModule implements ClusterDiscoveryModule {
         public List<URI> nodes() {
             return nodes;
         }
-    }
-
-    public static ClusterDiscoveryModule createDefault() {
-        return new StaticListDiscoveryModule(null);
     }
 }

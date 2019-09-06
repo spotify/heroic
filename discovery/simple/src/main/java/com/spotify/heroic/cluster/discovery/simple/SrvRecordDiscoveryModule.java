@@ -30,13 +30,10 @@ import com.spotify.heroic.dagger.PrimaryComponent;
 import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
-import lombok.Data;
-
-import javax.inject.Named;
 import java.util.List;
 import java.util.Optional;
+import javax.inject.Named;
 
-@Data
 public class SrvRecordDiscoveryModule implements ClusterDiscoveryModule {
     private final List<String> records;
     private final Optional<String> protocol;
@@ -44,7 +41,8 @@ public class SrvRecordDiscoveryModule implements ClusterDiscoveryModule {
 
     @JsonCreator
     public SrvRecordDiscoveryModule(
-        @JsonProperty("records") List<String> records, @JsonProperty("protocol") String protocol,
+        @JsonProperty("records") List<String> records,
+        @JsonProperty("protocol") String protocol,
         @JsonProperty("port") Integer port
     ) {
         this.records = Optional.ofNullable(records).orElseGet(ImmutableList::of);
@@ -119,9 +117,5 @@ public class SrvRecordDiscoveryModule implements ClusterDiscoveryModule {
         public SrvRecordDiscoveryModule build() {
             return new SrvRecordDiscoveryModule(records.build(), protocol, port);
         }
-    }
-
-    public static ClusterDiscoveryModule createDefault() {
-        return new SrvRecordDiscoveryModule(null, null, null);
     }
 }
