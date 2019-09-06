@@ -68,10 +68,8 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import javax.inject.Named;
-import lombok.Data;
 import org.apache.commons.lang3.tuple.Pair;
 
-@Data
 @ModuleId("elasticsearch")
 public final class ElasticsearchMetadataModule implements MetadataModule, DynamicModuleId {
     private static final int DEFAULT_DELETE_PARALLELISM = 20;
@@ -82,8 +80,8 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
     private static final int DEFAULT_WRITE_CACHE_CONCURRENCY = 4;
     private static final long DEFAULT_WRITE_CACHE_MAX_SIZE = 30_000_000L;
 
-    public static final String DEFAULT_GROUP = "elasticsearch";
-    public static final String DEFAULT_TEMPLATE_NAME = "heroic-metadata";
+    private static final String DEFAULT_GROUP = "elasticsearch";
+    private static final String DEFAULT_TEMPLATE_NAME = "heroic-metadata";
 
     private final Optional<String> id;
     private final Groups groups;
