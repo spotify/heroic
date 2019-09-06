@@ -46,10 +46,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import javax.inject.Named;
-import lombok.Data;
 import org.slf4j.Logger;
 
-@Data
 public class PubSubConsumerModule implements ConsumerModule {
     private static final int DEFAULT_THREADS_PER_SUBSCRIPTION = 8;
     private static final Long DEFAULT_MAX_OUTSTANDING_ELEMENT_COUNT = 20_000L;
@@ -69,6 +67,30 @@ public class PubSubConsumerModule implements ConsumerModule {
     private final Long maxOutstandingRequestBytes;
     private final int maxInboundMessageSize;
     private final Long keepAlive;
+
+    private PubSubConsumerModule(
+        Optional<String> id,
+        int threads,
+        ConsumerSchema schema,
+        String projectId,
+        String topicId,
+        String subscriptionId,
+        Long maxOutstandingElementCount,
+        Long maxOutstandingRequestBytes,
+        int maxInboundMessageSize,
+        Long keepAlive
+    ) {
+        this.id = id;
+        this.threads = threads;
+        this.schema = schema;
+        this.projectId = projectId;
+        this.topicId = topicId;
+        this.subscriptionId = subscriptionId;
+        this.maxOutstandingElementCount = maxOutstandingElementCount;
+        this.maxOutstandingRequestBytes = maxOutstandingRequestBytes;
+        this.maxInboundMessageSize = maxInboundMessageSize;
+        this.keepAlive = keepAlive;
+    }
 
     @Override
     public Exposed module(

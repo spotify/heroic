@@ -26,20 +26,19 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
-import lombok.Data;
-
 import java.net.InetAddress;
 
-@Data
 public class Server {
     private final AsyncFramework async;
-    private final Channel channel;
+
+    private Server(AsyncFramework async, @Deprecated Channel channel) {
+        this.async = async;
+    }
 
     public AsyncFuture<Void> start() {
         return async.resolved();
@@ -49,7 +48,7 @@ public class Server {
         return async.resolved();
     }
 
-    public static AsyncFuture<Server> setup(
+    static AsyncFuture<Server> setup(
         final AsyncFramework async, final CollectdChannelHandler handler, final InetAddress host,
         final int port
     ) {
@@ -64,15 +63,12 @@ public class Server {
 
         final ResolvableFuture<Server> future = async.future();
 
-        b.bind(host, port).addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(final ChannelFuture f) throws Exception {
-                if (f.isSuccess()) {
-                    future.resolve(new Server(async, f.channel()));
-                } else {
-                    future.fail(
-                        f.cause() != null ? f.cause() : new RuntimeException("Failed to bind"));
-                }
+        b.bind(host, port).addListener((ChannelFutureListener) f -> {
+            if (f.isSuccess()) {
+                future.resolve(new Server(async, f.channel()));
+            } else {
+                future.fail(
+                    f.cause() != null ? f.cause() : new RuntimeException("Failed to bind"));
             }
         });
 

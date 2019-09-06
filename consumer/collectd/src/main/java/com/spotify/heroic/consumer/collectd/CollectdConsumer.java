@@ -30,15 +30,12 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.Managed;
-import lombok.Data;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
+import javax.inject.Inject;
+import javax.inject.Named;
 
-@Data
 public class CollectdConsumer implements Consumer, LifeCycles {
     private final AsyncFramework async;
     private final Managed<Server> connection;
@@ -48,10 +45,13 @@ public class CollectdConsumer implements Consumer, LifeCycles {
     private final LongAdder consumed;
 
     @Inject
-    public CollectdConsumer(
-        AsyncFramework async, Managed<Server> connection,
-        @Named("consuming") AtomicInteger consuming, @Named("total") AtomicInteger total,
-        @Named("errors") AtomicLong errors, @Named("consumed") LongAdder consumed
+    CollectdConsumer(
+        AsyncFramework async,
+        Managed<Server> connection,
+        @Named("consuming") AtomicInteger consuming,
+        @Named("total") AtomicInteger total,
+        @Named("errors") AtomicLong errors,
+        @Named("consumed") LongAdder consumed
     ) {
         this.async = async;
         this.connection = connection;
@@ -80,7 +80,7 @@ public class CollectdConsumer implements Consumer, LifeCycles {
         final long consumed = this.consumed.sum();
 
         return Statistics.of(
-            ImmutableMap.<String, Long>of(CONSUMING, consuming, TOTAL, total, ERRORS, errors,
+            ImmutableMap.of(CONSUMING, consuming, TOTAL, total, ERRORS, errors,
                 CONSUMED, consumed));
     }
 
@@ -99,11 +99,11 @@ public class CollectdConsumer implements Consumer, LifeCycles {
         final Borrowed<Server> b = connection.borrow();
 
         if (!b.isValid()) {
-            return String.format("CollectdConsumer(non-configured)");
+            return "CollectdConsumer(non-configured)";
         }
 
         try {
-            return String.format("CollectdConsumer(configured)");
+            return "CollectdConsumer(configured)";
         } finally {
             b.release();
         }

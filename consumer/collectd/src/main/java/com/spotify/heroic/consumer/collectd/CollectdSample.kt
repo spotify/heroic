@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,27 +19,29 @@
  * under the License.
  */
 
-package com.spotify.heroic.consumer.collectd;
+package com.spotify.heroic.consumer.collectd
 
-import lombok.Data;
+data class CollectdSample(
+    val host: String,
+    val time: Long,
+    val plugin: String,
+    val pluginInstance: String,
+    val type: String,
+    val typeInstance: String,
+    val values: List<CollectdValue>,
+    val interval: Long,
+    val message: String,
+    val severity: Long
+)
 
-import java.util.List;
+enum class CollectdSampleType(val value: Int) {
+    COUNTER(0),
+    GAUGE(1),
+    DERIVE(2),
+    ABSOLUTE(3);
 
-@Data
-public class CollectdSample {
-    public static final int COUNTER = 0;
-    public static final int GAUGE = 1;
-    public static final int DERIVE = 2;
-    public static final int ABSOLUTE = 3;
-
-    private final String host;
-    private final long time;
-    private final String plugin;
-    private final String pluginInstance;
-    private final String type;
-    private final String typeInstance;
-    private final List<CollectdValue> values;
-    private final long interval;
-    private final String message;
-    private final long severity;
+    companion object {
+        private val map = values().associateBy(CollectdSampleType::value)
+        @JvmStatic fun fromValue(value: Int): CollectdSampleType? = map[value]
+    }
 }

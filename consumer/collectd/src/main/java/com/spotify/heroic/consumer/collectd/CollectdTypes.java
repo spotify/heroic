@@ -73,7 +73,7 @@ public class CollectdTypes {
         MAPPINGS.put(type, mapping);
     }
 
-    public static final String DEFAULT_KEY = "collectd";
+    private static final String DEFAULT_KEY = "collectd";
 
     private static final String DEFAULT_PLUGIN_TAG = "plugin";
     private static final String DEFAULT_PLUGIN_INSTANCE_TAG = "plugin_instance";
@@ -248,7 +248,7 @@ public class CollectdTypes {
         }
     }
 
-    static class Field {
+    public static class Field {
         private final double lower;
         private final double upper;
 

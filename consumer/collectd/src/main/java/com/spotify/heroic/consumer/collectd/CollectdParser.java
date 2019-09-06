@@ -23,7 +23,6 @@ package com.spotify.heroic.consumer.collectd;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.consumer.collectd.CollectdValue.Counter;
 import io.netty.buffer.ByteBuf;
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
@@ -33,22 +32,22 @@ import java.util.stream.IntStream;
 import org.slf4j.Logger;
 
 public class CollectdParser {
-    public static final int HOST = 0x0000;
-    public static final int TIME = 0x0001;
-    public static final int TIME_HR = 0x0008;
-    public static final int PLUGIN = 0x0002;
-    public static final int PLUGIN_INSTANCE = 0x0003;
-    public static final int TYPE = 0x0004;
-    public static final int TYPE_INSTANCE = 0x0005;
-    public static final int VALUES = 0x0006;
-    public static final int INTERVAL = 0x0007;
-    public static final int INTERVAL_HR = 0x0009;
-    public static final int MESSAGE = 0x0100;
-    public static final int SEVERITY = 0x0101;
+    private static final int HOST = 0x0000;
+    private static final int TIME = 0x0001;
+    private static final int TIME_HR = 0x0008;
+    private static final int PLUGIN = 0x0002;
+    private static final int PLUGIN_INSTANCE = 0x0003;
+    private static final int TYPE = 0x0004;
+    private static final int TYPE_INSTANCE = 0x0005;
+    private static final int VALUES = 0x0006;
+    private static final int INTERVAL = 0x0007;
+    private static final int INTERVAL_HR = 0x0009;
+    private static final int MESSAGE = 0x0100;
+    private static final int SEVERITY = 0x0101;
 
-    public static final long FACTOR_HR = 1 << 30;
+    private static final long FACTOR_HR = 1 << 30;
 
-    public static final Charset UTF8 = Charsets.UTF_8;
+    private static final Charset UTF8 = Charsets.UTF_8;
     private static final Logger log = org.slf4j.LoggerFactory.getLogger(CollectdParser.class);
 
     public static Iterator<CollectdSample> parse(final ByteBuf frame) {
@@ -128,18 +127,22 @@ public class CollectdParser {
         return new String(buffer, UTF8);
     }
 
-    public static List<CollectdValue> parseValues(final ByteBuf frame, final int size) {
+    public static List<CollectdValue> parseValues(final ByteBuf frame, @Deprecated final int size) {
         final int n = frame.readUnsignedShort();
 
-        final List<Integer> types = ImmutableList.copyOf(IntStream.range(0, n).map(i -> {
-            return frame.readByte();
-        }).iterator());
+        final List<Integer> types = ImmutableList.copyOf(IntStream.range(0, n).map(
+            i -> frame.readByte()).iterator());
 
         final ImmutableList.Builder<CollectdValue> values = ImmutableList.builder();
 
         for (final int type : types) {
-            switch (type) {
-                case CollectdSample.COUNTER:
+            CollectdSampleType sampleType = CollectdSampleType.fromValue(type);
+            if (sampleType == null) {
+                throw new IllegalArgumentException("invalid sample type: " + type);
+            }
+
+            switch (sampleType) {
+                case COUNTER:
                     final long c = frame.readLong();
 
                     if (c < 0) {
@@ -148,22 +151,22 @@ public class CollectdParser {
 
                     values.add(new Counter(c));
                     break;
-                case CollectdSample.GAUGE:
+                case GAUGE:
                     frame.order(ByteOrder.LITTLE_ENDIAN);
-                    values.add(new CollectdValue.Gauge(frame.readDouble()));
+                    values.add(new Gauge(frame.readDouble()));
                     frame.order(ByteOrder.BIG_ENDIAN);
                     break;
-                case CollectdSample.DERIVE:
-                    values.add(new CollectdValue.Derive(frame.readLong()));
+                case DERIVE:
+                    values.add(new Derive(frame.readLong()));
                     break;
-                case CollectdSample.ABSOLUTE:
+                case ABSOLUTE:
                     final long a = frame.readLong();
 
                     if (a < 0) {
                         throw new IllegalArgumentException("value too large for signed type");
                     }
 
-                    values.add(new CollectdValue.Absolute(a));
+                    values.add(new Absolute(a));
                     break;
                 default:
                     throw new IllegalArgumentException("invalid sample type: " + type);

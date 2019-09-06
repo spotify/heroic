@@ -46,11 +46,9 @@ import io.grpc.ManagedChannelBuilder;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
-import lombok.Data;
 import org.slf4j.Logger;
 import org.threeten.bp.Duration;
 
-@Data
 public class Connection {
 
     private static final Logger log = org.slf4j.LoggerFactory.getLogger(Connection.class);
