@@ -30,8 +30,8 @@ import com.datastax.driver.core.exceptions.DriverException;
 import com.datastax.driver.core.policies.RetryPolicy;
 import java.util.ArrayList;
 import java.util.List;
-import lombok.Data;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An aggressive retrying policy that will force the driver to retry a certain request a given
@@ -45,13 +45,16 @@ import org.slf4j.Logger;
  *
  * @author udoprog
  */
-@Data
 public class AggressiveRetryPolicy implements RetryPolicy {
 
-    private static final Logger log =
-      org.slf4j.LoggerFactory.getLogger(AggressiveRetryPolicy.class);
+    private static final Logger log = LoggerFactory.getLogger(AggressiveRetryPolicy.class);
     private final int numRetries;
     private final int rotateHost;
+
+    public AggressiveRetryPolicy(int numRetries, int rotateHost) {
+        this.numRetries = numRetries;
+        this.rotateHost = rotateHost;
+    }
 
     @Override
     public RetryDecision onReadTimeout(

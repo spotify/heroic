@@ -21,6 +21,9 @@
 
 package com.spotify.heroic.metric.datastax;
 
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+
 import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.policies.DefaultRetryPolicy;
 import com.datastax.driver.core.policies.RetryPolicy;
@@ -45,9 +48,6 @@ import dagger.Module;
 import dagger.Provides;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.Managed;
-import lombok.Data;
-
-import javax.inject.Named;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -56,21 +56,17 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import javax.inject.Named;
 
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
-
-@Data
 @ModuleId("datastax")
 public final class DatastaxMetricModule implements MetricModule, DynamicModuleId {
-    public static final String DATASTAX_CONFIGURE = "datastax.configure";
+    static final String DATASTAX_CONFIGURE = "datastax.configure";
 
-    public static final Set<String> DEFAULT_SEEDS = ImmutableSet.of("localhost");
-    public static final String DEFAULT_GROUP = "heroic";
-    public static final int DEFAULT_PORT = 9042;
-    public static final boolean DEFAULT_CONFIGURE = false;
-    public static final int DEFAULT_FETCH_SIZE = 5000;
-    public static final Duration DEFAULT_READ_TIMEOUT = new Duration(30, TimeUnit.SECONDS);
+    private static final Set<String> DEFAULT_SEEDS = ImmutableSet.of("localhost");
+    private static final int DEFAULT_PORT = 9042;
+    private static final boolean DEFAULT_CONFIGURE = false;
+    private static final int DEFAULT_FETCH_SIZE = 5000;
+    private static final Duration DEFAULT_READ_TIMEOUT = new Duration(30, TimeUnit.SECONDS);
 
     /* id of backend (defualt will be generated) */
     private final Optional<String> id;

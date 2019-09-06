@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,18 +19,11 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric.datastax.schema;
-
-import java.util.List;
-import lombok.Data;
+package com.spotify.heroic.metric.datastax.schema
 
 /**
  * Represents a CQL statement with a list of bindings that should be applied.
  *
  * @author udoprog
  */
-@Data
-public class SchemaBoundStatement {
-    final String statement;
-    final List<Object> bindings;
-}
+data class SchemaBoundStatement(val statement: String, val bindings: List<Any>)
