@@ -65,7 +65,6 @@ import eu.toolchain.async.ResolvableFuture;
 import eu.toolchain.async.StreamCollector;
 import eu.toolchain.async.Transform;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -80,7 +79,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.inject.Inject;
-import lombok.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
@@ -249,7 +247,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
                     };
 
                 final RowStreamHelper<BackendKey> helper =
-                    new RowStreamHelper<BackendKey>(helperObserver, c.schema.keyConverter(),
+                    new RowStreamHelper<>(helperObserver, c.schema.keyConverter(),
                         cause -> failedKeys.incrementAndGet());
 
                 Async.bind(async, c.session.executeAsync(bound)).onDone(helper);
@@ -362,7 +360,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
             };
 
             final RowStreamHelper<Point> helper =
-                new RowStreamHelper<Point>(helperObserver, f.converter());
+                new RowStreamHelper<>(helperObserver, f.converter());
 
             Async.bind(async, c.session.executeAsync(f.fetch(Integer.MAX_VALUE))).onDone(helper);
         };
@@ -443,23 +441,23 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
         }
 
         return async.eventuallyCollect(callables, new StreamCollector<Long, WriteMetric>() {
-            final ConcurrentLinkedQueue<Long> q = new ConcurrentLinkedQueue<Long>();
+            final ConcurrentLinkedQueue<Long> q = new ConcurrentLinkedQueue<>();
 
             @Override
-            public void resolved(Long result) throws Exception {
+            public void resolved(Long result) {
                 q.add(result);
             }
 
             @Override
-            public void failed(Throwable cause) throws Exception {
+            public void failed(Throwable cause) {
             }
 
             @Override
-            public void cancelled() throws Exception {
+            public void cancelled() {
             }
 
             @Override
-            public WriteMetric end(int resolved, int failed, int cancelled) throws Exception {
+            public WriteMetric end(int resolved, int failed, int cancelled) {
                 return new WriteMetric(ImmutableList.of(), ImmutableList.copyOf(q));
             }
         }, 500);
@@ -506,7 +504,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
     private List<AsyncFuture<FetchData>> fetchDataPoints(
         final QueryTrace.Watch w, final int limit, final QueryOptions options,
         final List<PreparedFetch> prepared, final Connection c
-    ) throws Exception {
+    ) {
         final List<AsyncFuture<FetchData>> fetches = new ArrayList<>(prepared.size());
 
         for (final Schema.PreparedFetch p : prepared) {
@@ -563,17 +561,17 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
         }
 
         @Override
-        public void failed(Throwable cause) throws Exception {
+        public void failed(Throwable cause) {
             future.fail(cause);
         }
 
         @Override
-        public void cancelled() throws Exception {
+        public void cancelled() {
             future.cancel();
         }
 
         @Override
-        public void resolved(final ResultSet rows) throws Exception {
+        public void resolved(final ResultSet rows) {
             if (future.isDone()) {
                 return;
             }
@@ -600,17 +598,17 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
             if (nextFetch.isPresent()) {
                 nextFetch.get().onDone(new FutureDone<Void>() {
                     @Override
-                    public void failed(Throwable cause) throws Exception {
+                    public void failed(Throwable cause) {
                         RowFetchHelper.this.failed(cause);
                     }
 
                     @Override
-                    public void cancelled() throws Exception {
+                    public void cancelled() {
                         RowFetchHelper.this.cancelled();
                     }
 
                     @Override
-                    public void resolved(Void result) throws Exception {
+                    public void resolved(Void result) {
                         RowFetchHelper.this.resolved(rows);
                     }
                 });
@@ -632,17 +630,17 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
 
             result.onDone(new FutureDone<T>() {
                 @Override
-                public void failed(Throwable cause) throws Exception {
+                public void failed(Throwable cause) {
                     future.fail(cause);
                 }
 
                 @Override
-                public void resolved(T result) throws Exception {
+                public void resolved(T result) {
                     future.resolve(result);
                 }
 
                 @Override
-                public void cancelled() throws Exception {
+                public void cancelled() {
                     future.cancel();
                 }
             });
@@ -675,17 +673,17 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
         }
 
         @Override
-        public void failed(Throwable cause) throws Exception {
+        public void failed(Throwable cause) {
             observer.fail(cause);
         }
 
         @Override
-        public void cancelled() throws Exception {
+        public void cancelled() {
             observer.cancel();
         }
 
         @Override
-        public void resolved(final ResultSet rows) throws Exception {
+        public void resolved(final ResultSet rows) {
             int count = rows.getAvailableWithoutFetching();
 
             final Optional<AsyncFuture<Void>> nextFetch = rows.isFullyFetched() ? Optional.empty()
@@ -722,31 +720,31 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
 
             observer.observe(batch).onDone(new FutureDone<Void>() {
                 @Override
-                public void failed(Throwable cause) throws Exception {
+                public void failed(Throwable cause) {
                     observer.fail(cause);
                 }
 
                 @Override
-                public void cancelled() throws Exception {
+                public void cancelled() {
                     observer.cancel();
                 }
 
                 @Override
-                public void resolved(Void result) throws Exception {
+                public void resolved(Void result) {
                     if (nextFetch.isPresent()) {
                         nextFetch.get().onDone(new FutureDone<Void>() {
                             @Override
-                            public void failed(Throwable cause) throws Exception {
+                            public void failed(Throwable cause) {
                                 RowStreamHelper.this.failed(cause);
                             }
 
                             @Override
-                            public void cancelled() throws Exception {
+                            public void cancelled() {
                                 RowStreamHelper.this.cancelled();
                             }
 
                             @Override
-                            public void resolved(Void result) throws Exception {
+                            public void resolved(Void result) {
                                 RowStreamHelper.this.resolved(rows);
                             }
                         });
@@ -771,32 +769,15 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
     private AsyncFuture<List<Event>> getEvents(final Connection c, final UUID id) {
         final ResolvableFuture<List<Event>> future = async.future();
 
-        final Transform<Row, Event> converter = row -> {
-            return new Event(row.getString("activity"), row.getUUID("event_id").timestamp(),
-                row.getInet("source"), row.getInt("source_elapsed"), row.getString("thread"));
-        };
+        final Transform<Row, Event> converter = row -> new Event(
+            row.getString("activity"), row.getUUID("event_id").timestamp(),
+            row.getInet("source"), row.getInt("source_elapsed"), row.getString("thread"));
 
         Async
             .bind(async, c.session.executeAsync(SELECT_EVENTS_FORMAT, id))
-            .onDone(new RowFetchHelper<Event, List<Event>>(future, converter, result -> {
-                return async.resolved(ImmutableList.copyOf(result.getData()));
-            }));
+            .onDone(new RowFetchHelper<>(future, converter, result ->
+                async.resolved(ImmutableList.copyOf(result.getData()))));
 
         return future;
-    }
-
-    @Data
-    public static class Event {
-        private final String name;
-        private final long timestamp;
-        private final InetAddress source;
-        private final int sourceElapsed;
-        private final String threadName;
-    }
-
-    @Data
-    private static class RowFetchResult<T> {
-        final List<ExecutionInfo> info;
-        final List<T> data;
     }
 }

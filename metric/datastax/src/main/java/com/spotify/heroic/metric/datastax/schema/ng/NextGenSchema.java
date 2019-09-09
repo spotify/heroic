@@ -109,9 +109,7 @@ public class NextGenSchema extends AbstractCassandraSchema implements Schema {
 
         return async
             .collectAndDiscard(ImmutableList.of(write, fetch, delete, count))
-            .directTransform(r -> {
-                return new NextGenSchemaInstance(keyspace, POINTS_TABLE, write.getNow(),
-                    fetch.getNow(), delete.getNow(), count.get());
-            });
+            .directTransform(r -> new NextGenSchemaInstance(keyspace, POINTS_TABLE, write.getNow(),
+                fetch.getNow(), delete.getNow(), count.get()));
     }
 }

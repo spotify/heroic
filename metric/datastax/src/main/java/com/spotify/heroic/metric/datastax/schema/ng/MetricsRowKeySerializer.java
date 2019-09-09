@@ -29,13 +29,14 @@ import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.Serializer;
 import eu.toolchain.serializer.SerializerFramework;
 import eu.toolchain.serializer.TinySerializer;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public class MetricsRowKeySerializer implements TypeSerializer<MetricsRowKey> {
-    final SerializerFramework s = TinySerializer.builder().useCompactSize(true).build();
-    final Serializer<MetricsRowKey> serializer = new MetricsRowKey_Serializer(s, s.variableLong());
+    private static final SerializerFramework s =
+        TinySerializer.builder().useCompactSize(true).build();
+    private static final Serializer<MetricsRowKey> serializer =
+        new MetricsRowKey_Serializer(s, s.variableLong());
 
     @Override
     public ByteBuffer serialize(MetricsRowKey value) throws IOException {

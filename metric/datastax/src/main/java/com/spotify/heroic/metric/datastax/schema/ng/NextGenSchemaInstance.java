@@ -34,8 +34,6 @@ import com.spotify.heroic.metric.datastax.schema.AbstractSchemaInstance;
 import com.spotify.heroic.metric.datastax.schema.BackendKeyUtils;
 import com.spotify.heroic.metric.datastax.schema.Schema.PreparedFetch;
 import eu.toolchain.async.Transform;
-import lombok.Data;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -43,28 +41,27 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Data
 public class NextGenSchemaInstance extends AbstractSchemaInstance {
-    public static final String KEY = "metric_key";
+    private static final String KEY = "metric_key";
     public static final long MAX_WIDTH = Integer.MAX_VALUE;
 
-    public static final TypeSerializer<MetricsRowKey> ROW_KEY = new MetricsRowKeySerializer();
+    private static final TypeSerializer<MetricsRowKey> ROW_KEY = new MetricsRowKeySerializer();
 
-    private final String keyspace;
-    private final String pointsTable;
     private final PreparedStatement write;
     private final PreparedStatement fetch;
     private final PreparedStatement delete;
     private final PreparedStatement count;
     private final BackendKeyUtils keyUtils;
 
-    public NextGenSchemaInstance(
-        final String keyspace, final String pointsTable, final PreparedStatement write,
-        final PreparedStatement fetch, final PreparedStatement delete, final PreparedStatement count
+    NextGenSchemaInstance(
+        final String keyspace,
+        final String pointsTable,
+        final PreparedStatement write,
+        final PreparedStatement fetch,
+        final PreparedStatement delete,
+        final PreparedStatement count
     ) {
         super(KEY);
-        this.keyspace = keyspace;
-        this.pointsTable = pointsTable;
         this.write = write;
         this.fetch = fetch;
         this.delete = delete;
