@@ -25,19 +25,32 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.common.Series;
 import eu.toolchain.serializer.AutoSerialize;
-import lombok.Data;
 
+// NB(hexedpackets): This should be a kotlin data class, but the AutoSerialize annotation does not
+// compile on kotlin classes.
 @AutoSerialize
-@Data
 public class MetricsRowKey {
     private final Series series;
     @AutoSerialize.Field(provided = true)
     private final long base;
+
+    public MetricsRowKey(Series series, long base) {
+        this.series = series;
+        this.base = base;
+    }
 
     @JsonCreator
     public static MetricsRowKey create(
         @JsonProperty("series") Series series, @JsonProperty("base") Long base
     ) {
         return new MetricsRowKey(series, base);
+    }
+
+    public Series getSeries() {
+        return this.series;
+    }
+
+    public long getBase() {
+        return this.base;
     }
 }
