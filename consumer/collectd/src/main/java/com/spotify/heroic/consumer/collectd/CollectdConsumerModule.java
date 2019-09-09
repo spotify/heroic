@@ -44,12 +44,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import javax.inject.Named;
-import lombok.Data;
 import org.slf4j.Logger;
 
-@Data
 public class CollectdConsumerModule implements ConsumerModule {
-    public static final int DEFAULT_PORT = 25826;
+    private static final int DEFAULT_PORT = 25826;
     private static final Logger log =
       org.slf4j.LoggerFactory.getLogger(CollectdConsumerModule.class);
 
@@ -58,6 +56,20 @@ public class CollectdConsumerModule implements ConsumerModule {
     private final Optional<Integer> port;
     private final Optional<GrokProcessor> hostProcessor;
     private final CollectdTypes types;
+
+    private CollectdConsumerModule(
+        Optional<String> id,
+        Optional<String> host,
+        Optional<Integer> port,
+        Optional<GrokProcessor> hostProcessor,
+        CollectdTypes types
+    ) {
+        this.id = id;
+        this.host = host;
+        this.port = port;
+        this.hostProcessor = hostProcessor;
+        this.types = types;
+    }
 
     @Override
     public Exposed module(
