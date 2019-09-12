@@ -127,7 +127,7 @@ public class BigtableMetricAnalytics implements MetricAnalytics, LifeCycles {
             .readRowsObserved(hitsTableName, ReadRowsRequest.builder().range(range).build())
             .transform(row -> {
                 final ByteString rowKey = row.getKey();
-                final SeriesKeyEncoding.SeriesKey k;
+                final SeriesKey k;
 
                 try {
                     k = fetchSeries.decode(rowKey, s -> mapper.readValue(s, Series.class));
@@ -158,7 +158,7 @@ public class BigtableMetricAnalytics implements MetricAnalytics, LifeCycles {
         }
 
         return connection.doto(c -> {
-            final ByteString key = fetchSeries.encode(new SeriesKeyEncoding.SeriesKey(date, series),
+            final ByteString key = fetchSeries.encode(new SeriesKey(date, series),
                 mapper::writeValueAsString);
 
             final AsyncFuture<Row> request = c
