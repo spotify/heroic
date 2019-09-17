@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.google.auto.value.AutoValue;
 import com.google.common.io.Resources;
+import com.spotify.heroic.consumer.schemas.spotify100.JsonMetric;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -69,10 +70,10 @@ public class Spotify100Test {
 
             final int line = i++;
 
-            final Spotify100.JsonMetric value;
+            final JsonMetric value;
 
             try {
-                value = mapper.readValue(parts[0].trim(), Spotify100.JsonMetric.class);
+                value = mapper.readValue(parts[0].trim(), JsonMetric.class);
             } catch (final Exception e) {
                 throw new RuntimeException(line + ": " + e.getMessage(), e);
             }

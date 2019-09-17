@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,22 +19,13 @@
  * under the License.
  */
 
-package com.spotify.heroic.http.metadata;
+package com.spotify.heroic.http.cluster
 
-import com.spotify.heroic.QueryDateRange;
-import com.spotify.heroic.filter.Filter;
-import java.util.Optional;
-import lombok.Data;
-import org.jetbrains.annotations.NotNull;
+import java.util.*
 
-@Data
-public class MetadataTagKeySuggest {
-    public static final int DEFAULT_LIMIT = 10;
-
-    @NotNull
-    private final Optional<Filter> filter;
-    @NotNull
-    private final Optional<QueryDateRange> range;
-    @NotNull
-    private final Optional<Integer> limit;
-}
+data class ClusterNodeStatus(
+    val node: String,
+    val id: UUID,
+    val version: Int,
+    val tags: Map<String, String>
+)

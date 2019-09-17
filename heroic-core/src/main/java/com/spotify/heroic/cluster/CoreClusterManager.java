@@ -547,8 +547,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
     ) {
         if (this.clients.compareAndSet(oldClients, newClients)) {
             synchronized (this.updateRegistryLock) {
-                registry.getAndSet(
-                    new NodeRegistry(async, new ArrayList<>(okNodes), okNodes.size()));
+                registry.getAndSet(new NodeRegistry(new ArrayList<>(okNodes), okNodes.size()));
             }
 
             // Close removed nodes

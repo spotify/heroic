@@ -51,7 +51,6 @@ dependencies {
 
     // Compile-time code generation
     antlr 'org.antlr:antlr4:4.5'
-    compileOnly 'org.projectlombok:lombok'
     compileOnly 'com.google.auto.value:auto-value'
 
 }

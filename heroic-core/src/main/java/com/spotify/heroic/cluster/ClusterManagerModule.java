@@ -49,16 +49,14 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import javax.inject.Named;
-import lombok.Data;
 import org.apache.commons.lang3.tuple.Pair;
 
 /**
  * @author udoprog
  */
-@Data
 @Module
 public class ClusterManagerModule {
-    public static final boolean DEFAULT_USE_LOCAL = true;
+    private static final boolean DEFAULT_USE_LOCAL = true;
 
     private final UUID id;
     private final Map<String, String> tags;
@@ -67,6 +65,28 @@ public class ClusterManagerModule {
     private final List<RpcProtocolModule> protocols;
     private final Set<Map<String, String>> topology;
     private final Optional<NodeMetadataFactory> metadataFactory;
+
+    public ClusterManagerModule(
+        UUID id,
+        Map<String, String> tags,
+        boolean useLocal,
+        ClusterDiscoveryModule discovery,
+        List<RpcProtocolModule> protocols,
+        Set<Map<String, String>> topology,
+        Optional<NodeMetadataFactory> metadataFactory
+    ) {
+        this.id = id;
+        this.tags = tags;
+        this.useLocal = useLocal;
+        this.discovery = discovery;
+        this.protocols = protocols;
+        this.topology = topology;
+        this.metadataFactory = metadataFactory;
+    }
+
+    public ClusterDiscoveryModule getDiscovery() {
+        return discovery;
+    }
 
     @Provides
     @ClusterScope

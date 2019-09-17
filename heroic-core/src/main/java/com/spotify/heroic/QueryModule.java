@@ -22,18 +22,21 @@
 package com.spotify.heroic;
 
 import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.statistics.QueryReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
+import com.spotify.heroic.statistics.QueryReporter;
 import dagger.Module;
 import dagger.Provides;
 import javax.inject.Named;
-import lombok.Data;
 
 @Module
-@Data
 public class QueryModule {
     private final OptionalLimit groupLimit;
     private final long smallQueryThreshold;
+
+    public QueryModule(OptionalLimit groupLimit, long smallQueryThreshold) {
+        this.groupLimit = groupLimit;
+        this.smallQueryThreshold = smallQueryThreshold;
+    }
 
     @Provides
     @QueryScope

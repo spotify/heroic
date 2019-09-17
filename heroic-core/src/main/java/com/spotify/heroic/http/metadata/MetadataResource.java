@@ -58,7 +58,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.MediaType;
-import lombok.Data;
 
 @Path("metadata")
 @Produces(MediaType.APPLICATION_JSON)
@@ -249,12 +248,5 @@ public class MetadataResource {
                 () -> new DateRange(now - TimeUnit.MILLISECONDS.convert(7, TimeUnit.DAYS), now));
 
         return new RequestCriteria(c, range, limit.get());
-    }
-
-    @Data
-    static class RequestCriteria {
-        private final Filter filter;
-        private final DateRange range;
-        private final OptionalLimit limit;
     }
 }

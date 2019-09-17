@@ -32,13 +32,16 @@ import io.opencensus.trace.Tracer;
 import io.opencensus.trace.Tracing;
 import java.util.List;
 import java.util.function.Function;
-import lombok.Data;
 
-@Data
 public class SuggestBackendGroup implements SuggestBackend {
     private final Tracer tracer = Tracing.getTracer();
     private final AsyncFramework async;
     private final SelectedGroup<SuggestBackend> backends;
+
+    SuggestBackendGroup(AsyncFramework async, SelectedGroup<SuggestBackend> backends) {
+        this.async = async;
+        this.backends = backends;
+    }
 
     @Override
     public AsyncFuture<Void> configure() {
@@ -121,6 +124,6 @@ public class SuggestBackendGroup implements SuggestBackend {
     }
 
     public String toString() {
-        return "SuggestBackendGroup(backends=" + this.getBackends() + ")";
+        return "SuggestBackendGroup(backends=" + backends + ")";
     }
 }

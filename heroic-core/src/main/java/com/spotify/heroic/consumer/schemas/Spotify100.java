@@ -23,28 +23,21 @@ package com.spotify.heroic.consumer.schemas;
 
 import static io.opencensus.trace.AttributeValue.stringAttributeValue;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TreeTraversingParser;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.fasterxml.jackson.module.kotlin.KotlinModule;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.consumer.ConsumerSchema;
 import com.spotify.heroic.consumer.ConsumerSchemaException;
 import com.spotify.heroic.consumer.ConsumerSchemaValidationException;
 import com.spotify.heroic.consumer.SchemaScope;
+import com.spotify.heroic.consumer.schemas.spotify100.JsonMetric;
+import com.spotify.heroic.consumer.schemas.spotify100.Version;
 import com.spotify.heroic.ingestion.Ingestion;
 import com.spotify.heroic.ingestion.IngestionGroup;
 import com.spotify.heroic.metric.MetricCollection;
@@ -62,9 +55,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import javax.inject.Inject;
-import lombok.Data;
 
 public class Spotify100 implements ConsumerSchema {
     private static final String HOST_TAG = "host";
@@ -73,72 +64,6 @@ public class Spotify100 implements ConsumerSchema {
 
     public String toString() {
         return "Spotify100()";
-    }
-
-    @Data
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class JsonMetric {
-        private final String key;
-        @Deprecated
-        private final String host;
-        private final Long time;
-        @JsonDeserialize(using = TagsDeserializer.class)
-        private final Map<String, String> attributes;
-        @JsonDeserialize(using = TagsDeserializer.class)
-        private final Map<String, String> resource;
-        private final Double value;
-
-        @JsonCreator
-        public JsonMetric(
-            @JsonProperty("key") String key,
-            @JsonProperty("host") Optional<String> host,
-            @JsonProperty("time") Long time,
-            @JsonProperty("attributes") Map<String, String> attributes,
-            @JsonProperty("resource") Map<String, String> resource,
-            @JsonProperty("value") Double value
-        ) {
-            this.key = key;
-            this.host = host.orElse(null);
-            this.time = time;
-            this.attributes = attributes;
-            this.resource = resource;
-            this.value = value;
-        }
-
-        public static final class TagsDeserializer extends JsonDeserializer<Map<String, String>> {
-            @Override
-            public Map<String, String> getNullValue(final DeserializationContext ctxt)
-                throws JsonMappingException {
-                return ImmutableMap.of();
-            }
-
-            @Override
-            public Map<String, String> deserialize(JsonParser p, DeserializationContext ctxt)
-                throws IOException {
-                final ImmutableMap.Builder<String, String> tags = ImmutableMap.builder();
-
-                if (p.getCurrentToken() != JsonToken.START_OBJECT) {
-                    throw ctxt.wrongTokenException(p, JsonToken.START_OBJECT, null);
-                }
-
-                while (p.nextToken() == JsonToken.FIELD_NAME) {
-                    final String key = p.getCurrentName();
-                    final String value = p.nextTextValue();
-
-                    if (value == null) {
-                        continue;
-                    }
-
-                    tags.put(key, value);
-                }
-
-                if (p.getCurrentToken() != JsonToken.END_OBJECT) {
-                    throw ctxt.wrongTokenException(p, JsonToken.END_OBJECT, null);
-                }
-
-                return tags.build();
-            }
-        }
     }
 
     @SchemaScope
@@ -271,40 +196,12 @@ public class Spotify100 implements ConsumerSchema {
         Consumer consumer();
     }
 
-    @Data
-    static class Version {
-        private final int major;
-        private final int minor;
-        private final int patch;
-
-        /**
-         * Parse the given version string.
-         */
-        public static Version parse(final String input) {
-            if (input == null) {
-                throw new NullPointerException();
-            }
-
-            final String[] parts = input.trim().split("\\.");
-
-            if (parts.length != 3) {
-                throw new IllegalArgumentException("too few components: " + input);
-            }
-
-            final int major = Integer.parseInt(parts[0]);
-            final int minor = Integer.parseInt(parts[1]);
-            final int patch = Integer.parseInt(parts[2]);
-
-            return new Version(major, minor, patch);
-        }
-    }
-
     /**
      * Setup the ObjectMapper necessary to serialize types in this protocol.
      */
     static ObjectMapper objectMapper() {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new Jdk8Module().configureAbsentsAsNulls(true));
-        return mapper;
+        return new ObjectMapper()
+            .registerModule(new Jdk8Module().configureAbsentsAsNulls(true))
+            .registerModule(new KotlinModule());
     }
 }

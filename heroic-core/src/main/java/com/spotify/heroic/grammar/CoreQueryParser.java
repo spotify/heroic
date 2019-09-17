@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.inject.Inject;
-import lombok.Data;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.BailErrorStrategy;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -45,7 +44,7 @@ public class CoreQueryParser implements QueryParser {
     @Override
     public List<Expression> parse(String statements) {
         return parse(HeroicQueryParser::statements, statements)
-            .pop(QueryListener.Statements.class)
+            .pop(Statements.class)
             .getExpressions();
     }
 
@@ -122,15 +121,5 @@ public class CoreQueryParser implements QueryParser {
         ParserRuleContext context(HeroicQueryParser parser);
 
         T convert(final QueryListener listener);
-    }
-
-    @Data
-    public static class FromDSL {
-        private final MetricType source;
-        private final Optional<RangeExpression> range;
-
-        public FromDSL eval(final Expression.Scope scope) {
-            return new FromDSL(source, range.map(r -> r.eval(scope)));
-        }
     }
 }

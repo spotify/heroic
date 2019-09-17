@@ -29,16 +29,19 @@ import dagger.Provides;
 import java.util.Optional;
 import java.util.function.Consumer;
 import javax.inject.Named;
-import lombok.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 
-@Data
 @Module
 public class Slf4jQueryLoggingModule implements QueryLoggingModule {
     private final Optional<String> name;
     private final Optional<String> level;
+
+    public Slf4jQueryLoggingModule(Optional<String> name, Optional<String> level) {
+        this.name = name;
+        this.level = level;
+    }
 
     @QueryLoggingScope
     @Provides

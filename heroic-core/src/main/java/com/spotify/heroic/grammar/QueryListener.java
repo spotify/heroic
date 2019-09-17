@@ -39,12 +39,10 @@ import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.metric.MetricType;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Stack;
 import java.util.concurrent.TimeUnit;
-import lombok.Data;
 import org.antlr.v4.runtime.CommonToken;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -288,7 +286,7 @@ class QueryListener extends HeroicQueryBaseListener {
 
             if (top instanceof KeywordValue) {
                 final KeywordValue kw = (KeywordValue) top;
-                keywords.put(kw.key, kw.expression);
+                keywords.put(kw.getKey(), kw.getExpression());
                 continue;
             }
 
@@ -777,22 +775,6 @@ class QueryListener extends HeroicQueryBaseListener {
         }
 
         return "<" + name.value() + ">";
-    }
-
-    @Data
-    static final class Statements {
-        private final List<Expression> expressions;
-    }
-
-    @Data
-    static final class KeywordValue {
-        private final String key;
-        private final Expression expression;
-    }
-
-    @Data
-    static final class KeywordValues {
-        private final Map<String, Expression> map;
     }
 
     static class ObjectMark {

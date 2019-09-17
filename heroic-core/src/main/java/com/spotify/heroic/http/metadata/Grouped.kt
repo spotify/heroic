@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,15 +19,8 @@
  * under the License.
  */
 
-package com.spotify.heroic.http.cluster;
+package com.spotify.heroic.http.metadata
 
-import com.spotify.heroic.cluster.ClusterManager;
-import lombok.Data;
+import java.util.*
 
-import java.util.List;
-
-@Data
-public class ClusterStatus {
-    private final List<ClusterNodeStatus> nodes;
-    private final ClusterManager.Statistics statistics;
-}
+data class Grouped<T>(val group: Optional<String>, val value: T)

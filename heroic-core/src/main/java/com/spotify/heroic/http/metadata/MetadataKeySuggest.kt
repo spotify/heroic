@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,19 +19,22 @@
  * under the License.
  */
 
-package com.spotify.heroic.http.metadata;
+package com.spotify.heroic.http.metadata
 
-import com.spotify.heroic.QueryDateRange;
-import com.spotify.heroic.filter.Filter;
-import lombok.Data;
-import lombok.NonNull;
+import com.spotify.heroic.QueryDateRange
+import com.spotify.heroic.filter.Filter
+import com.spotify.heroic.suggest.MatchOptions
+import java.util.*
 
-import java.util.Optional;
-
-@Data
-public class MetadataCount {
-    @NonNull
-    private final Optional<Filter> filter;
-    @NonNull
-    private final Optional<QueryDateRange> range;
+data class MetadataKeySuggest(
+    val filter: Optional<Filter>,
+    val range: Optional<QueryDateRange>,
+    val limit: Optional<Int>,
+    val match: Optional<MatchOptions.Builder>,
+    val key: Optional<String>
+) {
+    companion object {
+        const val DEFAULT_LIMIT = 10
+        @JvmField val DEFAULT_MATCH: MatchOptions = MatchOptions.builder().fuzzy(false).build()
+    }
 }

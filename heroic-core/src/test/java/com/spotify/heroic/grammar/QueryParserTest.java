@@ -288,13 +288,13 @@ public class QueryParserTest {
     }
 
     void checkFrom(
-        MetricType source, Optional<Expression> range, CoreQueryParser.FromDSL result
+        MetricType source, Optional<Expression> range, FromDSL result
     ) {
         assertEquals(source, result.getSource());
         assertEquals(range, result.getRange());
     }
 
-    CoreQueryParser.FromDSL parseFrom(String input) {
+    FromDSL parseFrom(String input) {
         return parser.parseFrom(input);
     }
 
