@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import java.util.ArrayList;
 import java.util.List;
-import lombok.Data;
 
 public class ReadModifyWriteRules {
     private final List<com.google.bigtable.v2.ReadModifyWriteRule>
@@ -54,7 +53,6 @@ public class ReadModifyWriteRules {
         return new Builder();
     }
 
-    @Data
     public static class Builder {
         final List<com.google.bigtable.v2.ReadModifyWriteRule> rules =
             new ArrayList<>();

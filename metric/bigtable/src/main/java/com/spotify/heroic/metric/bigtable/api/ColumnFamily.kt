@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,13 +19,6 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric.bigtable.api;
+package com.spotify.heroic.metric.bigtable.api
 
-import lombok.Data;
-
-@Data
-public class ColumnFamily {
-    final String clusterUri;
-    final String tableId;
-    final String name;
-}
+data class ColumnFamily(val clusterUri: String, val tableId: String, val name: String)

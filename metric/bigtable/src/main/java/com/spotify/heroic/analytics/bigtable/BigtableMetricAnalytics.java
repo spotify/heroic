@@ -31,7 +31,7 @@ import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.bigtable.BigtableConnection;
-import com.spotify.heroic.metric.bigtable.api.Family;
+import com.spotify.heroic.metric.bigtable.api.LatestCellValueColumn;
 import com.spotify.heroic.metric.bigtable.api.ReadModifyWriteRules;
 import com.spotify.heroic.metric.bigtable.api.ReadRowsRequest;
 import com.spotify.heroic.metric.bigtable.api.Row;
@@ -120,7 +120,7 @@ public class BigtableMetricAnalytics implements MetricAnalytics, LifeCycles {
         final ByteString start = fetchSeries.rangeKey(date);
         final ByteString end = fetchSeries.rangeKey(date.plusDays(1));
 
-        final RowRange range = RowRange.rowRange(Optional.of(start), Optional.of(end));
+        final RowRange range = new RowRange(Optional.of(start), Optional.of(end));
 
         return c
             .dataClient()
@@ -136,7 +136,7 @@ public class BigtableMetricAnalytics implements MetricAnalytics, LifeCycles {
                 }
 
                 final long value = row.getFamily(hitsColumnFamily).map(family -> {
-                    final Family.LatestCellValueColumn col =
+                    final LatestCellValueColumn col =
                         family.latestCellValue().iterator().next();
                     final ByteBuffer buf = ByteBuffer.wrap(col.getValue().toByteArray());
                     buf.order(ByteOrder.BIG_ENDIAN);
