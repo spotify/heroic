@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
-import eu.toolchain.async.AsyncFramework;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -35,15 +34,16 @@ import java.util.Random;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import lombok.Data;
 
-@Data
 public class NodeRegistry {
     private static final Random random = new Random();
-
-    private final AsyncFramework async;
     private final List<ClusterNode> entries;
     private final int totalNodes;
+
+    NodeRegistry(List<ClusterNode> entries, int totalNodes) {
+        this.entries = entries;
+        this.totalNodes = totalNodes;
+    }
 
     private Multimap<Map<String, String>, ClusterNode> buildShards(
         List<ClusterNode> entries
@@ -59,6 +59,10 @@ public class NodeRegistry {
 
     public List<ClusterNode> getEntries() {
         return ImmutableList.copyOf(entries);
+    }
+
+    public int getTotalNodes() {
+        return totalNodes;
     }
 
     public int getOnlineNodes() {

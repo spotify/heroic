@@ -29,12 +29,10 @@ import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindTags;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.FutureDone;
-import lombok.Data;
-
-import javax.inject.Inject;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import javax.inject.Inject;
 
 public class MetadataResourceCache {
     private final QueryManager query;
@@ -110,11 +108,5 @@ public class MetadataResourceCache {
             public void resolved(FindKeys result) {
             }
         });
-    }
-
-    @Data
-    static class Grouped<T> {
-        private final Optional<String> group;
-        private final T value;
     }
 }

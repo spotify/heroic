@@ -222,11 +222,12 @@ allprojects {
             dependency 'org.glassfish.jersey.inject:jersey-hk2:2.27'
 
             // can't use a dependencySet for jackson since the groups are all different
-            dependency 'com.fasterxml.jackson.core:jackson-annotations:2.8.11'
-            dependency 'com.fasterxml.jackson.core:jackson-databind:2.8.11.3'
-            dependency 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.8.11'
-            dependency 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.8.11'
-            dependency 'com.fasterxml.jackson.module:jackson-module-kotlin:2.8.11'
+            def jackson_version = '2.9.9'
+            dependency "com.fasterxml.jackson.core:jackson-annotations:$jackson_version"
+            dependency 'com.fasterxml.jackson.core:jackson-databind:2.9.9.3'
+            dependency "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jackson_version"
+            dependency "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:$jackson_version"
+            dependency "com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version"
 
             dependency 'junit:junit:4.12'
             dependency 'org.hamcrest:java-hamcrest:2.0.0.0'

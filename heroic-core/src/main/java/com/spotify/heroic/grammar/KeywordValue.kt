@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,40 +19,10 @@
  * under the License.
  */
 
-package com.spotify.heroic.http.metadata;
+@file:JvmMultifileClass
 
-import com.spotify.heroic.QueryDateRange;
-import com.spotify.heroic.filter.Filter;
-import lombok.Data;
-import lombok.NonNull;
+package com.spotify.heroic.grammar
 
-import java.util.Optional;
+data class KeywordValue(val key: String, val expression: Expression)
 
-@Data
-public class MetadataTagValueSuggest {
-    public static final int DEFAULT_LIMIT = 10;
-
-    /**
-     * Filter the suggestions being returned.
-     */
-    @NonNull
-    private final Optional<Filter> filter;
-
-    /**
-     * Limit the number of suggestions being returned.
-     */
-    @NonNull
-    private final Optional<Integer> limit;
-
-    /**
-     * Query for tags within the given range.
-     */
-    @NonNull
-    private final Optional<QueryDateRange> range;
-
-    /**
-     * Exclude the given tags from the result.
-     */
-    @NonNull
-    private final Optional<String> key;
-}
+data class KeywordValues(val map: Map<String, Expression>)

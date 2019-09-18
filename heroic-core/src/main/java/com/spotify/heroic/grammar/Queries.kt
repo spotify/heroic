@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,17 +19,8 @@
  * under the License.
  */
 
-package com.spotify.heroic.http.cluster;
+package com.spotify.heroic.grammar
 
-import lombok.Data;
+import com.spotify.heroic.shell.task.Query
 
-import java.util.Map;
-import java.util.UUID;
-
-@Data
-public class ClusterNodeStatus {
-    private final String node;
-    private final UUID id;
-    private final int version;
-    private final Map<String, String> tags;
-}
+data class Queries(val queries: List<Query>)
