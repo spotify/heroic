@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import java.util.ArrayList;
 import java.util.List;
-import lombok.Data;
 
 public class Mutations {
     private final List<com.google.bigtable.v2.Mutation> mutations;
@@ -53,7 +52,6 @@ public class Mutations {
         return new Builder();
     }
 
-    @Data
     public static class Builder {
         final List<com.google.bigtable.v2.Mutation> mutations =
             new ArrayList<>();

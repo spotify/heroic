@@ -39,7 +39,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
-import lombok.Data;
 import org.apache.commons.lang3.tuple.Pair;
 
 public class FakeBigtableConnection implements BigtableConnection {
@@ -164,7 +163,6 @@ public class FakeBigtableConnection implements BigtableConnection {
         }
     }
 
-    @Data
     class TableStorage {
         private Table table;
 
@@ -174,11 +172,20 @@ public class FakeBigtableConnection implements BigtableConnection {
         private final Object lock = new Object();
 
         @java.beans.ConstructorProperties({ "table" })
-        public TableStorage(final Table table) {
+        TableStorage(final Table table) {
             this.table = table;
         }
 
-        public AsyncFuture<Void> mutateRow(final ByteString rowKey, final Mutations mutations) {
+        Table getTable() {
+            return table;
+        }
+
+        TableStorage setTable(Table table) {
+            this.table = table;
+            return this;
+        }
+
+        AsyncFuture<Void> mutateRow(final ByteString rowKey, final Mutations mutations) {
             return async.call(() -> {
                 mutations.getMutations().forEach(mutation -> {
                     switch (mutation.getMutationCase()) {
@@ -211,7 +218,7 @@ public class FakeBigtableConnection implements BigtableConnection {
             });
         }
 
-        public AsyncFuture<List<FlatRow>> readRows(final ReadRowsRequest request) {
+        AsyncFuture<List<FlatRow>> readRows(final ReadRowsRequest request) {
             final Function<String, Boolean> matchesColumnFamily =
                 request.getFilter().<Function<String, Boolean>>map(
                     filter -> filter::matchesColumnFamily).orElse(familyName -> true);
@@ -264,11 +271,14 @@ public class FakeBigtableConnection implements BigtableConnection {
         }
     }
 
-    @Data
     class RowStorage {
         private final ColumnFamily columnFamily;
         private final ConcurrentMap<ByteString, ByteString> storage =
             new ConcurrentSkipListMap<>(RowFilter::compareByteStrings);
+
+        RowStorage(ColumnFamily columnFamily) {
+            this.columnFamily = columnFamily;
+        }
 
         void runSetCell(final Mutation.SetCell setCell) {
             // TODO: take timestamp into account

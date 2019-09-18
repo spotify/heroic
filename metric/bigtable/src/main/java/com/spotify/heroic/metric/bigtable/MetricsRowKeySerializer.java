@@ -37,12 +37,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.SortedMap;
-import lombok.Data;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class MetricsRowKeySerializer implements RowKeySerializer {
-    private static final Logger log = LoggerFactory.getLogger(MetricsRowKeySerializer.class);
     final SerializerFramework framework;
     final SerializerFramework suffixFramework;
     final RowKeyMinimal_Serializer minimalSerializer;
@@ -129,9 +125,63 @@ public class MetricsRowKeySerializer implements RowKeySerializer {
     }
 
     @AutoSerialize
-    @Data
+    // TODO: Convert to Kotlin data class once @AutoSerialize either works or is removed.
     public static class SuffixEntry {
         private final SuffixEntryType type;
         private final byte[] payload;
+
+        public SuffixEntry(SuffixEntryType type, byte[] payload) {
+            this.type = type;
+            this.payload = payload;
+        }
+
+        public SuffixEntryType getType() {
+            return this.type;
+        }
+
+        public byte[] getPayload() {
+            return this.payload;
+        }
+
+        public boolean equals(final Object obj) {
+            if (obj == this) {
+                return true;
+            }
+            if (!(obj instanceof SuffixEntry)) {
+                return false;
+            }
+            final SuffixEntry other =
+                (SuffixEntry) obj;
+            if (!other.canEqual(this)) {
+                return false;
+            }
+            final Object thisType = this.getType();
+            final Object otherType = other.getType();
+            if (thisType == null ? otherType != null : !thisType.equals(otherType)) {
+                return false;
+            }
+            if (!java.util.Arrays.equals(this.getPayload(), other.getPayload())) {
+                return false;
+            }
+            return true;
+        }
+
+        protected boolean canEqual(final Object other) {
+            return other instanceof SuffixEntry;
+        }
+
+        public int hashCode() {
+            final int prime = 59;
+            int result = 1;
+            final Object thisType = this.getType();
+            result = result * prime + (thisType == null ? 43 : thisType.hashCode());
+            result = result * prime + java.util.Arrays.hashCode(this.getPayload());
+            return result;
+        }
+
+        public String toString() {
+            return "MetricsRowKeySerializer.SuffixEntry(type=" + this.getType() + ", payload="
+                   + java.util.Arrays.toString(this.getPayload()) + ")";
+        }
     }
 }

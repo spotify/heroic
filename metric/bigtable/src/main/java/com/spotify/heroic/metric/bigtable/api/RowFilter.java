@@ -24,7 +24,6 @@ package com.spotify.heroic.metric.bigtable.api;
 import com.google.protobuf.ByteString;
 import java.util.List;
 import java.util.Optional;
-import lombok.Data;
 
 public interface RowFilter {
     static ColumnRange.Builder newColumnRangeBuilder(String family) {
@@ -81,9 +80,12 @@ public interface RowFilter {
 
     com.google.bigtable.v2.RowFilter toPb();
 
-    @Data
     class Chain implements RowFilter {
         private final List<? extends RowFilter> chain;
+
+        Chain(List<? extends RowFilter> chain) {
+            this.chain = chain;
+        }
 
         @Override
         public boolean matchesColumn(final ByteString columnQualifier) {
@@ -107,14 +109,26 @@ public interface RowFilter {
         }
     }
 
-    @Data
     class ColumnRange implements RowFilter {
         private final String family;
-
         private final Optional<ByteString> startQualifierClosed;
         private final Optional<ByteString> startQualifierOpen;
         private final Optional<ByteString> endQualifierClosed;
         private final Optional<ByteString> endQualifierOpen;
+
+        ColumnRange(
+            String family,
+            Optional<ByteString> startQualifierClosed,
+            Optional<ByteString> startQualifierOpen,
+            Optional<ByteString> endQualifierClosed,
+            Optional<ByteString> endQualifierOpen
+        ) {
+            this.family = family;
+            this.startQualifierClosed = startQualifierClosed;
+            this.startQualifierOpen = startQualifierOpen;
+            this.endQualifierClosed = endQualifierClosed;
+            this.endQualifierOpen = endQualifierOpen;
+        }
 
         @Override
         public boolean matchesColumn(final ByteString columnQualifier) {
@@ -208,8 +222,10 @@ public interface RowFilter {
         }
     }
 
-    @Data
     class OnlyLatestCell implements RowFilter {
+        OnlyLatestCell() {
+        }
+
         @Override
         public boolean matchesColumn(final ByteString columnQualifier) {
             return true;
@@ -229,8 +245,10 @@ public interface RowFilter {
         }
     }
 
-    @Data
     class BlockAll implements RowFilter {
+        BlockAll() {
+        }
+
         @Override
         public boolean matchesColumn(final ByteString columnQualifier) {
             return false;

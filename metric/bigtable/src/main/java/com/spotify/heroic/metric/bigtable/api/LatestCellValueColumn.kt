@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,20 +19,8 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric.bigtable.api;
+package com.spotify.heroic.metric.bigtable.api
 
-import com.google.protobuf.ByteString;
-import lombok.Data;
+import com.google.protobuf.ByteString
 
-import java.util.Map;
-import java.util.Optional;
-
-@Data
-public class Row {
-    final ByteString key;
-    final Map<String, Family> families;
-
-    public Optional<Family> getFamily(final String name) {
-        return Optional.ofNullable(families.get(name));
-    }
-}
+data class LatestCellValueColumn(val qualifier: ByteString, val value: ByteString)

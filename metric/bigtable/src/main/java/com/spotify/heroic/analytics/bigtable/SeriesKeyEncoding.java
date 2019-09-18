@@ -26,16 +26,17 @@ import com.google.common.base.Splitter;
 import com.google.protobuf.ByteString;
 import com.spotify.heroic.common.Series;
 import eu.toolchain.async.Transform;
-import lombok.Data;
-
 import java.time.LocalDate;
 import java.util.List;
 
-@Data
 public class SeriesKeyEncoding {
     private final String category;
 
     private static final Splitter SPLITTER = Splitter.on('/').limit(3);
+
+    public SeriesKeyEncoding(String category) {
+        this.category = category;
+    }
 
     public SeriesKey decode(ByteString key, Transform<String, Series> transform) throws Exception {
         final String string = key.toString(Charsets.UTF_8);
@@ -67,9 +68,7 @@ public class SeriesKeyEncoding {
         return ByteString.copyFrom(category + "/" + date.toString(), Charsets.UTF_8);
     }
 
-    @Data
-    public static class SeriesKey {
-        private final LocalDate date;
-        private final Series series;
+    public String toString() {
+        return "SeriesKeyEncoding(category=" + this.category + ")";
     }
 }
