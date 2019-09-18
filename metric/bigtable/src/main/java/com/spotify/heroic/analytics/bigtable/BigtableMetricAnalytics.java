@@ -31,7 +31,7 @@ import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.bigtable.BigtableConnection;
-import com.spotify.heroic.metric.bigtable.api.Family;
+import com.spotify.heroic.metric.bigtable.api.LatestCellValueColumn;
 import com.spotify.heroic.metric.bigtable.api.ReadModifyWriteRules;
 import com.spotify.heroic.metric.bigtable.api.ReadRowsRequest;
 import com.spotify.heroic.metric.bigtable.api.Row;
@@ -120,14 +120,14 @@ public class BigtableMetricAnalytics implements MetricAnalytics, LifeCycles {
         final ByteString start = fetchSeries.rangeKey(date);
         final ByteString end = fetchSeries.rangeKey(date.plusDays(1));
 
-        final RowRange range = RowRange.rowRange(Optional.of(start), Optional.of(end));
+        final RowRange range = new RowRange(Optional.of(start), Optional.of(end));
 
         return c
             .dataClient()
             .readRowsObserved(hitsTableName, ReadRowsRequest.builder().range(range).build())
             .transform(row -> {
                 final ByteString rowKey = row.getKey();
-                final SeriesKeyEncoding.SeriesKey k;
+                final SeriesKey k;
 
                 try {
                     k = fetchSeries.decode(rowKey, s -> mapper.readValue(s, Series.class));
@@ -136,7 +136,7 @@ public class BigtableMetricAnalytics implements MetricAnalytics, LifeCycles {
                 }
 
                 final long value = row.getFamily(hitsColumnFamily).map(family -> {
-                    final Family.LatestCellValueColumn col =
+                    final LatestCellValueColumn col =
                         family.latestCellValue().iterator().next();
                     final ByteBuffer buf = ByteBuffer.wrap(col.getValue().toByteArray());
                     buf.order(ByteOrder.BIG_ENDIAN);
@@ -158,7 +158,7 @@ public class BigtableMetricAnalytics implements MetricAnalytics, LifeCycles {
         }
 
         return connection.doto(c -> {
-            final ByteString key = fetchSeries.encode(new SeriesKeyEncoding.SeriesKey(date, series),
+            final ByteString key = fetchSeries.encode(new SeriesKey(date, series),
                 mapper::writeValueAsString);
 
             final AsyncFuture<Row> request = c

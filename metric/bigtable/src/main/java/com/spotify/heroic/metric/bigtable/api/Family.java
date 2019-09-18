@@ -21,15 +21,22 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
+import com.google.bigtable.v2.Column;
 import com.google.protobuf.ByteString;
-import lombok.Data;
-
 import java.util.Iterator;
 
-@Data
 public class Family {
-    final String name;
-    final Iterable<com.google.bigtable.v2.Column> columns;
+    private final String name;
+    private final Iterable<com.google.bigtable.v2.Column> columns;
+
+    Family(String name, Iterable<Column> columns) {
+        this.name = name;
+        this.columns = columns;
+    }
+
+    public String getName() {
+        return name;
+    }
 
     /**
      * Get an iterable of the latest cells in a given column.
@@ -70,9 +77,4 @@ public class Family {
         };
     }
 
-    @Data
-    public static class LatestCellValueColumn {
-        final ByteString qualifier;
-        final ByteString value;
-    }
 }

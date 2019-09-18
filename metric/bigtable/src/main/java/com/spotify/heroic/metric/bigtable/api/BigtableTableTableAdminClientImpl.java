@@ -29,8 +29,7 @@ import io.grpc.StatusRuntimeException;
 import java.util.Optional;
 
 public class BigtableTableTableAdminClientImpl implements BigtableTableAdminClient {
-    final com.google.cloud.bigtable.grpc.BigtableTableAdminClient
-        client;
+    final com.google.cloud.bigtable.grpc.BigtableTableAdminClient client;
 
     private final String project;
     private final String instance;

@@ -46,21 +46,19 @@ import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
 import java.util.Optional;
 import javax.inject.Named;
-import lombok.Data;
 
-@Data
 @ModuleId("bigtable")
 public final class BigtableMetricModule implements MetricModule, DynamicModuleId {
-    public static final String BIGTABLE_CONFIGURE_PARAM = "bigtable.configure";
+    private static final String BIGTABLE_CONFIGURE_PARAM = "bigtable.configure";
 
-    public static final String DEFAULT_GROUP = "bigtable";
-    public static final String DEFAULT_INSTANCE = "heroic";
-    public static final String DEFAULT_TABLE = "metrics";
-    public static final CredentialsBuilder DEFAULT_CREDENTIALS = new DefaultCredentialsBuilder();
-    public static final boolean DEFAULT_CONFIGURE = false;
-    public static final boolean DEFAULT_DISABLE_BULK_MUTATIONS = false;
-    public static final int DEFAULT_FLUSH_INTERVAL_SECONDS = 2;
-    public static final boolean DEFAULT_FAKE = false;
+    private static final String DEFAULT_GROUP = "bigtable";
+    private static final String DEFAULT_INSTANCE = "heroic";
+    private static final String DEFAULT_TABLE = "metrics";
+    private static final CredentialsBuilder DEFAULT_CREDENTIALS = new DefaultCredentialsBuilder();
+    private static final boolean DEFAULT_CONFIGURE = false;
+    private static final boolean DEFAULT_DISABLE_BULK_MUTATIONS = false;
+    private static final int DEFAULT_FLUSH_INTERVAL_SECONDS = 2;
+    private static final boolean DEFAULT_FAKE = false;
 
     private final Optional<String> id;
     private final Groups groups;

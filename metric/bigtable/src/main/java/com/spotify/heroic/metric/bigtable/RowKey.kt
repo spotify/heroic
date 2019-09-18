@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,13 +19,8 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric.bigtable;
+package com.spotify.heroic.metric.bigtable
 
-import com.spotify.heroic.common.Series;
-import lombok.Data;
+import com.spotify.heroic.common.Series
 
-@Data
-public class RowKey {
-    private final Series series;
-    private final long base;
-}
+data class RowKey(val series: Series, val base: Long)
