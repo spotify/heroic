@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,23 +19,24 @@
  * under the License.
  */
 
-package com.spotify.heroic;
+package com.spotify.heroic.lifecycle
 
-import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.common.FeatureSet;
-import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.metric.MetricType;
-import lombok.Data;
+data class ManyLifeCycle(
+    val lifeCycles: List<LifeCycle>
+): LifeCycle {
+    override fun toString(): String = "+$lifeCycles"
 
-import java.util.Optional;
+    override fun install() = lifeCycles.forEach { it.install() }
 
-@Data
-public class Query {
-    private final Optional<Aggregation> aggregation;
-    private final Optional<MetricType> source;
-    private final Optional<QueryDateRange> range;
-    private final Optional<Filter> filter;
-    private final Optional<QueryOptions> options;
-    /* set of experimental features to enable */
-    private final Optional<FeatureSet> features;
+    companion object {
+        @JvmStatic fun of(many: Iterable<LifeCycle>): LifeCycle {
+            val flattened = many.filter { it != LifeCycle.EMPTY }.flatMap {
+                when (it) {
+                    is ManyLifeCycle -> it.lifeCycles
+                    else -> listOf(it)
+                }
+            }
+            return ManyLifeCycle(flattened)
+        }
+    }
 }

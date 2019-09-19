@@ -28,22 +28,23 @@ import com.google.common.collect.Multimap;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
-import lombok.Data;
-
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-@Data
 public class ExtraParameters {
     public static final ParameterSpecification CONFIGURE =
         ParameterSpecification.parameter("configure", "Automatically configure all backends.");
-
-    public static final Joiner SCOPE_JOINER = Joiner.on('.');
+    private static final Joiner SCOPE_JOINER = Joiner.on('.');
 
     private final List<String> scope;
     private final Multimap<String, String> parameters;
+
+    public ExtraParameters(final List<String> scope, final Multimap<String, String> parameters) {
+        this.scope = scope;
+        this.parameters = parameters;
+    }
 
     public boolean containsAny(String... keys) {
         return Arrays.stream(keys).anyMatch(parameters::containsKey);

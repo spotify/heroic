@@ -24,6 +24,7 @@ package com.spotify.heroic.http.write
 import com.google.common.collect.ImmutableList
 import com.spotify.heroic.common.Series
 import com.spotify.heroic.ingestion.Ingestion
+import com.spotify.heroic.ingestion.Request
 import com.spotify.heroic.metric.Metric
 import com.spotify.heroic.metric.MetricCollection
 import java.util.Optional
@@ -35,7 +36,7 @@ data class WriteMetricRequest(val series: Optional<Series>, val data: Optional<M
         return data.map { d -> d.getDataAs(Metric::class.java) }.orElseGet { ImmutableList.of() }
     }
 
-    fun toIngestionRequest(): Optional<Ingestion.Request> {
-        return data.map { data -> Ingestion.Request(series.orElseGet { Series.empty() }, data) }
+    fun toIngestionRequest(): Optional<Request> {
+        return data.map { data -> Request(series.orElseGet { Series.empty() }, data) }
     }
 }

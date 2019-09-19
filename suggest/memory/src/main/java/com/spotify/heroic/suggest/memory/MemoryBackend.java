@@ -174,7 +174,7 @@ public class MemoryBackend implements SuggestBackend, Grouped {
                         SCORE, d.getId().getKey(), d.getId().getValue()))
                     .iterator()));
 
-            return async.resolved(TagSuggest.of(suggestions));
+            return async.resolved(new TagSuggest(suggestions));
         }
     }
 
@@ -247,7 +247,7 @@ public class MemoryBackend implements SuggestBackend, Grouped {
                 }
             }
 
-            return async.resolved(WriteSuggest.of());
+            return async.resolved(new WriteSuggest());
         } finally {
             l.unlock();
         }

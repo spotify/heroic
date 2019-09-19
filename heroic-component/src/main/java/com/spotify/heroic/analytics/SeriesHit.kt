@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,13 +19,8 @@
  * under the License.
  */
 
-package com.spotify.heroic.analytics;
+package com.spotify.heroic.analytics
 
-import com.spotify.heroic.common.Series;
-import lombok.Data;
+import com.spotify.heroic.common.Series
 
-@Data
-public class SeriesHit {
-    private final Series series;
-    private final long hits;
-}
+data class SeriesHit(val series: Series, val hits: Long)

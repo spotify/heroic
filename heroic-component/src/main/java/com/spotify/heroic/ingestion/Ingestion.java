@@ -23,27 +23,29 @@ package com.spotify.heroic.ingestion;
 
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.cluster.ClusterShard;
-import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metadata.WriteMetadata;
-import com.spotify.heroic.metric.Metric;
-import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.metric.ShardError;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.suggest.WriteSuggest;
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
-import lombok.Data;
-
-import java.util.Iterator;
 import java.util.List;
 
-@Data
 public class Ingestion {
     public static final Ingestion EMPTY = new Ingestion(ImmutableList.of(), ImmutableList.of());
 
     private final List<RequestError> errors;
     private final List<Long> times;
+
+    public Ingestion(final List<RequestError> errors, final List<Long> times) {
+        this.errors = errors;
+        this.times = times;
+    }
+
+    public List<Long> getTimes() {
+        return times;
+    }
 
     public static Ingestion of(final List<Long> times) {
         return new Ingestion(ImmutableList.of(), times);
@@ -82,15 +84,5 @@ public class Ingestion {
 
     public static Ingestion fromWriteMetric(final WriteMetric writeMetric) {
         return new Ingestion(writeMetric.getErrors(), writeMetric.getTimes());
-    }
-
-    @Data
-    public static class Request {
-        private final Series series;
-        private final MetricCollection data;
-
-        public Iterator<? extends Metric> all() {
-            return data.data().iterator();
-        }
     }
 }

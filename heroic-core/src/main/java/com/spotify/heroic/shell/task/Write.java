@@ -29,6 +29,7 @@ import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.ingestion.Ingestion;
 import com.spotify.heroic.ingestion.IngestionGroup;
 import com.spotify.heroic.ingestion.IngestionManager;
+import com.spotify.heroic.ingestion.Request;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
@@ -135,7 +136,7 @@ public class Write implements ShellTask {
 
         for (final MetricCollection group : groups.build()) {
             writes.add(g
-                .write(new Ingestion.Request(series, group))
+                .write(new Request(series, group))
                 .directTransform(reportResult("metrics", io.out())));
         }
 

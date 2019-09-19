@@ -40,6 +40,7 @@ import com.spotify.heroic.consumer.schemas.spotify100.JsonMetric;
 import com.spotify.heroic.consumer.schemas.spotify100.Version;
 import com.spotify.heroic.ingestion.Ingestion;
 import com.spotify.heroic.ingestion.IngestionGroup;
+import com.spotify.heroic.ingestion.Request;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.statistics.ConsumerReporter;
@@ -176,7 +177,7 @@ public class Spotify100 implements ConsumerSchema {
             reporter.reportMessageDrift(clock.currentTimeMillis() - p.getTimestamp());
             reporter.reportMetricsIn(1);
             AsyncFuture<Ingestion> ingestionFuture =
-                ingestion.write(new Ingestion.Request(series, MetricCollection.points(points)));
+                ingestion.write(new Request(series, MetricCollection.points(points)));
 
             // Return Void future, to not leak unnecessary information from the backend but just
             // allow monitoring of when the consumption is done.

@@ -448,7 +448,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 final Aggregations aggregations = response.getAggregations();
 
                 if (aggregations == null) {
-                    return TagSuggest.of();
+                    return new TagSuggest();
                 }
 
                 final StringTerms terms = aggregations.get("terms");
@@ -465,7 +465,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                     suggestions.add(new Suggestion(hits.getMaxScore(), k, v));
                 }
 
-                return TagSuggest.of(suggestions.build());
+                return new TagSuggest(suggestions.build());
             });
         });
     }
@@ -626,7 +626,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                         .setOpType(DocWriteRequest.OpType.CREATE)
                         .execute())
                         .directTransform(response -> timer.end())
-                        .catchFailed(handleVersionConflict(WriteSuggest::of,
+                        .catchFailed(handleVersionConflict(WriteSuggest::new,
                             reporter::reportWriteDroppedByDuplicate))
                         .onDone(writeContext)
                         .onFinished(tagSpan::end));

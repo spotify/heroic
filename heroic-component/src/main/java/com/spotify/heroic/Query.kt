@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
+ * "License"): you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
@@ -19,12 +19,20 @@
  * under the License.
  */
 
-package com.spotify.heroic.ingestion;
+package com.spotify.heroic
 
-import com.spotify.heroic.common.Collected;
-import com.spotify.heroic.common.Grouped;
-import eu.toolchain.async.AsyncFuture;
+import com.spotify.heroic.aggregation.Aggregation
+import com.spotify.heroic.common.FeatureSet
+import com.spotify.heroic.filter.Filter
+import com.spotify.heroic.metric.MetricType
+import java.util.*
 
-public interface IngestionGroup extends Grouped, Collected {
-    AsyncFuture<Ingestion> write(Request request);
-}
+data class Query(
+    val aggregation: Optional<Aggregation>,
+    val source: Optional<MetricType>,
+    val range: Optional<QueryDateRange>,
+    val filter: Optional<Filter>,
+    val options: Optional<QueryOptions>,
+    // set of experimental features to enable
+    val features: Optional<FeatureSet>
+)

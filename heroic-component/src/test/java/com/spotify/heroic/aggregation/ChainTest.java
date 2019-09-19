@@ -1,16 +1,15 @@
 package com.spotify.heroic.aggregation;
 
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+
+import java.io.IOException;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
-
-import java.io.IOException;
-
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.doThrow;
+import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
 public class ChainTest {
@@ -29,9 +28,6 @@ public class ChainTest {
     @Before
     public void setup() {
         doReturn(false).when(a).distributable();
-        doThrow(new RuntimeException("not supported")).when(a).distributed();
-        doThrow(new RuntimeException("not supported")).when(a).reducer();
-
         doReturn(true).when(c).distributable();
         doReturn(cdis).when(c).distributed();
         doReturn(cred).when(c).reducer();

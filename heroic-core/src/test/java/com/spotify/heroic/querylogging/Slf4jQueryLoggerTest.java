@@ -1,6 +1,6 @@
 package com.spotify.heroic.querylogging;
 
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -24,7 +24,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
 public class Slf4jQueryLoggerTest {
@@ -43,7 +43,6 @@ public class Slf4jQueryLoggerTest {
         mapper = mock(ObjectMapper.class);
         try {
             when(mapper.writeValueAsString(any())).thenReturn("");
-            when(mapper.valueToTree(any())).thenReturn(EMPTY);
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
@@ -51,10 +50,6 @@ public class Slf4jQueryLoggerTest {
         final String component = "<component>";
 
         slf4jQueryLogger = new Slf4jQueryLogger(logger, mapper, component);
-
-        final Slf4jQueryLoggerFactory queryLoggerFactory = mock(Slf4jQueryLoggerFactory.class);
-        when(queryLoggerFactory.create(any())).thenReturn(slf4jQueryLogger);
-
         queryContext = mock(QueryContext.class);
     }
 

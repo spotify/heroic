@@ -24,7 +24,6 @@ package com.spotify.heroic.suggest;
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.statistics.SuggestBackendReporter;
-import lombok.Data;
 
 public interface SuggestModule {
     Exposed module(PrimaryComponent primary, Depends depends, String id);
@@ -32,9 +31,16 @@ public interface SuggestModule {
     /**
      * Dependencies for suggestion modules.
      */
-    @Data
     class Depends {
         private final SuggestBackendReporter backendReporter;
+
+        public Depends(final SuggestBackendReporter backendReporter) {
+            this.backendReporter = backendReporter;
+        }
+
+        public SuggestBackendReporter getBackendReporter() {
+            return backendReporter;
+        }
     }
 
     /**

@@ -45,7 +45,8 @@ public class LifeCycleTest {
         verify(b).install();
         verify(c).install();
 
-        assertEquals(LifeCycle.combined(
-            Stream.<LifeCycle>builder().add(combined).add(c).add(LifeCycle.empty()).build()), all);
+        LifeCycle expected = LifeCycle.combined(
+            Stream.<LifeCycle>builder().add(combined).add(c).add(LifeCycle.empty()).build());
+        assertEquals(expected, all);
     }
 }

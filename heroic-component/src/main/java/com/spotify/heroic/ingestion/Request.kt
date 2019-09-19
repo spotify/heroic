@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
+ * "License"): you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
@@ -19,12 +19,12 @@
  * under the License.
  */
 
-package com.spotify.heroic.ingestion;
+package com.spotify.heroic.ingestion
 
-import com.spotify.heroic.common.Collected;
-import com.spotify.heroic.common.Grouped;
-import eu.toolchain.async.AsyncFuture;
+import com.spotify.heroic.common.Series
+import com.spotify.heroic.metric.Metric
+import com.spotify.heroic.metric.MetricCollection
 
-public interface IngestionGroup extends Grouped, Collected {
-    AsyncFuture<Ingestion> write(Request request);
+data class Request(val series: Series, val data: MetricCollection) {
+    fun all(): MutableIterator<Metric> = data.data().iterator()
 }

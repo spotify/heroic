@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,24 +19,13 @@
  * under the License.
  */
 
-package com.spotify.heroic.filter;
+package com.spotify.heroic.filter
 
-import com.spotify.heroic.common.BiConsumerIO;
-import com.spotify.heroic.common.FunctionIO;
-import lombok.Data;
+import com.spotify.heroic.common.BiConsumerIO
+import com.spotify.heroic.common.FunctionIO
+import java.util.*
 
-import java.util.Optional;
-
-@Data
-class FilterEncodingComponent<T> {
-    FunctionIO<FilterEncoding.Decoder, Optional<T>> decoder;
-    BiConsumerIO<FilterEncoding.Encoder, T> encoder;
-
-    public FilterEncodingComponent(
-        FunctionIO<FilterEncoding.Decoder, Optional<T>> decoder,
-        BiConsumerIO<FilterEncoding.Encoder, T> encoder
-    ) {
-        this.decoder = decoder;
-        this.encoder = encoder;
-    }
-}
+data class FilterEncodingComponent<T>(
+    val decoder: FunctionIO<FilterEncoding.Decoder, Optional<T>>,
+    val encoder: BiConsumerIO<FilterEncoding.Encoder, T>
+)

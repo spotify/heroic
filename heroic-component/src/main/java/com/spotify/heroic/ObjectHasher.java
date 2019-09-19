@@ -29,9 +29,7 @@ import java.util.Optional;
 import java.util.SortedSet;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import lombok.Data;
 
-@Data
 public class ObjectHasher {
     private enum Kind {
         START_OBJECT, END_OBJECT, LIST, SET, FIELD, INTEGER, LONG, DOUBLE, STRING, BOOLEAN, ENUM,
@@ -39,6 +37,10 @@ public class ObjectHasher {
     }
 
     private final Hasher hasher;
+
+    public ObjectHasher(Hasher hasher) {
+        this.hasher = hasher;
+    }
 
     public <T> void putField(
         final String name, final T value, final Consumer<T> hashTo
