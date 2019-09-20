@@ -23,8 +23,6 @@ package com.spotify.heroic.generator;
 
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
-import lombok.Data;
-
 import java.util.Optional;
 
 public interface MetricGeneratorModule {
@@ -43,7 +41,6 @@ public interface MetricGeneratorModule {
     /**
      * Dependencies of a generator.
      */
-    @Data
     class Depends {
     }
 

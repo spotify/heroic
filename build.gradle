@@ -231,7 +231,7 @@ allprojects {
 
             dependency 'junit:junit:4.12'
             dependency 'org.hamcrest:java-hamcrest:2.0.0.0'
-            dependency 'org.mockito:mockito-core:2.0.31-beta'
+            dependency 'org.mockito:mockito-core:3.0.0'
             dependencySet(group: 'com.google.code.findbugs', version: '3.0.1') {
                 entry 'annotations'
                 entry 'jsr305'

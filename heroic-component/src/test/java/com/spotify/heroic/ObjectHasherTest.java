@@ -9,7 +9,6 @@ import com.google.common.hash.Hashing;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
-import lombok.Data;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -47,9 +46,12 @@ public class ObjectHasherTest {
         assertNotEquals(h1.result(), h2.result());
     }
 
-    @Data
     private static final class Foo {
         private final int foo;
+
+        Foo(final int foo) {
+            this.foo = foo;
+        }
 
         void hashTo(final ObjectHasher hasher) {
             hasher.putObject(getClass(), () -> {
@@ -58,9 +60,12 @@ public class ObjectHasherTest {
         }
     }
 
-    @Data
     private static final class Bar {
         private final int foo;
+
+        Bar(final int foo) {
+            this.foo = foo;
+        }
 
         void hashTo(final ObjectHasher hasher) {
             hasher.putObject(getClass(), () -> {

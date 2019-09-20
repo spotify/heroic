@@ -27,7 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.ingestion.Ingestion;
+import com.spotify.heroic.ingestion.Request;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.Point;
 import java.util.HashMap;
@@ -118,7 +118,7 @@ public class CollectdTypes {
             Optional.empty(), Optional.empty());
     }
 
-    public List<Ingestion.Request> convert(
+    public List<Request> convert(
         final CollectdSample sample, final Iterable<Map.Entry<String, String>> tags
     ) {
         final Mapper mapping = mappings.get(sample.getType());
@@ -134,13 +134,13 @@ public class CollectdTypes {
     /**
      * Default conversion of collectd samples.
      */
-    private List<Ingestion.Request> convertDefault(
+    private List<Request> convertDefault(
         final CollectdSample sample, final Iterable<Map.Entry<String, String>> tags
     ) {
         final long time = sample.getTime() * 1000;
 
         final Iterator<CollectdValue> values = sample.getValues().iterator();
-        final ImmutableList.Builder<Ingestion.Request> ingestions = ImmutableList.builder();
+        final ImmutableList.Builder<Request> ingestions = ImmutableList.builder();
         final Iterable<Map.Entry<String, String>> sampleTags = defaultTags(sample);
 
         while (values.hasNext()) {
@@ -151,7 +151,7 @@ public class CollectdTypes {
 
             final MetricCollection data = MetricCollection.points(ImmutableList.of(point));
 
-            ingestions.add(new Ingestion.Request(series, data));
+            ingestions.add(new Request(series, data));
         }
 
         return ingestions.build();
@@ -200,7 +200,7 @@ public class CollectdTypes {
     }
 
     interface Mapper {
-        List<Ingestion.Request> convert(
+        List<Request> convert(
             final CollectdSample sample, final Iterable<Map.Entry<String, String>> tags
         );
     }
@@ -221,7 +221,7 @@ public class CollectdTypes {
                 final Iterator<Field> fields = this.fields.iterator();
                 final Iterator<CollectdValue> values = sample.getValues().iterator();
 
-                final ImmutableList.Builder<Ingestion.Request> ingestions = ImmutableList.builder();
+                final ImmutableList.Builder<Request> ingestions = ImmutableList.builder();
 
                 final Map<String, String> base = plugin.tags(sample);
 
@@ -240,7 +240,7 @@ public class CollectdTypes {
 
                     final MetricCollection data = MetricCollection.points(ImmutableList.of(point));
 
-                    ingestions.add(new Ingestion.Request(series, data));
+                    ingestions.add(new Request(series, data));
                 }
 
                 return ingestions.build();

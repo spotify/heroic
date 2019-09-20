@@ -1,13 +1,12 @@
 package com.spotify.heroic.grammar;
 
+import static org.junit.Assert.assertEquals;
+
+import java.util.function.BiFunction;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
-
-import java.util.function.BiFunction;
-
-import static org.junit.Assert.assertEquals;
+import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
 public class LetExpressionTest extends AbstractExpressionTest<LetExpression> {

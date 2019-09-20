@@ -27,6 +27,7 @@ import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.ingestion.Ingestion;
 import com.spotify.heroic.ingestion.IngestionComponent;
 import com.spotify.heroic.ingestion.IngestionManager;
+import com.spotify.heroic.ingestion.Request;
 import com.spotify.heroic.metric.FullQuery;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
@@ -121,10 +122,10 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
 
         writes.add(m1
             .useDefaultGroup()
-            .write(new Ingestion.Request(s1, points().p(10, 1D).p(30, 2D).build())));
+            .write(new Request(s1, points().p(10, 1D).p(30, 2D).build())));
         writes.add(m2
             .useDefaultGroup()
-            .write(new Ingestion.Request(s2, points().p(10, 1D).p(20, 4D).build())));
+            .write(new Request(s2, points().p(10, 1D).p(20, 4D).build())));
 
         return async.collectAndDiscard(writes);
     }

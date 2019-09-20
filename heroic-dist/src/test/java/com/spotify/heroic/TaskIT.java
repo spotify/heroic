@@ -16,6 +16,7 @@ import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.ingestion.Ingestion;
 import com.spotify.heroic.ingestion.IngestionComponent;
 import com.spotify.heroic.ingestion.IngestionManager;
+import com.spotify.heroic.ingestion.Request;
 import com.spotify.heroic.shell.ShellIO;
 import eu.toolchain.async.AsyncFuture;
 import java.io.ByteArrayInputStream;
@@ -65,7 +66,7 @@ public class TaskIT extends AbstractLocalClusterIT {
 
         writes.add(m1
             .useDefaultGroup()
-            .write(new Ingestion.Request(s1, points().p(10, 1D).p(30, 2D).build())));
+            .write(new Request(s1, points().p(10, 1D).p(30, 2D).build())));
 
         return async.collectAndDiscard(writes);
     }

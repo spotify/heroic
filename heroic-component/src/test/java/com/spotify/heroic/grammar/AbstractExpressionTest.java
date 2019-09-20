@@ -1,24 +1,23 @@
 package com.spotify.heroic.grammar;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
+import static com.spotify.heroic.grammar.ExpressionTests.visitorTest;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.lenient;
 
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
-
-import static com.spotify.heroic.grammar.ExpressionTests.visitorTest;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyObject;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.doReturn;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
 public abstract class AbstractExpressionTest<E extends Expression> {
@@ -41,19 +40,19 @@ public abstract class AbstractExpressionTest<E extends Expression> {
 
     @Before
     public final void abstractSetup() {
-        doReturn(lookup).when(scope).lookup(eq(ctx), anyString());
-        doReturn(lookup).when(lookup).eval(scope);
+        lenient().doReturn(lookup).when(scope).lookup(eq(ctx), anyString());
+        lenient().doReturn(lookup).when(lookup).eval(scope);
 
-        doReturn(a).when(a).eval(scope);
-        doReturn(b).when(b).eval(scope);
+        lenient().doReturn(a).when(a).eval(scope);
+        lenient().doReturn(b).when(b).eval(scope);
 
-        doReturn("a").when(a).toString();
-        doReturn("b").when(b).toString();
+        lenient().doReturn("a").when(a).toString();
+        lenient().doReturn("b").when(b).toString();
 
-        doReturn("a").when(a).toRepr();
-        doReturn("b").when(b).toRepr();
+        lenient().doReturn("a").when(a).toRepr();
+        lenient().doReturn("b").when(b).toRepr();
 
-        doReturn(e).when(ctx).castError(anyObject(), any(Class.class));
+        lenient().doReturn(e).when(ctx).castError(any(), any(Class.class));
     }
 
     protected abstract E build(Context ctx);

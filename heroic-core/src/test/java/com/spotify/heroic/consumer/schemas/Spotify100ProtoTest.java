@@ -30,6 +30,7 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.consumer.ConsumerSchemaValidationException;
 import com.spotify.heroic.ingestion.Ingestion;
 import com.spotify.heroic.ingestion.IngestionGroup;
+import com.spotify.heroic.ingestion.Request;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.statistics.ConsumerReporter;
@@ -74,7 +75,7 @@ public class Spotify100ProtoTest {
   @Before
   public void setup() {
     when(clock.currentTimeMillis()).thenReturn(1542830485000L);
-    when(ingestion.write(any(Ingestion.Request.class))).thenReturn(resolved);
+    when(ingestion.write(any(Request.class))).thenReturn(resolved);
     consumer = new Spotify100Proto.Consumer(clock, ingestion, reporter, async);
   }
 
@@ -97,7 +98,7 @@ public class Spotify100ProtoTest {
     final List<Point> points = ImmutableList.of(p);
 
     verify(reporter).reportMessageDrift(5000);
-    verify(ingestion).write(new Ingestion.Request(s, MetricCollection.points(points)));
+    verify(ingestion).write(new Request(s, MetricCollection.points(points)));
   }
 
   @Test
@@ -132,7 +133,7 @@ public class Spotify100ProtoTest {
     final Series s = Series.of(metric.getKey(), metric.getTagsMap(), metric.getResourceMap());
     final Point p = new Point(metric.getTime(), metric.getValue());
     final List<Point> points = ImmutableList.of(p);
-    verify(ingestion).write(new Ingestion.Request(s, MetricCollection.points(points)));
+    verify(ingestion).write(new Request(s, MetricCollection.points(points)));
   }
 
 }

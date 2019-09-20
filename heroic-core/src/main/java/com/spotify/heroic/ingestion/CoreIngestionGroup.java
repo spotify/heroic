@@ -63,14 +63,16 @@ public class CoreIngestionGroup implements IngestionGroup {
     private final Optional<MetadataBackend> metadata;
     private final Optional<SuggestBackend> suggest;
 
-    public CoreIngestionGroup(final AsyncFramework async,
-                              final Supplier<Filter> filter,
-                              final Semaphore writePermits,
-                              final IngestionManagerReporter reporter,
-                              final LongAdder ingested,
-                              final Optional<MetricBackend> metric,
-                              final Optional<MetadataBackend> metadata,
-                              final Optional<SuggestBackend> suggest) {
+    public CoreIngestionGroup(
+        final AsyncFramework async,
+        final Supplier<Filter> filter,
+        final Semaphore writePermits,
+        final IngestionManagerReporter reporter,
+        final LongAdder ingested,
+        final Optional<MetricBackend> metric,
+        final Optional<MetadataBackend> metadata,
+        final Optional<SuggestBackend> suggest
+    ) {
         this.async = async;
         this.filter = filter;
         this.writePermits = writePermits;
@@ -89,7 +91,7 @@ public class CoreIngestionGroup implements IngestionGroup {
     }
 
     @Override
-    public AsyncFuture<Ingestion> write(final Ingestion.Request request) {
+    public AsyncFuture<Ingestion> write(final Request request) {
         ingested.increment();
         return syncWrite(request);
     }
@@ -101,7 +103,7 @@ public class CoreIngestionGroup implements IngestionGroup {
             suggest.map(Collected::isEmpty).orElse(true);
     }
 
-    protected AsyncFuture<Ingestion> syncWrite(final Ingestion.Request request) {
+    protected AsyncFuture<Ingestion> syncWrite(final Request request) {
         final Span span = tracer.spanBuilder("CoreIngestionGroup.syncWrite").startSpan();
 
         if (!filter.get().apply(request.getSeries())) {
@@ -133,7 +135,7 @@ public class CoreIngestionGroup implements IngestionGroup {
         }
     }
 
-    protected AsyncFuture<Ingestion> doWrite(final Ingestion.Request request) {
+    protected AsyncFuture<Ingestion> doWrite(final Request request) {
         final Span span = tracer.spanBuilder("CoreIngestionGroup.doWrite").startSpan();
         final List<AsyncFuture<Ingestion>> futures = new ArrayList<>();
 
@@ -148,7 +150,7 @@ public class CoreIngestionGroup implements IngestionGroup {
     }
 
     protected AsyncFuture<Ingestion> doMetricWrite(
-        final MetricBackend metric, final Ingestion.Request write, final Span parentSpan
+        final MetricBackend metric, final Request write, final Span parentSpan
     ) {
         return metric
             .write(new WriteMetric.Request(write.getSeries(), write.getData()), parentSpan)
@@ -156,7 +158,7 @@ public class CoreIngestionGroup implements IngestionGroup {
     }
 
     protected AsyncFuture<Ingestion> doMetadataWrite(
-        final MetadataBackend metadata, final Ingestion.Request write, final DateRange range,
+        final MetadataBackend metadata, final Request write, final DateRange range,
         final Span parentSpan
     ) {
         return metadata
@@ -165,7 +167,7 @@ public class CoreIngestionGroup implements IngestionGroup {
     }
 
     protected AsyncFuture<Ingestion> doSuggestWrite(
-        final SuggestBackend suggest, final Ingestion.Request write, final DateRange range,
+        final SuggestBackend suggest, final Request write, final DateRange range,
         final Span parentSpan
     ) {
         return suggest
@@ -176,7 +178,7 @@ public class CoreIngestionGroup implements IngestionGroup {
     /**
      * Setup a range supplier that memoizes the result.
      */
-    protected Supplier<DateRange> rangeSupplier(final Ingestion.Request request) {
+    protected Supplier<DateRange> rangeSupplier(final Request request) {
         return new Supplier<DateRange>() {
             // memoized value.
             private DateRange calculated = null;
@@ -193,7 +195,7 @@ public class CoreIngestionGroup implements IngestionGroup {
         };
     }
 
-    protected DateRange rangeFrom(final Ingestion.Request request) {
+    protected DateRange rangeFrom(final Request request) {
         final Iterator<? extends Metric> it = request.all();
 
         if (!it.hasNext()) {

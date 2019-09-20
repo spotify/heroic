@@ -21,18 +21,29 @@
 
 package com.spotify.heroic;
 
-import lombok.Data;
-
 import java.io.PrintWriter;
 import java.text.BreakIterator;
 import java.util.Locale;
 import java.util.Optional;
 
-@Data
 public class ParameterSpecification {
     private final String name;
     private final String description;
     private final Optional<String> metavar;
+
+    public ParameterSpecification(
+        final String name,
+        final String description,
+        final Optional<String> metavar
+    ) {
+        this.name = name;
+        this.description = description;
+        this.metavar = metavar;
+    }
+
+    public String getName() {
+        return name;
+    }
 
     public static ParameterSpecification parameter(String name, String description) {
         return new ParameterSpecification(name, description, Optional.empty());

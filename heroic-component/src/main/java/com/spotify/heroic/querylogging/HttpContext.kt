@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2017 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
+ * "License"): you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
@@ -19,33 +19,31 @@
  * under the License.
  */
 
-package com.spotify.heroic.querylogging;
+package com.spotify.heroic.querylogging
 
-import java.util.Optional;
-import lombok.Data;
+import java.util.*
 
-@Data
-public class HttpContext {
+data class HttpContext(
     /**
      * The remote address that connected to this node.
      */
-    private final String remoteAddress;
+    val remotrAddress: String,
     /**
      * The remote host (usually same as address) that connected to this node.
      */
-    private final String remoteHost;
+    val remoteHost: String,
     /**
      * The client address that performed the request.
      * Most notably, if X-Forwarded-For is set, this will be the value of it.
      * Otherwise it is the same as {@link #remoteAddress}.
      */
-    private final String clientAddress;
+    val clientAddress: String,
     /**
      * The user agent of the client that performed the request.
      */
-    private final Optional<String> userAgent;
+    val userAgent: Optional<String>,
     /**
      * The id of the client that performed the request.
      */
-    private final Optional<String> clientId;
-}
+    val clientId: Optional<String>
+)

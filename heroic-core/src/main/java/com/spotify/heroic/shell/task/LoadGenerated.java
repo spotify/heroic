@@ -30,9 +30,9 @@ import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.generator.Generator;
 import com.spotify.heroic.generator.GeneratorManager;
 import com.spotify.heroic.generator.MetadataGenerator;
-import com.spotify.heroic.ingestion.Ingestion;
 import com.spotify.heroic.ingestion.IngestionGroup;
 import com.spotify.heroic.ingestion.IngestionManager;
+import com.spotify.heroic.ingestion.Request;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
@@ -103,7 +103,7 @@ public class LoadGenerated implements ShellTask {
             for (final Series s : metadataGenerator.generate(params.seriesCount)) {
                 final MetricCollection c = generator.generate(s, range);
 
-                writes.add(group.write(new Ingestion.Request(s, c)).directTransform(n -> {
+                writes.add(group.write(new Request(s, c)).directTransform(n -> {
                     synchronized (io) {
                         io.out().println("Wrote: " + s);
                     }

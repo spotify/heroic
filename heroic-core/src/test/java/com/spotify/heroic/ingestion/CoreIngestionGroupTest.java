@@ -1,5 +1,19 @@
 package com.spotify.heroic.ingestion;
 
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
@@ -12,31 +26,16 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.FutureFinished;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Supplier;
-
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
 public class CoreIngestionGroupTest {
@@ -61,7 +60,7 @@ public class CoreIngestionGroupTest {
     @Mock
     private SuggestBackend suggest;
     @Mock
-    private Ingestion.Request request;
+    private Request request;
     @Mock
     private AsyncFuture<Ingestion> expected;
     @Mock
@@ -84,12 +83,6 @@ public class CoreIngestionGroupTest {
             return expected;
         }).when(expected).onFinished(any(FutureFinished.class));
 
-        doAnswer(invocation -> {
-            return expected;
-        }).when(expected).onDone(any(FutureDone.class));
-
-        doReturn(other).when(other).onFinished(any(FutureFinished.class));
-
         doReturn(range).when(rangeSupplier).get();
     }
 
@@ -108,11 +101,10 @@ public class CoreIngestionGroupTest {
     }
 
     @Test
-    public void testWriteSome() throws Exception {
+    public void testWriteSome() {
         final CoreIngestionGroup group = setupIngestionGroup(empty(), empty(), empty());
 
         doReturn(expected).when(group).syncWrite(request);
-        doReturn(other).when(async).resolved(any(Ingestion.class));
 
         assertEquals(expected, group.write(request));
 
@@ -126,8 +118,6 @@ public class CoreIngestionGroupTest {
         final CoreIngestionGroup group = setupIngestionGroup(empty(), empty(), empty());
 
         doReturn(filter).when(filterSupplier).get();
-        doReturn(failed).when(async).failed(any(Throwable.class));
-        doReturn(resolved).when(async).resolved(any(Ingestion.class));
         doReturn(true).when(filter).apply(series);
         doNothing().when(writePermits).acquire();
         doNothing().when(writePermits).release();
@@ -150,14 +140,8 @@ public class CoreIngestionGroupTest {
         final CoreIngestionGroup group = setupIngestionGroup(empty(), empty(), empty());
 
         doReturn(filter).when(filterSupplier).get();
-        doReturn(other).when(async).failed(any(Throwable.class));
         doReturn(expected).when(async).resolved(any(Ingestion.class));
         doReturn(false).when(filter).apply(series);
-        doNothing().when(writePermits).acquire();
-        doNothing().when(writePermits).release();
-
-        doReturn(other).when(expected).onFinished(any(FutureFinished.class));
-        doReturn(other).when(group).doWrite(request);
 
         assertEquals(expected, group.syncWrite(request));
 
@@ -180,13 +164,8 @@ public class CoreIngestionGroupTest {
 
         doReturn(filter).when(filterSupplier).get();
         doReturn(expected).when(async).failed(any(Throwable.class));
-        doReturn(resolved).when(async).resolved(any(Ingestion.class));
         doReturn(true).when(filter).apply(series);
         doThrow(e).when(writePermits).acquire();
-        doNothing().when(writePermits).release();
-
-        doReturn(other).when(expected).onFinished(any(FutureFinished.class));
-        doReturn(other).when(group).doWrite(request);
 
         assertEquals(expected, group.syncWrite(request));
 
@@ -232,7 +211,6 @@ public class CoreIngestionGroupTest {
         doReturn(expected).when(async).collect(futures, Ingestion.reduce());
 
         doReturn(other).when(group).doMetricWrite(eq(metric), eq(request), any());
-        doReturn(other).when(group).doMetadataWrite(eq(metadata), eq(request), eq(range), any());
         doReturn(other).when(group).doSuggestWrite(eq(suggest), eq(request), eq(range), any());
 
         assertEquals(expected, group.doWrite(request));
