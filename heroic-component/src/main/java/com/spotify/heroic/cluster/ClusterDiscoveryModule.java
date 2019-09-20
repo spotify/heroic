@@ -26,25 +26,18 @@ import com.spotify.heroic.dagger.PrimaryComponent;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.Data;
-
-import javax.inject.Inject;
 import java.net.URI;
 import java.util.List;
+import javax.inject.Inject;
 
 public interface ClusterDiscoveryModule {
     ClusterDiscoveryComponent module(PrimaryComponent primary);
 
     static ClusterDiscoveryModule nullModule() {
-        return new ClusterDiscoveryModule() {
-            @Override
-            public ClusterDiscoveryComponent module(PrimaryComponent primary) {
-                return DaggerClusterDiscoveryModule_NullComponent
-                    .builder()
-                    .primaryComponent(primary)
-                    .build();
-            }
-        };
+        return primary -> DaggerClusterDiscoveryModule_NullComponent
+            .builder()
+            .primaryComponent(primary)
+            .build();
     }
 
     @ClusterScope
@@ -54,7 +47,6 @@ public interface ClusterDiscoveryModule {
         Null clusterDiscovery();
     }
 
-    @Data
     @ClusterScope
     class Null implements ClusterDiscovery {
         private final AsyncFramework async;

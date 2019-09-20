@@ -118,7 +118,7 @@ public class MemoryBackend implements SuggestBackend, Grouped {
                 ImmutableSortedSet.copyOf(e.getValue()), false))
             .iterator());
 
-        return async.resolved(TagValuesSuggest.of(suggestions, false));
+        return async.resolved(new TagValuesSuggest(suggestions, false));
     }
 
     @Override
@@ -147,7 +147,7 @@ public class MemoryBackend implements SuggestBackend, Grouped {
                 Optional.empty()))
             .iterator());
 
-        return async.resolved(TagKeyCount.of(suggestions, false));
+        return async.resolved(new TagKeyCount(suggestions, false));
     }
 
     @Override
@@ -197,7 +197,7 @@ public class MemoryBackend implements SuggestBackend, Grouped {
             .map(d -> new KeySuggest.Suggestion(SCORE, d))
             .iterator());
 
-        return async.resolved(KeySuggest.of(suggestions));
+        return async.resolved(new KeySuggest(suggestions));
     }
 
     @Override
@@ -212,7 +212,7 @@ public class MemoryBackend implements SuggestBackend, Grouped {
                 .map(TagId::getValue)
                 .collect(Collectors.toList());
 
-            return async.resolved(TagValueSuggest.of(values, false));
+            return async.resolved(new TagValueSuggest(values, false));
         }
     }
 

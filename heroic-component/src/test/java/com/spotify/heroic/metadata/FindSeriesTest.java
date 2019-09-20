@@ -41,7 +41,7 @@ public class FindSeriesTest extends AbstractReducedResultTest {
             FindSeries.reduce(OptionalLimit.of(2)).collect(ImmutableList.of(s1, s2, s3));
 
         assertEquals(2, find.getSeries().size());
-        assertTrue(find.isLimited());
+        assertTrue(find.getLimited());
         assertEquals(1, Sets.difference(all, find.getSeries()).size());
     }
 }

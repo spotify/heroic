@@ -24,7 +24,6 @@ package com.spotify.heroic.metadata;
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
-import lombok.Data;
 
 public interface MetadataModule {
     Exposed module(PrimaryComponent primary, Depends depends, String id);
@@ -32,9 +31,16 @@ public interface MetadataModule {
     /**
      * Dependencies for metadata modules.
      */
-    @Data
     class Depends {
         private final MetadataBackendReporter backendReporter;
+
+        public Depends(MetadataBackendReporter backendReporter) {
+            this.backendReporter = backendReporter;
+        }
+
+        public MetadataBackendReporter getBackendReporter() {
+            return backendReporter;
+        }
     }
 
     /**

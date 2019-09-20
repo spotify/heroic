@@ -83,7 +83,7 @@ public class MemoryBackend implements MetadataBackend {
     @Override
     public AsyncFuture<WriteMetadata> write(final WriteMetadata.Request request) {
         this.storage.add(request.getSeries());
-        return async.resolved(WriteMetadata.of());
+        return async.resolved(new WriteMetadata());
     }
 
     @Override
@@ -105,7 +105,7 @@ public class MemoryBackend implements MetadataBackend {
             }
         });
 
-        return async.resolved(FindTags.of(tags, tags.size()));
+        return async.resolved(new FindTags(tags, tags.size()));
     }
 
     @Override
@@ -115,7 +115,7 @@ public class MemoryBackend implements MetadataBackend {
         final Set<Series> s =
             ImmutableSet.copyOf(lookup(request.getFilter(), limit.add(1)).iterator());
 
-        return async.resolved(FindSeries.of(limit.limitSet(s), limit.isGreater(s.size())));
+        return async.resolved(new FindSeries(limit.limitSet(s), limit.isGreater(s.size())));
     }
 
     @Override
@@ -125,7 +125,7 @@ public class MemoryBackend implements MetadataBackend {
         return observer -> {
             final OptionalLimit limit = request.getLimit();
 
-            final FindSeriesStream result = FindSeriesStream.of(
+            final FindSeriesStream result = new FindSeriesStream(
                 lookup(request.getFilter(), limit.add(1)).collect(Collectors.toSet()));
 
             observer.observe(result).onDone(observer.onDone());
@@ -139,7 +139,7 @@ public class MemoryBackend implements MetadataBackend {
         final Set<String> s =
             ImmutableSet.copyOf(lookup(request.getFilter(), limit).map(Series::hash).iterator());
 
-        return async.resolved(FindSeriesIds.of(limit.limitSet(s), limit.isGreater(s.size())));
+        return async.resolved(new FindSeriesIds(limit.limitSet(s), limit.isGreater(s.size())));
     }
 
     @Override
@@ -149,7 +149,7 @@ public class MemoryBackend implements MetadataBackend {
         return observer -> {
             final OptionalLimit limit = request.getLimit();
 
-            final FindSeriesIdsStream result = FindSeriesIdsStream.of(
+            final FindSeriesIdsStream result = new FindSeriesIdsStream(
                 lookup(request.getFilter(), limit).map(Series::hash).collect(Collectors.toSet()));
 
             observer.observe(result).onDone(observer.onDone());
@@ -169,7 +169,7 @@ public class MemoryBackend implements MetadataBackend {
             .filter(b -> b)
             .count();
 
-        return async.resolved(DeleteSeries.of(deletes, 0));
+        return async.resolved(new DeleteSeries(deletes, 0));
     }
 
     @Override
@@ -177,7 +177,7 @@ public class MemoryBackend implements MetadataBackend {
         final Set<String> keys = ImmutableSet.copyOf(
             lookup(request.getFilter(), request.getLimit()).map(Series::getKey).iterator());
 
-        return async.resolved(FindKeys.of(keys, keys.size(), 0));
+        return async.resolved(new FindKeys(keys, keys.size(), 0));
     }
 
     @Override

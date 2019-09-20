@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,24 +19,21 @@
  * under the License.
  */
 
-package com.spotify.heroic.metadata;
+package com.spotify.heroic.metadata
 
-import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.common.Series;
-import com.spotify.heroic.filter.Filter;
-import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonIgnore
+import com.spotify.heroic.common.DateRange
+import com.spotify.heroic.common.OptionalLimit
+import com.spotify.heroic.common.Series
+import com.spotify.heroic.filter.Filter
 
-import java.util.List;
+data class FindSeriesStream(val series: Set<Series> = setOf()) {
+    @JsonIgnore
+    fun isEmpty(): Boolean = series.isEmpty()
 
-@Data
-public class Entries {
-    private final List<Series> series;
-
-    @Data
-    public static class Request {
-        private final Filter filter;
-        private final DateRange range;
-        private final OptionalLimit limit;
-    }
+    data class Request(
+        val filter: Filter,
+        val range: DateRange,
+        val limit: OptionalLimit
+    )
 }

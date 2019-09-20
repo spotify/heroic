@@ -217,7 +217,7 @@ public class LocalMetricManager implements MetricManager {
             public AsyncFuture<FullQuery> transform(final FindSeries result) throws Exception {
                 final ResultLimits limits;
 
-                if (result.isLimited()) {
+                if (result.getLimited()) {
                     if (failOnLimits) {
                         final RequestError error = QueryError.fromMessage(
                             "The number of series requested is more than the allowed limit of " +

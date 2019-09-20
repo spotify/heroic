@@ -238,7 +238,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 final List<TagValuesSuggest.Suggestion> suggestions = new ArrayList<>();
 
                 if (response.getAggregations() == null) {
-                    return TagValuesSuggest.of(Collections.emptyList(), Boolean.FALSE);
+                    return new TagValuesSuggest(Collections.emptyList(), Boolean.FALSE);
                 }
 
                 final Terms terms = response.getAggregations().get("keys");
@@ -263,7 +263,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                         new TagValuesSuggest.Suggestion(bucket.getKeyAsString(), values, limited));
                 }
 
-                return TagValuesSuggest.of(ImmutableList.copyOf(suggestions),
+                return new TagValuesSuggest(ImmutableList.copyOf(suggestions),
                     limit.isGreater(buckets.size()));
             });
         });
@@ -304,7 +304,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 final ImmutableList.Builder<String> suggestions = ImmutableList.builder();
 
                 if (response.getAggregations() == null) {
-                    return TagValueSuggest.of(Collections.emptyList(), Boolean.FALSE);
+                    return new TagValueSuggest(Collections.emptyList(), Boolean.FALSE);
                 }
 
                 final Terms terms = response.getAggregations().get("values");
@@ -315,7 +315,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                     suggestions.add(bucket.getKeyAsString());
                 }
 
-                return TagValueSuggest.of(suggestions.build(), limit.isGreater(buckets.size()));
+                return new TagValueSuggest(suggestions.build(), limit.isGreater(buckets.size()));
             });
         });
     }
@@ -353,7 +353,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 final Set<TagKeyCount.Suggestion> suggestions = new LinkedHashSet<>();
 
                 if (response.getAggregations() == null) {
-                    return TagKeyCount.of(Collections.emptyList(), Boolean.FALSE);
+                    return new TagKeyCount(Collections.emptyList(), Boolean.FALSE);
                 }
 
                 final Terms keys = response.getAggregations().get("keys");
@@ -383,7 +383,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                             exactValues));
                 }
 
-                return TagKeyCount.of(ImmutableList.copyOf(suggestions),
+                return new TagKeyCount(ImmutableList.copyOf(suggestions),
                     limit.isGreater(buckets.size()));
             });
         });
@@ -512,7 +512,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 final Set<KeySuggest.Suggestion> suggestions = new LinkedHashSet<>();
 
                 if (response.getAggregations() == null) {
-                    return KeySuggest.of(Collections.emptyList());
+                    return new KeySuggest(Collections.emptyList());
                 }
 
                 final StringTerms terms = response.getAggregations().get("keys");
@@ -524,7 +524,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                         new KeySuggest.Suggestion(hits.getMaxScore(), bucket.getKeyAsString()));
                 }
 
-                return KeySuggest.of(ImmutableList.copyOf(suggestions));
+                return new KeySuggest(ImmutableList.copyOf(suggestions));
             });
         });
     }
