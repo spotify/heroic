@@ -94,7 +94,7 @@ public abstract class AbstractMetricBackend implements MetricBackend {
         final QueryOptions options, final long pageSize, final Optional<BackendKey> key
     ) {
         final BackendKeyFilter partial = key
-            .map(BackendKeyFilter::gt)
+            .map(BackendKeyFilter.GT::new)
             .map(filter::withStart)
             .orElse(filter)
             .withLimit(OptionalLimit.of(pageSize));

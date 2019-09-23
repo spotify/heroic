@@ -156,14 +156,14 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
                     Lists.transform(fetches, fetch -> fetch.directTransform(fetchData -> {
                         fetchData
                             .getGroups()
-                            .forEach(mc -> metricsConsumer.accept(MetricReadResult.create(mc)));
+                            .forEach(mc -> metricsConsumer.accept(new MetricReadResult(mc)));
                         return fetchData.getResult();
                     }));
                 return async.collect(results, FetchData.collectResult(FETCH));
             }
 
-            return async.resolved(FetchData.errorResult(w.end(FETCH),
-                QueryError.fromMessage("unsupported source: " + request.getType())));
+            return async.resolved(new FetchData.Result(w.end(FETCH),
+                new QueryError("unsupported source: " + request.getType())));
         });
     }
 
@@ -531,7 +531,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
                         final ImmutableList<Long> times = ImmutableList.of(trace.elapsed());
                         final List<MetricCollection> groups =
                             ImmutableList.of(MetricCollection.points(result.getData()));
-                        return FetchData.of(trace, times, groups);
+                        return new FetchData(new FetchData.Result(trace), times, groups);
                     })));
 
             fetches.add(future);

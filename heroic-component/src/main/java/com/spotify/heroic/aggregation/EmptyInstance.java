@@ -197,7 +197,7 @@ public class EmptyInstance implements AggregationInstance {
 
             final ImmutableList<Iterator<T>> iterators =
                 ImmutableList.copyOf(iterables.build().stream().map(Iterable::iterator).iterator());
-            final Iterator<T> metrics = Iterators.mergeSorted(iterators, Metric.comparator());
+            final Iterator<T> metrics = Iterators.mergeSorted(iterators, Metric.comparator);
 
             return new AggregationOutput(key, series, builder.apply(ImmutableList.copyOf(metrics)));
         }

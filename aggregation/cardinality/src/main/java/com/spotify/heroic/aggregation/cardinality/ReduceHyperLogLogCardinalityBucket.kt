@@ -43,7 +43,7 @@ data class ReduceHyperLogLogCardinalityBucket(
             key: Map<String, String>, sample: Payload
     ) {
         try {
-            states.add(HyperLogLog.Builder.build(sample.state()))
+            states.add(HyperLogLog.Builder.build(sample.state))
         } catch (e: IOException) {
             throw RuntimeException("Failed to deserialize state", e)
         }

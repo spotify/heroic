@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,42 +19,18 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric;
+package com.spotify.heroic.metric
 
-import com.google.common.hash.Hasher;
+import com.google.common.hash.Hasher
 
-import java.util.Comparator;
+data class Point(
+    override val timestamp: Long,
+    val value: Double
+): Metric {
+    override fun valid() = value.isFinite()
 
-public interface Metric {
-    long getTimestamp();
-
-    boolean valid();
-
-    void hash(Hasher hasher);
-
-    static Comparator<Metric> comparator() {
-        return comparator;
+    override fun hash(hasher: Hasher) {
+        hasher.putInt(MetricType.POINT.ordinal)
+        hasher.putDouble(value)
     }
-
-    static Metric invalid() {
-        return invalid;
-    }
-
-    Comparator<Metric> comparator = Comparator.comparingLong(Metric::getTimestamp);
-
-    Metric invalid = new Metric() {
-        @Override
-        public long getTimestamp() {
-            throw new IllegalStateException("invalid has not timestamp");
-        }
-
-        @Override
-        public boolean valid() {
-            return false;
-        }
-
-        @Override
-        public void hash(final Hasher hasher) {
-        }
-    };
 }

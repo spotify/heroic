@@ -1,18 +1,17 @@
 package com.spotify.heroic.metric;
 
-import com.spotify.heroic.common.OptionalLimit;
-import org.junit.Test;
-import org.mockito.Mockito;
-
-import java.util.Optional;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+
+import com.spotify.heroic.common.OptionalLimit;
+import java.util.Optional;
+import org.junit.Test;
+import org.mockito.Mockito;
 
 public class BackendKeyFilterTest {
     @Test
     public void testEmpty() {
-        BackendKeyFilter f = BackendKeyFilter.of();
+        BackendKeyFilter f = new BackendKeyFilter();
         assertEquals(Optional.empty(), f.getStart());
         assertEquals(Optional.empty(), f.getEnd());
         assertEquals(OptionalLimit.empty(), f.getLimit());
@@ -20,7 +19,7 @@ public class BackendKeyFilterTest {
 
     @Test
     public void testMutations() {
-        final BackendKeyFilter a = BackendKeyFilter.of();
+        final BackendKeyFilter a = new BackendKeyFilter();
         assertEquals(Optional.empty(), a.getStart());
         assertEquals(Optional.empty(), a.getEnd());
         assertEquals(OptionalLimit.empty(), a.getLimit());

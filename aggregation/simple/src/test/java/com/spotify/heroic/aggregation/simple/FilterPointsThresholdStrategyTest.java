@@ -20,19 +20,18 @@
  */
 package com.spotify.heroic.aggregation.simple;
 
+import static java.util.stream.Collectors.toList;
+import static junit.framework.TestCase.assertFalse;
+import static org.junit.Assert.assertEquals;
+
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
-import org.junit.Before;
-import org.junit.Test;
-
 import java.util.List;
 import java.util.stream.IntStream;
-
-import static java.util.stream.Collectors.toList;
-import static junit.framework.TestCase.assertFalse;
-import static org.junit.Assert.assertEquals;
+import org.junit.Before;
+import org.junit.Test;
 
 public class FilterPointsThresholdStrategyTest {
     private static final int POINT_RANGE_START = 0;

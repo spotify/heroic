@@ -280,8 +280,8 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                 case EVENT:
                     return fetchBatch(watcher, type, eventsRanges(request), c, consumer);
                 default:
-                    return async.resolved(FetchData.errorResult(QueryTrace.of(FETCH),
-                        QueryError.fromMessage("unsupported source: " + request.getType())));
+                    return async.resolved(new FetchData.Result(QueryTrace.of(FETCH),
+                        new QueryError("unsupported source: " + request.getType())));
             }
         });
     }
@@ -326,8 +326,8 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                 return writeBatch(EVENTS, series, client, g.getDataAs(Event.class),
                     BigtableBackend.this::serializeEvent, parentSpan);
             default:
-                return async.resolved(WriteMetric.error(
-                    QueryError.fromMessage("Unsupported metric type: " + g.getType())));
+                return async.resolved(new WriteMetric(
+                    new QueryError("Unsupported metric type: " + g.getType())));
         }
     }
 
@@ -460,10 +460,10 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                     watcher.readData(row.getCells().size());
                     final List<Metric> metrics = Lists.transform(row.getCells(), transform);
                     final MetricCollection mc = MetricCollection.build(type, metrics);
-                    final MetricReadResult readResult = MetricReadResult.create(mc, resource);
+                    final MetricReadResult readResult = new MetricReadResult(mc, resource);
                     metricsConsumer.accept(readResult);
                 }
-                return FetchData.result(fs.end());
+                return new FetchData.Result(fs.end());
             }));
         }
         return async.collect(fetches, FetchData.collectResult(FETCH)).directTransform(result -> {

@@ -21,9 +21,6 @@
 
 package com.spotify.heroic.metric;
 
-import lombok.Data;
-
-@Data
 public class RuntimeNodeException extends RuntimeException {
     private final String uri;
 
@@ -34,5 +31,9 @@ public class RuntimeNodeException extends RuntimeException {
     public RuntimeNodeException(final String uri, final String message, Throwable cause) {
         super(message, cause);
         this.uri = uri;
+    }
+
+    public String getUri() {
+        return uri;
     }
 }

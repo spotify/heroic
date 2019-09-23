@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,19 +19,8 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric;
+package com.spotify.heroic.metric
 
-import lombok.Data;
+import com.spotify.heroic.common.Series
 
-@Data
-public class QueryError implements RequestError {
-    private final String error;
-
-    public static RequestError fromMessage(final String message) {
-        return new QueryError(message);
-    }
-
-    public static QueryError fromThrowable(final Throwable e) {
-        return new QueryError(e.getMessage());
-    }
-}
+data class BackendEntry(val series: Series, val metrics: MetricCollection)

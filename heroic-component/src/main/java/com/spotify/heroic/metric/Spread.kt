@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,16 +19,27 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric;
+package com.spotify.heroic.metric
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.hash.Hasher
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes({
-    @JsonSubTypes.Type(value = NodeError.class, name = "node"),
-    @JsonSubTypes.Type(value = ShardError.class, name = "shard"),
-    @JsonSubTypes.Type(value = QueryError.class, name = "query")
-})
-public interface RequestError {
+data class Spread(
+    override val timestamp: Long,
+    val count: Long,
+    val sum: Double,
+    val sum2: Double,
+    val min: Double,
+    val max: Double
+): Metric {
+    override fun valid() = true
+
+    override fun hash(hasher: Hasher) {
+        hasher.putInt(MetricType.SPREAD.ordinal)
+        hasher.putLong(timestamp)
+        hasher.putLong(count)
+        hasher.putDouble(sum)
+        hasher.putDouble(sum2)
+        hasher.putDouble(min)
+        hasher.putDouble(max)
+    }
 }

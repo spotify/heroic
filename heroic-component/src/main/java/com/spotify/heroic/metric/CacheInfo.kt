@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,24 +19,21 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric;
+package com.spotify.heroic.metric
 
-import com.google.common.collect.ImmutableSortedMap;
-import java.util.SortedMap;
-import lombok.Data;
+data class CacheInfo(
+    /**
+     * Indicates if the response was fetched from cache or not.
+     */
+    val cached: Boolean,
 
-@Data
-public class MetricReadResult {
-    private final MetricCollection metrics;
-    private final SortedMap<String, String> resource;
+    /**
+     * TTL for which an item has been, or is cached for in seconds.
+     */
+    val ttl: Int,
 
-    public static MetricReadResult create(final MetricCollection metrics) {
-        return new MetricReadResult(metrics, ImmutableSortedMap.of());
-    }
-
-    public static MetricReadResult create(
-        final MetricCollection metrics, final SortedMap<String, String> resources
-    ) {
-        return new MetricReadResult(metrics, resources);
-    }
-}
+    /**
+     * The key used for caching.
+     */
+    val cacheKey: String
+)

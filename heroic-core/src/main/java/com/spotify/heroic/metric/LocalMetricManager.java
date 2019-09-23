@@ -219,7 +219,7 @@ public class LocalMetricManager implements MetricManager {
 
                 if (result.getLimited()) {
                     if (failOnLimits) {
-                        final RequestError error = QueryError.fromMessage(
+                        final RequestError error = new QueryError(
                             "The number of series requested is more than the allowed limit of " +
                                 seriesLimit);
 
@@ -242,7 +242,7 @@ public class LocalMetricManager implements MetricManager {
                     session = aggregation.session(range, quotaWatcher, bucketStrategy);
                 } catch (QuotaViolationException e) {
                     return async.resolved(FullQuery.limitsError(namedWatch.end(),
-                        QueryError.fromMessage(String.format(
+                        new QueryError(String.format(
                             "aggregation needs to retain more data then what is allowed: %d",
                             aggregationLimit.asLong().get())),
                         ResultLimits.of(ResultLimit.AGGREGATION)));
@@ -580,7 +580,7 @@ public class LocalMetricManager implements MetricManager {
 
             if (watcher.isReadQuotaViolated() || watcher.isRetainQuotaViolated()) {
                 final Optional<Histogram> dataDensity = Optional.of(getRowDensityHistogram());
-                errorsBuilder.add(QueryError.fromMessage(
+                errorsBuilder.add(new QueryError(
                     checkIssues(failed, cancelled).orElse("Query exceeded quota")));
 
                 return FullQuery.create(trace, errorsBuilder.build(), ImmutableList.of(),
@@ -607,7 +607,7 @@ public class LocalMetricManager implements MetricManager {
             for (final AggregationOutput group : result.getResult()) {
                 if (groupLimit.isGreaterOrEqual(groups.size())) {
                     if (failOnLimits) {
-                        errorsBuilder.add(QueryError.fromMessage(
+                        errorsBuilder.add(new QueryError(
                             "The number of result groups is more than the allowed limit of " +
                                 groupLimit));
                         return FullQuery.create(trace, errorsBuilder.build(), ImmutableList.of(),

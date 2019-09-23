@@ -444,7 +444,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
             ) throws Exception {
                 final List<RequestError> errors = this.errors
                     .stream()
-                    .map(QueryError::fromThrowable)
+                    .map(QueryError::new)
                     .collect(Collectors.toList());
 
                 return new DeleteSeries(errors, resolved, failed + cancelled);
