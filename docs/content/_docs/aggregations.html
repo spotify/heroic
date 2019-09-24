@@ -15,12 +15,16 @@ title: Aggregations
 </p>
 
 <ul>
-  <li><a href="#min">Minimum Aggregation</a></li>
-  <li><a href="#max">Maximum Aggregation</a></li>
   <li><a href="#average">Average Aggregation</a></li>
-  <li><a href="#sum">Sum Aggregation</a></li>
-  <li><a href="#chain">Chain Aggregation</a></li>
-  <li><a href="#group">Group Aggregation</a></li>
+  <li><a href="#count">Count Aggregation</a></li>
+  <li><a href="#delta">Delta Aggregation</a></li>
+  <li><a href="#deltapersec">Delta per Second Aggregation</a></li>
+  <li><a href="#max">Maximum Aggregation</a></li>
+  <li><a href="#min">Minimum Aggregation</a></li>
+  <li><a href="#notneg">Not Negative Aggregation</a></li>
+  <li><a href="#stddev">Standard Deviation Aggregation</a></li>
+  <li><a href="#sum">Sum Aggregation</a></li>  
+  <li><a href="#sum2">Sum Squared Aggregation</a></li>
   <li><a href="#filtering">TopK/BottomK/AboveK/BelowK Aggregation</a></li>
 </ul>
 
@@ -54,55 +58,7 @@ The following graphics represents what data will be sampled to generate the samp
 
 <img style="width: 100%;" src="{{ 'images/size_extent_3.svg' | relative_url }}"></img>
 
-<h3 id="min">
-  Min Aggregation
-  <a class="link-to" href="#min"><span class="glyphicon glyphicon-link"></span></a>
-</h3>
-
-<h5>JSON</h5>
-
-<pre><code class="language-json">
-{"type": "min", "sampling": {"unit": &lt;unit&gt;, "size": &lt;number&gt;, "extent": &lt;number&gt;}}
-</code></pre>
-
-<h5>HQL</h5>
-
-<pre><code class="language-hql">
-min(size=&lt;duration&gt;, extent=&lt;duration&gt;)
-</code></pre>
-
-<h5>Description</h5>
-
-<p>
-  The min aggregation picks the <em>smallest</em> numerical value seen in the given extent.
-</p>
-
-<img style="width: 100%;" src="{{ 'images/aggregation_min.svg' | relative_url }}"></img>
-
-<h3 id="max">
-  Max Aggregation
-  <a class="link-to" href="#max"><span class="glyphicon glyphicon-link"></span></a>
-</h3>
-
-<h5>JSON</h5>
-
-<pre><code class="language-json">
-{"type": "max", "sampling": {"unit": &lt;unit&gt;, "size": &lt;number&gt;, "extent": &lt;number&gt;}}
-</code></pre>
-
-<h5>HQL</h5>
-
-<pre><code class="language-hql">
-max(size=&lt;duration&gt;, extent=&lt;duration&gt;)
-</code></pre>
-
-<h5>Description</h5>
-
-<p>
-  The max aggregation picks the <em>largest</em> numerical value seen in the given extent.
-</p>
-
-<img style="width: 100%;" src="{{ 'images/aggregation_max.svg' | relative_url }}"></img>
+## AVERAGE
 
 <h3 id="average">
   Average Aggregation
@@ -129,6 +85,189 @@ average(size=&lt;duration&gt;, extent=&lt;duration&gt;)
 
 <img style="width: 100%;" src="{{ 'images/aggregation_average.svg' | relative_url }}"></img>
 
+## COUNT
+
+<h3 id="count">
+  Count Aggregation
+  <a class="link-to" href="#count"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
+
+<h5>JSON</h5>
+
+<pre><code class="language-json">
+{"type": "count", "sampling": {"unit": &lt;unit&gt;, "size": &lt;number&gt;, "extent": &lt;number&gt;}}
+</code></pre>
+
+<h5>HQL</h5>
+
+<pre><code class="language-hql">
+count(size=&lt;duration&gt;, extent=&lt;duration&gt;)
+</code></pre>
+
+<h5>Description</h5>
+
+<p>
+  The count aggregation calculates the amount of all samples in a given extent.
+</p>
+
+## DELTA
+
+<h3 id="delta">
+  Delta Aggregation
+  <a class="link-to" href="#delta"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
+
+<h5>JSON</h5>
+
+<pre><code class="language-json">
+{"type": "delta", "sampling": {"unit": &lt;unit&gt;, "size": &lt;number&gt;, "extent": &lt;number&gt;}}
+</code></pre>
+
+<h5>HQL</h5>
+
+<pre><code class="language-hql">
+delta(size=&lt;duration&gt;, extent=&lt;duration&gt;)
+</code></pre>
+
+<h5>Description</h5>
+
+<p>
+  The delta aggregation calculates the change between samples in a given extent.
+</p>
+
+
+## DELTA PER SECOND
+
+<h3 id="deltapersec">
+  Delta per Second Aggregation
+  <a class="link-to" href="#deltapersec"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
+
+<h5>JSON</h5>
+
+<pre><code class="language-json">
+{"type": "dps", "sampling": {"unit": &lt;unit&gt;, "size": &lt;number&gt;, "extent": &lt;number&gt;}}
+</code></pre>
+
+<h5>HQL</h5>
+
+<pre><code class="language-hql">
+dps(size=&lt;duration&gt;, extent=&lt;duration&gt;)
+</code></pre>
+
+<h5>Description</h5>
+
+<p>
+  The delta per second aggregation calculates the change per second between samples in a given extent.
+</p>
+
+## MAX
+
+<h3 id="max">
+  Max Aggregation
+  <a class="link-to" href="#max"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
+
+<h5>JSON</h5>
+
+<pre><code class="language-json">
+{"type": "max", "sampling": {"unit": &lt;unit&gt;, "size": &lt;number&gt;, "extent": &lt;number&gt;}}
+</code></pre>
+
+<h5>HQL</h5>
+
+<pre><code class="language-hql">
+max(size=&lt;duration&gt;, extent=&lt;duration&gt;)
+</code></pre>
+
+<h5>Description</h5>
+
+<p>
+  The max aggregation picks the <em>largest</em> numerical value seen in the given extent.
+</p>
+
+<img style="width: 100%;" src="{{ 'images/aggregation_max.svg' | relative_url }}"></img>
+
+
+## MIN
+
+<h3 id="min">
+  Min Aggregation
+  <a class="link-to" href="#min"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
+
+<h5>JSON</h5>
+
+<pre><code class="language-json">
+{"type": "min", "sampling": {"unit": &lt;unit&gt;, "size": &lt;number&gt;, "extent": &lt;number&gt;}}
+</code></pre>
+
+<h5>HQL</h5>
+
+<pre><code class="language-hql">
+min(size=&lt;duration&gt;, extent=&lt;duration&gt;)
+</code></pre>
+
+<h5>Description</h5>
+
+<p>
+  The min aggregation picks the <em>smallest</em> numerical value seen in the given extent.
+</p>
+
+<img style="width: 100%;" src="{{ 'images/aggregation_min.svg' | relative_url }}"></img>
+
+## NOT NEGATIVE
+
+<h3 id="notneg">
+  Not Negative Aggregation
+  <a class="link-to" href="#notneg"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
+
+<h5>JSON</h5>
+
+<pre><code class="language-json">
+{"type": "min", "sampling": {"unit": &lt;unit&gt;, "size": &lt;number&gt;, "extent": &lt;number&gt;}}
+</code></pre>
+
+<h5>HQL</h5>
+
+<pre><code class="language-hql">
+min(size=&lt;duration&gt;, extent=&lt;duration&gt;)
+</code></pre>
+
+<h5>Description</h5>
+
+<p>
+  The not negative aggregation filters out negative values from all samples in a given extent.
+</p>
+
+## STD DEV
+
+<h3 id="stddev">
+  Standard Deviation Aggregation
+  <a class="link-to" href="#stddev"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
+
+<h5>JSON</h5>
+
+<pre><code class="language-json">
+{"type": "stddev", "sampling": {"unit": &lt;unit&gt;, "size": &lt;number&gt;, "extent": &lt;number&gt;}}
+</code></pre>
+
+<h5>HQL</h5>
+
+<pre><code class="language-hql">
+stddev(size=&lt;duration&gt;, extent=&lt;duration&gt;)
+</code></pre>
+
+<h5>Description</h5>
+
+<p>
+  The standard deviation aggregation calculates the standard deviation of all samples in a given extent.
+</p>
+
+## SUM
+
 <h3 id="sum">
   Sum Aggregation
   <a class="link-to" href="#sum"><span class="glyphicon glyphicon-link"></span></a>
@@ -154,72 +293,30 @@ sum(size=&lt;duration&gt;, extent=&lt;duration&gt;)
 
 <img style="width: 100%;" src="{{ 'images/aggregation_sum.svg' | relative_url }}"></img>
 
-<h3 id="chain">
-  Chain Aggregation
-  <a class="link-to" href="#chain"><span class="glyphicon glyphicon-link"></span></a>
+## SUM2
+
+<h3 id="sum2">
+  Sum Squared Aggregation
+  <a class="link-to" href="#sum2"><span class="glyphicon glyphicon-link"></span></a>
 </h3>
 
 <h5>JSON</h5>
 
 <pre><code class="language-json">
-{"type": "chain", "chain": [&lt;aggregation&gt;, ..]}
+{"type": "sum2", "sampling": {"unit": &lt;unit&gt;, "size": &lt;number&gt;, "extent": &lt;number&gt;}}
 </code></pre>
 
 <h5>HQL</h5>
 
 <pre><code class="language-hql">
-&lt;aggregation&gt; | ..
-</code></pre>
-
-<p>
-  A chain aggregation applies the specified aggregations in order.
-  The result of the first aggregation is fed into the second, and so forth.
-</p>
-
-<h3 id="group">
-  Group Aggregation
-  <a class="link-to" href="#group"><span class="glyphicon glyphicon-link"></span></a>
-</h3>
-
-<h5>JSON</h5>
-
-<pre><code class="language-json">
-{"type": "group", "of": [&lt;string&gt;, ..], "each": &lt;aggregation&gt;}
-</code></pre>
-
-<h5>HQL</h5>
-
-<pre><code class="language-hql">
-&lt;aggregation&gt; by *
-&lt;aggregation&gt; by &lt;string&gt;
-&lt;aggregation&gt; by [&lt;string&gt;, ..]
+sum2(size=&lt;duration&gt;, extent=&lt;duration&gt;)
 </code></pre>
 
 <h5>Description</h5>
 
 <p>
-  Takes a set of tags, and groups the sources which have the same values for those tags.
+  The sum squared aggregation sums the squared values of all points in a given extent.
 </p>
-
-<p>
-  The result below is what would happen when grouping the data on the <b>host</b> tag.<br />
-  Assume that the red points come from the host <span style="color: #ff0000;"><b>database1</b></span>,
-  the green points come from the host <span style="color: #00ff00;"><b>api1</b></span>,
-  and that the blue points come from the host <span style="color: #0000ff;"><b>load-balancer3</b></span>
-</p>
-
-<img style="width: 100%;" src="{{ 'images/aggregation_group.svg' | relative_url }}"></img>
-
-<p>
-  Group aggregations are special, they don't have a <em>size</em> or <em>extent</em>.
-  Instead they can accept a child aggregation, which will be applied to every matching sub-group.
-</p>
-
-<p>
-  The below example is the <a href="#average">average</a> aggregation applied to each group.
-</p>
-
-<img style="width: 100%;" src="{{ 'images/aggregation_group_average.svg' | relative_url }}"></img>
 
 <h3 id="filtering">
   TopK/BottomK/AboveK/BelowK Aggregation
