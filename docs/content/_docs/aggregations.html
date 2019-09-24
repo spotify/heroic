@@ -107,7 +107,7 @@ count(size=&lt;duration&gt;, extent=&lt;duration&gt;)
 <h5>Description</h5>
 
 <p>
-  The count aggregation calculates the amount of all samples in a given extent.
+  The count aggregation calculates the number of all samples in a given extent.
 </p>
 
 ## DELTA
@@ -120,13 +120,13 @@ count(size=&lt;duration&gt;, extent=&lt;duration&gt;)
 <h5>JSON</h5>
 
 <pre><code class="language-json">
-{"type": "delta", "sampling": {"unit": &lt;unit&gt;, "size": &lt;number&gt;, "extent": &lt;number&gt;}}
+{"type": "delta", ()}
 </code></pre>
 
 <h5>HQL</h5>
 
 <pre><code class="language-hql">
-delta(size=&lt;duration&gt;, extent=&lt;duration&gt;)
+delta()
 </code></pre>
 
 <h5>Description</h5>
@@ -146,13 +146,13 @@ delta(size=&lt;duration&gt;, extent=&lt;duration&gt;)
 <h5>JSON</h5>
 
 <pre><code class="language-json">
-{"type": "dps", "sampling": {"unit": &lt;unit&gt;, "size": &lt;number&gt;, "extent": &lt;number&gt;}}
+{"type": "deltaPerSecond", ()}
 </code></pre>
 
 <h5>HQL</h5>
 
 <pre><code class="language-hql">
-dps(size=&lt;duration&gt;, extent=&lt;duration&gt;)
+deltaPerSecond()
 </code></pre>
 
 <h5>Description</h5>
@@ -226,13 +226,13 @@ min(size=&lt;duration&gt;, extent=&lt;duration&gt;)
 <h5>JSON</h5>
 
 <pre><code class="language-json">
-{"type": "min", "sampling": {"unit": &lt;unit&gt;, "size": &lt;number&gt;, "extent": &lt;number&gt;}}
+{"type": "notNegative", ()}
 </code></pre>
 
 <h5>HQL</h5>
 
 <pre><code class="language-hql">
-min(size=&lt;duration&gt;, extent=&lt;duration&gt;)
+notNegative()
 </code></pre>
 
 <h5>Description</h5>
