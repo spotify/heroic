@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
+ * "License"): you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
@@ -19,32 +19,22 @@
  * under the License.
  */
 
-package com.spotify.heroic.grammar;
+package com.spotify.heroic.grammar
 
-import com.fasterxml.jackson.annotation.JsonTypeName;
-import lombok.Data;
+data class PlusExpression(
+    @JvmField val context: Context,
+    val left: Expression,
+    val right: Expression
+): Expression {
+    override fun getContext() = context
 
-/**
- * An expression representing a Reference ($name).
- */
-@Data
-@JsonTypeName("reference")
-public class ReferenceExpression implements Expression {
-    private final Context context;
-    private final String name;
-
-    @Override
-    public Expression eval(final Scope scope) {
-        return scope.lookup(context, name).eval(scope);
+    override fun eval(scope: Expression.Scope): Expression? {
+        return left.eval(scope).add(right.eval(scope))
     }
 
-    @Override
-    public <R> R visit(final Visitor<R> visitor) {
-        return visitor.visitReference(this);
+    override fun <R : Any?> visit(visitor: Expression.Visitor<R>): R {
+        return visitor.visitPlus(this)
     }
 
-    @Override
-    public String toRepr() {
-        return "$" + name;
-    }
+    override fun toRepr() = "${left.toRepr()} + ${right.toRepr()}"
 }

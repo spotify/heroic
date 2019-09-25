@@ -1,17 +1,16 @@
 package com.spotify.heroic.grammar;
 
+import static org.junit.Assert.assertEquals;
+
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.MetricType;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.runners.MockitoJUnitRunner;
-
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
-
-import static org.junit.Assert.assertEquals;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
 public class QueryExpressionTest extends AbstractExpressionTest<QueryExpression> {
@@ -41,6 +40,6 @@ public class QueryExpressionTest extends AbstractExpressionTest<QueryExpression>
         assertEquals(range, e.getRange());
         assertEquals(filter, e.getFilter());
         assertEquals(with, e.getWith());
-        assertEquals(as, e.getAs());
+        assertEquals(as, e.getAsExpression());
     }
 }

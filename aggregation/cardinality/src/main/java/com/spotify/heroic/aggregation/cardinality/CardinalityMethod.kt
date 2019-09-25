@@ -171,7 +171,7 @@ interface CardinalityMethod {
                 private fun buildHyperLogLogPlus(e: FunctionExpression): CardinalityMethod {
                     val precision: Int? = e
                         .keyword("precision")
-                        .map { i -> i.cast(IntegerExpression::class.java).valueAsInteger }
+                        .map { i -> i.cast(IntegerExpression::class.java).getValueAsInteger() }
                         .orElse(null)
 
                     val includeKey: Boolean? = e

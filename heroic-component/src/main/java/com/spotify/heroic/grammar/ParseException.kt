@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,35 +19,24 @@
  * under the License.
  */
 
-package com.spotify.heroic.grammar;
+package com.spotify.heroic.grammar
 
-import com.fasterxml.jackson.annotation.JsonTypeName;
-import lombok.Data;
+import java.lang.RuntimeException
 
-/**
- * Representation of a let expression.
- * <p>
- * These take the form: {@code let &lt;reference&gt; = &lt;expression&gt;}
- */
-@Data
-@JsonTypeName("let")
-public class LetExpression implements Expression {
-    private final Context context;
-    private final ReferenceExpression reference;
-    private final Expression expression;
+data class ParseException(
+    val partialMessage: String?,
+    override val cause: Throwable?,
+    val line: Int,
+    val col: Int,
+    val lineEnd: Int,
+    val colEnd: Int
+): RuntimeException("%d:%d: %s".format(line, col, partialMessage), cause) {
+    constructor(message: String?, cause: Throwable?, line: Int, col: Int):
+        this(message, cause, line, col, line, col)
 
-    @Override
-    public <R> R visit(final Visitor<R> visitor) {
-        return visitor.visitLet(this);
-    }
+    override fun toString() = super.toString()
 
-    @Override
-    public Context getContext() {
-        return context;
-    }
-
-    @Override
-    public String toRepr() {
-        return String.format("let %s = %s", reference.toRepr(), expression.toRepr());
+    companion object {
+        private const val serialVersionUID = -7313640439644659488L
     }
 }

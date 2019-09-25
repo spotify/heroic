@@ -25,24 +25,32 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
-    @JsonSubTypes.Type(DoubleExpression.class), @JsonSubTypes.Type(DurationExpression.class),
-    @JsonSubTypes.Type(DateTimeExpression.class), @JsonSubTypes.Type(TimeExpression.class),
-    @JsonSubTypes.Type(InstantExpression.class), @JsonSubTypes.Type(EmptyExpression.class),
-    @JsonSubTypes.Type(FunctionExpression.class), @JsonSubTypes.Type(IntegerExpression.class),
-    @JsonSubTypes.Type(LetExpression.class), @JsonSubTypes.Type(ListExpression.class),
-    @JsonSubTypes.Type(MinusExpression.class), @JsonSubTypes.Type(PlusExpression.class),
-    @JsonSubTypes.Type(MultiplyExpression.class), @JsonSubTypes.Type(DivideExpression.class),
-    @JsonSubTypes.Type(QueryExpression.class), @JsonSubTypes.Type(RangeExpression.class),
-    @JsonSubTypes.Type(ReferenceExpression.class), @JsonSubTypes.Type(StringExpression.class),
-    @JsonSubTypes.Type(NegateExpression.class)
+    @JsonSubTypes.Type(value = DoubleExpression.class, name = "double"),
+    @JsonSubTypes.Type(value = DurationExpression.class, name = "duration"),
+    @JsonSubTypes.Type(value = DateTimeExpression.class, name = "date-time"),
+    @JsonSubTypes.Type(value = TimeExpression.class, name = "time"),
+    @JsonSubTypes.Type(value = InstantExpression.class, name = "instant"),
+    @JsonSubTypes.Type(value = EmptyExpression.class, name = "empty"),
+    @JsonSubTypes.Type(value = FunctionExpression.class, name = "function"),
+    @JsonSubTypes.Type(value = IntegerExpression.class, name = "integer"),
+    @JsonSubTypes.Type(value = LetExpression.class, name = "let"),
+    @JsonSubTypes.Type(value = ListExpression.class, name = "list"),
+    @JsonSubTypes.Type(value = MinusExpression.class, name = "minus"),
+    @JsonSubTypes.Type(value = PlusExpression.class, name = "plus"),
+    @JsonSubTypes.Type(value = MultiplyExpression.class, name = "multiply"),
+    @JsonSubTypes.Type(value = DivideExpression.class, name = "divide"),
+    @JsonSubTypes.Type(value = QueryExpression.class, name = "query"),
+    @JsonSubTypes.Type(value = RangeExpression.class, name = "range"),
+    @JsonSubTypes.Type(value = ReferenceExpression.class, name = "reference"),
+    @JsonSubTypes.Type(value = StringExpression.class, name = "string"),
+    @JsonSubTypes.Type(value = NegateExpression.class, name = "negate")
 })
 public interface Expression {
     String NOW = "now";
