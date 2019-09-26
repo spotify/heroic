@@ -38,21 +38,32 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import lombok.Data;
-import org.slf4j.Logger;
 
-@Data
 public class ClusterShard {
     private static final QueryTrace.Identifier RETRY_BACKOFF =
         QueryTrace.Identifier.create("retry-backoff");
     private static final String DARKLOAD = "darkload";
-    private static final Logger log = org.slf4j.LoggerFactory.getLogger(ClusterShard.class);
 
     private final AsyncFramework async;
-
     private final Map<String, String> shard;
     private final QueryReporter reporter;
     private final ClusterManager cluster;
+
+    public ClusterShard(
+        AsyncFramework async,
+        Map<String, String> shard,
+        QueryReporter reporter,
+        ClusterManager cluster
+    ) {
+        this.async = async;
+        this.shard = shard;
+        this.reporter = reporter;
+        this.cluster = cluster;
+    }
+
+    public Map<String, String> getShard() {
+        return shard;
+    }
 
     public <T> AsyncFuture<T> apply(
         Function<ClusterNode.Group, AsyncFuture<T>> function,

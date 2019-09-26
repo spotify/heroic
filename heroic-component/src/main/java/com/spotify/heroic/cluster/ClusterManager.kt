@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,19 +19,15 @@
  * under the License.
  */
 
-package com.spotify.heroic.cluster;
+package com.spotify.heroic.cluster
 
-import com.spotify.heroic.common.UsableGroupManager;
-import eu.toolchain.async.AsyncFuture;
-import java.net.URI;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import lombok.Data;
+import com.spotify.heroic.common.UsableGroupManager
+import eu.toolchain.async.AsyncFuture
+import java.net.URI
+import java.util.*
+import java.util.function.Consumer
+import java.util.function.Function
+import java.util.function.Predicate
 
 /**
  * Handles management of cluster state.
@@ -43,37 +39,33 @@ import lombok.Data;
  * {@link #withNodeInShardButNotWithId(shardTags, excludeIds, registerNodeUse, fn)}. *
  * @author udoprog
  */
-public interface ClusterManager extends UsableGroupManager<List<ClusterShard>> {
-    @Data
-    class Statistics {
-        private final int onlineNodes;
-        private final int offlineNodes;
-    }
+interface ClusterManager: UsableGroupManager<MutableList<ClusterShard>> {
+    data class Statistics(val onlineNodes: Int, val offlineNodes: Int)
 
     /**
      * Get the list of static nodes.
      */
-    AsyncFuture<Set<URI>> getStaticNodes();
+    fun getStaticNodes(): AsyncFuture<Set<URI>>
 
     /**
      * Remove a static node.
      */
-    AsyncFuture<Void> removeStaticNode(URI node);
+    fun removeStaticNode(node: URI): AsyncFuture<Void>
 
     /**
      * Add a static node.
      */
-    AsyncFuture<Void> addStaticNode(URI node);
+    fun addStaticNode(node: URI): AsyncFuture<Void>
 
     /**
      * Eventually consistent view of the currently known nodes in the cluster
      */
-    List<ClusterNode> getNodes();
+     fun getNodes(): List<ClusterNode>
 
     /**
      * Eventually consistent view of the currently known nodes in a specific shard
      */
-    List<ClusterNode> getNodesForShard(Map<String, String> shard);
+    fun getNodesForShard(shard: Map<String, String>): List<ClusterNode>
 
     /**
      * Run function on one random ClusterNode in a specific shard. The caller is allowed the
@@ -86,10 +78,10 @@ public interface ClusterManager extends UsableGroupManager<List<ClusterShard>> {
      * @param <T> type of the return value
      * @return Return value of the applied function, Id of the node, string representation of node
      */
-    <T> Optional<NodeResult<T>> withNodeInShardButNotWithId(
-        Map<String, String> shard, Predicate<ClusterNode> exclude,
-        Consumer<ClusterNode> registerNodeUse, Function<ClusterNode.Group, T> fn
-    );
+    fun <T> withNodeInShardButNotWithId(
+        shard: Map<String, String>, exclude: Predicate<ClusterNode>,
+        registerNodeUse: Consumer<ClusterNode>, fn: Function<ClusterNode.Group, T>
+    ): Optional<NodeResult<T>>
 
     /**
      * Check if there's at this instant any more nodes in the specified shard.
@@ -99,28 +91,27 @@ public interface ClusterManager extends UsableGroupManager<List<ClusterShard>> {
      * withNodeInShardButNotWithId(...), so the result of this method should only be used as an
      * advice. A call to withNodeInShardButNotWithId could still fail because of no node available.
      */
-    boolean hasNextButNotWithId(Map<String, String> shard, Predicate<ClusterNode> exclude);
+    fun hasNextButNotWithId(shard: Map<String, String>, exclude: Predicate<ClusterNode>): Boolean
 
     /**
      * Perform a refresh of the cluster information.
      *
      * @return a future indicating the state of the refresh
      */
-    AsyncFuture<Void> refresh();
+    fun refresh(): AsyncFuture<Void>
 
-    Statistics getStatistics();
+    fun getStatistics(): Statistics
 
-    Set<RpcProtocol> protocols();
+    fun protocols(): Set<RpcProtocol>
 
     /**
      * The result of applying a function to a random node in a shard
      */
-    @Data
-    class NodeResult<T> {
-        private final T returnValue;
+    data class NodeResult<T>(
+        val returnValue: T,
 
         /* NOTE: No guarantees are made about this object having a live connection. Only made
          * available to facilitate identifying which node that was used. */
-        private final ClusterNode node;
-    }
+        val node: ClusterNode
+    )
 }

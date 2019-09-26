@@ -247,7 +247,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                         .startSpan();
                     AsyncFuture<WriteMetadata> result = bind(builder.execute())
                         .directTransform(response -> timer.end())
-                        .catchFailed(handleVersionConflict(WriteMetadata::of,
+                        .catchFailed(handleVersionConflict(WriteMetadata::new,
                             reporter::reportWriteDroppedByDuplicate))
                         .onDone(writeContext)
                         .onFinished(writeSpan::end);
@@ -270,7 +270,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
             final OptionalLimit limit = filter.getLimit();
 
             if (limit.isZero()) {
-                return async.resolved(CountSeries.of());
+                return async.resolved(new CountSeries());
             }
 
             final QueryBuilder f = filter(filter.getFilter());
@@ -282,7 +282,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
             builder.setSize(0);
 
             return bind(builder.execute()).directTransform(
-                response -> CountSeries.of(response.getHits().getTotalHits(), false));
+                response -> new CountSeries(response.getHits().getTotalHits(), false));
         });
     }
 
@@ -292,7 +292,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
             final OptionalLimit limit = filter.getLimit();
             final QueryBuilder f = filter(filter.getFilter());
             return entries(filter.getFilter(), filter.getLimit(), filter.getRange(), this::toSeries,
-                l -> FindSeries.of(l.getSet(), l.isLimited()), builder -> {
+                l -> new FindSeries(l.getSet(), l.isLimited()), builder -> {
                 });
         });
     }
@@ -300,14 +300,14 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     @Override
     public AsyncObservable<FindSeriesStream> findSeriesStream(final FindSeries.Request request) {
         return entriesStream(request.getLimit(), request.getFilter(), request.getRange(),
-            this::toSeries, FindSeriesStream::of, builder -> {
+            this::toSeries, FindSeriesStream::new, builder -> {
             });
     }
 
     @Override
     public AsyncFuture<FindSeriesIds> findSeriesIds(final FindSeriesIds.Request request) {
         return entries(request.getFilter(), request.getLimit(), request.getRange(), this::toId,
-            l -> FindSeriesIds.of(l.getSet(), l.isLimited()), builder -> {
+            l -> new FindSeriesIds(l.getSet(), l.isLimited()), builder -> {
                 builder.setFetchSource(false);
             });
     }
@@ -317,7 +317,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         final FindSeriesIds.Request request
     ) {
         return entriesStream(request.getLimit(), request.getFilter(), request.getRange(),
-            this::toId, FindSeriesIdsStream::of, builder -> {
+            this::toId, FindSeriesIdsStream::new, builder -> {
                 builder.setFetchSource(false);
             });
     }
@@ -376,7 +376,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                     }
                 }
 
-                return FindKeys.of(keys, size, duplicates);
+                return new FindKeys(keys, size, duplicates);
             });
         });
     }

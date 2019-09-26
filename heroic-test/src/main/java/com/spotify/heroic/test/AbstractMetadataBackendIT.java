@@ -159,14 +159,14 @@ public abstract class AbstractMetadataBackendIT {
             .findSeries(new FindSeries.Request(TrueFilter.get(), range, OptionalLimit.of(1L)))
             .get();
 
-        assertTrue("Result should be limited", r1.isLimited());
+        assertTrue("Result should be limited", r1.getLimited());
         assertEquals("Result size should be same as limit", 1, r1.getSeries().size());
 
         final FindSeries r2 = backend
             .findSeries(new FindSeries.Request(TrueFilter.get(), range, OptionalLimit.of(3L)))
             .get();
 
-        assertFalse("Result should not be limited", r2.isLimited());
+        assertFalse("Result should not be limited", r2.getLimited());
         assertEquals("Result size should be all entries", 3, r2.getSeries().size());
     }
 
