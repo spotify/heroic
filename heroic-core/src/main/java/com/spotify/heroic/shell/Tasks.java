@@ -254,35 +254,35 @@ public final class Tasks {
 
     public static BackendKeyFilter setupKeyFilter(KeyspaceBase params, ObjectMapper mapper)
         throws Exception {
-        BackendKeyFilter filter = BackendKeyFilter.of();
+        BackendKeyFilter filter = new BackendKeyFilter();
 
         if (params.getStart() != null) {
-            filter = filter.withStart(BackendKeyFilter.gte(
+            filter = filter.withStart(new BackendKeyFilter.GTE(
                 mapper.readValue(params.getStart(), BackendKeyArgument.class).toBackendKey()));
         }
 
         if (params.getStartPercentage() >= 0) {
             filter = filter.withStart(
-                BackendKeyFilter.gtePercentage((float) params.getStartPercentage() / 100f));
+                new BackendKeyFilter.GTEPercentage((float) params.getStartPercentage() / 100f));
         }
 
         if (params.getStartToken() != null) {
-            filter = filter.withStart(BackendKeyFilter.gteToken(params.getStartToken()));
+            filter = filter.withStart(new BackendKeyFilter.GTEToken(params.getStartToken()));
         }
 
         if (params.getEnd() != null) {
-            filter = filter.withEnd(BackendKeyFilter.lt(
+            filter = filter.withEnd(new BackendKeyFilter.LT(
                 mapper.readValue(params.getEnd(), BackendKeyArgument.class).toBackendKey()));
         }
 
         if (params.getEndPercentage() >= 0) {
             filter =
-                filter.withEnd(BackendKeyFilter.ltPercentage((float) params.getEndPercentage()
-                                                             / 100f));
+                filter.withEnd(new BackendKeyFilter.LTPercentage((float) params.getEndPercentage()
+                                                                 / 100f));
         }
 
         if (params.getEndToken() != null) {
-            filter = filter.withEnd(BackendKeyFilter.ltToken(params.getEndToken()));
+            filter = filter.withEnd(new BackendKeyFilter.LTToken(params.getEndToken()));
         }
 
         filter = filter.withLimit(params.getLimit());

@@ -25,21 +25,19 @@ import com.spotify.heroic.ObjectHasher
 import com.spotify.heroic.aggregation.BucketAggregationInstance
 import com.spotify.heroic.metric.MetricType
 import com.spotify.heroic.metric.Payload
-import java.beans.ConstructorProperties
-import java.util.function.BiConsumer
 
 data class DistributedCardinalityInstance(
         override val size: Long,
         override val extent: Long,
         val method: CardinalityMethod
-) : BucketAggregationInstance<CardinalityBucket>(size, extent, BucketAggregationInstance.ALL_TYPES, MetricType.CARDINALITY) {
+) : BucketAggregationInstance<CardinalityBucket>(size, extent, ALL_TYPES, MetricType.CARDINALITY) {
 
     override fun buildBucket(timestamp: Long): CardinalityBucket {
         return method.build(timestamp)
     }
 
     override fun build(bucket: CardinalityBucket): Payload {
-        return Payload.create(bucket.timestamp, bucket.state())
+        return Payload(bucket.timestamp, bucket.state())
     }
 
     override fun bucketHashTo(hasher: ObjectHasher) {

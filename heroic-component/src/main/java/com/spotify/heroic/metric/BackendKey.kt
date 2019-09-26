@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,14 +19,14 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric;
+package com.spotify.heroic.metric
 
-import lombok.Data;
+import com.spotify.heroic.common.Series
+import java.util.*
 
-import java.util.List;
-
-@Data
-public class BackendKeySet {
-    private final List<BackendKey> keys;
-    private final long failedKeys;
-}
+data class BackendKey @JvmOverloads constructor(
+    val series: Series,
+    val base: Long,
+    val type: MetricType = MetricType.POINT,
+    val token: Optional<Long> = Optional.empty()
+)

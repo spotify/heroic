@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,16 +19,17 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric;
+package com.spotify.heroic.metric
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonValue
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes({
-    @JsonSubTypes.Type(value = NodeError.class, name = "node"),
-    @JsonSubTypes.Type(value = ShardError.class, name = "shard"),
-    @JsonSubTypes.Type(value = QueryError.class, name = "query")
-})
-public interface RequestError {
+data class ResultLimits(@get:JsonValue val limits: Set<ResultLimit> = emptySet()) {
+    fun join(other: ResultLimits) = ResultLimits(limits.plus(other.limits))
+
+    fun add(limit: ResultLimit) = ResultLimits(setOf(limit).plus(limits))
+
+    companion object {
+        @JvmStatic
+        fun of(vararg limits: ResultLimit) = ResultLimits(limits.toSet())
+    }
 }

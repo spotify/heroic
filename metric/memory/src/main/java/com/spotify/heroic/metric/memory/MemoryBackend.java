@@ -136,7 +136,7 @@ public class MemoryBackend extends AbstractMetricBackend {
         final QueryTrace.NamedWatch w = QueryTrace.watch(FETCH);
         final MemoryKey key = new MemoryKey(request.getType(), request.getSeries().getTags());
         doFetch(key, request.getRange(), watcher, metricsConsumer);
-        return async.resolved(FetchData.result(w.end()));
+        return async.resolved(new FetchData.Result(w.end()));
     }
 
     @Override
@@ -197,7 +197,7 @@ public class MemoryBackend extends AbstractMetricBackend {
 
             final List<Metric> data = ImmutableList.copyOf(metrics);
             final MetricCollection collection = MetricCollection.build(key.getSource(), data);
-            metricsConsumer.accept(MetricReadResult.create(collection, e.getKey()));
+            metricsConsumer.accept(new MetricReadResult(collection, e.getKey()));
         }
     }
 

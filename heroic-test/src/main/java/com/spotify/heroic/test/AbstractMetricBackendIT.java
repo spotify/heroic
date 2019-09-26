@@ -417,7 +417,7 @@ public abstract class AbstractMetricBackendIT {
         actual
             .stream()
             .flatMap(mc -> mc.data().stream())
-            .sorted(Metric.comparator())
+            .sorted(Metric.comparator)
             .forEach(new Consumer<Metric>() {
                 int i;
 

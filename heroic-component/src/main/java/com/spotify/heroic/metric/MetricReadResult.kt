@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
+ * "License"): you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
@@ -19,14 +19,11 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric;
+package com.spotify.heroic.metric
 
-import lombok.Data;
+import java.util.*
 
-import java.util.Map;
-
-@Data
-public class ShardLatency {
-    private final Map<String, String> tags;
-    private final long latency;
-}
+data class MetricReadResult @JvmOverloads constructor(
+    val metrics: MetricCollection,
+    val resource: SortedMap<String, String> = sortedMapOf()
+)

@@ -229,7 +229,7 @@ public interface MetricCollection {
     ) {
         final List<Metric> data = ImmutableList.copyOf(Iterators.mergeSorted(
             ImmutableList.copyOf(values.stream().map(Iterable::iterator).iterator()),
-            Metric.comparator()));
+            Metric.comparator));
         return build(type, data);
     }
 

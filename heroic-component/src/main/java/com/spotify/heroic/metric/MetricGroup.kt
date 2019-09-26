@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,13 +19,26 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric;
+package com.spotify.heroic.metric
 
-import com.spotify.heroic.common.Series;
-import lombok.Data;
+import com.google.common.hash.Hasher
 
-@Data
-public class BackendEntry {
-    private final Series series;
-    private final MetricCollection metrics;
+data class MetricGroup(
+    override val timestamp: Long,
+    val groups: List<MetricCollection>
+): Metric {
+    companion object {
+        // Handler for null payload in constructor
+        operator fun invoke(timestamp: Long, groups: List<MetricCollection>?) =
+            MetricGroup(timestamp, groups ?: emptyList())
+    }
+
+    override fun valid() = true
+
+    override fun hash(hasher: Hasher) {
+        hasher.putInt(MetricType.GROUP.ordinal)
+        groups.forEach { c ->
+            c.data().forEach { it.hash(hasher) }
+        }
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,24 +19,28 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric;
+package com.spotify.heroic.metric
 
-import com.google.common.hash.Hasher;
-import lombok.Data;
+import com.google.common.hash.Hasher
 
-@Data
-public class Point implements Metric {
-    private final long timestamp;
-    private final double value;
+data class Event @JvmOverloads constructor(
+    override val timestamp: Long,
+    val payload: Map<String, String> = emptyMap()
+): Metric {
 
-    @Override
-    public boolean valid() {
-        return Double.isFinite(value);
+    override fun valid() = true
+
+    override fun hash(hasher: Hasher) {
+        hasher.putInt(MetricType.EVENT.ordinal)
+
+        payload.toSortedMap().forEach { (key, value) ->
+            hasher.putString(key, Charsets.UTF_8).putString(value, Charsets.UTF_8)
+        }
     }
 
-    @Override
-    public void hash(final Hasher hasher) {
-        hasher.putInt(MetricType.POINT.ordinal());
-        hasher.putDouble(value);
+    companion object {
+        // Handler for null payload in constructor
+        operator fun invoke(timestamp: Long, payload: Map<String, String>?) =
+            Event(timestamp, payload ?: emptyMap())
     }
 }
