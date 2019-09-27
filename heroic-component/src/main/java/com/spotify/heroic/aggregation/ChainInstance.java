@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.aggregation;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.ObjectHasher;
@@ -36,17 +37,20 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
-import lombok.Data;
 
 /**
  * A special aggregation method that is a chain of other aggregation methods.
  *
  * @author udoprog
  */
-@Data
 public class ChainInstance implements AggregationInstance {
     private final List<AggregationInstance> chain;
+
+    public ChainInstance(@JsonProperty("chain") List<AggregationInstance> chain) {
+        this.chain = chain;
+    }
 
     /**
      * The last aggregation in the chain determines the estimated number of samples.
@@ -200,6 +204,37 @@ public class ChainInstance implements AggregationInstance {
         }
 
         return child.build();
+    }
+
+    public List<AggregationInstance> getChain() {
+        return this.chain;
+    }
+
+    public boolean equals(final Object o) {
+        if (o == this) {
+            return true;
+        }
+        if (!(o instanceof ChainInstance)) {
+            return false;
+        }
+        final ChainInstance other =
+            (ChainInstance) o;
+        if (!other.canEqual(this)) {
+            return false;
+        }
+        return Objects.equals(this.getChain(), other.getChain());
+    }
+
+    protected boolean canEqual(final Object other) {
+        return other instanceof ChainInstance;
+    }
+
+    public int hashCode() {
+        final int prime = 59;
+        int result = 1;
+        final Object chain = this.getChain();
+        result = result * prime + (chain == null ? 43 : chain.hashCode());
+        return result;
     }
 
     private static final class Session implements AggregationSession {

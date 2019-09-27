@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,23 +19,17 @@
  * under the License.
  */
 
-package com.spotify.heroic.aggregation;
+package com.spotify.heroic.aggregation
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import lombok.Data;
+object Empty: Aggregation {
+    const val NAME = "empty"
 
-@Data
-public class Empty implements Aggregation {
-    public static final String NAME = "empty";
+    override fun apply(p0: AggregationContext?): EmptyInstance = EmptyInstance.INSTANCE
 
-    public static final Aggregation INSTANCE = new Empty();
-
-    @JsonCreator
-    public Empty() {
-    }
-
-    @Override
-    public EmptyInstance apply(final AggregationContext context) {
-        return EmptyInstance.INSTANCE;
+    // Jackson currently creates multiple instances of singleton objects, causing equality
+    // to fail. Overriding equals is necessary until this is fixed:
+    // https://github.com/FasterXML/jackson-module-kotlin/issues/225
+    override fun equals(other: Any?): Boolean {
+        return other is Empty
     }
 }
