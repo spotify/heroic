@@ -57,7 +57,7 @@ public class LocalMetricManagerTest {
         final OptionalLimit concurrentQueriesBackoff = OptionalLimit.empty();
         final int fetchParallelism = 20;
         final boolean failOnLimits = true;
-        final Groups groups = Groups.of("foo");
+        final Groups groups = new Groups("foo");
         doReturn(groups).when(metricBackend).groups();
         final GroupSet<MetricBackend> groupSet =
             GroupSet.build(Collections.singletonList(metricBackend), Optional.empty());

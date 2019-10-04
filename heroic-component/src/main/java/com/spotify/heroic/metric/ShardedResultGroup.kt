@@ -66,9 +66,9 @@ data class ShardedResultGroup(
 
         fun summarize(resultGroups: List<ShardedResultGroup>): MultiSummary {
             val shardSummary = mutableSetOf<Map<String, String>>()
-            val keySize = Histogram.builder()
+            val keySize = Histogram.Builder()
             val seriesSummarizer = SeriesSetsSummarizer()
-            val dataSize = Histogram.builder()
+            val dataSize = Histogram.Builder()
             var cadence = Optional.empty<Long>()
 
             resultGroups.forEach {

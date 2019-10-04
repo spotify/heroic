@@ -30,7 +30,7 @@ data class SeriesSetsSummarizer @JvmOverloads constructor(
     val uniqueKeys: HashSet<String> = hashSetOf(),
     val tags: Multimap<String, String> = HashMultimap.create(),
     val resource: Multimap<String, String> = HashMultimap.create(),
-    val seriesSize: Histogram.Builder = Histogram.builder()
+    val seriesSize: Histogram.Builder = Histogram.Builder()
 ) {
     fun add(series: Set<Series>) {
         seriesSize.add(series.size.toLong())
@@ -42,8 +42,8 @@ data class SeriesSetsSummarizer @JvmOverloads constructor(
     }
 
     fun end(): Summary {
-        val tagsSize = Histogram.builder()
-        val resourceSize = Histogram.builder()
+        val tagsSize = Histogram.Builder()
+        val resourceSize = Histogram.Builder()
 
         tags.asMap().forEach { tagsSize.add(it.value.size.toLong()) }
         resource.asMap().forEach { resourceSize.add(it.value.size.toLong()) }

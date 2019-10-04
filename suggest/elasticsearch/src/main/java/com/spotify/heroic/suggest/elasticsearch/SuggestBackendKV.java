@@ -645,7 +645,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
     @Override
     public Statistics getStatistics() {
-        return Statistics.of(WRITE_CACHE_SIZE, writeCache.size());
+        return new Statistics(WRITE_CACHE_SIZE, writeCache.size());
     }
 
     private AsyncFuture<Void> start() {

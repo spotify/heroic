@@ -21,42 +21,23 @@
 
 package com.spotify.heroic.common;
 
-import lombok.Data;
-
-import java.util.Optional;
-
 public interface Validation {
-    /**
-     * Check that the given field is present.
-     *
-     * @param object The field value to check.
-     * @param name The name of the field.
-     * @param <T> The type of the field
-     * @return The object, if present.
-     * @throws com.spotify.heroic.common.Validation.MissingField if field is not present.
-     */
-    static <T> T fieldIsPresent(Optional<T> object, String name) {
-        if (!object.isPresent()) {
-            throw new MissingField(name, "must be present");
-        }
-
-        return object.get();
-    }
-
-    @Data
     class MissingBody extends RuntimeException {
         public MissingBody(final String message) {
             super(message);
         }
     }
 
-    @Data
     class MissingField extends RuntimeException {
         private final String name;
 
         public MissingField(final String name, final String message) {
             super(message);
             this.name = name;
+        }
+
+        public String getName() {
+            return name;
         }
     }
 }

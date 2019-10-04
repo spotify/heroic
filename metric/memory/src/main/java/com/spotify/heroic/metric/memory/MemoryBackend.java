@@ -108,7 +108,7 @@ public class MemoryBackend extends AbstractMetricBackend {
 
     @Override
     public Statistics getStatistics() {
-        return Statistics.of(MEMORY_KEYS, storage.size());
+        return new Statistics(MEMORY_KEYS, storage.size());
     }
 
     @Override

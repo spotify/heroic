@@ -45,9 +45,9 @@ data class ResultGroup(
 
         @JvmStatic
         fun summarize(resultGroups: List<ResultGroup>): MultiSummary {
-            val keySize = Histogram.builder()
+            val keySize = Histogram.Builder()
             val seriesSummarizer = SeriesSetsSummarizer()
-            val dataSize = Histogram.builder()
+            val dataSize = Histogram.Builder()
             var cadence = Optional.empty<Long>()
 
             resultGroups.forEach {
