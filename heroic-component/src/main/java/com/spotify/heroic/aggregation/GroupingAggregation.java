@@ -40,9 +40,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import lombok.Data;
 
-@Data
 public abstract class GroupingAggregation implements AggregationInstance {
     private final Optional<List<String>> of;
     private final AggregationInstance each;
@@ -50,6 +48,14 @@ public abstract class GroupingAggregation implements AggregationInstance {
     public GroupingAggregation(final Optional<List<String>> of, final AggregationInstance each) {
         this.of = checkNotNull(of, "of");
         this.each = checkNotNull(each, "each");
+    }
+
+    public Optional<List<String>> getOf() {
+        return of;
+    }
+
+    public AggregationInstance getEach() {
+        return each;
     }
 
     /**

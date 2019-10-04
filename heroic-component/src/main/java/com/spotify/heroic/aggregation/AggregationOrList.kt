@@ -21,24 +21,25 @@
 
 package com.spotify.heroic.aggregation
 
+import com.fasterxml.jackson.annotation.JsonValue
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import java.util.*
-import java.util.concurrent.TimeUnit
 
-data class Options(
-    val sampling: Optional<SamplingQuery>,
-    val aggregation: Optional<Aggregation>
-) : Aggregation {
-
-    override fun apply(context: AggregationContext): AggregationInstance {
-        return aggregation
-                .orElse(Empty)
-                .apply(context.withOptions(
-                    sampling.flatMap { Optional.ofNullable(it.size) },
-                    sampling.flatMap { Optional.ofNullable(it.extent) }))
-    }
+/**
+ * Backwards compatibility from the dark ages, where group aggregations 'each' field took a list.
+ * <p>
+ * XXX: remove when deprecated.
+ *
+ * @author udoprog
+ */
+@JsonDeserialize(using = AggregationOrListDeserializer::class)
+data class AggregationOrList(val aggregation: Optional<Aggregation>) {
+    @JsonValue
+    fun toAggregation() = aggregation
 
     companion object {
-        const val NAME = "opts"
-        @JvmField val DEFAULT_SIZE = TimeUnit.MILLISECONDS.convert(60, TimeUnit.MINUTES)
+        @JvmStatic
+        fun fromAggregation(aggregation: Aggregation) =
+            AggregationOrList(Optional.of(aggregation))
     }
 }

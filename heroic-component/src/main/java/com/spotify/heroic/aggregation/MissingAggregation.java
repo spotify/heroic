@@ -21,16 +21,17 @@
 
 package com.spotify.heroic.aggregation;
 
-import lombok.Getter;
-
 public class MissingAggregation extends RuntimeException {
     private static final long serialVersionUID = -6533263351664767350L;
 
-    @Getter
     private final String name;
 
     public MissingAggregation(final String name) {
         super("Missing aggregation " + name);
         this.name = name;
+    }
+
+    public String getName() {
+        return this.name;
     }
 }

@@ -21,21 +21,24 @@
 
 package com.spotify.heroic.aggregation;
 
-import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import lombok.Data;
-
 import java.util.List;
 import java.util.ListIterator;
 
-@Data
 public class Chain implements Aggregation {
     public static final String NAME = "chain";
-    public static final Joiner PIPE = Joiner.on(" | ");
 
     private final List<Aggregation> chain;
+
+    public Chain(List<Aggregation> chain) {
+        this.chain = chain;
+    }
+
+    public List<Aggregation> getChain() {
+        return chain;
+    }
 
     @Override
     public AggregationInstance apply(final AggregationContext context) {

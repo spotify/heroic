@@ -22,7 +22,6 @@
 package com.spotify.heroic.aggregation;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
@@ -45,11 +44,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
-import lombok.Data;
 
-@Data
 public class EmptyInstance implements AggregationInstance {
-    public static final Map<String, String> EMPTY_GROUP = ImmutableMap.of();
     public static final EmptyInstance INSTANCE = new EmptyInstance();
 
     @Override
@@ -82,12 +78,15 @@ public class EmptyInstance implements AggregationInstance {
     /**
      * A trivial session that collects all values provided to it.
      */
-    @Data
     private static final class CollectorSession implements AggregationSession {
         private final ConcurrentMap<Map<String, String>, SubSession> sessions =
             new ConcurrentHashMap<>();
         private final Object lock = new Object();
         private final RetainQuotaWatcher quotaWatcher;
+
+        private CollectorSession(RetainQuotaWatcher quotaWatcher) {
+            this.quotaWatcher = quotaWatcher;
+        }
 
         @Override
         public void updatePoints(
