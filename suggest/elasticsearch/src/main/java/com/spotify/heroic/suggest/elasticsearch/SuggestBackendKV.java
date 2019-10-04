@@ -572,7 +572,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 final Scope indexScope = tracer.withSpan(indexSpan);
                 indexSpan.putAttribute("index", AttributeValue.stringAttributeValue(index));
 
-                final Pair<String, HashCode> key = Pair.of(index, s.getHashCode());
+                final Pair<String, HashCode> key = Pair.of(index, s.getHashCodeTagOnly());
 
                 if (!writeCache.acquire(key, reporter::reportWriteDroppedByCacheHit)) {
                     indexSpan.setStatus(

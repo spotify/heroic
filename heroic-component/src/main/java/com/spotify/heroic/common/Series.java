@@ -57,6 +57,10 @@ public class Series implements Comparable<Series> {
     @AutoSerialize.Ignore
     final HashCode hashCode;
 
+    @AutoSerialize.Ignore
+    final HashCode hashCodeTagOnly;
+
+
     /**
      * Package-private constructor to avoid invalid inputs.
      *
@@ -83,6 +87,7 @@ public class Series implements Comparable<Series> {
         this.tags = checkNotNull(tags, "tags");
         this.resource = checkNotNull(resource, "resource");
         this.hashCode = generateHash();
+        this.hashCodeTagOnly = generateHashTagOnly();
     }
 
     public String getKey() {
@@ -95,11 +100,6 @@ public class Series implements Comparable<Series> {
 
     public SortedMap<String, String> getResource() {
         return resource;
-    }
-
-    @JsonIgnore
-    public HashCode getHashCode() {
-        return hashCode;
     }
 
     private HashCode generateHash() {
@@ -122,7 +122,20 @@ public class Series implements Comparable<Series> {
             }
         }
 
-        return hasher.hash();
+        for (final Map.Entry<String, String> kv : resource.entrySet()) {
+          final String k = kv.getKey();
+          final String v = kv.getValue();
+
+          if (k != null) {
+            hasher.putString(k, Charsets.UTF_8);
+          }
+
+          if (v != null) {
+            hasher.putString(v, Charsets.UTF_8);
+          }
+        }
+
+      return hasher.hash();
     }
 
     public String hash() {
@@ -132,6 +145,34 @@ public class Series implements Comparable<Series> {
     @Override
     public int hashCode() {
         return hashCode.asInt();
+    }
+
+    @JsonIgnore
+    public HashCode getHashCodeTagOnly() {
+      return hashCodeTagOnly;
+    }
+
+    private HashCode generateHashTagOnly() {
+      final Hasher hasher = HASH_FUNCTION.newHasher();
+
+      if (key != null) {
+        hasher.putString(key, Charsets.UTF_8);
+      }
+
+      for (final Map.Entry<String, String> kv : tags.entrySet()) {
+        final String k = kv.getKey();
+        final String v = kv.getValue();
+
+        if (k != null) {
+          hasher.putString(k, Charsets.UTF_8);
+        }
+
+        if (v != null) {
+          hasher.putString(v, Charsets.UTF_8);
+        }
+      }
+
+      return hasher.hash();
     }
 
     @Override
