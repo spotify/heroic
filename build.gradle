@@ -162,7 +162,6 @@ allprojects {
             dependency 'com.lightstep.tracer:java-common:0.16.2'
             dependency 'com.lightstep.tracer:lightstep-tracer-jre:0.14.8'
 
-            //dependency 'com.google.cloud:google-cloud-core:1.53.0'
             dependencySet(group: 'com.google.cloud', version: '1.56.0') {
                 entry('google-cloud-pubsub') {
                     exclude 'io.grpc:grpc-netty-shaded'
@@ -170,6 +169,7 @@ allprojects {
                 entry 'google-cloud-core'
                 entry 'google-cloud-core-grpc'
             }
+            dependency 'com.google.cloud.bigtable:bigtable-client-core:1.12.1'
 
             dependency 'com.addthis:stream-lib:3.0.0'
             dependency 'org.xerial.snappy:snappy-java:1.1.7.2'

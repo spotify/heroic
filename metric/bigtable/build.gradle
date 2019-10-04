@@ -1,5 +1,5 @@
 dependencies {
-    implementation('com.google.cloud.bigtable:bigtable-client-core:1.4.0') {
+    implementation('com.google.cloud.bigtable:bigtable-client-core') {
         exclude group: 'io.grpc', module: 'grpc-netty-shaded'
         exclude group: 'io.grpc', module: 'grpc-core'
         exclude group: 'io.opencensus', module: 'opencensus-api'
