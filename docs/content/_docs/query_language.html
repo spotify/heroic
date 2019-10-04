@@ -132,48 +132,6 @@ heroic> parse-query --no-indent "average by host | sum by site"
 </table>
 </div>
 
-<p>
-  There is also syntactic sugar for the special
-  <a href="aggregations#group">group</a> and
-  <a href="aggregations#chain">chain</a>
-  aggregations.
-</p>
-
-<div class="table-responsive">
-  <table class="table table-bordered">
-    <tr>
-      <td>
-        <pre><code class="language-hql">
-            empty by host
-        </code></pre>
-      </td>
-      <td>
-        <pre><code class="language-json">
-            {"type": "group", "of": ["host"], "each": {"type": "empty"}}
-        </code></pre>
-      </td>
-    </tr>
-    <tr>
-      <td>
-        <pre><code class="language-hql">
-            average(size=5m) | sum(size=10m)
-        </code></pre>
-      </td>
-      <td>
-        <pre><code class="language-json">
-            {
-              "type": "chain",
-              "chain": [
-                {"type": "average", "size": "5m"},
-                {"type": "sum", "size": "10m"}
-              ]
-            }
-        </code></pre>
-      </td>
-    </tr>
-  </table>
-</div>
-
 <h3 id="filters">
   Filters
   <a class="link-to" href="#filters"><span class="glyphicon glyphicon-link"></span></a>
@@ -200,14 +158,14 @@ heroic> parse-query --no-indent "average by host | sum by site"
 
   <tr>
     <th scope="row">And</th>
-    <td>Matches if all child statements match. <code class="language-hql">true</code> if empty.</td>
+    <td>Matches if all child statements match.<code class="language-hql">true</code> if empty.</td>
     <td><pre><code class="language-hql">&lt;a&gt; and &lt;b&gt;</code></pre></td>
     <td><pre><code class="language-json">["and", &lt;a&gt;, &lt;b&gt;]</code></pre></td>
   </tr>
 
   <tr>
     <th scope="row">Or</th>
-    <td>Matches if any child statements match. <code class="language-hql">false</code> if empty.</td>
+    <td>Matches if any child statements match.<code class="language-hql">false</code> if empty.</td>
     <td><pre><code class="language-hql">&lt;a&gt; or &lt;b&gt;</code></pre></td>
     <td><pre><code class="language-json">["or", &lt;a&gt;, &lt;b&gt;]</code></pre></td>
   </tr>
@@ -218,6 +176,13 @@ heroic> parse-query --no-indent "average by host | sum by site"
     <td><pre><code class="language-hql">!&lt;a&gt;</code></pre></td>
     <td><pre><code class="language-json">["not", &lt;a&gt;]</code></pre></td>
   </tr>
+
+  <tr>
+    <th scope="row">Override Grouping</th>
+    <td>Override grouping.</td>
+    <td><pre><code class="language-hql">(&lt;a&gt; and &lt;b&gt;) and &lt;c&gt;</code></pre></td>
+    <td><pre><code class="language-json">["and", ["and", &lt;a&gt;, &lt;b&gt;], &lt;c&gt;]</code></pre></td>
+  </tr>
 </table>
 </div>
 
@@ -227,71 +192,124 @@ heroic> parse-query --no-indent "average by host | sum by site"
 <table class="table table-bordered">
   <tr>
     <th></th>
+    <th>Description</th>
     <th>Parsed</th>
     <th>JSON</th>
   </tr>
 
   <tr>
     <th scope="row">Tag Matches</th>
-    <td><pre><code class="language-hql">&lt;a&gt; = &lt;b&gt;</code></pre></td>
-    <td><pre><code class="language-json">["=", &lt;a&gt;, &lt;b&gt;]</code></pre></td>
+    <td>Tag foo equals to bar.</td>
+    <td><pre><code class="language-hql">&lt;foo&gt; = &lt;bar&gt;</code></pre></td>
+    <td><pre><code class="language-json">["=", &lt;foo&gt;, &lt;bar&gt;]</code></pre></td>
   </tr>
 
   <tr>
     <th scope="row">Tag Does Not Match</th>
-    <td><pre><code class="language-hql">&lt;a&gt; != &lt;b&gt;</code></pre></td>
-    <td><pre><code class="language-json">["not", ["=", &lt;a&gt;, &lt;b&gt;]]</code></pre></td>
-  </tr>
-
-  <tr>
-    <th scope="row">Tag Starts With</th>
-    <td><pre><code class="language-hql">&lt;a&gt; ^ &lt;b&gt;</code></pre></td>
-    <td><pre><code class="language-json">["^", &lt;a&gt;, &lt;b&gt;]</code></pre></td>
-  </tr>
-
-  <tr>
-    <th scope="row">Tag Does Not Start With</th>
-    <td><pre><code class="language-hql">&lt;a&gt; !^ &lt;b&gt;</code></pre></td>
-    <td><pre><code class="language-json">["not", ["^", &lt;a&gt;, &lt;b&gt;]]</code></pre></td>
-  </tr>
-
-  <tr>
-    <th scope="row">Key Matches</th>
-    <td><pre><code class="language-hql">$key = &lt;a&gt;</code></pre></td>
-    <td><pre><code class="language-json">["key", &lt;a&gt;]</code></pre></td>
-  </tr>
-
-  <tr>
-    <th scope="row">Key Does Not Match</th>
-    <td><pre><code class="language-hql">$key != &lt;a&gt;</code></pre></td>
-    <td><pre><code class="language-json">["not", ["key", &lt;a&gt;]]</code></pre></td>
-  </tr>
-
-  <tr>
-    <th scope="row">Tag Exists</th>
-    <td><pre><code class="language-hql">+&lt;a&gt;</code></pre></td>
-    <td><pre><code class="language-json">["+", &lt;a&gt;]</code></pre></td>
+    <td>Tag foo does not equal to bar.</td>
+    <td><pre><code class="language-hql">&lt;foo&gt; != &lt;bar&gt;</code></pre></td>
+    <td><pre><code class="language-json">["not", ["=", &lt;foo&gt;, &lt;bar&gt;]]</code></pre></td>
   </tr>
 
   <tr>
     <th scope="row">Tag In</th>
-    <td><pre><code class="language-hql">&lt;a&gt; in [&lt;b&gt;, ..]</code></pre></td>
-    <td><pre><code class="language-json">["or", ["=", &lt;a&gt;, &lt;b&gt;], ..]</code></pre></td>
+    <td>Tag foo equals to either bar or baz.</td>
+    <td><pre><code class="language-hql">&lt;foo&gt; in [&lt;bar&gt;, &lt;baz&gt;]</code></pre></td>
+    <td><pre><code class="language-json">["or", ["=", &lt;foo&gt;, &lt;bar&gt;], ["=", &lt;foo&gt;, &lt;baz&gt;]]</code></pre></td>
   </tr>
 
   <tr>
     <th scope="row">Tag Not In</th>
-    <td><pre><code class="language-hql">&lt;a&gt; not in [&lt;b&gt;, ..]</code></pre></td>
-    <td><pre><code class="language-json">["not", ["or", ["=", &lt;a&gt;, &lt;b&gt;], ..]]</code></pre></td>
+    <td>Tag foo does not equal to either bar or baz.</td>
+    <td><pre><code class="language-hql">&lt;foo&gt; not in [&lt;bar&gt;, &lt;baz&gt;]</code></pre></td>
+    <td><pre><code class="language-json">["not", ["or", ["=", &lt;foo&gt;, &lt;bar&gt;], ["=", &lt;foo&gt;, &lt;baz&gt;]]]</code></pre></td>
+  </tr>
+
+  <tr>
+    <th scope="row">Tag Exists</th>
+    <td>Tag foo exists.</td>
+    <td><pre><code class="language-hql">+&lt;foo&gt;</code></pre></td>
+    <td><pre><code class="language-json">["+", &lt;foo&gt;]</code></pre></td>
+  </tr>
+
+  <tr>
+    <th scope="row">Tag Does Not Exists</th>
+    <td>Tag foo does not exist.</td>
+    <td><pre><code class="language-hql">!+&lt;foo&gt;</code></pre></td>
+    <td><pre><code class="language-json">["not", ["+", &lt;foo&gt;]]</code></pre></td>
+  </tr>
+
+  <tr>
+    <th scope="row">Tag Prefixed With</th>
+    <td>Tag foo is prefixed with bar.</td>
+    <td><pre><code class="language-hql">&lt;foo&gt; ^ &lt;bar&gt;</code></pre></td>
+    <td><pre><code class="language-json">["^", &lt;foo&gt;, &lt;bar&gt;]</code></pre></td>
+  </tr>
+
+  <tr>
+    <th scope="row">Tag Not Prefixed With</th>
+    <td>Tag foo is not prefixed with bar.</td>
+    <td><pre><code class="language-hql">&lt;foo&gt; !^ &lt;bar&gt;</code></pre></td>
+    <td><pre><code class="language-json">["not", ["^", &lt;foo&gt;, &lt;bar&gt;]]</code></pre></td>
+  </tr>
+
+  <tr>
+    <th scope="row">True</th>
+    <td>True.</td>
+    <td><pre><code class="language-hql">true</code></pre></td>
+    <td><pre><code class="language-json">true</code></pre></td>
+  </tr>
+
+  <tr>
+    <th scope="row">False</th>
+    <td>False.</td>
+    <td><pre><code class="language-hql">false</code></pre></td>
+    <td><pre><code class="language-json">false</code></pre></td>
   </tr>
 
   <tr>
     <th scope="row">RegEx On Tag</th>
+    <td>Regular expressions on tags.</td>
     <td><pre><code class="language-hql">&lt;a&gt; ~ &lt;b&gt;</code></pre></td>
     <td><pre><code class="language-json">["~", &lt;a&gt;, &lt;b&gt;]</code></pre></td>
   </tr>
+
+  <tr>
+    <th scope="row">Custom Filters</th>
+    <td>Details in the next section.</td>
+    <td><pre><code class="language-hql">q &lt;a&gt;</code></pre></td>
+    <td><pre><code class="language-json">["q", &lt;a&gt;]</code></pre></td>
+  </tr>
+
 </table>
 </div>
+
+<h4 id="customfilters">
+  Custom Filters
+  <a class="link-to" href="#customfilters"><span class="glyphicon glyphicon-link"></span></a>
+</h4>
+
+<p>
+  When you need to select series using a more complex syntax than that available through the basic tag suggestions, you can create custom filters. These can take advantage of the HQL format of the above filters.
+</p>
+
+<h5>Some examples:</h5>
+
+<p>
+Suppose you want to look at unsuccessful incoming requests. How do we select the unsuccessful ones from all the other incoming requests? One way is to create a custom filter like this:
+</p>
+<code class="language-json">result in ["fail", "drop"]</code>
+
+<p>
+Suppose you want to exclude a single host from your query. The way to accomplish this is to use a custom filter like this:
+</p>
+<code class="language-json">host != "myhost.example.net"</code>
+
+<p>
+If you want to exclude more than one host, you could use a not in expression to exclude multiple values for the same tag, like this:
+</p>
+<code class="language-json">host not in ["myhost1.example.net", "myhost2.example.net"]</code>
+
 
 <h3 id="hql">
   The HQL Language
