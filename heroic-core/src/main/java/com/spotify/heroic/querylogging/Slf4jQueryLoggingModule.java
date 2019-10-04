@@ -38,6 +38,7 @@ public class Slf4jQueryLoggingModule implements QueryLoggingModule {
     private final Optional<String> name;
     private final Optional<String> level;
 
+    @java.beans.ConstructorProperties({ "name", "level" })
     public Slf4jQueryLoggingModule(Optional<String> name, Optional<String> level) {
         this.name = name;
         this.level = level;
