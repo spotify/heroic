@@ -28,7 +28,7 @@ import com.spotify.heroic.metric.bigtable.CredentialsBuilder;
 public class ComputeEngineCredentialsBuilder implements CredentialsBuilder {
     @Override
     public CredentialOptions build() {
-        return CredentialOptions.credential(new ComputeEngineCredentials());
+        return CredentialOptions.credential(ComputeEngineCredentials.create());
     }
 
     public String toString() {
