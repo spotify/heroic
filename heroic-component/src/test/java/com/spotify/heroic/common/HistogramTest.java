@@ -8,7 +8,7 @@ import org.junit.Test;
 public class HistogramTest {
     @Test
     public void basic() {
-        final Histogram.Builder builder = Histogram.builder();
+        final Histogram.Builder builder = new Histogram.Builder();
 
         builder.add(100L);
         builder.add(200L);
@@ -27,7 +27,7 @@ public class HistogramTest {
 
     @Test
     public void empty() {
-        final Histogram.Builder builder = Histogram.builder();
+        final Histogram.Builder builder = new Histogram.Builder();
 
         final Histogram h = builder.build();
 
@@ -41,7 +41,7 @@ public class HistogramTest {
 
     @Test
     public void one() {
-        final Histogram.Builder builder = Histogram.builder();
+        final Histogram.Builder builder = new Histogram.Builder();
 
         builder.add(100L);
 

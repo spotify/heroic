@@ -118,7 +118,6 @@ allprojects {
                 entry 'kotlin-stdlib-jdk-8'
                 entry 'kotlin-test'
             }
-            dependency 'org.projectlombok:lombok:1.16.6'
             dependencySet(group: 'com.google.auto.value', version: '1.6.3') {
                 entry 'auto-value-annotations'
                 entry 'auto-value'
@@ -246,8 +245,6 @@ subprojects {
         implementation 'com.google.dagger:dagger'
 
         compileOnly 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
-        annotationProcessor 'org.projectlombok:lombok'
-        testAnnotationProcessor 'org.projectlombok:lombok'
         annotationProcessor "com.google.auto.value:auto-value"
         testAnnotationProcessor "com.google.auto.value:auto-value"
         annotationProcessor 'eu.toolchain.serializer:tiny-serializer-processor'

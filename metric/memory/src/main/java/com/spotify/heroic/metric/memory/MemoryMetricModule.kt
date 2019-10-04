@@ -32,7 +32,7 @@ import dagger.Module
 import dagger.Provides
 import java.util.*
 
-private val DEFAULT_GROUPS = Groups.of("memory")
+private val DEFAULT_GROUPS = Groups("memory")
 
 @ModuleId("memory")
 data class MemoryMetricModule(

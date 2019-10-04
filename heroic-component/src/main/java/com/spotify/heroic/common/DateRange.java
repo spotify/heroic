@@ -30,11 +30,10 @@ import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.time.Clock;
 import eu.toolchain.serializer.AutoSerialize;
 import java.sql.Date;
-import lombok.Data;
+import java.util.Objects;
 import org.apache.commons.lang3.time.FastDateFormat;
 
 @AutoSerialize
-@Data
 public class DateRange implements Comparable<DateRange> {
     private static final FastDateFormat FORMAT =
         FastDateFormat.getInstance("yyyy-MM-dd HH:mm:ss.SSS");
@@ -58,8 +57,34 @@ public class DateRange implements Comparable<DateRange> {
         return start;
     }
 
+    public long getStart() {
+        return start;
+    }
+
     public long end() {
         return end;
+    }
+
+    public long getEnd() {
+        return end;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(start, end);
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        final DateRange dateRange = (DateRange) o;
+        return start == dateRange.start &&
+               end == dateRange.end;
     }
 
     @JsonIgnore

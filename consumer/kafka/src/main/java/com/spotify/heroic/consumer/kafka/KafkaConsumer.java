@@ -86,7 +86,7 @@ public class KafkaConsumer implements Consumer, LifeCycles {
         final long errors = this.errors.get();
         final long consumed = this.consumed.sum();
 
-        return Statistics.of(
+        return new Statistics(
             ImmutableMap.<String, Long>of(CONSUMING, consuming, TOTAL, total, ERRORS, errors,
                 CONSUMED, consumed));
     }

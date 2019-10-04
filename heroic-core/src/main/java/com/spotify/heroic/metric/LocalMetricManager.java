@@ -600,7 +600,7 @@ public class LocalMetricManager implements MetricManager {
             final Optional<Histogram> dataDensity = Optional.of(getRowDensityHistogram());
 
             final Statistics baseStatistics =
-                Statistics.of(ROWS_ACCESSED, watcher.getRowsAccessed());
+                new Statistics(ROWS_ACCESSED, watcher.getRowsAccessed());
 
             final List<ResultGroup> groups = new ArrayList<>();
 
@@ -643,7 +643,7 @@ public class LocalMetricManager implements MetricManager {
              * threads writing with minimum blocking. Reading the data only happens at the end of
              * the watched operation, so here we build the histogram.
              */
-            final Histogram.Builder builder = Histogram.builder();
+            final Histogram.Builder builder = new Histogram.Builder();
             for (final Long value : rowDensityData.elementSet()) {
                 builder.add(value);
             }

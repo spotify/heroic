@@ -108,7 +108,7 @@ public class IngestionManagerImpl implements IngestionManager {
 
     @Override
     public Statistics getStatistics() {
-        return Statistics.of(INGESTED, ingested.sum(), AVAILABLE_WRITE_PERMITS,
+        return new Statistics(INGESTED, ingested.sum(), AVAILABLE_WRITE_PERMITS,
             writePermits.availablePermits());
     }
 

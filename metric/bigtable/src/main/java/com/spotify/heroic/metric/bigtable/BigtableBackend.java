@@ -295,7 +295,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     public Statistics getStatistics() {
         final long written = this.written.getCount();
         final double writeRate = this.written.getFiveMinuteRate();
-        return Statistics.of("written", written, "writeRate", (long) writeRate);
+        return new Statistics("written", written, "writeRate", (long) writeRate);
     }
 
     private AsyncFuture<Void> start() {

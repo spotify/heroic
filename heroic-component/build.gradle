@@ -17,8 +17,6 @@ dependencies {
     implementation 'io.opencensus:opencensus-contrib-zpages'
     implementation 'io.opencensus:opencensus-contrib-grpc-util'
     implementation 'com.google.protobuf:protobuf-java'
-
-    compileOnly 'org.projectlombok:lombok'
 }
 
 task testJar(type: Jar) {

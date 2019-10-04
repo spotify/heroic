@@ -102,7 +102,7 @@ public class Query implements ShellTask {
             features = features.combine(FeatureSet.of(Feature.SLICED_DATA_FETCH));
         }
 
-        features = features.combine(FeatureSet.create(new HashSet<>(params.features)));
+        features = features.combine(new FeatureSet(new HashSet<>(params.features)));
         queryBuilder.features(Optional.of(features));
 
         return query

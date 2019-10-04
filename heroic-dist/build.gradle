@@ -55,9 +55,6 @@ dependencies {
     implementation 'jline:jline:2.12'
     implementation 'com.google.protobuf:protobuf-java'
 
-    compileOnly 'org.projectlombok:lombok'
-
-    testCompileOnly 'org.projectlombok:lombok'
     testImplementation project(':heroic-test')
     testImplementation 'org.hamcrest:java-hamcrest'
     testImplementation 'com.google.cloud:google-cloud-pubsub'

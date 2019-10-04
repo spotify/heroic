@@ -617,7 +617,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
     @Override
     public Statistics getStatistics() {
-        return Statistics.of(WRITE_CACHE_SIZE, writeCache.size());
+        return new Statistics(WRITE_CACHE_SIZE, writeCache.size());
     }
 
     public static BackendType backendType() {
