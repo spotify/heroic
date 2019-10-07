@@ -1,4 +1,4 @@
-FROM maven:3.5.4-jdk-8 as builder
+FROM maven:3.5.4-jdk-11 as builder
 LABEL maintainer "layer8 <layer8@spotify.com>"
 
 COPY . .
@@ -7,7 +7,7 @@ RUN _JAVA_OPTIONS=-Djdk.net.URLClassPath.disableClassPathURLCheck=true ./gradlew
 
 
 #Final
-FROM openjdk:8
+FROM openjdk:11
 LABEL maintainer "layer8 <layer8@spotify.com>"
 
 EXPOSE 8080
