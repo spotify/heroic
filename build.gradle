@@ -13,7 +13,7 @@ buildscript {
         classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.8'
         classpath 'io.spring.gradle:dependency-management-plugin:1.0.7.RELEASE'
         classpath 'net.ltgt.gradle:gradle-apt-plugin:0.21'
-        classpath 'com.github.jengelman.gradle.plugins:shadow:4.0.1'
+        classpath 'com.github.jengelman.gradle.plugins:shadow:5.1.0'
     }
 }
 
@@ -88,10 +88,10 @@ allprojects {
     }
 
     jacoco {
-        toolVersion = '0.7.7.201606060606'
+        toolVersion = '0.8.4'
     }
 
-    sourceCompatibility = '1.8'
+    sourceCompatibility = '11'
 
     publishing {
         publications {
@@ -235,6 +235,8 @@ allprojects {
                 entry 'annotations'
                 entry 'jsr305'
             }
+            
+            dependency 'javax.annotation:javax.annotation-api:1.3.2'
         }
     }
 }
@@ -247,6 +249,10 @@ subprojects {
         compileOnly 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
         annotationProcessor "com.google.auto.value:auto-value"
         testAnnotationProcessor "com.google.auto.value:auto-value"
+        
+        // tiny-serializer-processor relies on the deprecated javax annotations
+        implementation 'javax.annotation:javax.annotation-api'
+        annotationProcessor 'javax.annotation:javax.annotation-api'
         annotationProcessor 'eu.toolchain.serializer:tiny-serializer-processor'
         annotationProcessor 'com.google.dagger:dagger-compiler'
 

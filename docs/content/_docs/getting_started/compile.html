@@ -14,7 +14,7 @@ title: Compile Heroic
 </div>
 
 <p>
-  In order to compile Heroic, you'll need a working <a href="http://www.oracle.com/technetwork/java/javase/downloads/index.html">Java 8 JDK</a>, and <a href="https://maven.apache.org/">Maven 3</a>.
+  In order to compile Heroic, you'll need a working <a href="http://www.oracle.com/technetwork/java/javase/downloads/index.html">Java 11 JDK</a>, <a href="https://maven.apache.org/">Maven 3</a>, and <a href="https://gradle.org/install/">Gradle</a>.
 </p>
 
 <p>
@@ -26,13 +26,20 @@ $ git clone https://github.com/spotify/heroic.git
 </code></pre>
 
 <p>
-  Go to the cloned directory and run Maven:
+  Go to the cloned directory and run Maven for repackaged dependencies:
 </p>
 
 <pre><code class="language-bash">
 $ cd heroic
 $ tools/install-repackaged
-$ mvn clean package
+</code></pre>
+
+<p>
+  Now run Gradle to build the Heroic project:
+</p>
+
+<pre><code class="language-bash">
+$ ./gradlew assemble
 </code></pre>
 
 <p>

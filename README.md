@@ -17,7 +17,7 @@ Not doing so might result in losing your data to goblins. It is currently not on
 
 ## Building
 
-Java 8 is required.
+Java 11 is required.
 
 There are some repackaged dependencies that you have to make available, you do
 this by running `tools/install-repackaged`.
