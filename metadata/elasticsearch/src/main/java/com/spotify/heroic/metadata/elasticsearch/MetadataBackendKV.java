@@ -217,7 +217,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                 try (Scope ws = tracer.withSpan(span)) {
                     span.putAttribute("index", AttributeValue.stringAttributeValue(index));
 
-                    if (!writeCache.acquire(Pair.of(index, series.getHashCode()),
+                    if (!writeCache.acquire(Pair.of(index, series.getHashCodeTagOnly()),
                         reporter::reportWriteDroppedByCacheHit)) {
                         span.setStatus(
                             Status.ALREADY_EXISTS.withDescription("Write dropped by cache hit"));

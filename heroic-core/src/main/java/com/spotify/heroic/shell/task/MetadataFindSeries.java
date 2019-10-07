@@ -90,7 +90,7 @@ public class MetadataFindSeries implements ShellTask {
                         io
                             .out()
                             .println(mapper.writeValueAsString(
-                                new AnalyticsSeries(series.getHashCode().toString(),
+                                new AnalyticsSeries(series.getHashCodeTagOnly().toString(),
                                     mapper.writeValueAsString(series))));
                     } catch (final Exception e) {
                         throw new RuntimeException(e);
