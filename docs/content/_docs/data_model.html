@@ -4,7 +4,7 @@ title: Data Model
 <h2>{{ page.title }}</h2>
 
 <p>
-  A series is identified by <em>key</em>, and a unique set of <em>tags</em>.
+  A series is identified by <em>key</em>, and a unique set of <em>tags</em> and <em>resource identifiers</em>.
 </p>
 
 <p>
@@ -14,7 +14,7 @@ title: Data Model
 
 <p>
   A series represents <em>something</em> over time, where <em>something</em> is
-  currently either a set of data points, or events.
+  currently a set of data points.
 </p>
 
 <h3 id="data-points">
@@ -49,46 +49,6 @@ title: Data Model
 [&lt;timestamp&gt;, &lt;value&gt;]
 </pre></code>
 
-<h3 id="events">
-  Events
-  <a class="link-to" href="#events"><span class="glyphicon glyphicon-link"></span></a>
-</h3>
-
-<p>
-  Java Class: {% include github-link.html module='heroic-component' name='metric.Event' %}
-</p>
-
-<div class="callout callout-danger">
-  <h4>Experimental</h4>
-  <p>
-    Events are currently experimental and not supported by the Cassandra
-    backend.
-  </p>
-</div>
-
-<p>
-  Each event stores the <em>timestamp</em> at which they were sampled, and a
-  JSON payload (preferrably small).
-</p>
-
-<p>
-  The <em>timestamp</em> is stored as a 64-bit number (long), which
-  represents the number of milliseconds since the unix epoch.
-</p>
-
-<p>
-  The <em>payload</em> is a JSON payload stored as an arbitrarily sized
-  binary blob.
-</p>
-
-<p>
-  An event is typically represented as a JSON array, with two elements.
-</p>
-
-<pre><code class="language-json">
-[&lt;timestamp&gt;, {&lt;payload&gt;}]
-</pre></code>
-
 <h3 id="series">
   Semantic Series
   <a class="link-to" href="#series"><span class="glyphicon glyphicon-link"></span></a>
@@ -113,12 +73,15 @@ title: Data Model
 {
   "key": "system",
   "tags": {
-    "host": "database.example.com",
-    "site": "lon",
+    "site": "gew",
     "what": "cpu-idle-percentage",
     "system-component": "cpu",
     "cpu-type": "idle",
     "unit": "%"
+  },
+  "resource": {
+    "podname": "pod-example-123-abc",
+    "host": "database.example.com"
   }
 }
 </pre></code>
