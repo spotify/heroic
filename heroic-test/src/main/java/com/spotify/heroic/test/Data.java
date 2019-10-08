@@ -26,7 +26,4 @@ public class Data {
         return new Points();
     }
 
-    public static Events events() {
-        return new Events();
-    }
 }

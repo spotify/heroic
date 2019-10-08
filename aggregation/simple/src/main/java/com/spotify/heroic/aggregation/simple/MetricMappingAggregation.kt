@@ -26,7 +26,6 @@ import com.spotify.heroic.ObjectHasher
 import com.spotify.heroic.aggregation.*
 import com.spotify.heroic.common.DateRange
 import com.spotify.heroic.common.Series
-import com.spotify.heroic.metric.Event
 import com.spotify.heroic.metric.MetricGroup
 import com.spotify.heroic.metric.Payload
 import com.spotify.heroic.metric.Point
@@ -66,12 +65,6 @@ abstract class MetricMappingAggregation(
             key: Map<String, String>, series: Set<Series>, values: List<Point>
         ) {
             this.childSession.updatePoints(key, series, values)
-        }
-
-        override fun updateEvents(
-            key: Map<String, String>, series: Set<Series>, values: List<Event>
-        ) {
-            this.childSession.updateEvents(key, series, values)
         }
 
         override fun updatePayload(

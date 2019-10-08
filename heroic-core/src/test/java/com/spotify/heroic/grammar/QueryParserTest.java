@@ -239,7 +239,6 @@ public class QueryParserTest {
         final DefaultScope scope = new DefaultScope(10000);
 
         checkFrom(MetricType.POINT, Optional.empty(), parseFrom("from points"));
-        checkFrom(MetricType.EVENT, Optional.empty(), parseFrom("from events"));
 
         final Optional<Expression> r1 =
             Optional.of(range(cols(11, 24), integer(col(12), 0), integer(cols(15, 23), 1000)));

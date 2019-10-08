@@ -28,7 +28,6 @@ import com.spotify.heroic.common.Series
 import com.spotify.heroic.metric.*
 import com.spotify.heroic.metric.Spread
 import java.util.*
-import java.util.stream.Collectors
 
 object NotNegativeInstance : AggregationInstance {
     private val INNER = EmptyInstance.INSTANCE
@@ -88,11 +87,6 @@ object NotNegativeInstance : AggregationInstance {
             key: Map<String, String>, series: Set<Series>, values: List<Point>
         ) {
             this.childSession.updatePoints(key, series, values)
-        }
-
-        override fun updateEvents(
-            key: Map<String, String>, series: Set<Series>, values: List<Event>
-        ) {
         }
 
         override fun updatePayload(

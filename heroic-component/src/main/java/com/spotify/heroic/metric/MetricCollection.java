@@ -40,8 +40,8 @@ import java.util.Set;
 /**
  * A collection of metrics.
  * <p>
- * Metrics are constrained to the implemented types below, so far these are {@link Point}, {@link
- * Event}, {@link Spread} , and {@link MetricGroup}.
+ * Metrics are constrained to the implemented types below, so far these are {@link Point},
+ * {@link Spread} , and {@link MetricGroup}.
  * <p>
  * There is a JSON serialization available in {@link com.spotify.heroic.metric.MetricCollection}
  * which correctly preserves the type information of these collections.
@@ -64,13 +64,11 @@ import java.util.Set;
  * @author udoprog
  * @see Point
  * @see Spread
- * @see Event
  * @see MetricGroup
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
     @JsonSubTypes.Type(MetricCollection.PointCollection.class),
-    @JsonSubTypes.Type(MetricCollection.EventCollection.class),
     @JsonSubTypes.Type(MetricCollection.SpreadCollection.class),
     @JsonSubTypes.Type(MetricCollection.GroupCollection.class),
     @JsonSubTypes.Type(MetricCollection.CardinalityCollection.class),
@@ -161,16 +159,6 @@ public interface MetricCollection {
     }
 
     /**
-     * Build a new events collection.
-     *
-     * @param metrics events to include in the collection
-     * @return a new events collection
-     */
-    static MetricCollection events(List<Event> metrics) {
-        return EventCollection.create(metrics);
-    }
-
-    /**
      * Build a new spreads collection.
      *
      * @param metrics spreads to include in the collection
@@ -201,8 +189,6 @@ public interface MetricCollection {
         final MetricType key, final List<? extends Metric> metrics
     ) {
         switch (key) {
-            case EVENT:
-                return EventCollection.create((List<Event>) metrics);
             case CARDINALITY:
                 return CardinalityCollection.create((List<Payload>) metrics);
             case GROUP:
@@ -254,30 +240,6 @@ public interface MetricCollection {
             AggregationSession session, Map<String, String> key, Set<Series> series
         ) {
             session.updatePoints(key, series, data());
-        }
-    }
-
-    @AutoValue
-    @JsonTypeName("events")
-    abstract class EventCollection implements MetricCollection {
-        @JsonCreator
-        public static EventCollection create(@JsonProperty("data") final List<Event> data) {
-            return new AutoValue_MetricCollection_EventCollection(data);
-        }
-
-        @JsonProperty
-        public abstract List<Event> data();
-
-        @Override
-        public MetricType getType() {
-            return MetricType.EVENT;
-        }
-
-        @Override
-        public void updateAggregation(
-            AggregationSession session, Map<String, String> key, Set<Series> series
-        ) {
-            session.updateEvents(key, series, data());
         }
     }
 

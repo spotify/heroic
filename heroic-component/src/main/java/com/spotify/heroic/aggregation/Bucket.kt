@@ -21,16 +21,13 @@
 
 package com.spotify.heroic.aggregation
 
-import com.spotify.heroic.metric.Payload
-import com.spotify.heroic.metric.Event
 import com.spotify.heroic.metric.MetricGroup
+import com.spotify.heroic.metric.Payload
 import com.spotify.heroic.metric.Point
 import com.spotify.heroic.metric.Spread
 
 interface Bucket {
     fun updatePoint(key: Map<String, String>, sample: Point)
-
-    fun updateEvent(key: Map<String, String>, sample: Event)
 
     fun updateSpread(key: Map<String, String>, sample: Spread)
 

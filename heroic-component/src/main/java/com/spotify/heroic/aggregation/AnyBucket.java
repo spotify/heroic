@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.aggregation;
 
-import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Payload;
@@ -33,11 +32,6 @@ import java.util.Map;
 public interface AnyBucket extends Bucket {
     @Override
     default void updatePoint(Map<String, String> key, Point sample) {
-        update(key, sample);
-    }
-
-    @Override
-    default void updateEvent(Map<String, String> key, Event sample) {
         update(key, sample);
     }
 

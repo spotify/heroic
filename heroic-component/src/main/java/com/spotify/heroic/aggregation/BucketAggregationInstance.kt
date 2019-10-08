@@ -30,15 +30,8 @@ import com.spotify.heroic.aggregation.BucketStrategy.Mapping
 import com.spotify.heroic.common.DateRange
 import com.spotify.heroic.common.Series
 import com.spotify.heroic.common.Statistics
-import com.spotify.heroic.metric.Event
-import com.spotify.heroic.metric.Metric
-import com.spotify.heroic.metric.MetricCollection
-import com.spotify.heroic.metric.MetricGroup
-import com.spotify.heroic.metric.MetricType
-import com.spotify.heroic.metric.Payload
-import com.spotify.heroic.metric.Point
-import com.spotify.heroic.metric.Spread
-import java.util.ArrayList
+import com.spotify.heroic.metric.*
+import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.LongAdder
 
@@ -70,14 +63,6 @@ abstract class BucketAggregationInstance<B : Bucket>(
             series.add(s)
             feed(MetricType.POINT, values,
                 { bucket, m -> bucket.updatePoint(key, m as Point) })
-        }
-
-        override fun updateEvents(
-            key: Map<String, String>, s: Set<Series>, values: List<Event>
-        ) {
-            series.add(s)
-            feed(MetricType.EVENT, values,
-                { bucket, m -> bucket.updateEvent(key, m as Event) })
         }
 
         override fun updateSpreads(
@@ -205,7 +190,7 @@ abstract class BucketAggregationInstance<B : Bucket>(
     companion object {
         @JvmField val EMPTY_KEY: Map<String, String> = ImmutableMap.of()
         @JvmField val ALL_TYPES: Set<MetricType> = ImmutableSet.of(
-            MetricType.POINT, MetricType.EVENT, MetricType.SPREAD, MetricType.GROUP,
+            MetricType.POINT, MetricType.SPREAD, MetricType.GROUP,
             MetricType.CARDINALITY)
     }
 }
