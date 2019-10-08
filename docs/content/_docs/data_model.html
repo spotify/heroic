@@ -8,6 +8,15 @@ title: Data Model
 </p>
 
 <p>
+<b>Tags</b> are indexed data stored with a given time-series. Tags can be used with both filters and aggregations.
+</p>
+
+<p>
+<b>Resource Identifiers</b> are additional, non-indexed data stored with a given time-series. These were added to help address issues with ephemerality. In a system where "host" (for example) can change often, one may want to store "host" as a resource tag to avoid losing time-series data every time "host" changes. 
+Currently, Resource Identifiers can be used with aggregations but not filters. 
+</p>
+
+<p>
   Keys, tag keys, and tag values can contain any valid unicode string,
   internally they are stored in UTF-8.
 </p>
