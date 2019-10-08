@@ -42,8 +42,8 @@ layout: default
         <a href="{{ 'docs/query_language' | relative_url }}">Query Language</a>
       </li>
 
-      <li {% if page.title == 'API' %}class="active"{% endif %}>
-        <a href="{{ 'docs/api' | relative_url }}">API</a>
+      <li {% if page.title == 'API Endpoints' %}class="active"{% endif %}>
+        <a href="{{ 'docs/api' | relative_url }}">API Endpoints</a>
 
         <ul class="nav endpoints">
           {%- assign endpoints = site.endpoints | sort: 'endpoint' | reverse %}
@@ -51,6 +51,17 @@ layout: default
           <li class="endpoint-{{ item.method | downcase }} {% if page.url == item.url %}active{% endif %}">
             <a href="{{ item.url | relative_url  }}">{{ item.method }}: {{ item.endpoint }}</a>
           </li>
+          {% endfor %}
+        </ul>
+      </li>
+
+      <li {% if page.title == 'API Types' %}class="active"{% endif %}>
+        <a href="{{ 'docs/api' | relative_url }}">API Types</a>
+	<ul class="nav types">
+          {% for item in site.api_types %}
+	  <li class="type-{{ item.method | downcase }} {% if page.url == item.url %}active{% endif %}">
+            <a href="{{ item.url | relative_url  }}">{{ item.type_name }}</a>
+	  </li>
           {% endfor %}
         </ul>
       </li>

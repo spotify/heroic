@@ -10,8 +10,8 @@ fields:
     type_json: '{&lt;string&gt;: &lt;string&gt;, ...}'
     purpose: Tags of the series.
 ---
-Java Class: {% include github-link.html module='heroic-component' name='common.Series' %}
+{% include github-link.html module='heroic-component' name='common.Series' %}
 
 
-See the [Series section in Data Model](docs/data_model#series)
+See the [Series section in Data Model]({{ "/docs/data_model#series" | relative_url }})
 for details about <em>what</em> a series is.

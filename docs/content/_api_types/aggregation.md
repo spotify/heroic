@@ -12,6 +12,6 @@ fields:
 Java Class: {% include github-link.html name='aggregation.Aggregation' %}
 
 An aggregation is responsible for analysing and sampling a larger dataset into a smaller, more manageable one.
-For details on all available aggregations, see the [Aggregations Section](docs/aggregations).
+For details on all available aggregations, see the [Aggregations Section]({{ "/docs/aggregations" | relative_url }}).
 
 This object tells the distance to the point in the past.
