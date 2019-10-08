@@ -20,6 +20,7 @@ dependencies {
     implementation 'org.eclipse.jetty:jetty-server'
     implementation 'org.eclipse.jetty.http2:http2-server'
     implementation 'javax.mail:mail'
+    implementation 'javax.xml.bind:jaxb-api'
     implementation 'org.eclipse.jetty:jetty-rewrite'
     implementation 'org.eclipse.jetty:jetty-util'
     implementation 'org.glassfish.jersey.containers:jersey-container-servlet-core'
