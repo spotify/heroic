@@ -1,0 +1,94 @@
+port: 8080
+
+cluster:
+  tags:
+    site: guc
+  protocols:
+    - type: grpc
+      port: 1494
+      maxFrameSize: 1280010000
+  discovery:
+    type: static
+    nodes:
+      - grpc://localhost:1494
+    #- grpc://gae2-heroicapi-gaesdf-0mc1.gae2.spotify.net:1494
+    #- grpc://gew1-heroicapi-gewsdf-17hk.gew1.spotify.net:1494
+    #- grpc://guc3-heroicapi-gucsdf-08vv.guc3.spotify.net:1494
+
+  topology:
+    #- site: gae
+    #- site: gew
+    - site: guc
+
+
+metrics:
+  seriesLimit: 80000
+  dataLimit: 80000000
+  groupLimit: 4000
+  aggregationLimit: 4000000
+  failOnLimits: true
+  concurrentQueriesBackoff: 500
+  backends:
+    - type: bigtable
+      project: xpn-heroic-1
+      instance: metrics-guc
+      credentials:
+        type: default
+
+metadata:
+  backends:
+    - type: elasticsearch
+      backendType: kv
+      connection:
+        clusterName: heroic-metadata-guc3
+        sniff: true
+        nodeSamplerInterval: 30s
+        index:
+          type: rotating
+          pattern: heroic-metadata-guc3-%s
+        seeds:
+          - guc3-heroicmetadata-master-0rkz.guc3.spotify.net
+          - guc3-heroicmetadata-master-rwd6.guc3.spotify.net
+          - guc3-heroicmetadata-master-tvgd.guc3.spotify.net
+      writesPerSecond: 1000
+      rateLimitSlowStartSeconds: 120
+      writeCacheDurationMinutes: 360
+
+suggest:
+  backends:
+    - type: elasticsearch
+      backendType: kv
+      connection:
+        clusterName: heroic-suggest-guc3
+        sniff: true
+        nodeSamplerInterval: 30s
+        index:
+          type: rotating
+          pattern: heroic-suggest-guc3-%s
+        seeds:
+          - guc3-heroicsuggest-master-446s.guc3.spotify.net
+          - guc3-heroicsuggest-master-gh40.guc3.spotify.net
+          - guc3-heroicsuggest-master-m74s.guc3.spotify.net
+      writesPerSecond: 100
+      rateLimitSlowStartSeconds: 120
+      writeCacheDurationMinutes: 360
+
+ingestion:
+  filter: "true"
+  updateMetrics: false
+  updateMetadata: false
+  updateSuggestions: false
+
+shellServer:
+  port: 9192
+
+
+statistics:
+  type: semantic
+
+#queryLogging:
+#  type: slf4j
+#  name: "com.spotify.heroic.query_logging"
+
+features:
+  - com.spotify.heroic.sliced_data_fetch

@@ -28,7 +28,8 @@ data class StatusResponse(
         val isOk: Boolean,
         val consumers: Consumer?,
         val backends: Backend?,
-        val metadataBackend: MetadataBackend?,
+        val metadataBackend: Backend?,
+        val suggestBackend: Backend?,
         val cluster: Cluster?
 ) {
 
@@ -36,8 +37,6 @@ data class StatusResponse(
                    val errors: Long, val consumingThreads: Long, val totalThreads: Long)
 
     data class Backend(val isOk: Boolean, val available: Int, val ready: Int)
-
-    data class MetadataBackend(val isOk: Boolean, val available: Int, val ready: Int)
 
     data class Cluster(val isOk: Boolean, val onlineNodes: Int, val offlineNodes: Int)
 }

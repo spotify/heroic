@@ -30,6 +30,8 @@ import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricManager;
+import com.spotify.heroic.suggest.SuggestBackend;
+import com.spotify.heroic.suggest.SuggestManager;
 import java.util.Set;
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
@@ -46,17 +48,23 @@ public class StatusResource {
     private final Set<Consumer> consumers;
     private final MetricManager metric;
     private final MetadataManager metadata;
+    private final SuggestManager suggest;
     private final ClusterManager cluster;
     private final ServiceInfo service;
 
     @Inject
     public StatusResource(
-        final Set<Consumer> consumers, final MetricManager metric, final MetadataManager metadata,
-        final ClusterManager cluster, final ServiceInfo service
+        final Set<Consumer> consumers,
+        final MetricManager metric,
+        final MetadataManager metadata,
+        final SuggestManager suggest,
+        final ClusterManager cluster,
+        final ServiceInfo service
     ) {
         this.consumers = consumers;
         this.metric = metric;
         this.metadata = metadata;
+        this.suggest = suggest;
         this.cluster = cluster;
         this.service = service;
     }
@@ -65,15 +73,21 @@ public class StatusResource {
     public Response get() {
         final StatusResponse.Consumer consumers = buildConsumerStatus();
         final StatusResponse.Backend backends = buildBackendStatus();
-        final StatusResponse.MetadataBackend metadataBackends = buildMetadataBackendStatus();
+        final StatusResponse.Backend metadataBackends = buildMetadataBackendStatus();
+        final StatusResponse.Backend suggestBackends = buildSuggestBackendStatus();
 
         final StatusResponse.Cluster cluster = buildClusterStatus();
 
         final boolean allOk =
-            consumers.isOk() && backends.isOk() && metadataBackends.isOk() && cluster.isOk();
+            consumers.isOk()
+            && backends.isOk()
+            && metadataBackends.isOk()
+            && suggestBackends.isOk()
+            && cluster.isOk();
 
         final StatusResponse response =
-            new StatusResponse(service, allOk, consumers, backends, metadataBackends, cluster);
+            new StatusResponse(service, allOk, consumers, backends,
+                metadataBackends, suggestBackends, cluster);
 
         if (!response.isOk()) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity(response).build();
@@ -130,10 +144,17 @@ public class StatusResource {
             consumingThreads, totalThreads);
     }
 
-    private StatusResponse.MetadataBackend buildMetadataBackendStatus() {
+    private StatusResponse.Backend buildMetadataBackendStatus() {
         final Set<GroupMember<MetadataBackend>> members = metadata.groupSet().inspectAll();
         final int available = members.size();
         int ready = (int) members.stream().map(b -> b.getMember().isReady()).count();
-        return new StatusResponse.MetadataBackend(available == ready, available, ready);
+        return new StatusResponse.Backend(available == ready, available, ready);
+    }
+
+    private StatusResponse.Backend buildSuggestBackendStatus() {
+        final Set<GroupMember<SuggestBackend>> members = suggest.groupSet().inspectAll();
+        final int available = members.size();
+        int ready = (int) members.stream().map(b -> b.getMember().isReady()).count();
+        return new StatusResponse.Backend(available == ready, available, ready);
     }
 }
