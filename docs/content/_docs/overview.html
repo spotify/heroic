@@ -31,12 +31,12 @@ title: Overview
 </p>
 
 <p>
-  We support consuming over <a href="config/consumer#kafka">Kafka</a>, the <a href="config/consumer#collectd">collectd protocol</a>, and over <a href="api#post-write">HTTP</a>.
+  We support consuming over <a href="config#kafka">Kafka</a>, <a href="config#pubsub">Pubsub</a>, the collectd protocol, and over <a href="api/post-write">HTTP</a>.
 </p>
 
 <p>
-  Out of these options, Kafka is the preferred one since it allows for a discovery-free architecture due to it being a pub-sub system.
-  It has proven to be horizontally scalable and resilient towards failures.
+  Out of these options, Pubsub or Kafka are preferred since they allow for a discovery-free architecture as a pub-sub system.
+  They have proven to be horizontally scalable and resilient towards failures.
 </p>
 
 <p>
@@ -71,7 +71,7 @@ title: Overview
 </p>
 
 <p>
-  For more information, see the section detailing how to configure <a href="config/metrics">metrics backends</a>.
+  For more information, see the section detailing how to configure <a href="config#metrics_backend">metrics backends</a>.
 </p>
 
 <h3>Metadata</h3>
@@ -87,14 +87,14 @@ title: Overview
 </p>
 
 <p>
-  For more information, see the section detailing how to configure <a href="config/metadata">metadata backends</a>.
+  For more information, see the section detailing how to configure <a href="config#metadata_backend">metadata backends</a>.
 </p>
 
 <h3>Suggestions</h3>
 
 <p>
   When building Heroic it was quickly realized that navigating millions, or hundreads of millions of time series without context is hard.
-  To address this, a specialized Elasticsearch backend was built to handle <a href="config/suggest">suggestions</a>.
+  To address this, a specialized Elasticsearch backend was built to handle <a href="config#suggest_backend">suggestions</a>.
 </p>
 
 <p>
