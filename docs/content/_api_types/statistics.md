@@ -5,4 +5,4 @@ fields:
     type_json: '{&lt;string&gt;: &lt;number&gt;}'
     purpose: Counters containing statistics.
 ---
-Java Class: {% include github-link.html module='heroic-component' name='common.Statistics' %}
+<a href="https://github.com/spotify/heroic/blob/master/heroic-component/src/main/java/com/spotify/heroic/common/Statistics.kt">com.spotify.heroic.common.Statistics</a>

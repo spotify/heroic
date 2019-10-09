@@ -4,7 +4,7 @@ layout: sidebar
 fields: []
 ---
 {% capture content %}
-  Java Class: {% include github-link.html module='heroic-component' name='metric.RequestError' %}
+  {% include github-link.html module='heroic-component' name='metric.RequestError' %}
 {% endcapture %}
 
 {% include mkhash.inc required=true name="type" type_json='"node"|"shard"|"query"' purpose='Type of the error. The different error types have different sets of information associated with them.' %}
@@ -12,7 +12,7 @@ fields: []
 
 
 {% capture content %}
-  Java Class: {% include github-link.html module='heroic-component' name='metric.NodeError' %}
+<a href="https://github.com/spotify/heroic/blob/master/heroic-component/src/main/java/com/spotify/heroic/metric/NodeError.kt">com.spotify.heroic.metric.NodeError</a>
 {% endcapture %}
 
 {% assign fields = page.fields %}
@@ -30,7 +30,7 @@ fields: []
 
 
 {% capture content %}
-  Java Class: {% include github-link.html module='heroic-component' name='metric.ShardError' %}
+<a href="https://github.com/spotify/heroic/blob/master/heroic-component/src/main/java/com/spotify/heroic/metric/ShardError.kt">com.spotify.heroic.metric.ShardError</a>
 {% endcapture %}
 
 {% assign fields = page.fields %}
@@ -46,7 +46,7 @@ fields: []
 
 
 {% capture content %}
-  Java Class: {% include github-link.html module='heroic-component' name='metric.QueryError' %}
+<a href="https://github.com/spotify/heroic/blob/master/heroic-component/src/main/java/com/spotify/heroic/metric/QueryError.kt">com.spotify.heroic.metric.QueryError</a>
 {% endcapture %}
 
 {% assign fields = page.fields %}

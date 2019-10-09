@@ -41,4 +41,4 @@ fields:
   type_json: '{&lt;string&gt;: &lt;number&gt;}'
   purpose: The set of tags that have more than a single value, the number is the number of distinct tags.
 ---
-Java Class: {% include github-link.html module='heroic-component' name='metric.ShardedResultGroup' %}
+<a href="https://github.com/spotify/heroic/blob/master/heroic-component/src/main/java/com/spotify/heroic/metric/ShardedResultGroup.kt">com.spotify.heroic.metric.ShardedResultGroup</a>

@@ -13,4 +13,4 @@ fields:
     type_json: '&lt;number&gt; | 300s'
     purpose: The extent to use in a given aggregation.
 ---
-Java Class: {% include github-link.html module='heroic-component' name='aggregation.SamplingQuery' %}
+<a href="https://github.com/spotify/heroic/blob/master/heroic-component/src/main/java/com/spotify/heroic/aggregation/SamplingQuery.kt">com.spotify.heroic.aggregation.SamplingQuery</a>
