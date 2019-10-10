@@ -26,7 +26,9 @@ import com.spotify.heroic.ObjectHasher
 import com.spotify.heroic.aggregation.*
 import com.spotify.heroic.common.DateRange
 import com.spotify.heroic.common.Series
-import com.spotify.heroic.metric.*
+import com.spotify.heroic.metric.MetricGroup
+import com.spotify.heroic.metric.Payload
+import com.spotify.heroic.metric.Point
 import com.spotify.heroic.metric.Spread
 import java.util.function.Supplier
 
@@ -82,12 +84,6 @@ abstract class FilterAggregation(
             key: Map<String, String>, series: Set<Series>, values: List<Point>
         ) {
             childSession.updatePoints(key, series, values)
-        }
-
-        override fun updateEvents(
-            key: Map<String, String>, series: Set<Series>, values: List<Event>
-        ) {
-            childSession.updateEvents(key, series, values)
         }
 
         override fun updateSpreads(

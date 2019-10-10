@@ -4,7 +4,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import com.google.common.collect.ImmutableMap;
-import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
@@ -19,12 +18,6 @@ public class AnyBucketTest {
     public void forwarding() {
         final AnyBucket any = mock(AnyBucket.class, Mockito.CALLS_REAL_METHODS);
         final Map<String, String> tags = ImmutableMap.of();
-
-        {
-            final Event event = new Event(0);
-            any.updateEvent(tags, event);
-            verify(any).update(tags, event);
-        }
 
         {
             final Point point = new Point(0, 0);

@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.metric.bigtable;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.cloud.bigtable.grpc.scanner.FlatRow;
@@ -39,7 +38,6 @@ import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.metric.AbstractMetricBackend;
 import com.spotify.heroic.metric.BackendEntry;
-import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.Metric;
@@ -252,16 +250,6 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         });
     }
 
-    private List<PreparedQuery> eventsRanges(final FetchData.Request request) throws IOException {
-        return ranges(request.getSeries(), request.getRange(), EVENTS, (t, d) -> {
-            try {
-                return new Event(t, mapper.readValue(d.toByteArray(), PAYLOAD_TYPE));
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        });
-    }
-
     @Override
     public AsyncFuture<FetchData.Result> fetch(
         final FetchData.Request request, final FetchQuotaWatcher watcher,
@@ -277,8 +265,6 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             switch (type) {
                 case POINT:
                     return fetchBatch(watcher, type, pointsRanges(request), c, consumer);
-                case EVENT:
-                    return fetchBatch(watcher, type, eventsRanges(request), c, consumer);
                 default:
                     return async.resolved(new FetchData.Result(QueryTrace.of(FETCH),
                         new QueryError("unsupported source: " + request.getType())));
@@ -322,9 +308,6 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             case POINT:
                 return writeBatch(POINTS, series, client, g.getDataAs(Point.class),
                     d -> serializeValue(d.getValue()), parentSpan);
-            case EVENT:
-                return writeBatch(EVENTS, series, client, g.getDataAs(Event.class),
-                    BigtableBackend.this::serializeEvent, parentSpan);
             default:
                 return async.resolved(new WriteMetric(
                     new QueryError("Unsupported metric type: " + g.getType())));
@@ -524,14 +507,6 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         final ByteBuffer buffer =
             ByteBuffer.allocate(Double.BYTES).putLong(Double.doubleToLongBits(value));
         return ByteString.copyFrom(buffer.array());
-    }
-
-    ByteString serializeEvent(Event event) {
-        try {
-            return ByteString.copyFrom(mapper.writeValueAsBytes(event.getPayload()));
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     static double deserializeValue(ByteString value) {

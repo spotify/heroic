@@ -31,7 +31,6 @@ import java.util.concurrent.ConcurrentSkipListSet
 
 data class GroupUniqueBucket(override val timestamp: Long) : AbstractBucket(), Bucket {
     internal val points: SortedSet<Point> = ConcurrentSkipListSet(Metric.comparator())
-    internal val events: SortedSet<Event> = ConcurrentSkipListSet(Metric.comparator())
     internal val spreads: SortedSet<Spread> = ConcurrentSkipListSet(Metric.comparator())
     internal val groups: SortedSet<MetricGroup> = ConcurrentSkipListSet(Metric.comparator())
 
@@ -40,10 +39,6 @@ data class GroupUniqueBucket(override val timestamp: Long) : AbstractBucket(), B
 
         if (!points.isEmpty()) {
             result.add(MetricCollection.points(ImmutableList.copyOf(points)))
-        }
-
-        if (!events.isEmpty()) {
-            result.add(MetricCollection.events(ImmutableList.copyOf(events)))
         }
 
         if (!spreads.isEmpty()) {
@@ -59,10 +54,6 @@ data class GroupUniqueBucket(override val timestamp: Long) : AbstractBucket(), B
 
     override fun updatePoint(key: Map<String, String>, sample: Point) {
         points.add(sample)
-    }
-
-    override fun updateEvent(key: Map<String, String>, sample: Event) {
-        events.add(sample)
     }
 
     override fun updateSpread(key: Map<String, String>, sample: Spread) {

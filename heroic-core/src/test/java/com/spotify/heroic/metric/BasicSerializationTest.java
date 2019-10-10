@@ -26,12 +26,6 @@ public class BasicSerializationTest {
     private ObjectMapper mapper = FakeModuleLoader.builder().build().json();
 
     @Test
-    public void testEvent() throws Exception {
-        final Event expected = new Event(1024L, ImmutableMap.of("string", "foo"));
-        assertSerialization("Event.json", expected, Event.class);
-    }
-
-    @Test
     public void testPoint() throws Exception {
         final Point expected = new Point(1024L, 3.14);
         assertSerialization("Point.json", expected, Point.class);
@@ -42,14 +36,6 @@ public class BasicSerializationTest {
         final MetricCollection expected = MetricCollection.points(
             ImmutableList.of(new Point(1000, 10.0d), new Point(2000, 20.0d)));
         assertSerialization("MetricCollection.json", expected, MetricCollection.class);
-    }
-
-    @Test
-    public void testMetricCollection2() throws Exception {
-        final MetricCollection expected = MetricCollection.events(
-            ImmutableList.of(new Event(1000, ImmutableMap.of("foo", "bar")),
-                new Event(2000, ImmutableMap.of("bar", "baz"))));
-        assertSerialization("MetricCollection.Event.json", expected, MetricCollection.class);
     }
 
     @Test

@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.test;
 
-import static com.spotify.heroic.test.Data.events;
 import static com.spotify.heroic.test.Data.points;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeTrue;
@@ -287,17 +286,6 @@ public abstract class AbstractMetricBackendIT {
 
         void forEach(final ThrowingBiConsumer<MetricCollection, MetricCollection> consumer)
             throws Exception {
-            // test for events, if supported
-            if (eventSupport) {
-                final Events input = events();
-                final Events expected = events();
-
-                inputStream().forEach(t -> input.e(t, EVENT));
-                expectedStream().forEach(t -> expected.e(t, EVENT));
-
-                consumer.accept(input.build(), expected.build());
-            }
-
             // test for points
             {
                 final Points input = points();

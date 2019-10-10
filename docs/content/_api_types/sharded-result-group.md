@@ -3,7 +3,7 @@ type_name: ShardedResultGroup
 fields:
 - required: true
   name: "type"
-  type_json: '"points"|"events"|"spreads"|"groups"'
+  type_json: '"points"|"spreads"|"groups"'
   purpose: Type of the result group.
 - required: true
   name: "hash"
@@ -26,10 +26,6 @@ fields:
       <li>
         <code class="language-json">"series"</code> indicates that the
         <code class="language-json">&lt;sample&gt;</code> is a <code class="language-json">&lt;number&gt;</code>.
-      </li>
-      <li>
-        <code class="language-json">"events"</code> indicates that the
-        <code class="language-json">&lt;sample&gt;</code> is an <code class="language-json">{&lt;string&gt;: &lt;any&gt;}</code> object.
       </li>
     </ul>
 - required: true

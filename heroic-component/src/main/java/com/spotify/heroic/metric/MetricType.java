@@ -38,7 +38,6 @@ import java.util.stream.Collectors;
 public enum MetricType {
     // @formatter:off
     POINT(Point.class, "points"),
-    EVENT(Event.class, "events"),
     SPREAD(Spread.class, "spreads"),
     GROUP(MetricGroup.class, "groups"),
     // TODO: rename to PAYLOAD.

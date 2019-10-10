@@ -30,7 +30,6 @@ import com.spotify.heroic.ingestion.Ingestion;
 import com.spotify.heroic.ingestion.IngestionGroup;
 import com.spotify.heroic.ingestion.IngestionManager;
 import com.spotify.heroic.ingestion.Request;
-import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.Point;
@@ -46,7 +45,6 @@ import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,7 +53,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import org.kohsuke.args4j.Option;
 
-@TaskUsage("Write a single, or a set of events")
+@TaskUsage("Write a single, or a set of points")
 @TaskName("write")
 public class Write implements ShellTask {
     private static final TypeReference<Map<String, String>> PAYLOAD_TYPE =
@@ -100,7 +98,6 @@ public class Write implements ShellTask {
         final long now = clock.currentTimeMillis();
 
         final List<Point> points = parsePoints(params.points, now);
-        final List<Event> events = parseEvents(params.events, now);
 
         final ImmutableList.Builder<MetricCollection> groups = ImmutableList.builder();
 
@@ -116,18 +113,6 @@ public class Write implements ShellTask {
             }
 
             groups.add(MetricCollection.points(points));
-        }
-
-        if (!events.isEmpty()) {
-            int i = 0;
-
-            io.out().println(String.format("Writing %d event(s):", events.size()));
-
-            for (final Metric p : events) {
-                io.out().println(String.format("%d: %s", i++, p));
-            }
-
-            groups.add(MetricCollection.events(events));
         }
 
         io.out().flush();
@@ -159,29 +144,6 @@ public class Write implements ShellTask {
 
             return null;
         };
-    }
-
-    List<Event> parseEvents(List<String> points, long now) throws IOException {
-        final List<Event> output = new ArrayList<>();
-
-        for (final String p : points) {
-            final String[] parts = p.split("=");
-
-            final long timestamp;
-            final Map<String, String> payload;
-
-            if (parts.length == 1) {
-                timestamp = now;
-                payload = json.readValue(parts[0], PAYLOAD_TYPE);
-            } else {
-                timestamp = Tasks.parseInstant(parts[0], now);
-                payload = json.readValue(parts[1], PAYLOAD_TYPE);
-            }
-
-            output.add(new Event(timestamp, payload));
-        }
-
-        return output;
     }
 
     List<Point> parsePoints(List<String> points, long now) {
@@ -218,10 +180,6 @@ public class Write implements ShellTask {
         @Option(name = "-p", aliases = {"--point"}, usage = "Point to write",
             metaVar = "<time>=<value>")
         private List<String> points = new ArrayList<>();
-
-        @Option(name = "-e", aliases = {"--event"}, usage = "Event to write",
-            metaVar = "<time>=<payload>")
-        private List<String> events = new ArrayList<>();
     }
 
     public static Write setup(final CoreComponent core) {

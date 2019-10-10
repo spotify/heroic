@@ -24,7 +24,6 @@ package com.spotify.heroic.generator;
 import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicModule;
 import com.spotify.heroic.dagger.LoadingComponent;
-import com.spotify.heroic.generator.random.RandomEventMetricGeneratorModule;
 import com.spotify.heroic.generator.sine.SineMetricGeneratorModule;
 
 public class Module implements HeroicModule {
@@ -34,7 +33,6 @@ public class Module implements HeroicModule {
 
         return () -> {
             config.registerType("sine", SineMetricGeneratorModule.class);
-            config.registerType("random-events", RandomEventMetricGeneratorModule.class);
             config.registerType("random", RandomMetadataGenerator.class);
         };
     }

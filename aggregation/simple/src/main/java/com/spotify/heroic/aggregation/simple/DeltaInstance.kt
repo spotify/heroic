@@ -90,11 +90,6 @@ object DeltaInstance : AggregationInstance {
             this.childSession.updatePoints(key, series, values)
         }
 
-        override fun updateEvents(
-            key: Map<String, String>, series: Set<Series>, values: List<Event>
-        ) {
-        }
-
         override fun updatePayload(
             key: Map<String, String>, series: Set<Series>, values: List<Payload>
         ) {
