@@ -138,7 +138,7 @@ public class HeroicCore implements HeroicConfiguration {
     private static final int DEFAULT_LIGHTSTEP_COLLECTOR_PORT = 80;
     private static final String DEFAULT_LIGHTSTEP_COMPONENT_NAME = "heroic";
     private static final int DEFAULT_LIGHTSTEP_REPORTING_MS = 1_000;
-    private static final int DEFAULT_LIGHTSTEP_MAX_BUFFERED_SPANS = 1_000;
+    private static final int DEFAULT_LIGHTSTEP_MAX_BUFFERED_SPANS = 5_000;
     private static final boolean DEFAULT_LIGHTSTEP_RESET_CLIENT = false;
 
     static final UncaughtExceptionHandler uncaughtExceptionHandler = (Thread t, Throwable e) -> {
@@ -306,21 +306,21 @@ public class HeroicCore implements HeroicConfiguration {
     private void enableTracing(Map<String, Object> config) throws IOException {
         final Object lightstepConfig = config.get("lightstep");
         if (lightstepConfig != null) {
-            final Map<String, String> configMap = (Map) lightstepConfig;
+            final Map<String, Object> lsConfig = (Map) lightstepConfig;
 
             // a collectorHost being defined takes priority over a grpcCollectorTarget
-            final String collectorHost = configMap.get("collectorHost");
-            final Integer collectorPort = (Integer) config.getOrDefault("collectorPort",
-              DEFAULT_LIGHTSTEP_COLLECTOR_PORT);
-            final String accessToken = configMap.get("accessToken");
-            final String componentName = (String) config.getOrDefault("componentName",
-              DEFAULT_LIGHTSTEP_COMPONENT_NAME);
-            final Integer reportingIntervalMs = (Integer) config.getOrDefault("reportingIntervalMs",
-                DEFAULT_LIGHTSTEP_REPORTING_MS);
-            final Integer maxBufferedSpans = (Integer) config.getOrDefault("maxBufferedSpans",
-              DEFAULT_LIGHTSTEP_MAX_BUFFERED_SPANS);
-            final Boolean resetClient = (Boolean) config.getOrDefault("resetClient",
-              DEFAULT_LIGHTSTEP_RESET_CLIENT);
+            final String collectorHost = (String) lsConfig.get("collectorHost");
+            final Integer collectorPort = (Integer) lsConfig.getOrDefault(
+                "collectorPort", DEFAULT_LIGHTSTEP_COLLECTOR_PORT);
+            final String accessToken = (String) lsConfig.get("accessToken");
+            final String componentName = (String) lsConfig.getOrDefault(
+                "componentName", DEFAULT_LIGHTSTEP_COMPONENT_NAME);
+            final Integer reportingIntervalMs = (Integer) lsConfig.getOrDefault(
+                "reportingIntervalMs", DEFAULT_LIGHTSTEP_REPORTING_MS);
+            final Integer maxBufferedSpans = (Integer) lsConfig.getOrDefault(
+                "maxBufferedSpans", DEFAULT_LIGHTSTEP_MAX_BUFFERED_SPANS);
+            final Boolean resetClient = (Boolean) lsConfig.getOrDefault(
+                "resetClient", DEFAULT_LIGHTSTEP_RESET_CLIENT);
 
             if (collectorHost == null) {
                 throw new IllegalArgumentException(

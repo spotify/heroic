@@ -101,12 +101,13 @@ public class QueryResource {
     @Path("metrics")
     @Consumes(MediaType.APPLICATION_JSON)
     public void metrics(
-        @Suspended final AsyncResponse response, @QueryParam("group") String group,
-        @Context final HttpServletRequest servletReq, final QueryMetrics query
+        @Suspended final AsyncResponse response,
+        @QueryParam("group") String group,
+        @Context final HttpServletRequest servletReq,
+        final QueryMetrics query
     ) {
         final HttpContext httpContext = CoreHttpContextFactory.create(servletReq);
-        final QueryContext queryContext =
-            QueryContext.create(query.clientContext(), httpContext);
+        final QueryContext queryContext = QueryContext.create(query.clientContext(), httpContext);
         queryLogger.logHttpQueryJson(queryContext, query);
 
         final Query q = query.toQueryBuilder(this.query::newQueryFromString).build();
@@ -120,8 +121,10 @@ public class QueryResource {
     @POST
     @Path("batch")
     public void metrics(
-        @Suspended final AsyncResponse response, @QueryParam("backend") String group,
-        @Context final HttpServletRequest servletReq, final QueryBatch query
+        @Suspended final AsyncResponse response,
+        @QueryParam("backend") String group,
+        @Context final HttpServletRequest servletReq,
+        final QueryBatch query
     ) {
         final HttpContext httpContext = CoreHttpContextFactory.create(servletReq);
         final QueryManager.Group g = this.query.useOptionalGroup(Optional.ofNullable(group));
@@ -184,7 +187,8 @@ public class QueryResource {
     }
 
     private void bindMetricsResponse(
-        final AsyncResponse response, final AsyncFuture<QueryResult> callback,
+        final AsyncResponse response,
+        final AsyncFuture<QueryResult> callback,
         final QueryContext queryContext
     ) {
         response.setTimeout(300, TimeUnit.SECONDS);

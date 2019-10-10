@@ -46,6 +46,7 @@ import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.MetricReadResult;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.WriteMetric;
+import io.opencensus.trace.BlankSpan;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -221,8 +222,11 @@ public abstract class AbstractMetricBackendIT {
         final List<MetricReadResult> data = Collections.synchronizedList(new ArrayList<>());
 
         backend
-            .fetch(new FetchData.Request(expected.getType(), s1, range,
-                QueryOptions.builder().build()), FetchQuotaWatcher.NO_QUOTA, data::add)
+            .fetch(new FetchData.
+                    Request(expected.getType(), s1, range, QueryOptions.builder().build()),
+                FetchQuotaWatcher.NO_QUOTA,
+                data::add,
+                BlankSpan.INSTANCE)
             .get();
 
         final Set<MetricCollection> found =
@@ -387,8 +391,10 @@ public abstract class AbstractMetricBackendIT {
         if (slicedFetch) {
             List<MetricCollection> fetchedMetrics = Collections.synchronizedList(new ArrayList<>());
             backend
-                .fetch(request, FetchQuotaWatcher.NO_QUOTA,
-                    mcr -> fetchedMetrics.add(mcr.getMetrics()))
+                .fetch(request,
+                    FetchQuotaWatcher.NO_QUOTA,
+                    mcr -> fetchedMetrics.add(mcr.getMetrics()),
+                    BlankSpan.INSTANCE)
                 .get();
             return fetchedMetrics;
         } else {

@@ -79,9 +79,11 @@ public class HttpServer implements LifeCycles {
 
     @Inject
     public HttpServer(
-        @Named("bind") final InetSocketAddress address, final HeroicCoreInstance instance,
+        @Named("bind") final InetSocketAddress address,
+        final HeroicCoreInstance instance,
         final HeroicConfigurationContext config,
-        @Named(MediaType.APPLICATION_JSON) final ObjectMapper mapper, final AsyncFramework async,
+        @Named(MediaType.APPLICATION_JSON) final ObjectMapper mapper,
+        final AsyncFramework async,
         @Named("enableCors") final boolean enableCors,
         @Named("corsAllowOrigin") final Optional<String> corsAllowOrigin,
         final List<JettyServerConnector> connectors,

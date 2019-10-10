@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
+import static io.opencensus.trace.AttributeValue.booleanAttributeValue;
+
 import com.google.bigtable.v2.ReadModifyWriteRowRequest;
 import com.google.cloud.bigtable.grpc.BigtableSession;
 import com.google.cloud.bigtable.grpc.scanner.FlatRow;
@@ -36,6 +38,7 @@ import com.spotify.heroic.async.AsyncObserver;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
+import io.opencensus.trace.Span;
 import java.io.IOException;
 import java.util.List;
 
@@ -76,11 +79,13 @@ public class BigtableDataClientImpl implements BigtableDataClient {
 
     @Override
     public AsyncFuture<List<FlatRow>> readRows(
-        final String tableName, final ReadRowsRequest request
+        final String tableName,
+        final ReadRowsRequest request,
+        final Span span
     ) {
         return convert(session
             .getDataClient()
-            .readFlatRowsAsync(request.toPb(Table.toURI(clusterUri, tableName))));
+            .readFlatRowsAsync(request.toPb(Table.toURI(clusterUri, tableName))), span);
     }
 
     @Override
@@ -147,10 +152,7 @@ public class BigtableDataClientImpl implements BigtableDataClient {
     Row convertRow(final com.google.bigtable.v2.Row row) {
         final ImmutableMap.Builder<String, Family> families = ImmutableMap.builder();
 
-        for (
-            final com.google.bigtable.v2.Family
-                family : row.getFamiliesList()
-        ) {
+        for (final com.google.bigtable.v2.Family family : row.getFamiliesList()) {
             families.put(family.getName(), new Family(family.getName(), family.getColumnsList()));
         }
 
@@ -209,6 +211,28 @@ public class BigtableDataClientImpl implements BigtableDataClient {
 
             @Override
             public void onFailure(Throwable t) {
+                future.fail(t);
+            }
+        }, MoreExecutors.directExecutor());
+
+        return future;
+    }
+
+    private <T> AsyncFuture<T> convert(final ListenableFuture<T> request, final Span span) {
+        final ResolvableFuture<T> future = async.future();
+
+        Futures.addCallback(request, new FutureCallback<T>() {
+            @Override
+            public void onSuccess(T result) {
+                span.end();
+                future.resolve(result);
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                span.addAnnotation(t.getMessage());
+                span.putAttribute("error", booleanAttributeValue(true));
+                span.end();
                 future.fail(t);
             }
         }, MoreExecutors.directExecutor());

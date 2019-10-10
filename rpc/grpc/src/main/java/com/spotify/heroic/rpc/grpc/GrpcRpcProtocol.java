@@ -52,6 +52,7 @@ import io.grpc.ManagedChannel;
 import io.grpc.MethodDescriptor;
 import io.grpc.netty.NettyChannelBuilder;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.opencensus.trace.Span;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -215,7 +216,8 @@ public class GrpcRpcProtocol implements RpcProtocol {
             }
 
             @Override
-            public AsyncFuture<FullQuery> query(final FullQuery.Request request) {
+            public AsyncFuture<FullQuery> query(final FullQuery.Request request, final Span span) {
+                // TODO: Do we have to use a span here with gRPC since its auto instrumented?
                 return request(METRICS_FULL_QUERY, request);
             }
 

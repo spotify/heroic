@@ -156,7 +156,7 @@ allprojects {
                 entry 'opencensus-contrib-grpc-util'
                 entry 'opencensus-contrib-http-util'
             }
-            dependency 'com.lightstep.opencensus:lightstep-opencensus-exporter:0.0.2'
+            dependency 'com.lightstep.opencensus:lightstep-opencensus-exporter:0.0.3'
             dependency 'com.lightstep.tracer:tracer-okhttp:0.16.2'
             dependency 'com.lightstep.tracer:java-common:0.16.2'
             dependency 'com.lightstep.tracer:lightstep-tracer-jre:0.14.8'

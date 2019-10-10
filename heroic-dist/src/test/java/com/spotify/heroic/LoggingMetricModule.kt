@@ -8,6 +8,7 @@ import com.spotify.heroic.instrumentation.OperationsLog
 import com.spotify.heroic.lifecycle.LifeCycle
 import com.spotify.heroic.metric.*
 import eu.toolchain.async.AsyncFuture
+import io.opencensus.trace.Span
 import java.util.function.Consumer
 
 data class LoggingMetricModule(
@@ -53,9 +54,10 @@ data class LoggingMetricModule(
         override fun fetch(
             request: FetchData.Request,
             watcher: FetchQuotaWatcher,
-            metricsConsumer: Consumer<MetricReadResult>
+            metricsConsumer: Consumer<MetricReadResult>,
+            span: Span
         ): AsyncFuture<FetchData.Result> {
-            return delegate.fetch(request, watcher, metricsConsumer)
+            return delegate.fetch(request, watcher, metricsConsumer, span)
         }
 
         override fun listEntries(): Iterable<BackendEntry> {

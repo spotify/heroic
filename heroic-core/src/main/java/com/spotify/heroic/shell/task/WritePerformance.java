@@ -45,6 +45,7 @@ import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.StreamCollector;
+import io.opencensus.trace.BlankSpan;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -103,7 +104,9 @@ public class WritePerformance implements ShellTask {
             reads.add(readGroup.fetch(
                 new FetchData.Request(MetricType.POINT, s, range, QueryOptions.defaults()),
                 FetchQuotaWatcher.NO_QUOTA,
-                mcr -> writeRequests.add(new WriteMetric.Request(s, mcr.getMetrics()))));
+                mcr -> writeRequests.add(new WriteMetric.Request(s, mcr.getMetrics())),
+                BlankSpan.INSTANCE
+            ));
         }
 
         return async.collect(reads).lazyTransform(input -> {

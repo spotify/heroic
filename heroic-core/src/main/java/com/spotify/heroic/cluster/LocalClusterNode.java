@@ -42,6 +42,7 @@ import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import io.opencensus.trace.Span;
 import java.util.Optional;
 import javax.inject.Inject;
 
@@ -108,8 +109,8 @@ public class LocalClusterNode implements ClusterNode {
         }
 
         @Override
-        public AsyncFuture<FullQuery> query(final FullQuery.Request request) {
-            return metrics().query(request);
+        public AsyncFuture<FullQuery> query(final FullQuery.Request request, final Span span) {
+            return metrics().query(request, span);
         }
 
         @Override

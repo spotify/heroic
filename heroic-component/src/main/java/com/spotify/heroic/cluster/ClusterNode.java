@@ -36,6 +36,7 @@ import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
 import eu.toolchain.async.AsyncFuture;
+import io.opencensus.trace.Span;
 
 public interface ClusterNode extends UsableGroupManager<ClusterNode.Group> {
     NodeMetadata metadata();
@@ -61,7 +62,7 @@ public interface ClusterNode extends UsableGroupManager<ClusterNode.Group> {
          */
         AsyncFuture<Void> ping();
 
-        AsyncFuture<FullQuery> query(FullQuery.Request request);
+        AsyncFuture<FullQuery> query(FullQuery.Request request, Span span);
 
         AsyncFuture<FindTags> findTags(FindTags.Request request);
 

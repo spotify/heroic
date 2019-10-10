@@ -17,6 +17,7 @@ import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
 import eu.toolchain.async.ClockSource;
 import eu.toolchain.async.RetryPolicy;
+import io.opencensus.trace.BlankSpan;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -60,7 +61,11 @@ public abstract class AbstractConsumerIT extends AbstractSingleNodeIT {
                 return coreComponent
                     .metricManager()
                     .useDefaultGroup()
-                    .fetch(fetchDataRequest, FetchQuotaWatcher.NO_QUOTA, data::add);
+                    .fetch(fetchDataRequest,
+                        FetchQuotaWatcher.NO_QUOTA,
+                        data::add,
+                        BlankSpan.INSTANCE
+                    );
             }).get();
 
             assertFalse(data.isEmpty());
@@ -97,7 +102,11 @@ public abstract class AbstractConsumerIT extends AbstractSingleNodeIT {
                 return coreComponent
                     .metricManager()
                     .useDefaultGroup()
-                    .fetch(fetchDataRequest, FetchQuotaWatcher.NO_QUOTA, data::add);
+                    .fetch(fetchDataRequest,
+                        FetchQuotaWatcher.NO_QUOTA,
+                        data::add,
+                        BlankSpan.INSTANCE
+                    );
             }).get();
 
             assertFalse(data.isEmpty());

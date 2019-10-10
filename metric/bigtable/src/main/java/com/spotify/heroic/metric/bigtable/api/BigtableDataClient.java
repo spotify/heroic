@@ -25,6 +25,7 @@ import com.google.protobuf.ByteString;
 import com.spotify.heroic.async.AsyncObservable;
 import com.google.cloud.bigtable.grpc.scanner.FlatRow;
 import eu.toolchain.async.AsyncFuture;
+import io.opencensus.trace.Span;
 import java.util.List;
 
 public interface BigtableDataClient {
@@ -35,9 +36,12 @@ public interface BigtableDataClient {
      *
      * @param tableName Table to read rows from.
      * @param request Request to use when reading rows.
+     * @param span Used for distributed tracing
      * @return A future that will be resolved when all rows are available.
      */
-    AsyncFuture<List<FlatRow>> readRows(String tableName, ReadRowsRequest request);
+    AsyncFuture<List<FlatRow>> readRows(String tableName,
+                                        ReadRowsRequest request,
+                                        Span span);
 
     /**
      * Read the given set of rows in an observable way.
