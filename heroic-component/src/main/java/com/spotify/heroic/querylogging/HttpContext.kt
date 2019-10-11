@@ -27,7 +27,7 @@ data class HttpContext(
     /**
      * The remote address that connected to this node.
      */
-    val remotrAddress: String,
+    val remoteAddress: String,
     /**
      * The remote host (usually same as address) that connected to this node.
      */
