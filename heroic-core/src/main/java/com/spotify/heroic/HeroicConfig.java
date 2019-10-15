@@ -97,12 +97,13 @@ public abstract class HeroicConfig {
         Optional<ConditionalFeatures> conditionalFeatures,
         Map<String, Object> tracing,
         String version,
-        String service
+        String service,
+        String commit
     ) {
         return new AutoValue_HeroicConfig(id, startTimeout, stopTimeout, host, port, connectors,
             enableCors, corsAllowOrigin, features, cluster, metric, metadata,
             suggest, cache, ingestion, consumers, shellServer, analytics, generator, statistics,
-            queryLogging, conditionalFeatures, tracing, version, service);
+            queryLogging, conditionalFeatures, tracing, version, service, commit);
     }
 
     private static final org.slf4j.Logger log = LoggerFactory.getLogger(HeroicConfig.class);
@@ -110,8 +111,9 @@ public abstract class HeroicConfig {
     public static final Duration DEFAULT_START_TIMEOUT = Duration.of(5, TimeUnit.MINUTES);
     public static final Duration DEFAULT_STOP_TIMEOUT = Duration.of(1, TimeUnit.MINUTES);
 
-    public static final String DEFAULT_VERSION = "HEAD";
-    public static final String DEFAULT_SERVICE = "The Heroic Time Series Database";
+    private static final String DEFAULT_VERSION = "HEAD";
+    private static final String DEFAULT_COMMIT = "HEAD";
+    private static final String DEFAULT_SERVICE = "The Heroic Time Series Database";
 
     public abstract Optional<String> id();
 
@@ -151,6 +153,7 @@ public abstract class HeroicConfig {
 
     public abstract String version();
     public abstract String service();
+    public abstract String commit();
 
     public static Builder builder() {
         return new Builder();
@@ -424,8 +427,6 @@ public abstract class HeroicConfig {
                 .map(JettyServerConnector.Builder::build)
                 .iterator());
 
-            final String defaultVersion = loadDefaultVersion().orElse(DEFAULT_VERSION);
-
             // @formatter:off
             return HeroicConfig.create(
                 id,
@@ -452,26 +453,35 @@ public abstract class HeroicConfig {
                 queryLogging.orElseGet(NoopQueryLoggingModule::new),
                 conditionalFeatures,
                 tracing.orElseGet(HashMap::new),
-                version.orElse(defaultVersion),
-                service.orElse(DEFAULT_SERVICE)
+                version.orElseGet(this::loadDefaultVersion),
+                service.orElse(DEFAULT_SERVICE),
+                loadCommit()
             );
             // @formatter:on
         }
 
-        private Optional<String> loadDefaultVersion() {
+        private String loadDefaultVersion() {
+            return loadClassResource("version", DEFAULT_VERSION);
+        }
+
+        private String loadCommit() {
+            return loadClassResource("commit", DEFAULT_COMMIT);
+        }
+
+        private String loadClassResource(String name, String defaultValue) {
             try (final InputStream in = getClass()
                 .getClassLoader()
-                .getResourceAsStream("com.spotify.heroic/version")) {
+                .getResourceAsStream("com.spotify.heroic/" + name)) {
                 if (in == null) {
-                    return Optional.empty();
+                    return defaultValue;
                 }
 
                 final BufferedReader reader =
                     new BufferedReader(new InputStreamReader(in, Charsets.UTF_8));
-                return Optional.of(reader.readLine());
+                return reader.readLine();
             } catch (final Exception e) {
-                log.warn("Failed to load version file", e);
-                return Optional.empty();
+                log.warn("Failed to load resource file", e);
+                return defaultValue;
             }
         }
     }

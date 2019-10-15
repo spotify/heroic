@@ -48,7 +48,12 @@ public class EarlyModule {
     @Provides
     @EarlyScope
     ServiceInfo service() {
-        return new ServiceInfo(config.service(), config.version(), id.orElse("heroic"));
+        return new ServiceInfo(
+            config.service(),
+            config.version(),
+            id.orElse("heroic"),
+            config.commit()
+        );
     }
 
     @Provides
