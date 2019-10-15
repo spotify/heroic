@@ -28,7 +28,14 @@ def getGitHash = { ->
 
 allprojects {
     group = 'com.spotify.heroic'
-    version = '0.0.1-SNAPSHOT'
+
+    def tag = System.getenv('TRAVIS_TAG')
+    if (tag == null) {
+        version = '0.0.1-SNAPSHOT'
+    } else {
+        version = tag
+    }
+
     ext.gitCommit = getGitHash()
 
     apply plugin: "io.spring.dependency-management"

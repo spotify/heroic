@@ -5,7 +5,7 @@ apply plugin: 'com.github.johnrengelman.shadow'
 mainClassName = 'com.spotify.heroic.HeroicService'
 
 processResources {
-    expand version: project.version, commit: gitCommit
+    expand version: version, commit: gitCommit
 }
 
 shadowJar {
