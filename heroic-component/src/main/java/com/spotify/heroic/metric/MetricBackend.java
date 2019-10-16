@@ -65,14 +65,14 @@ public interface MetricBackend extends Initializing, Grouped, Collected {
      * @param request Fetch request to use.
      * @param watcher The watcher implementation to use when fetching metrics.
      * @param metricsConsumer The consumer that receives the fetched data
-     * @param span Used for distributed tracing
+     * @param parentSpan Used for distributed tracing
      * @return A future containing the fetch result.
      */
     AsyncFuture<FetchData.Result> fetch(
         FetchData.Request request,
         FetchQuotaWatcher watcher,
         Consumer<MetricReadResult> metricsConsumer,
-        final Span span
+        Span parentSpan
     );
 
     /**

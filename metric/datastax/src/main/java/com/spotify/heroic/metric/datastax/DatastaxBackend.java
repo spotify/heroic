@@ -137,7 +137,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
         final FetchData.Request request,
         final FetchQuotaWatcher watcher,
         final Consumer<MetricReadResult> metricsConsumer,
-        final Span span
+        final Span parentSpan
     ) {
         if (!watcher.mayReadData()) {
             throw new IllegalArgumentException("query violated data limit");

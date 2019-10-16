@@ -134,7 +134,7 @@ public class MemoryBackend extends AbstractMetricBackend {
         FetchData.Request request,
         FetchQuotaWatcher watcher,
         Consumer<MetricReadResult> metricsConsumer,
-        Span span
+        Span parentSpan
     ) {
         final QueryTrace.NamedWatch w = QueryTrace.watch(FETCH);
         final MemoryKey key = new MemoryKey(request.getType(), request.getSeries().getTags());

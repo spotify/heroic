@@ -261,7 +261,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         final FetchData.Request request,
         final FetchQuotaWatcher watcher,
         final Consumer<MetricReadResult> consumer,
-        final Span span
+        final Span parentSpan
     ) {
         return connection.doto(c -> {
             final MetricType type = request.getType();
@@ -272,7 +272,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
             switch (type) {
                 case POINT:
-                    return fetchBatch(watcher, type, pointsRanges(request), c, consumer, span);
+                    return fetchBatch(watcher, type, pointsRanges(request), c, consumer, parentSpan);
                 default:
                     return async.resolved(new FetchData.Result(QueryTrace.of(FETCH),
                         new QueryError("unsupported source: " + request.getType())));
@@ -443,6 +443,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
             final Function<FlatRow.Cell, Metric> transform =
                 cell -> p.deserialize(cell.getQualifier(), cell.getValue());
+
             QueryTrace.NamedWatch fs = QueryTrace.watch(FETCH_SEGMENT);
             final AsyncFuture<List<FlatRow>> readRows =
               client.readRows(
@@ -487,7 +488,6 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             .collectResult(FETCH))
             .directTransform(result -> {
                 fetchBatchSpan.end();
-                parentSpan.end();
                 // this is not actually how many rows were touched. The number of resource
                 // identifiers are unknown until query time.
                 watcher.accessedRows(prepared.size());
@@ -512,7 +512,9 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     }
 
     List<PreparedQuery> ranges(
-        final Series series, final DateRange range, final String columnFamily,
+        final Series series,
+        final DateRange range,
+        final String columnFamily,
         final BiFunction<Long, ByteString, Metric> deserializer
     ) throws IOException {
         final List<PreparedQuery> bases = new ArrayList<>();
@@ -533,11 +535,12 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             final ByteString keyEnd = ByteString.copyFrom(
                 RowKeyUtil.calculateTheClosestNextRowKeyForPrefix(key.toByteArray()));
 
-            final ByteString startKey = serializeOffset(offset(modified.start()));
-            final ByteString endKey = serializeOffset(offset(modified.end()));
+            final ByteString columnStart = serializeOffset(offset(modified.start()));
+            final ByteString columnEnd = serializeOffset(offset(modified.end()));
 
             bases.add(
-                new PreparedQuery(key, keyEnd, columnFamily, startKey, endKey, deserializer, base));
+                new PreparedQuery(
+                    key, keyEnd, columnFamily, columnStart, columnEnd, deserializer, base));
         }
 
         return bases;
@@ -607,8 +610,10 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                                             "startQualifierOpen", "endQualifierClosed",
                                             "deserializer",
                                             "base" })
-        public PreparedQuery(final ByteString rowKeyStart, final ByteString rowKeyEnd,
-                             final String columnFamily, final ByteString startQualifierOpen,
+        public PreparedQuery(final ByteString rowKeyStart,
+                             final ByteString rowKeyEnd,
+                             final String columnFamily,
+                             final ByteString startQualifierOpen,
                              final ByteString endQualifierClosed,
                              final BiFunction<Long, ByteString, Metric> deserializer,
                              final long base) {

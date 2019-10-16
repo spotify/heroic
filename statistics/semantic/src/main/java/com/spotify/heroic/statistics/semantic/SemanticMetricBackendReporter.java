@@ -240,9 +240,9 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
             final FetchData.Request request,
             final FetchQuotaWatcher watcher,
             final Consumer<MetricReadResult> metricsConsumer,
-            final Span span
+            final Span parentSpan
         ) {
-            return delegate.fetch(request, watcher, metricsConsumer, span).onDone(fetch.setup());
+            return delegate.fetch(request, watcher, metricsConsumer, parentSpan).onDone(fetch.setup());
         }
 
         @Override

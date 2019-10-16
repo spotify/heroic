@@ -82,10 +82,10 @@ class BigtableAnalyticsMetricBackend implements MetricBackend {
         final FetchData.Request request,
         final FetchQuotaWatcher watcher,
         final Consumer<MetricReadResult> metricsConsumer,
-        final Span span
+        final Span parentSpan
     ) {
         analytics.reportFetchSeries(LocalDate.now(), request.getSeries());
-        return backend.fetch(request, watcher, metricsConsumer, span);
+        return backend.fetch(request, watcher, metricsConsumer, parentSpan);
     }
 
     @Override

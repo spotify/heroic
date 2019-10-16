@@ -55,9 +55,9 @@ data class LoggingMetricModule(
             request: FetchData.Request,
             watcher: FetchQuotaWatcher,
             metricsConsumer: Consumer<MetricReadResult>,
-            span: Span
+            parentSpan: Span
         ): AsyncFuture<FetchData.Result> {
-            return delegate.fetch(request, watcher, metricsConsumer, span)
+            return delegate.fetch(request, watcher, metricsConsumer, parentSpan)
         }
 
         override fun listEntries(): Iterable<BackendEntry> {

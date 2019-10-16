@@ -123,9 +123,12 @@ public class LocalMetricManager implements MetricManager {
         @Named("dataLimit") final OptionalLimit dataLimit,
         @Named("concurrentQueriesBackoff") final OptionalLimit concurrentQueriesBackoff,
         @Named("fetchParallelism") final int fetchParallelism,
-        @Named("failOnLimits") final boolean failOnLimits, final AsyncFramework async,
-        final GroupSet<MetricBackend> groupSet, final MetadataManager metadata,
-        final MetricBackendReporter reporter, final QueryLoggerFactory queryLoggerFactory
+        @Named("failOnLimits") final boolean failOnLimits,
+        final AsyncFramework async,
+        final GroupSet<MetricBackend> groupSet,
+        final MetadataManager metadata,
+        final MetricBackendReporter reporter,
+        final QueryLoggerFactory queryLoggerFactory
     ) {
         this.groupLimit = groupLimit;
         this.seriesLimit = seriesLimit;
@@ -193,7 +196,7 @@ public class LocalMetricManager implements MetricManager {
             private final DateRange range;
             private final QueryOptions options;
             private final DataInMemoryReporter dataInMemoryReporter;
-            private final Span span;
+            private final Span parentSpan;
             private final MetricType source;
 
             private Transform(
@@ -203,7 +206,7 @@ public class LocalMetricManager implements MetricManager {
                 final OptionalLimit groupLimit,
                 final QuotaWatcher quotaWatcher,
                 final DataInMemoryReporter dataInMemoryReporter,
-                final Span span
+                final Span parentSpan
             ) {
                 this.aggregation = request.aggregation();
                 this.range = request.range();
@@ -218,7 +221,7 @@ public class LocalMetricManager implements MetricManager {
                 this.quotaWatcher = quotaWatcher;
 
                 this.dataInMemoryReporter = dataInMemoryReporter;
-                this.span = span;
+                this.parentSpan = parentSpan;
 
                 final Features features = request.features();
                 this.bucketStrategy = options
@@ -231,13 +234,13 @@ public class LocalMetricManager implements MetricManager {
             @Override
             public AsyncFuture<FullQuery> transform(final FindSeries result) throws Exception {
                 final Span fetchSpan = tracer.spanBuilderWithExplicitParent(
-                    "localMetricsManager.fetch", span).startSpan();
+                    "localMetricsManager.fetch", parentSpan).startSpan();
                 final ResultLimits limits;
 
                 if (result.getLimited()) {
                     if (failOnLimits) {
                         final RequestError error = new QueryError(
-                            "The number of series requested is more than the allowed limit of " +
+                            "The number of series requested is more than th e allowed limit of " +
                                 seriesLimit);
 
                         fetchSpan.addAnnotation(error.toString());
@@ -316,7 +319,7 @@ public class LocalMetricManager implements MetricManager {
                             quotaWatcher,
                             mcr -> collector.acceptMetricsCollection(series, mcr),
                             fetchSeries
-                        ));
+                        ).onDone(new EndSpanFutureReporter(fetchSeries)));
                     }
                 });
                 return async
@@ -335,9 +338,12 @@ public class LocalMetricManager implements MetricManager {
             if (!concurrentQueries.tryAcquire()) {
                 // There's currently too many concurrent queries. Fail now so that the QueryManager
                 // gets an opportunity to try another node in the same shard instead.
-                return async.failed(new GoAwayException(
+                final String e =
                     "Node has reached maximum number of concurrent MetricManager requests (" +
-                        concurrentQueriesBackoff + ")"));
+                    concurrentQueriesBackoff + ")";
+                span.addAnnotation(e);
+                span.end();
+                return async.failed(new GoAwayException(e));
             }
 
             try {
@@ -349,7 +355,7 @@ public class LocalMetricManager implements MetricManager {
         }
 
         private AsyncFuture<FullQuery> protectedQuery(
-            final FullQuery.Request request, final Span span) {
+            final FullQuery.Request request, final Span parentSpan) {
             final QueryOptions options = request.options();
             final QueryContext queryContext = request.context();
 
@@ -358,11 +364,10 @@ public class LocalMetricManager implements MetricManager {
             final DataInMemoryReporter dataInMemoryReporter = reporter.newDataInMemoryReporter();
 
             final QuotaWatcher quotaWatcher = new QuotaWatcher(
-                options.dataLimit().orElse(dataLimit).asLong().orElse(Long.MAX_VALUE), options
-                .aggregationLimit()
-                .orElse(aggregationLimit)
-                .asLong()
-                .orElse(Long.MAX_VALUE), dataInMemoryReporter);
+                options.dataLimit().orElse(dataLimit).asLong().orElse(Long.MAX_VALUE),
+                options.aggregationLimit().orElse(aggregationLimit).asLong().orElse(Long.MAX_VALUE),
+                dataInMemoryReporter
+            );
 
             final OptionalLimit seriesLimit =
                 options.seriesLimit().orElse(LocalMetricManager.this.seriesLimit);
@@ -373,6 +378,9 @@ public class LocalMetricManager implements MetricManager {
             final OptionalLimit groupLimit =
                 options.groupLimit().orElse(LocalMetricManager.this.groupLimit);
 
+            final Span findSeriesSpan = tracer.spanBuilderWithExplicitParent(
+                "localMetricsManager.findSeries", parentSpan).startSpan();
+
             // Transform that takes the result from ES metadata lookup to fetch from backend
             final LazyTransform<FindSeries, FullQuery> transform =
                 new Transform(request,
@@ -381,17 +389,14 @@ public class LocalMetricManager implements MetricManager {
                     groupLimit,
                     quotaWatcher,
                     dataInMemoryReporter,
-                    span);
-
-            final Span metadataSpan = tracer.spanBuilderWithExplicitParent(
-                "localMetricsManager.findSeries", span).startSpan();
+                    findSeriesSpan);
 
             return metadata
                 .findSeries(new FindSeries.Request(request.filter(), request.range(), seriesLimit))
-                .onResolved(t -> metadataSpan.putAttribute(
-                    "seriesCount", longAttributeValue(t.getSeries().size())))
-                .onDone(new EndSpanFutureReporter(metadataSpan))
                 .onDone(reporter.reportFindSeries())
+                .onResolved(t -> findSeriesSpan.putAttribute(
+                    "seriesCount", longAttributeValue(t.getSeries().size())))
+                .onDone(new EndSpanFutureReporter(findSeriesSpan))
                 .lazyTransform(transform)
                 .directTransform(fullQuery -> {
                     queryLogger.logOutgoingResponseAtNode(queryContext, fullQuery);
@@ -399,8 +404,6 @@ public class LocalMetricManager implements MetricManager {
                 })
                 .onDone(reporter.reportQueryMetrics());
         }
-
-
 
 
         @Override
@@ -419,10 +422,10 @@ public class LocalMetricManager implements MetricManager {
             final FetchData.Request request,
             final FetchQuotaWatcher watcher,
             final Consumer<MetricReadResult> metricsConsumer,
-            final Span span
+            final Span parentSpan
         ) {
             final List<AsyncFuture<FetchData.Result>> callbacks =
-                map(b -> b.fetch(request, watcher, metricsConsumer, span));
+                map(b -> b.fetch(request, watcher, metricsConsumer, parentSpan));
             return async.collect(callbacks, FetchData.collectResult(FETCH));
         }
 

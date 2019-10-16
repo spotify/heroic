@@ -78,10 +78,10 @@ import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
 import com.spotify.heroic.time.Clock;
+import com.spotify.heroic.tracing.EndSpanFutureReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Collector;
-import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.Transform;
 import io.opencensus.trace.Span;
 import io.opencensus.trace.Tracer;
@@ -222,7 +222,6 @@ public class CoreQueryManager implements QueryManager {
             final QueryTrace.NamedWatch shardWatch = tracing.watch(QUERY_SHARD);
             final Stopwatch fullQueryWatch = Stopwatch.createStarted();
             final long now = clock.currentTimeMillis();
-            final FutureDone onDoneQueryReporter = reporter.reportQuery();
 
             queryLogger.logQuery(queryContext, q);
 
@@ -282,12 +281,12 @@ public class CoreQueryManager implements QueryManager {
             queryLogger.logOutgoingRequestToShards(queryContext, request);
 
 
-            final Span querySpan = tracer.spanBuilder("coreQueryManager.query").startSpan();
+            final Span rootSpan = tracer.spanBuilder("coreQueryManager.query").startSpan();
             final AsyncFuture<QueryResult> query = queryCache.load(request, () -> {
 
                 for (final ClusterShard shard : shards) {
                     final Span shardSpan = tracer.spanBuilderWithExplicitParent(
-                        "coreQueryManager.shard", querySpan).startSpan();
+                        "coreQueryManager.shard", rootSpan).startSpan();
                     shardSpan.putAttribute(
                         "shard", stringAttributeValue(shard.getShard().toString()));
 
@@ -300,10 +299,10 @@ public class CoreQueryManager implements QueryManager {
                         .catchFailed(FullQuery.shardError(shardLocalWatch, shard))
                         .directTransform(fullQuery -> {
                             queryLogger.logIncomingResponseFromShard(queryContext, fullQuery);
-                            shardSpan.end();
                             return fullQuery;
                         })
-                        .directTransform(QueryResultPart.fromResultGroup(shard));
+                        .directTransform(QueryResultPart.fromResultGroup(shard))
+                        .onDone(new EndSpanFutureReporter(shardSpan));
 
                     if (!shard.isDarkload()) {
                         // Stash the future to be able to gather result from all shards.
@@ -318,18 +317,21 @@ public class CoreQueryManager implements QueryManager {
                     QueryResult.collectParts(QUERY, range, combiner, limit));
             });
 
-          return query.directTransform(result -> {
-              reportCompletedQuery(result, fullQueryWatch);
-              if (result.getErrors().size() > 0) {
-                querySpan.addAnnotation(result.getErrors().toString());
-                querySpan.putAttribute("error", booleanAttributeValue(true));
-              }
 
-              querySpan.putAttribute("preAggregationSampleSize",
-                  longAttributeValue(result.getPreAggregationSampleSize()));
-              querySpan.end();
-              return result;
-            }).onDone(onDoneQueryReporter);
+          return query
+              .directTransform(result -> {
+                  reportCompletedQuery(result, fullQueryWatch);
+                  if (result.getErrors().size() > 0) {
+                      rootSpan.addAnnotation(result.getErrors().toString());
+                      rootSpan.putAttribute("error", booleanAttributeValue(true));
+                  }
+                  rootSpan.putAttribute("preAggregationSampleSize",
+                      longAttributeValue(result.getPreAggregationSampleSize()));
+
+                  return result;
+              })
+              .onDone(reporter.reportQuery())
+              .onDone(new EndSpanFutureReporter(rootSpan));
         }
 
         private void reportCompletedQuery(
