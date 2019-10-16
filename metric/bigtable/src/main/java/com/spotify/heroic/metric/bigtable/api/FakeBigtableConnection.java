@@ -30,7 +30,6 @@ import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.metric.bigtable.BigtableConnection;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import io.opencensus.trace.Span;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -139,8 +138,7 @@ public class FakeBigtableConnection implements BigtableConnection {
         @Override
         public AsyncFuture<List<FlatRow>> readRows(
             final String tableName,
-            final ReadRowsRequest request,
-            final Span preparedSpan
+            final ReadRowsRequest request
         ) {
             final TableStorage storage = tables.get(tableName);
 

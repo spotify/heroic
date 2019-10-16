@@ -60,6 +60,7 @@ import com.spotify.heroic.metric.bigtable.api.RowRange;
 import com.spotify.heroic.metric.bigtable.api.Table;
 import com.spotify.heroic.metrics.Meter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
+import com.spotify.heroic.tracing.EndSpanFutureReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
@@ -272,7 +273,8 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
             switch (type) {
                 case POINT:
-                    return fetchBatch(watcher, type, pointsRanges(request), c, consumer, parentSpan);
+                    return fetchBatch(
+                        watcher, type, pointsRanges(request), c, consumer, parentSpan);
                 default:
                     return async.resolved(new FetchData.Result(QueryTrace.of(FETCH),
                         new QueryError("unsupported source: " + request.getType())));
@@ -458,9 +460,8 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                                       .endQualifierClosed(p.endQualifierClosed)
                                       .build(),
                                   RowFilter.onlyLatestCell())))
-                      .build(),
-                  readRowsSpan
-              );
+                      .build()
+              ).onDone(new EndSpanFutureReporter(readRowsSpan));
 
             fetches.add(readRows.directTransform(result -> {
                 final Span transformSpan = tracer.spanBuilderWithExplicitParent(
