@@ -158,12 +158,13 @@ allprojects {
             dependency 'io.netty:netty-transport:4.1.31.Final'
 
             dependencySet(group: 'io.grpc', version: '1.16.1') {
-                entry 'grpc-stub'
+                entry 'grpc-auth'
+                entry 'grpc-core'
                 entry 'grpc-netty'
                 entry 'grpc-netty-shaded'
-                entry 'grpc-auth'
                 entry 'grpc-protobuf'
-                entry 'grpc-core'
+                entry 'grpc-protobuf-lite'
+                entry 'grpc-stub'
             }
 
             dependencySet(group: 'io.opencensus', version: '0.22.1') {
@@ -177,6 +178,11 @@ allprojects {
             dependency 'com.lightstep.tracer:tracer-okhttp:0.16.2'
             dependency 'com.lightstep.tracer:java-common:0.16.2'
             dependency 'com.lightstep.tracer:lightstep-tracer-jre:0.14.8'
+
+            dependencySet(group: 'com.google.api', version: '1.35.1') {
+                entry 'gax'
+                entry 'gax-grpc'
+            }
 
             dependencySet(group: 'com.google.cloud', version: '1.56.0') {
                 entry('google-cloud-pubsub') {
