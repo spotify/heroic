@@ -240,7 +240,7 @@ public class LocalMetricManager implements MetricManager {
                 if (result.getLimited()) {
                     if (failOnLimits) {
                         final RequestError error = new QueryError(
-                            "The number of series requested is more than th e allowed limit of " +
+                            "The number of series requested is more than the allowed limit of " +
                                 seriesLimit);
 
                         fetchSpan.addAnnotation(error.toString());
