@@ -24,5 +24,6 @@ package com.spotify.heroic.common
 data class ServiceInfo(
     val name: String,
     val version: String,
-    val id: String
+    val id: String,
+    val commit: String
 )
