@@ -21,6 +21,10 @@
 
 package com.spotify.heroic.metric;
 
+import static io.opencensus.trace.AttributeValue.booleanAttributeValue;
+import static io.opencensus.trace.AttributeValue.longAttributeValue;
+import static java.lang.String.format;
+
 import com.google.common.collect.ConcurrentHashMultiset;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -53,11 +57,14 @@ import com.spotify.heroic.querylogging.QueryLogger;
 import com.spotify.heroic.querylogging.QueryLoggerFactory;
 import com.spotify.heroic.statistics.DataInMemoryReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
+import com.spotify.heroic.tracing.EndSpanFutureReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.StreamCollector;
+import io.opencensus.trace.BlankSpan;
 import io.opencensus.trace.Span;
+import io.opencensus.trace.Tracer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -77,6 +84,8 @@ import org.slf4j.Logger;
 
 @MetricScope
 public class LocalMetricManager implements MetricManager {
+    private static final Tracer tracer = io.opencensus.trace.Tracing.getTracer();
+
     private static final QueryTrace.Identifier QUERY =
         QueryTrace.identifier(LocalMetricManager.class, "query");
     private static final QueryTrace.Identifier FETCH =
@@ -114,9 +123,12 @@ public class LocalMetricManager implements MetricManager {
         @Named("dataLimit") final OptionalLimit dataLimit,
         @Named("concurrentQueriesBackoff") final OptionalLimit concurrentQueriesBackoff,
         @Named("fetchParallelism") final int fetchParallelism,
-        @Named("failOnLimits") final boolean failOnLimits, final AsyncFramework async,
-        final GroupSet<MetricBackend> groupSet, final MetadataManager metadata,
-        final MetricBackendReporter reporter, final QueryLoggerFactory queryLoggerFactory
+        @Named("failOnLimits") final boolean failOnLimits,
+        final AsyncFramework async,
+        final GroupSet<MetricBackend> groupSet,
+        final MetadataManager metadata,
+        final MetricBackendReporter reporter,
+        final QueryLoggerFactory queryLoggerFactory
     ) {
         this.groupLimit = groupLimit;
         this.seriesLimit = seriesLimit;
@@ -184,12 +196,17 @@ public class LocalMetricManager implements MetricManager {
             private final DateRange range;
             private final QueryOptions options;
             private final DataInMemoryReporter dataInMemoryReporter;
+            private final Span parentSpan;
             private final MetricType source;
 
             private Transform(
-                final FullQuery.Request request, final boolean failOnLimits,
-                final OptionalLimit seriesLimit, final OptionalLimit groupLimit,
-                final QuotaWatcher quotaWatcher, final DataInMemoryReporter dataInMemoryReporter
+                final FullQuery.Request request,
+                final boolean failOnLimits,
+                final OptionalLimit seriesLimit,
+                final OptionalLimit groupLimit,
+                final QuotaWatcher quotaWatcher,
+                final DataInMemoryReporter dataInMemoryReporter,
+                final Span parentSpan
             ) {
                 this.aggregation = request.aggregation();
                 this.range = request.range();
@@ -204,6 +221,7 @@ public class LocalMetricManager implements MetricManager {
                 this.quotaWatcher = quotaWatcher;
 
                 this.dataInMemoryReporter = dataInMemoryReporter;
+                this.parentSpan = parentSpan;
 
                 final Features features = request.features();
                 this.bucketStrategy = options
@@ -215,6 +233,8 @@ public class LocalMetricManager implements MetricManager {
 
             @Override
             public AsyncFuture<FullQuery> transform(final FindSeries result) throws Exception {
+                final Span fetchSpan = tracer.spanBuilderWithExplicitParent(
+                    "localMetricsManager.fetch", parentSpan).startSpan();
                 final ResultLimits limits;
 
                 if (result.getLimited()) {
@@ -222,6 +242,10 @@ public class LocalMetricManager implements MetricManager {
                         final RequestError error = new QueryError(
                             "The number of series requested is more than the allowed limit of " +
                                 seriesLimit);
+
+                        fetchSpan.addAnnotation(error.toString());
+                        fetchSpan.putAttribute("quotaViolation", booleanAttributeValue(true));
+                        fetchSpan.end();
 
                         return async.resolved(FullQuery.limitsError(namedWatch.end(), error,
                             ResultLimits.of(ResultLimit.SERIES)));
@@ -241,15 +265,18 @@ public class LocalMetricManager implements MetricManager {
                 try {
                     session = aggregation.session(range, quotaWatcher, bucketStrategy);
                 } catch (QuotaViolationException e) {
+                    String error = format(
+                        "aggregation needs to retain more data then what is allowed: %d",
+                        aggregationLimit.asLong().get());
+                    fetchSpan.addAnnotation(error);
+                    fetchSpan.putAttribute("quotaViolation", booleanAttributeValue(true));
+                    fetchSpan.end();
                     return async.resolved(FullQuery.limitsError(namedWatch.end(),
-                        new QueryError(String.format(
-                            "aggregation needs to retain more data then what is allowed: %d",
-                            aggregationLimit.asLong().get())),
+                        new QueryError(error),
                         ResultLimits.of(ResultLimit.AGGREGATION)));
                 }
 
                 /* setup collector */
-
                 final ResultCollector collector;
 
                 if (options.tracing().isEnabled(Tracing.DETAILED)) {
@@ -282,39 +309,53 @@ public class LocalMetricManager implements MetricManager {
                 }
 
                 final List<Callable<AsyncFuture<FetchData.Result>>> fetches = new ArrayList<>();
-
-                /* setup fetches */
                 accept(metricBackend -> {
                     for (final Series series : result.getSeries()) {
+                        final Span fetchSeries = tracer.spanBuilderWithExplicitParent(
+                            "localMetricsManager.fetchSeries", fetchSpan).startSpan();
+                        fetchSeries.addAnnotation(series.toString());
                         fetches.add(() -> metricBackend.fetch(
-                            new FetchData.Request(source, series, range, options), quotaWatcher,
-                            mcr -> collector.acceptMetricsCollection(series, mcr)));
+                            new FetchData.Request(source, series, range, options),
+                            quotaWatcher,
+                            mcr -> collector.acceptMetricsCollection(series, mcr),
+                            fetchSeries
+                        ).onDone(new EndSpanFutureReporter(fetchSeries)));
                     }
                 });
-
-                return async.eventuallyCollect(fetches, collector, fetchParallelism);
+                return async
+                    .eventuallyCollect(fetches, collector, fetchParallelism)
+                    .onDone(new EndSpanFutureReporter(fetchSpan));
             }
         }
 
         @Override
         public AsyncFuture<FullQuery> query(final FullQuery.Request request) {
+            return query(request, BlankSpan.INSTANCE);
+        }
+
+        @Override
+        public AsyncFuture<FullQuery> query(final FullQuery.Request request, final Span span) {
             if (!concurrentQueries.tryAcquire()) {
                 // There's currently too many concurrent queries. Fail now so that the QueryManager
                 // gets an opportunity to try another node in the same shard instead.
-                return async.failed(new GoAwayException(
+                final String e =
                     "Node has reached maximum number of concurrent MetricManager requests (" +
-                        concurrentQueriesBackoff + ")"));
+                    concurrentQueriesBackoff + ")";
+                span.addAnnotation(e);
+                span.end();
+                return async.failed(new GoAwayException(e));
             }
 
             try {
-                return protectedQuery(request).onFinished(concurrentQueries::release);
+                return protectedQuery(request, span).onFinished(concurrentQueries::release);
             } catch (Exception e) {
                 concurrentQueries.release();
                 throw new RuntimeException(e);
             }
         }
 
-        private AsyncFuture<FullQuery> protectedQuery(final FullQuery.Request request) {
+        private AsyncFuture<FullQuery> protectedQuery(
+            final FullQuery.Request request, final Span parentSpan) {
             final QueryOptions options = request.options();
             final QueryContext queryContext = request.context();
 
@@ -323,11 +364,10 @@ public class LocalMetricManager implements MetricManager {
             final DataInMemoryReporter dataInMemoryReporter = reporter.newDataInMemoryReporter();
 
             final QuotaWatcher quotaWatcher = new QuotaWatcher(
-                options.dataLimit().orElse(dataLimit).asLong().orElse(Long.MAX_VALUE), options
-                .aggregationLimit()
-                .orElse(aggregationLimit)
-                .asLong()
-                .orElse(Long.MAX_VALUE), dataInMemoryReporter);
+                options.dataLimit().orElse(dataLimit).asLong().orElse(Long.MAX_VALUE),
+                options.aggregationLimit().orElse(aggregationLimit).asLong().orElse(Long.MAX_VALUE),
+                dataInMemoryReporter
+            );
 
             final OptionalLimit seriesLimit =
                 options.seriesLimit().orElse(LocalMetricManager.this.seriesLimit);
@@ -338,15 +378,25 @@ public class LocalMetricManager implements MetricManager {
             final OptionalLimit groupLimit =
                 options.groupLimit().orElse(LocalMetricManager.this.groupLimit);
 
+            final Span findSeriesSpan = tracer.spanBuilderWithExplicitParent(
+                "localMetricsManager.findSeries", parentSpan).startSpan();
+
             // Transform that takes the result from ES metadata lookup to fetch from backend
             final LazyTransform<FindSeries, FullQuery> transform =
-                new Transform(request, failOnLimits, seriesLimit, groupLimit, quotaWatcher,
-                    dataInMemoryReporter);
+                new Transform(request,
+                    failOnLimits,
+                    seriesLimit,
+                    groupLimit,
+                    quotaWatcher,
+                    dataInMemoryReporter,
+                    findSeriesSpan);
 
             return metadata
-                .findSeries(
-                    new FindSeries.Request(request.filter(), request.range(), seriesLimit))
+                .findSeries(new FindSeries.Request(request.filter(), request.range(), seriesLimit))
                 .onDone(reporter.reportFindSeries())
+                .onResolved(t -> findSeriesSpan.putAttribute(
+                    "seriesCount", longAttributeValue(t.getSeries().size())))
+                .onDone(new EndSpanFutureReporter(findSeriesSpan))
                 .lazyTransform(transform)
                 .directTransform(fullQuery -> {
                     queryLogger.logOutgoingResponseAtNode(queryContext, fullQuery);
@@ -354,6 +404,7 @@ public class LocalMetricManager implements MetricManager {
                 })
                 .onDone(reporter.reportQueryMetrics());
         }
+
 
         @Override
         public Statistics getStatistics() {
@@ -368,11 +419,13 @@ public class LocalMetricManager implements MetricManager {
 
         @Override
         public AsyncFuture<FetchData.Result> fetch(
-            final FetchData.Request request, final FetchQuotaWatcher watcher,
-            final Consumer<MetricReadResult> metricsConsumer
+            final FetchData.Request request,
+            final FetchQuotaWatcher watcher,
+            final Consumer<MetricReadResult> metricsConsumer,
+            final Span parentSpan
         ) {
             final List<AsyncFuture<FetchData.Result>> callbacks =
-                map(b -> b.fetch(request, watcher, metricsConsumer));
+                map(b -> b.fetch(request, watcher, metricsConsumer, parentSpan));
             return async.collect(callbacks, FetchData.collectResult(FETCH));
         }
 
@@ -517,9 +570,7 @@ public class LocalMetricManager implements MetricManager {
             requestErrors.addAll(result.getErrors());
         }
 
-        void acceptMetricsCollection(
-            final Series series, final MetricReadResult readResult
-        ) {
+        void acceptMetricsCollection(final Series series, final MetricReadResult readResult) {
             final MetricCollection metrics = readResult.getMetrics();
             final Map<String, String> aggregationKey = buildAggregationKey(series, readResult);
 

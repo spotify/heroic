@@ -39,6 +39,7 @@ import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.WriteMetric;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import io.opencensus.trace.Span;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -130,8 +131,10 @@ public class MemoryBackend extends AbstractMetricBackend {
 
     @Override
     public AsyncFuture<FetchData.Result> fetch(
-        FetchData.Request request, FetchQuotaWatcher watcher,
-        Consumer<MetricReadResult> metricsConsumer
+        FetchData.Request request,
+        FetchQuotaWatcher watcher,
+        Consumer<MetricReadResult> metricsConsumer,
+        Span parentSpan
     ) {
         final QueryTrace.NamedWatch w = QueryTrace.watch(FETCH);
         final MemoryKey key = new MemoryKey(request.getType(), request.getSeries().getTags());

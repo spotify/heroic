@@ -22,6 +22,7 @@
 package com.spotify.heroic.metric;
 
 import eu.toolchain.async.AsyncFuture;
+import io.opencensus.trace.Span;
 
 public interface MetricBackendGroup extends MetricBackend {
     /**
@@ -29,4 +30,5 @@ public interface MetricBackendGroup extends MetricBackend {
      */
     AsyncFuture<FullQuery> query(FullQuery.Request request);
 
+    AsyncFuture<FullQuery> query(FullQuery.Request request, Span span);
 }

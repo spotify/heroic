@@ -147,10 +147,7 @@ public class BigtableDataClientImpl implements BigtableDataClient {
     Row convertRow(final com.google.bigtable.v2.Row row) {
         final ImmutableMap.Builder<String, Family> families = ImmutableMap.builder();
 
-        for (
-            final com.google.bigtable.v2.Family
-                family : row.getFamiliesList()
-        ) {
+        for (final com.google.bigtable.v2.Family family : row.getFamiliesList()) {
             families.put(family.getName(), new Family(family.getName(), family.getColumnsList()));
         }
 

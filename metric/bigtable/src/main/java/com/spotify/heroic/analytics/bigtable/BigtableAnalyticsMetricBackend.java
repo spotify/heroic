@@ -36,6 +36,7 @@ import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricReadResult;
 import com.spotify.heroic.metric.WriteMetric;
 import eu.toolchain.async.AsyncFuture;
+import io.opencensus.trace.Span;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.function.Consumer;
@@ -78,11 +79,13 @@ class BigtableAnalyticsMetricBackend implements MetricBackend {
 
     @Override
     public AsyncFuture<FetchData.Result> fetch(
-        final FetchData.Request request, final FetchQuotaWatcher watcher,
-        final Consumer<MetricReadResult> metricsConsumer
+        final FetchData.Request request,
+        final FetchQuotaWatcher watcher,
+        final Consumer<MetricReadResult> metricsConsumer,
+        final Span parentSpan
     ) {
         analytics.reportFetchSeries(LocalDate.now(), request.getSeries());
-        return backend.fetch(request, watcher, metricsConsumer);
+        return backend.fetch(request, watcher, metricsConsumer, parentSpan);
     }
 
     @Override

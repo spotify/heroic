@@ -36,6 +36,7 @@ import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
 import eu.toolchain.async.AsyncFuture;
+import io.opencensus.trace.Span;
 import java.util.Optional;
 
 public class TracingClusterNode implements ClusterNode {
@@ -89,8 +90,9 @@ public class TracingClusterNode implements ClusterNode {
         }
 
         @Override
-        public AsyncFuture<FullQuery> query(FullQuery.Request request) {
-            return delegateGroup.query(request).directTransform(FullQuery.trace(queryIdentifier));
+        public AsyncFuture<FullQuery> query(FullQuery.Request request, Span span) {
+            return delegateGroup.query(
+                request, span).directTransform(FullQuery.trace(queryIdentifier));
         }
 
         @Override

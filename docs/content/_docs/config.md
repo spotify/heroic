@@ -1005,7 +1005,7 @@ lightstep:
   reportingIntervalMs: <int> default = 1000
 
   # Max buffered spans
-  maxBufferedSpans: <int> default = 1000
+  maxBufferedSpans: <int> default = 5000
 
   # If enabled, the client connection will be reset at regular intervals.
   # Used to load balance on client side.

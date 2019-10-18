@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.metric.bigtable;
 
+import static io.opencensus.trace.AttributeValue.longAttributeValue;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.cloud.bigtable.grpc.scanner.FlatRow;
@@ -58,6 +60,7 @@ import com.spotify.heroic.metric.bigtable.api.RowRange;
 import com.spotify.heroic.metric.bigtable.api.Table;
 import com.spotify.heroic.metrics.Meter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
+import com.spotify.heroic.tracing.EndSpanFutureReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
@@ -102,7 +105,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
     public static final String POINTS = "points";
     public static final String EVENTS = "events";
-    public static final long PERIOD = 0x100000000L;
+    public static final long PERIOD = 0x100_000_000L;
 
     private final AsyncFramework async;
     private final SerializerFramework serializer;
@@ -124,10 +127,14 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
     @Inject
     public BigtableBackend(
-        final AsyncFramework async, @Named("common") final SerializerFramework serializer,
-        final RowKeySerializer rowKeySerializer, final Managed<BigtableConnection> connection,
-        final Groups groups, @Named("table") final String table,
-        @Named("configure") final boolean configure, MetricBackendReporter reporter,
+        final AsyncFramework async,
+        @Named("common") final SerializerFramework serializer,
+        final RowKeySerializer rowKeySerializer,
+        final Managed<BigtableConnection> connection,
+        final Groups groups,
+        @Named("table") final String table,
+        @Named("configure") final boolean configure,
+        MetricBackendReporter reporter,
         @Named("application/json") ObjectMapper mapper
     ) {
         super(async);
@@ -252,8 +259,10 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
     @Override
     public AsyncFuture<FetchData.Result> fetch(
-        final FetchData.Request request, final FetchQuotaWatcher watcher,
-        final Consumer<MetricReadResult> consumer
+        final FetchData.Request request,
+        final FetchQuotaWatcher watcher,
+        final Consumer<MetricReadResult> consumer,
+        final Span parentSpan
     ) {
         return connection.doto(c -> {
             final MetricType type = request.getType();
@@ -264,7 +273,8 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
             switch (type) {
                 case POINT:
-                    return fetchBatch(watcher, type, pointsRanges(request), c, consumer);
+                    return fetchBatch(
+                        watcher, type, pointsRanges(request), c, consumer, parentSpan);
                 default:
                     return async.resolved(new FetchData.Result(QueryTrace.of(FETCH),
                         new QueryError("unsupported source: " + request.getType())));
@@ -323,7 +333,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             .startSpan();
         final Scope scope = tracer.withSpan(span);
         span.putAttribute("type", AttributeValue.stringAttributeValue(columnFamily));
-        span.putAttribute("batchSize", AttributeValue.longAttributeValue(batch.size()));
+        span.putAttribute("batchSize", longAttributeValue(batch.size()));
 
         // common case for consumers
         if (batch.size() == 1) {
@@ -413,46 +423,77 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     }
 
     private AsyncFuture<FetchData.Result> fetchBatch(
-        final FetchQuotaWatcher watcher, final MetricType type, final List<PreparedQuery> prepared,
-        final BigtableConnection c, final Consumer<MetricReadResult> metricsConsumer
+        final FetchQuotaWatcher watcher,
+        final MetricType type,
+        final List<PreparedQuery> prepared,
+        final BigtableConnection c,
+        final Consumer<MetricReadResult> metricsConsumer,
+        final Span parentSpan
     ) {
         final BigtableDataClient client = c.dataClient();
+
+        final Span fetchBatchSpan =
+            tracer.spanBuilderWithExplicitParent("bigtable.fetchBatch", parentSpan).startSpan();
+        fetchBatchSpan.putAttribute("preparedQuerySize", longAttributeValue(prepared.size()));
 
         final List<AsyncFuture<FetchData.Result>> fetches = new ArrayList<>(prepared.size());
 
         for (final PreparedQuery p : prepared) {
-            QueryTrace.NamedWatch fs = QueryTrace.watch(FETCH_SEGMENT);
-
-            final AsyncFuture<List<FlatRow>> readRows = client.readRows(table, ReadRowsRequest
-                .builder()
-                .range(new RowRange(Optional.of(p.rowKeyStart), Optional.of(p.rowKeyEnd)))
-                .filter(RowFilter.chain(Arrays.asList(RowFilter
-                    .newColumnRangeBuilder(p.columnFamily)
-                    .startQualifierOpen(p.startQualifierOpen)
-                    .endQualifierClosed(p.endQualifierClosed)
-                    .build(), RowFilter.onlyLatestCell())))
-                .build());
+            Span readRowsSpan = tracer.spanBuilderWithExplicitParent(
+                "bigtable.readRows", fetchBatchSpan).startSpan();
+            readRowsSpan.putAttribute("rowKeyBaseTimestamp", longAttributeValue(p.base));
 
             final Function<FlatRow.Cell, Metric> transform =
                 cell -> p.deserialize(cell.getQualifier(), cell.getValue());
 
+            QueryTrace.NamedWatch fs = QueryTrace.watch(FETCH_SEGMENT);
+            final AsyncFuture<List<FlatRow>> readRows =
+              client.readRows(
+                  table,
+                  ReadRowsRequest.builder()
+                      .range(new RowRange(Optional.of(p.rowKeyStart), Optional.of(p.rowKeyEnd)))
+                      .filter(
+                          RowFilter.chain(
+                              Arrays.asList(
+                                  RowFilter.newColumnRangeBuilder(p.columnFamily)
+                                      .startQualifierOpen(p.startQualifierOpen)
+                                      .endQualifierClosed(p.endQualifierClosed)
+                                      .build(),
+                                  RowFilter.onlyLatestCell())))
+                      .build()
+              ).onDone(new EndSpanFutureReporter(readRowsSpan));
+
             fetches.add(readRows.directTransform(result -> {
+                final Span transformSpan = tracer.spanBuilderWithExplicitParent(
+                    "bigtable.transform", readRowsSpan).startSpan();
+                transformSpan.putAttribute("rowsReturned", longAttributeValue(result.size()));
+
                 for (final FlatRow row : result) {
                     SortedMap<String, String> resource = parseResourceFromRowKey(row.getRowKey());
 
                     watcher.readData(row.getCells().size());
+
                     final List<Metric> metrics = Lists.transform(row.getCells(), transform);
                     final MetricCollection mc = MetricCollection.build(type, metrics);
                     final MetricReadResult readResult = new MetricReadResult(mc, resource);
+
                     metricsConsumer.accept(readResult);
                 }
+                transformSpan.end();
+
                 return new FetchData.Result(fs.end());
             }));
         }
-        return async.collect(fetches, FetchData.collectResult(FETCH)).directTransform(result -> {
-            watcher.accessedRows(prepared.size());
-            return result;
-        });
+
+        return async.collect(fetches, FetchData
+            .collectResult(FETCH))
+            .directTransform(result -> {
+                fetchBatchSpan.end();
+                // this is not actually how many rows were touched. The number of resource
+                // identifiers are unknown until query time.
+                watcher.accessedRows(prepared.size());
+                return result;
+            });
     }
 
     private SortedMap<String, String> parseResourceFromRowKey(final ByteString rowKey)
@@ -472,7 +513,9 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     }
 
     List<PreparedQuery> ranges(
-        final Series series, final DateRange range, final String columnFamily,
+        final Series series,
+        final DateRange range,
+        final String columnFamily,
         final BiFunction<Long, ByteString, Metric> deserializer
     ) throws IOException {
         final List<PreparedQuery> bases = new ArrayList<>();
@@ -493,11 +536,12 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             final ByteString keyEnd = ByteString.copyFrom(
                 RowKeyUtil.calculateTheClosestNextRowKeyForPrefix(key.toByteArray()));
 
-            final ByteString startKey = serializeOffset(offset(modified.start()));
-            final ByteString endKey = serializeOffset(offset(modified.end()));
+            final ByteString columnStart = serializeOffset(offset(modified.start()));
+            final ByteString columnEnd = serializeOffset(offset(modified.end()));
 
             bases.add(
-                new PreparedQuery(key, keyEnd, columnFamily, startKey, endKey, deserializer, base));
+                new PreparedQuery(
+                    key, keyEnd, columnFamily, columnStart, columnEnd, deserializer, base));
         }
 
         return bases;
@@ -567,8 +611,10 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                                             "startQualifierOpen", "endQualifierClosed",
                                             "deserializer",
                                             "base" })
-        public PreparedQuery(final ByteString rowKeyStart, final ByteString rowKeyEnd,
-                             final String columnFamily, final ByteString startQualifierOpen,
+        public PreparedQuery(final ByteString rowKeyStart,
+                             final ByteString rowKeyEnd,
+                             final String columnFamily,
+                             final ByteString startQualifierOpen,
                              final ByteString endQualifierClosed,
                              final BiFunction<Long, ByteString, Metric> deserializer,
                              final long base) {

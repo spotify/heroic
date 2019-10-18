@@ -237,10 +237,13 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
 
         @Override
         public AsyncFuture<FetchData.Result> fetch(
-            final FetchData.Request request, final FetchQuotaWatcher watcher,
-            final Consumer<MetricReadResult> metricsConsumer
+            final FetchData.Request request,
+            final FetchQuotaWatcher watcher,
+            final Consumer<MetricReadResult> metricsConsumer,
+            final Span parentSpan
         ) {
-            return delegate.fetch(request, watcher, metricsConsumer).onDone(fetch.setup());
+            return delegate.fetch(
+                request, watcher, metricsConsumer, parentSpan).onDone(fetch.setup());
         }
 
         @Override

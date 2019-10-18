@@ -47,6 +47,7 @@ import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.LazyTransform;
+import io.opencensus.trace.BlankSpan;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -135,7 +136,7 @@ public class Fetch implements ShellTask {
 
         return readGroup
             .fetch(new FetchData.Request(source, series, range, options),
-                FetchQuotaWatcher.NO_QUOTA, printMetricsCollection)
+                FetchQuotaWatcher.NO_QUOTA, printMetricsCollection, BlankSpan.INSTANCE)
             .lazyTransform(handleResult);
     }
 

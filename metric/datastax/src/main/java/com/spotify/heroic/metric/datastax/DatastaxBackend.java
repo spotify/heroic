@@ -64,6 +64,7 @@ import eu.toolchain.async.Managed;
 import eu.toolchain.async.ResolvableFuture;
 import eu.toolchain.async.StreamCollector;
 import eu.toolchain.async.Transform;
+import io.opencensus.trace.Span;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -133,8 +134,10 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
 
     @Override
     public AsyncFuture<FetchData.Result> fetch(
-        final FetchData.Request request, final FetchQuotaWatcher watcher,
-        final Consumer<MetricReadResult> metricsConsumer
+        final FetchData.Request request,
+        final FetchQuotaWatcher watcher,
+        final Consumer<MetricReadResult> metricsConsumer,
+        final Span parentSpan
     ) {
         if (!watcher.mayReadData()) {
             throw new IllegalArgumentException("query violated data limit");

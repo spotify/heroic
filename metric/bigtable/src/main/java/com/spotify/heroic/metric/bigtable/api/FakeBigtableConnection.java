@@ -137,7 +137,8 @@ public class FakeBigtableConnection implements BigtableConnection {
 
         @Override
         public AsyncFuture<List<FlatRow>> readRows(
-            final String tableName, final ReadRowsRequest request
+            final String tableName,
+            final ReadRowsRequest request
         ) {
             final TableStorage storage = tables.get(tableName);
 
