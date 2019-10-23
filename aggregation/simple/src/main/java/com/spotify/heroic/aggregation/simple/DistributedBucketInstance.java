@@ -29,6 +29,10 @@ import com.spotify.heroic.metric.MetricType;
 
 import java.util.Set;
 
+/*
+   Any aggregation using this bucket will have its updateSpreads method called given
+   distributed() is overridden to return Spreads and  "Set<MetricType> input" includes it.
+ */
 public abstract class DistributedBucketInstance<B extends Bucket>
     extends BucketAggregationInstance<B> {
     public DistributedBucketInstance(
