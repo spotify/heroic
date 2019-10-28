@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicCoreInstance;
+import com.spotify.heroic.common.ServiceInfo;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.http.tracing.OpenCensusFeature;
 import com.spotify.heroic.jetty.JettyJSONErrorHandler;
@@ -32,6 +33,7 @@ import com.spotify.heroic.jetty.JettyServerConnector;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.servlet.ShutdownFilter;
+import com.spotify.heroic.tracing.TracingConfig;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import java.net.InetSocketAddress;
@@ -66,13 +68,15 @@ public class HttpServer implements LifeCycles {
 
     private final InetSocketAddress address;
     private final HeroicCoreInstance instance;
-    private final HeroicConfigurationContext config;
+    private final HeroicConfigurationContext configContext;
     private final ObjectMapper mapper;
     private final AsyncFramework async;
     private final boolean enableCors;
     private final Optional<String> corsAllowOrigin;
     private final List<JettyServerConnector> connectors;
     private final Supplier<Boolean> stopping;
+    private final ServiceInfo service;
+    private final TracingConfig config;
 
     private volatile Server server = null;
     private final Object lock = new Object();
@@ -81,23 +85,27 @@ public class HttpServer implements LifeCycles {
     public HttpServer(
         @Named("bind") final InetSocketAddress address,
         final HeroicCoreInstance instance,
-        final HeroicConfigurationContext config,
+        final HeroicConfigurationContext configContext,
         @Named(MediaType.APPLICATION_JSON) final ObjectMapper mapper,
         final AsyncFramework async,
         @Named("enableCors") final boolean enableCors,
         @Named("corsAllowOrigin") final Optional<String> corsAllowOrigin,
         final List<JettyServerConnector> connectors,
-        @Named("stopping") final Supplier<Boolean> stopping
+        @Named("stopping") final Supplier<Boolean> stopping,
+        final ServiceInfo service,
+        @Named("tracingConfig") final TracingConfig config
     ) {
         this.address = address;
         this.instance = instance;
-        this.config = config;
+        this.configContext = configContext;
         this.mapper = mapper;
         this.async = async;
         this.enableCors = enableCors;
         this.corsAllowOrigin = corsAllowOrigin;
         this.connectors = connectors;
         this.stopping = stopping;
+        this.service = service;
+        this.config = config;
     }
 
     @Override
@@ -251,22 +259,25 @@ public class HttpServer implements LifeCycles {
 
     private ResourceConfig setupResourceConfig() throws Exception {
         final ResourceConfig config = new ResourceConfig();
-        config.register(OpenCensusFeature.class);
+
+        config.register(new OpenCensusFeature(this.config, this.service));
 
         int count = 0;
 
-        for (final Function<CoreComponent, List<Object>> resource : this.config.getResources()) {
-            if (log.isTraceEnabled()) {
-                log.trace("Loading resource: {}", resource);
-            }
+        for (final Function<CoreComponent, List<Object>> resource :
+            this.configContext.getResources()) {
 
-            final List<Object> resources = instance.inject(resource::apply);
+                if (log.isTraceEnabled()) {
+                    log.trace("Loading resource: {}", resource);
+                }
 
-            for (final Object r : resources) {
-                config.register(r);
-            }
+                final List<Object> resources = instance.inject(resource::apply);
 
-            count += resources.size();
+                for (final Object r : resources) {
+                    config.register(r);
+                }
+
+                count += resources.size();
         }
 
         // Resources.

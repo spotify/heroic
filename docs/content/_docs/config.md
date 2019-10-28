@@ -988,6 +988,10 @@ probability: <float> default = 0.01
 # Local port to expose zpages on. Traces are accessible at http://localhost:{port}/tracez
 zpagesPort: <int>
 
+# Add request headers if present as tags to the trace.
+requestHeadersToTags:
+- x-user-request
+
 # Configuration for exporting traces to LightStep.
 lightstep:
 

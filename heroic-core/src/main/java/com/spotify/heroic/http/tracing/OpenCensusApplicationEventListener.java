@@ -21,8 +21,11 @@
 
 package com.spotify.heroic.http.tracing;
 
+import static io.opencensus.trace.AttributeValue.stringAttributeValue;
 import static java.text.MessageFormat.format;
 
+import com.spotify.heroic.common.ServiceInfo;
+import com.spotify.heroic.tracing.TracingConfig;
 import io.opencensus.contrib.http.util.HttpPropagationUtil;
 import io.opencensus.trace.AttributeValue;
 import io.opencensus.trace.Span;
@@ -52,6 +55,8 @@ class OpenCensusApplicationEventListener implements ApplicationEventListener {
     private final TextFormat textFormat = HttpPropagationUtil.getCloudTraceFormat();
     private TextFormatGetter<ContainerRequest> textFormatGetter = new TextFormatGetter<>();
     private final OpenCensusFeature.Verbosity verbosity;
+    private final TracingConfig tracing;
+    private final ServiceInfo serviceInfo;
     private static final EnvironmentMetadata environmentMetadata = EnvironmentMetadata.create();
 
     /**
@@ -60,8 +65,13 @@ class OpenCensusApplicationEventListener implements ApplicationEventListener {
      *
      * @param verbosity desired verbosity level
      */
-    public OpenCensusApplicationEventListener(OpenCensusFeature.Verbosity verbosity) {
+    public OpenCensusApplicationEventListener(
+        final OpenCensusFeature.Verbosity verbosity,
+        final TracingConfig tracing,
+        final ServiceInfo serviceInfo) {
         this.verbosity = verbosity;
+        this.tracing = tracing;
+        this.serviceInfo = serviceInfo;
     }
 
     @Override
@@ -95,15 +105,22 @@ class OpenCensusApplicationEventListener implements ApplicationEventListener {
 
         final Span span = spanBuilder.startSpan();
 
-        span.putAttribute("span.kind", AttributeValue.stringAttributeValue("server"));
-        span.putAttribute("http.method", AttributeValue.stringAttributeValue(request.getMethod()));
-        span.putAttribute("http.url", AttributeValue.stringAttributeValue(
+        span.putAttribute("version",
+            stringAttributeValue(serviceInfo.getVersion() + ":" +  serviceInfo.getCommit()));
+        span.putAttribute("span.kind", stringAttributeValue("server"));
+        span.putAttribute("http.method", stringAttributeValue(request.getMethod()));
+        span.putAttribute("http.url", stringAttributeValue(
             request.getRequestUri().toASCIIString()));
-        span.putAttribute("http.request_headers", AttributeValue.stringAttributeValue(
-            OpenCensusUtils.headersAsString(request.getHeaders())));
         span.putAttribute("http.has_request_entity", AttributeValue.booleanAttributeValue(
             request.hasEntity()));
         span.putAttributes(environmentMetadata.toAttributes());
+        request.getHeaders().entrySet()
+            .stream()
+            .filter(entry -> tracing.getRequestHeadersToTags().contains(entry.getKey()))
+            .forEach(entry -> {
+                final String key = format("http.header.{0}", entry.getKey());
+                span.putAttribute(key, stringAttributeValue(entry.getValue().get(0)));
+            });
 
         request.setProperty(OpenCensusFeature.SPAN_CONTEXT_PROPERTY, span);
         span.addAnnotation("Request started.");
@@ -289,7 +306,7 @@ class OpenCensusApplicationEventListener implements ApplicationEventListener {
          */
         private void logError(final Throwable t) {
             requestSpan.setStatus(Status.INTERNAL);
-            requestSpan.putAttribute("event", AttributeValue.stringAttributeValue("error"));
+            requestSpan.putAttribute("event", stringAttributeValue("error"));
             requestSpan.addAnnotation(t.toString());
         }
     }
