@@ -22,7 +22,8 @@
 package com.spotify.heroic.common;
 
 import eu.toolchain.async.AsyncFuture;
-
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import javax.ws.rs.container.AsyncResponse;
 
 public interface JavaxRestFramework {
@@ -31,6 +32,8 @@ public interface JavaxRestFramework {
     }
 
     <T> void bind(final AsyncResponse response, final AsyncFuture<T> callback);
+
+    <T> void bind(final AsyncResponse response, final CompletionStage<T> callback);
 
     /**
      * Helper function to correctly wire up async response management.
@@ -41,6 +44,10 @@ public interface JavaxRestFramework {
      */
     <T, R> void bind(
         final AsyncResponse response, final AsyncFuture<T> callback, final Resume<T, R> resume
+    );
+
+    <T, R> void bind(
+        final AsyncResponse response, final CompletionStage<T> callback, final Resume<T, R> resume
     );
 
     <T> Resume<T, T> passthrough();
