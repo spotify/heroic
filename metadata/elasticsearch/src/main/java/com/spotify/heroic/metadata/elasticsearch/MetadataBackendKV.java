@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.metadata.elasticsearch;
 
-import static com.spotify.heroic.metadata.elasticsearch.ElasticsearchMetadataUtils.loadJsonResource;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 import static org.elasticsearch.index.query.QueryBuilders.prefixQuery;
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
@@ -40,6 +39,7 @@ import com.spotify.heroic.elasticsearch.BackendType;
 import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.LimitedSet;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
+import com.spotify.heroic.elasticsearch.ResourceLoader;
 import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
 import com.spotify.heroic.filter.AndFilter;
 import com.spotify.heroic.filter.FalseFilter;
@@ -315,19 +315,19 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         });
     }
 
-  @Override
-  public AsyncFuture<FindSeries> findSeries(final FindSeries.Request filter) {
-    return doto(
-        c -> {
-          return entries(
-              filter.getFilter(),
-              filter.getLimit(),
-              filter.getRange(),
-              this::toSeries,
-              l -> new FindSeries(l.getSet(), l.isLimited()),
-              builder -> { });
-        });
-  }
+    @Override
+    public AsyncFuture<FindSeries> findSeries(final FindSeries.Request filter) {
+       return doto(
+         c -> {
+            return entries(
+                filter.getFilter(),
+                filter.getLimit(),
+                filter.getRange(),
+                this::toSeries,
+                l -> new FindSeries(l.getSet(), l.isLimited()),
+                builder -> { });
+          });
+    }
 
     @Override
     public AsyncObservable<FindSeriesStream> findSeriesStream(final FindSeries.Request request) {
@@ -338,10 +338,9 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
     @Override
     public AsyncFuture<FindSeriesIds> findSeriesIds(final FindSeriesIds.Request request) {
-        return entries(request.getFilter(), request.getLimit(), request.getRange(), this::toId,
-            l -> new FindSeriesIds(l.getSet(), l.isLimited()), builder -> {
-                builder.setFetchSource(false);
-            });
+        return entries(request.getFilter(), request.getLimit(), this::toId,
+            l -> new FindSeriesIds(l.getSet(), l.isLimited()),
+            builder -> builder.setFetchSource(false));
     }
 
     @Override
@@ -435,8 +434,10 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     }
 
     private <T, O> AsyncFuture<O> entries(
-        final Filter filter, final OptionalLimit limit, final DateRange range,
-        final Function<SearchHit, T> converter, final Transform<LimitedSet<T>, O> collector,
+        final Filter filter,
+        final OptionalLimit limit,
+        final Function<SearchHit, T> converter,
+        final Transform<LimitedSet<T>, O> collector,
         final Consumer<SearchRequestBuilder> modifier
     ) {
         final QueryBuilder f = filter(filter);
@@ -666,11 +667,10 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         return new Statistics(WRITE_CACHE_SIZE, writeCache.size());
     }
 
-    public static BackendType backendType() {
+    static BackendType backendType() {
         final Map<String, Map<String, Object>> mappings = new HashMap<>();
-
-        mappings.put(METADATA_TYPE, loadJsonResource("kv/metadata.json"));
-
+        mappings.put(METADATA_TYPE,
+            ResourceLoader.loadJson(ElasticsearchMetadataModule.class, "kv/metadata.json"));
         return new BackendType(mappings, ImmutableMap.of(), MetadataBackendKV.class);
     }
 
