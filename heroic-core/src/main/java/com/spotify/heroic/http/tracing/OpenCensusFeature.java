@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.http.tracing;
 
+import com.spotify.heroic.common.ServiceInfo;
+import com.spotify.heroic.tracing.TracingConfig;
 import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.core.Feature;
 import javax.ws.rs.core.FeatureContext;
@@ -29,20 +31,16 @@ import org.apache.commons.lang3.NotImplementedException;
 
 public class OpenCensusFeature implements Feature {
     private final Verbosity verbosity;
+    private final TracingConfig tracing;
+    private final ServiceInfo serviceInfo;
 
     /**
      * Creates feature instance with default ({@link Verbosity#INFO} verbosity level.
      */
-    public OpenCensusFeature() {
-        verbosity = Verbosity.INFO;
-    }
-
-    /**
-     * Creates feature instance with given ({@link Verbosity} level.
-     * @param verbosity desired level of logging verbosity
-     */
-    public OpenCensusFeature(Verbosity verbosity) {
-        this.verbosity = verbosity;
+    public OpenCensusFeature(final TracingConfig tracing, final ServiceInfo serviceInfo) {
+        this.tracing = tracing;
+        this.serviceInfo = serviceInfo;
+        this.verbosity = Verbosity.INFO;
     }
 
     /**
@@ -57,7 +55,8 @@ public class OpenCensusFeature implements Feature {
             case CLIENT:
                 throw new NotImplementedException("Client tracing not implemented");
             case SERVER:
-                context.register(new OpenCensusApplicationEventListener(verbosity));
+                context.register(new OpenCensusApplicationEventListener(
+                    verbosity, tracing, serviceInfo));
             default:
                 // This can't happen.
         }

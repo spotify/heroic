@@ -80,6 +80,7 @@ import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.StatisticsComponent;
 import com.spotify.heroic.suggest.CoreSuggestComponent;
 import com.spotify.heroic.suggest.DaggerCoreSuggestComponent;
+import com.spotify.heroic.tracing.TracingConfig;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
@@ -98,7 +99,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -134,12 +134,6 @@ public class HeroicCore implements HeroicConfiguration {
     static final boolean DEFAULT_ONESHOT = false;
     static final boolean DEFAULT_DISABLE_BACKENDS = false;
     static final boolean DEFAULT_SETUP_SHELL_SERVER = true;
-
-    private static final int DEFAULT_LIGHTSTEP_COLLECTOR_PORT = 80;
-    private static final String DEFAULT_LIGHTSTEP_COMPONENT_NAME = "heroic";
-    private static final int DEFAULT_LIGHTSTEP_REPORTING_MS = 1_000;
-    private static final int DEFAULT_LIGHTSTEP_MAX_BUFFERED_SPANS = 5_000;
-    private static final boolean DEFAULT_LIGHTSTEP_RESET_CLIENT = false;
 
     static final UncaughtExceptionHandler uncaughtExceptionHandler = (Thread t, Throwable e) -> {
         try {
@@ -303,39 +297,19 @@ public class HeroicCore implements HeroicConfiguration {
     }
 
     @SuppressWarnings("unchecked")
-    private void enableTracing(Map<String, Object> config) throws IOException {
-        final Object lightstepConfig = config.get("lightstep");
-        if (lightstepConfig != null) {
-            final Map<String, Object> lsConfig = (Map) lightstepConfig;
+    private void enableTracing(TracingConfig config) throws IOException {
+        final TracingConfig.Lightstep lightstep = config.getLightstep();
 
-            // a collectorHost being defined takes priority over a grpcCollectorTarget
-            final String collectorHost = (String) lsConfig.get("collectorHost");
-            final Integer collectorPort = (Integer) lsConfig.getOrDefault(
-                "collectorPort", DEFAULT_LIGHTSTEP_COLLECTOR_PORT);
-            final String accessToken = (String) lsConfig.get("accessToken");
-            final String componentName = (String) lsConfig.getOrDefault(
-                "componentName", DEFAULT_LIGHTSTEP_COMPONENT_NAME);
-            final Integer reportingIntervalMs = (Integer) lsConfig.getOrDefault(
-                "reportingIntervalMs", DEFAULT_LIGHTSTEP_REPORTING_MS);
-            final Integer maxBufferedSpans = (Integer) lsConfig.getOrDefault(
-                "maxBufferedSpans", DEFAULT_LIGHTSTEP_MAX_BUFFERED_SPANS);
-            final Boolean resetClient = (Boolean) lsConfig.getOrDefault(
-                "resetClient", DEFAULT_LIGHTSTEP_RESET_CLIENT);
-
-            if (collectorHost == null) {
-                throw new IllegalArgumentException(
-                  "Lightstep collectorHost must be defined");
-            }
-
+        if (!lightstep.getCollectorHost().isBlank()) {
             final Options.OptionsBuilder optionsBuilder = new Options.OptionsBuilder()
-                .withAccessToken(accessToken)
-                .withMaxReportingIntervalMillis(reportingIntervalMs)
-                .withMaxBufferedSpans(maxBufferedSpans)
+                .withAccessToken(lightstep.getAccessToken())
+                .withMaxReportingIntervalMillis(lightstep.getReportingIntervalMs())
+                .withMaxBufferedSpans(lightstep.getMaxBufferedSpans())
                 .withCollectorProtocol("http")
-                .withResetClient(resetClient)
-                .withComponentName(componentName)
-                .withCollectorHost(collectorHost)
-                .withCollectorPort(collectorPort);
+                .withResetClient(lightstep.getResetClient())
+                .withComponentName(lightstep.getComponentName())
+                .withCollectorHost(lightstep.getCollectorHost())
+                .withCollectorPort(lightstep.getCollectorPort());
 
             final Options options;
             try {
@@ -349,21 +323,19 @@ public class HeroicCore implements HeroicConfiguration {
 
         }
 
-        final Integer zpagesPort = (Integer) config.get("zpagesPort");
-        if (zpagesPort != null) {
-            log.info("Starting zpage handlers on port {}", zpagesPort.toString());
+        if (config.getZpagesPort() > 0) {
+            log.info("Starting zpage handlers on port {}", config.getZpagesPort());
             // Start a web server for tracing data
-            ZPageHandlers.startHttpServerAndRegisterAll(zpagesPort);
+            ZPageHandlers.startHttpServerAndRegisterAll(config.getZpagesPort());
         }
 
-        final double probability = (double) config.getOrDefault("probability", 0.01);
-        log.info("Setting tracing to sample with a probability of {}", probability);
+        log.info("Setting tracing to sample with a probability of {}", config.getProbability());
         TraceConfig traceConfig = Tracing.getTraceConfig();
         traceConfig.updateActiveTraceParams(
             traceConfig
                 .getActiveTraceParams()
                 .toBuilder()
-                .setSampler(Samplers.probabilitySampler(probability))
+                .setSampler(Samplers.probabilitySampler(config.getProbability()))
                 .build());
     }
 
@@ -618,12 +590,16 @@ public class HeroicCore implements HeroicConfiguration {
         }
 
         final InetSocketAddress bindAddress = setupBindAddress(config);
-
         final HttpServerComponent serverComponent = DaggerHttpServerComponent
             .builder()
             .primaryComponent(primary)
-            .httpServerModule(new HttpServerModule(bindAddress, config.enableCors(),
-                config.corsAllowOrigin(), config.connectors()))
+            .httpServerModule(new HttpServerModule(
+                bindAddress,
+                config.enableCors(),
+                config.corsAllowOrigin(),
+                config.connectors(),
+                config.tracing()
+            ))
             .build();
 
         // Trigger life cycle registration

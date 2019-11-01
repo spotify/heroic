@@ -24,6 +24,7 @@ package com.spotify.heroic.http;
 import com.spotify.heroic.jetty.JettyServerConnector;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
+import com.spotify.heroic.tracing.TracingConfig;
 import dagger.Provides;
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -36,15 +37,19 @@ public class HttpServerModule {
     private final boolean enableCors;
     private final Optional<String> corsAllowOrigin;
     private final List<JettyServerConnector> connectors;
+    private final TracingConfig tracingConfig;
 
     @java.beans.ConstructorProperties({ "bind", "enableCors", "corsAllowOrigin", "connectors" })
-    public HttpServerModule(final InetSocketAddress bind, final boolean enableCors,
+    public HttpServerModule(final InetSocketAddress bind,
+                            final boolean enableCors,
                             final Optional<String> corsAllowOrigin,
-                            final List<JettyServerConnector> connectors) {
+                            final List<JettyServerConnector> connectors,
+                            final TracingConfig tracingConfig) {
         this.bind = bind;
         this.enableCors = enableCors;
         this.corsAllowOrigin = corsAllowOrigin;
         this.connectors = connectors;
+        this.tracingConfig = tracingConfig;
     }
 
     @Provides
@@ -72,6 +77,13 @@ public class HttpServerModule {
     @HttpServerScope
     List<JettyServerConnector> connectors() {
         return connectors;
+    }
+
+    @Provides
+    @Named("tracingConfig")
+    @HttpServerScope
+    TracingConfig tracingConfig() {
+        return tracingConfig;
     }
 
     @Provides

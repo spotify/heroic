@@ -57,15 +57,14 @@ import com.spotify.heroic.shell.ShellServerModule;
 import com.spotify.heroic.statistics.StatisticsModule;
 import com.spotify.heroic.statistics.noop.NoopStatisticsModule;
 import com.spotify.heroic.suggest.SuggestManagerModule;
+import com.spotify.heroic.tracing.TracingConfig;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.LoggerFactory;
@@ -95,7 +94,7 @@ public abstract class HeroicConfig {
         StatisticsModule statistics,
         QueryLoggingModule queryLogging,
         Optional<ConditionalFeatures> conditionalFeatures,
-        Map<String, Object> tracing,
+        TracingConfig tracing,
         String version,
         String service,
         String commit
@@ -149,7 +148,7 @@ public abstract class HeroicConfig {
     public abstract StatisticsModule statistics();
     public abstract QueryLoggingModule queryLogging();
     public abstract Optional<ConditionalFeatures> conditionalFeature();
-    public abstract Map<String, Object> tracing();
+    public abstract TracingConfig tracing();
 
     public abstract String version();
     public abstract String service();
@@ -229,7 +228,7 @@ public abstract class HeroicConfig {
         private Optional<StatisticsModule> statistics = empty();
         private Optional<QueryLoggingModule> queryLogging = empty();
         private Optional<ConditionalFeatures> conditionalFeatures = empty();
-        private Optional<Map<String, Object>> tracing = empty();
+        private Optional<TracingConfig> tracing = empty();
 
         private Optional<String> version = empty();
         private Optional<String> service = empty();
@@ -261,7 +260,7 @@ public abstract class HeroicConfig {
             @JsonProperty("statistics") Optional<StatisticsModule> statistics,
             @JsonProperty("queryLogging") Optional<QueryLoggingModule> queryLogging,
             @JsonProperty("conditionalFeatures") Optional<ConditionalFeatures> conditionalFeatures,
-            @JsonProperty("tracing") Optional<Map<String, Object>> tracing,
+            @JsonProperty("tracing") Optional<TracingConfig> tracing,
             @JsonProperty("version") Optional<String> version,
             @JsonProperty("service") Optional<String> service
         ) {
@@ -383,7 +382,7 @@ public abstract class HeroicConfig {
             return this;
         }
 
-        public Builder tracing(Map<String, Object> tracing) {
+        public Builder tracing(TracingConfig tracing) {
             this.tracing = of(tracing);
             return this;
         }
@@ -452,7 +451,7 @@ public abstract class HeroicConfig {
                 statistics.orElseGet(NoopStatisticsModule::new),
                 queryLogging.orElseGet(NoopQueryLoggingModule::new),
                 conditionalFeatures,
-                tracing.orElseGet(HashMap::new),
+                tracing.orElse(new TracingConfig()),
                 version.orElseGet(this::loadDefaultVersion),
                 service.orElse(DEFAULT_SERVICE),
                 loadCommit()

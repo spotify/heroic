@@ -25,30 +25,9 @@ import io.opencensus.trace.Status;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
-import javax.ws.rs.core.MultivaluedMap;
 
 class OpenCensusUtils {
-    private OpenCensusUtils() {
-    }
-
-    /**
-     * Convert request/response headers from {@link MultivaluedMap} into printable form.
-     *
-     * @param headers multi-valued map of request or response headers
-     * @return {@code String} representation, e.g. "[header1=foo]; [header2=bar, baz]"
-     */
-    static String headersAsString(final MultivaluedMap<String, ?> headers) {
-        return headers.entrySet()
-            .stream()
-            .map((entry) -> "["
-                            + entry.getKey() + "="
-                            + entry.getValue()
-                                .stream()
-                                .map(Object::toString)
-                                .collect(Collectors.joining(", "))
-                            + "]")
-            .collect(Collectors.joining("; "));
-    }
+    private OpenCensusUtils() { }
 
     static String formatList(List<?> list) {
         return list.stream().map(Object::toString).collect(Collectors.joining(", "));
