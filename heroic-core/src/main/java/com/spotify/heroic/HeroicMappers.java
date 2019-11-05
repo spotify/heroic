@@ -46,6 +46,7 @@ import com.spotify.heroic.filter.FilterRegistry;
 import com.spotify.heroic.generator.MetadataGenerator;
 import com.spotify.heroic.generator.MetricGeneratorModule;
 import com.spotify.heroic.grammar.QueryParser;
+import com.spotify.heroic.metadata.MetadataActorModule;
 import com.spotify.heroic.metadata.MetadataModule;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.MetricGroupSerialization;
@@ -84,6 +85,7 @@ public final class HeroicMappers {
         m.addMixIn(RpcProtocolModule.class, TypeNameMixin.class);
         m.addMixIn(ConsumerModule.Builder.class, TypeNameMixin.class);
         m.addMixIn(MetadataModule.class, TypeNameMixin.class);
+        m.addMixIn(MetadataActorModule.class, TypeNameMixin.class);
         m.addMixIn(SuggestModule.class, TypeNameMixin.class);
         m.addMixIn(MetricModule.class, TypeNameMixin.class);
         m.addMixIn(MetricGeneratorModule.class, TypeNameMixin.class);

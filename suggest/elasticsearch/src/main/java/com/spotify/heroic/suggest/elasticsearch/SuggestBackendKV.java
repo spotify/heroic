@@ -617,17 +617,10 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                     .spanBuilderWithExplicitParent(indexSpanName + ".writeIndex", indexSpan)
                     .startSpan();
 
-            final ResolvableFuture<IndexResponse> seriesWrite = async.future();
-            c.index(index, SERIES_TYPE)
-                .setId(seriesId)
-                .setSource(series)
-                .setOpType(DocWriteRequest.OpType.CREATE)
-                .execute(bind(seriesWrite));
-
-            writes.add(
-                seriesWrite
-                    .directTransform(response -> timer.end())
-                    .onFinished(indexWriteSpan::end));
+            writes.add(bind(c.index(
+                index, SERIES_TYPE, seriesId, series, DocWriteRequest.OpType.CREATE))
+                .directTransform(response -> timer.end())
+                .onFinished(indexWriteSpan::end));
 
             for (final String tagIndex : tagsIndexes) {
               for (final Map.Entry<String, String> e : s.getTags().entrySet()) {
@@ -635,28 +628,25 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                     tracer
                         .spanBuilderWithExplicitParent(indexSpanName + ".writeTags", indexSpan)
                         .startSpan();
-                tagSpan.putAttribute("index", AttributeValue.stringAttributeValue(tagIndex));
 
-                final XContentBuilder suggest = XContentFactory.jsonBuilder();
+                    tagSpan.putAttribute("index", AttributeValue.stringAttributeValue(index));
 
-                suggest.startObject();
-                buildContext(suggest, s);
-                buildTag(suggest, e);
-                suggest.endObject();
+                    final XContentBuilder suggest = XContentFactory.jsonBuilder();
 
-                final String suggestId = seriesId + ":" + Integer.toHexString(e.hashCode());
-                tagSpan.putAttribute("suggestId", AttributeValue.stringAttributeValue(suggestId));
-                final FutureReporter.Context writeContext = reporter.setupWriteReporter();
+                    suggest.startObject();
+                    buildContext(suggest, s);
+                    buildTag(suggest, e);
+                    suggest.endObject();
 
-                final ResolvableFuture<IndexResponse> tagWrite = async.future();
-                c.index(tagIndex, TAG_TYPE)
-                    .setId(suggestId)
-                    .setSource(suggest)
-                    .setOpType(DocWriteRequest.OpType.CREATE)
-                    .execute(bind(tagWrite));
+                    final String suggestId =
+                        seriesId + ":" + Integer.toHexString(e.hashCode());
+                    tagSpan.putAttribute("suggestId",
+                        AttributeValue.stringAttributeValue(suggestId));
+                    final FutureReporter.Context writeContext =
+                        reporter.setupWriteReporter();
 
-                writes.add(
-                    tagWrite
+                    writes.add(bind(c.index(
+                        index, TAG_TYPE, suggestId, suggest, DocWriteRequest.OpType.CREATE))
                         .directTransform(response -> timer.end())
                         .catchFailed(
                             handleVersionConflict(

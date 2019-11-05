@@ -30,13 +30,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.action.DocWriteRequest;
+import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateRequestBuilder;
 import org.elasticsearch.action.delete.DeleteRequestBuilder;
-import org.elasticsearch.action.index.IndexRequestBuilder;
+import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchScrollRequestBuilder;
 import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.client.IndicesAdminClient;
+import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -132,8 +135,15 @@ public class Connection {
         return index.count(client.getClient(), type);
     }
 
-    public IndexRequestBuilder index(String index, String type) {
-        return client.getClient().prepareIndex(index, type);
+    public ListenableActionFuture<IndexResponse> index(
+        String index, String type, String id, XContentBuilder source, DocWriteRequest.OpType opType
+    ) {
+        return client.getClient()
+            .prepareIndex(index, type)
+            .setId(id)
+            .setSource(source)
+            .setOpType(opType)
+            .execute();
     }
 
     public SearchScrollRequestBuilder prepareSearchScroll(String scrollId) {

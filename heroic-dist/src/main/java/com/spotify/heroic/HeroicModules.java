@@ -57,6 +57,7 @@ public class HeroicModules {
 
         new com.spotify.heroic.metadata.elasticsearch.Module(),
         new com.spotify.heroic.metadata.memory.Module(),
+        new com.spotify.heroic.metadata.elasticsearch.actor.Module(),
 
         new com.spotify.heroic.suggest.elasticsearch.Module(),
         new com.spotify.heroic.suggest.memory.Module(),

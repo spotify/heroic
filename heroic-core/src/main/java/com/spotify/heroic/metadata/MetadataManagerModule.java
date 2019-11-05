@@ -22,6 +22,7 @@
 package com.spotify.heroic.metadata;
 
 import static com.spotify.heroic.common.Optionals.mergeOptionalList;
+import static com.spotify.heroic.common.Optionals.pickOptional;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
 
@@ -40,21 +41,30 @@ import dagger.Module;
 import dagger.Provides;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import javax.annotation.Nullable;
 import javax.inject.Named;
 
 @Module
 public class MetadataManagerModule {
     private final List<MetadataModule> backends;
     private final Optional<List<String>> defaultBackends;
+    private final MetadataActorModule backend;
 
     public MetadataManagerModule(
         List<MetadataModule> backends,
-        Optional<List<String>> defaultBackends
+        Optional<List<String>> defaultBackends,
+        @Nullable MetadataActorModule backend
     ) {
         this.backends = backends;
         this.defaultBackends = defaultBackends;
+        this.backend = backend;
+    }
+
+    public MetadataActorModule getBackend() {
+        return backend;
     }
 
     @Provides
@@ -86,8 +96,11 @@ public class MetadataManagerModule {
     public Set<MetadataBackend> backends(
         List<Exposed> components, MetadataBackendReporter reporter
     ) {
-        return ImmutableSet.copyOf(
-            components.stream().map(Exposed::backend).map(reporter::decorate).iterator());
+        return components.stream()
+                .map(Exposed::backend)
+                .filter(Objects::nonNull)
+                .map(reporter::decorate)
+                .collect(ImmutableSet.toImmutableSet());
     }
 
     @Provides
@@ -111,6 +124,7 @@ public class MetadataManagerModule {
     public static class Builder {
         private Optional<List<MetadataModule>> backends = empty();
         private Optional<List<String>> defaultBackends = empty();
+        private Optional<MetadataActorModule> backend = empty();
 
         private Builder() {
         }
@@ -118,10 +132,12 @@ public class MetadataManagerModule {
         @JsonCreator
         public Builder(
             @JsonProperty("backends") Optional<List<MetadataModule>> backends,
-            @JsonProperty("defaultBackends") Optional<List<String>> defaultBackends
+            @JsonProperty("defaultBackends") Optional<List<String>> defaultBackends,
+            @JsonProperty("backend") Optional<MetadataActorModule> backend
         ) {
             this.backends = backends;
             this.defaultBackends = defaultBackends;
+            this.backend = backend;
         }
 
         public Builder backends(List<MetadataModule> backends) {
@@ -134,22 +150,25 @@ public class MetadataManagerModule {
             return this;
         }
 
+        public Builder backend(MetadataActorModule backend) {
+            this.backend = of(backend);
+            return this;
+        }
+
         public Builder merge(final Builder o) {
-            // @formatter:off
             return new Builder(
                 mergeOptionalList(o.backends, backends),
-                mergeOptionalList(o.defaultBackends, defaultBackends)
+                mergeOptionalList(o.defaultBackends, defaultBackends),
+                pickOptional(o.backend, backend)
             );
-            // @formatter:on
         }
 
         public MetadataManagerModule build() {
-            // @formatter:off
             return new MetadataManagerModule(
                 backends.orElseGet(ImmutableList::of),
-                defaultBackends
+                defaultBackends,
+                backend.orElse(null)
             );
-            // @formatter:on
         }
     }
 }

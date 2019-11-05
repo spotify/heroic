@@ -25,6 +25,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
 
+import akka.actor.ActorSystem;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
@@ -279,12 +280,15 @@ public class HeroicCore implements HeroicConfiguration {
         // Initialize the instance injector with access to early components.
         final AtomicReference<CoreComponent> injector = new AtomicReference<>();
 
+        HeroicActors actors = new HeroicActors();
         final HeroicCoreInstance instance =
-            new Instance(loading.async(), injector, early, config, this.late);
+            new Instance(loading.async(), injector, early, config, this.late, actors);
 
         final CoreComponent primary = primaryInjector(early, config, instance);
 
         primary.loadingLifeCycle().install();
+
+        actors.metadataFrom(config.metadata().getBackend());
 
         primary.internalLifeCycleRegistry().scoped("startup future").start(() -> {
             primary.context().resolveStartedFuture();
@@ -446,7 +450,7 @@ public class HeroicCore implements HeroicConfiguration {
      * @param config The loaded configuration file.
      * @param early The early injector, which will act as a parent to the primary injector to bridge
      * all it's provided components.
-     * @return The primary guice injector.
+     * @return The primary Dagger injector.
      */
     private CoreComponent primaryInjector(
         final CoreEarlyComponent early, final HeroicConfig config, final HeroicCoreInstance instance
@@ -458,6 +462,7 @@ public class HeroicCore implements HeroicConfiguration {
         life.add(statistics.life());
 
         final HeroicReporter reporter = statistics.reporter();
+        instance.getActors().setReporter(reporter);
 
         // Register root components.
         final CorePrimaryComponent primary = DaggerCorePrimaryComponent
@@ -1006,6 +1011,7 @@ public class HeroicCore implements HeroicConfiguration {
         private final CoreEarlyComponent early;
         private final HeroicConfig config;
         private final List<HeroicBootstrap> late;
+        private final HeroicActors actors;
 
         private final ResolvableFuture<Void> start;
         private final ResolvableFuture<Void> stop;
@@ -1013,15 +1019,19 @@ public class HeroicCore implements HeroicConfiguration {
         private final AsyncFuture<Void> started;
         private final AsyncFuture<Void> stopped;
 
-        public Instance(
-            final AsyncFramework async, final AtomicReference<CoreComponent> coreInjector,
-            final CoreEarlyComponent early, final HeroicConfig config,
-            final List<HeroicBootstrap> late
+        Instance(
+            final AsyncFramework async,
+            final AtomicReference<CoreComponent> coreInjector,
+            final CoreEarlyComponent early,
+            final HeroicConfig config,
+            final List<HeroicBootstrap> late,
+            final HeroicActors actors
         ) {
             this.coreInjector = coreInjector;
             this.early = early;
             this.config = config;
             this.late = late;
+            this.actors = actors;
 
             this.start = async.future();
             this.stop = async.future();
@@ -1082,6 +1092,11 @@ public class HeroicCore implements HeroicConfiguration {
                     return null;
                 }, Executors.newSingleThreadExecutor());
             });
+        }
+
+        @Override
+        public HeroicActors getActors() {
+            return actors;
         }
 
         /**

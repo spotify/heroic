@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,20 +19,24 @@
  * under the License.
  */
 
-package com.spotify.heroic;
+package com.spotify.heroic
 
-import com.spotify.heroic.dagger.CoreComponent;
-import eu.toolchain.async.AsyncFuture;
-import java.util.function.Function;
+import akka.actor.ActorRef
+import akka.actor.ActorSystem
+import com.spotify.heroic.metadata.MetadataActorModule
+import com.spotify.heroic.statistics.HeroicReporter
 
-public interface HeroicCoreInstance {
-    <T> T inject(Function<CoreComponent, T> injector);
+data class HeroicActors(
+    val system: ActorSystem = ActorSystem.create("heroic"),
+    var metadata: ActorRef? = null
+) {
+    lateinit var reporter: HeroicReporter
 
-    AsyncFuture<Void> start();
-
-    AsyncFuture<Void> shutdown();
-
-    AsyncFuture<Void> join();
-
-    HeroicActors getActors();
+    fun metadataFrom(module: MetadataActorModule?): HeroicActors {
+        if (module != null) {
+            module.reporter = reporter
+            metadata = system.actorOf(module.props(), "metadata")
+        }
+        return this
+    }
 }

@@ -1,0 +1,21 @@
+{
+  "metadata": {
+    "_all": {
+        "enabled": false
+    },
+    "properties": {
+      "key": {
+        "type": "keyword",
+        "doc_values": true
+      },
+      "tags": {
+        "type": "keyword",
+        "doc_values": true
+      },
+      "tag_keys": {
+        "type": "keyword",
+        "doc_values": true
+      }
+    }
+  }
+}

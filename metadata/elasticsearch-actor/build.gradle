@@ -1,0 +1,11 @@
+apply plugin: 'kotlin-kapt'
+
+dependencies {
+    implementation project(':heroic-component')
+    implementation project(':heroic-elasticsearch-utils')
+    implementation 'com.typesafe.akka:akka-actor_2.12'
+    kapt 'com.google.dagger:dagger-compiler'
+}
+
+group = 'com.spotify.heroic.metadata'
+description = 'Heroic: Elasticsearch Metadata Actor'

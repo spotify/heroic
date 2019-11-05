@@ -96,6 +96,7 @@ import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Named;
 import org.apache.commons.lang3.tuple.Pair;
+import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.DocWriteRequest.OpType;
 import org.elasticsearch.action.delete.DeleteRequestBuilder;
@@ -269,7 +270,12 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
                     builder.execute(listener);
 
-                    final AsyncFuture<WriteMetadata> writeMetadataAsyncFuture = result
+
+
+                    ListenableActionFuture<IndexResponse> future =
+                        c.index(index, METADATA_TYPE, id, source, OpType.CREATE);
+
+                    final AsyncFuture<WriteMetadata> writeMetadataAsyncFuture = bind(future)
                         .directTransform(response -> timer.end())
                         .catchFailed(handleVersionConflict(WriteMetadata::new,
                             reporter::reportWriteDroppedByDuplicate))
