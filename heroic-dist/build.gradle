@@ -30,6 +30,7 @@ dependencies {
     api project(':heroic-metric-memory')
     api project(':heroic-metadata-elasticsearch')
     api project(':heroic-metadata-memory')
+    api project(':heroic-metadata-elasticsearch-actor')
     api project(':heroic-suggest-elasticsearch')
     api project(':heroic-suggest-memory')
     api project(':heroic-discovery-simple')

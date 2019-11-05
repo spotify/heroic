@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,20 +19,28 @@
  * under the License.
  */
 
-package com.spotify.heroic;
+package com.spotify.heroic.metadata
 
-import com.spotify.heroic.dagger.CoreComponent;
-import eu.toolchain.async.AsyncFuture;
-import java.util.function.Function;
+import com.spotify.heroic.common.Statistics
 
-public interface HeroicCoreInstance {
-    <T> T inject(Function<CoreComponent, T> injector);
+interface MetadataActor {
+    val statistics: Statistics
+        get() = Statistics.empty()
 
-    AsyncFuture<Void> start();
+    /**
+     * Buffer a write for the specified series.
+     */
+    fun write(request: WriteMetadata.Request): WriteMetadata
 
-    AsyncFuture<Void> shutdown();
+    fun findTags(request: FindTags.Request): FindTags
 
-    AsyncFuture<Void> join();
+    fun findSeries(request: FindSeries.Request): FindSeries
 
-    HeroicActors getActors();
+    fun findSeriesIds(request: FindSeriesIds.Request): FindSeriesIds
+
+    fun countSeries(request: CountSeries.Request): CountSeries
+
+    fun deleteSeries(request: DeleteSeries.Request): DeleteSeries
+
+    fun findKeys(request: FindKeys.Request): FindKeys
 }

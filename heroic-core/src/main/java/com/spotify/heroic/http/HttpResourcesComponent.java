@@ -23,6 +23,7 @@ package com.spotify.heroic.http;
 
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.http.cluster.ClusterResource;
+import com.spotify.heroic.http.metadata.MetadataActorResource;
 import com.spotify.heroic.http.metadata.MetadataResource;
 import com.spotify.heroic.http.parser.ParserResource;
 import com.spotify.heroic.http.query.QueryResource;
@@ -48,6 +49,8 @@ public interface HttpResourcesComponent {
     RenderResource renderResource();
 
     QueryResource queryResource();
+
+    MetadataActorResource metadataActorResource();
 
     MetadataResource metadataResource();
 

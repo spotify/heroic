@@ -52,6 +52,8 @@ dependencies {
     // Default usage tracking module. Normally different module dependencies are handled in
     // heroic-dist, but defaults need to be accessible in heroic-core.
     implementation project(':heroic-usage-tracking-google-analytics')
+
+    implementation 'com.typesafe.akka:akka-actor_2.12'
     
     testImplementation project(':heroic-test')
     testImplementation project(path: ':heroic-component', configuration: 'testRuntime')

@@ -592,11 +592,9 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 final Span indexWriteSpan = tracer
                     .spanBuilderWithExplicitParent(indexSpanName + ".writeIndex", indexSpan)
                     .startSpan();
-                writes.add(bind(c.index(index, SERIES_TYPE)
-                    .setId(seriesId)
-                    .setSource(series)
-                    .setOpType(DocWriteRequest.OpType.CREATE)
-                    .execute()).directTransform(response -> timer.end())
+                writes.add(bind(c.index(
+                    index, SERIES_TYPE, seriesId, series, DocWriteRequest.OpType.CREATE))
+                    .directTransform(response -> timer.end())
                     .onFinished(indexWriteSpan::end));
 
                 for (final Map.Entry<String, String> e : s.getTags().entrySet()) {
@@ -619,12 +617,8 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                     final FutureReporter.Context writeContext =
                         reporter.setupWriteReporter();
 
-                    writes.add(bind(c
-                        .index(index, TAG_TYPE)
-                        .setId(suggestId)
-                        .setSource(suggest)
-                        .setOpType(DocWriteRequest.OpType.CREATE)
-                        .execute())
+                    writes.add(bind(c.index(
+                        index, TAG_TYPE, suggestId, suggest, DocWriteRequest.OpType.CREATE))
                         .directTransform(response -> timer.end())
                         .catchFailed(handleVersionConflict(WriteSuggest::new,
                             reporter::reportWriteDroppedByDuplicate))

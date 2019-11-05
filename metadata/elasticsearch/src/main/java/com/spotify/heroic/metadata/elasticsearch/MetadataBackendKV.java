@@ -100,6 +100,7 @@ import org.elasticsearch.action.DocWriteRequest.OpType;
 import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.delete.DeleteRequestBuilder;
 import org.elasticsearch.action.index.IndexRequestBuilder;
+import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.unit.TimeValue;
@@ -237,12 +238,6 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                     buildContext(source, series);
                     source.endObject();
 
-                    final IndexRequestBuilder builder = c
-                        .index(index, TYPE_METADATA)
-                        .setId(id)
-                        .setSource(source)
-                        .setOpType(OpType.CREATE);
-
                     final RequestTimer<WriteMetadata> timer = WriteMetadata.timer();
                     final FutureReporter.Context writeContext =
                         reporter.setupBackendWriteReporter();
@@ -250,7 +245,10 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                     final Span writeSpan = tracer
                         .spanBuilder(indexSpanName + ".writeIndex")
                         .startSpan();
-                    AsyncFuture<WriteMetadata> result = bind(builder.execute())
+
+                    ListenableActionFuture<IndexResponse> future =
+                        c.index(index, TYPE_METADATA, id, source, OpType.CREATE);
+                    AsyncFuture<WriteMetadata> result = bind(future)
                         .directTransform(response -> timer.end())
                         .catchFailed(handleVersionConflict(WriteMetadata::new,
                             reporter::reportWriteDroppedByDuplicate))

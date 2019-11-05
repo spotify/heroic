@@ -23,6 +23,7 @@ package com.spotify.heroic.elasticsearch;
 
 import static java.util.Optional.ofNullable;
 
+import akka.actor.Props;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.elasticsearch.index.IndexMapping;
@@ -91,6 +92,13 @@ public class ConnectionModule {
         return new Provider(async);
     }
 
+    public Props connectionActor(
+        final String defaultTemplateName, final BackendType type
+    ) throws Exception {
+        final String template = ofNullable(templateName).orElse(defaultTemplateName);
+        return Props.create(ConnectionActor.class, index, clientSetup.setup(), template, type);
+    }
+
     public class Provider {
         private final AsyncFramework async;
 
@@ -104,7 +112,7 @@ public class ConnectionModule {
         ) {
             final String template = ofNullable(templateName).orElse(defaultTemplateName);
 
-            return async.managed(new ManagedSetup<Connection>() {
+            return async.managed(new ManagedSetup<>() {
                 @Override
                 public AsyncFuture<Connection> construct() {
                     return async.call(

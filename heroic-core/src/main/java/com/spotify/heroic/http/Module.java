@@ -44,6 +44,7 @@ public class Module implements HeroicModule {
                     w.statusResource(),
                     w.renderResource(),
                     w.queryResource(),
+                    w.metadataActorResource(),
                     w.metadataResource(),
                     w.clusterResource(),
                     w.parserResource()

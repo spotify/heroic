@@ -260,6 +260,8 @@ allprojects {
             }
 
             dependency 'javax.annotation:javax.annotation-api:1.3.2'
+
+            dependency 'com.typesafe.akka:akka-actor_2.12:2.5.26'
         }
     }
 }
