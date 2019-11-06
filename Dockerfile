@@ -1,6 +1,7 @@
 FROM maven:3.5.4-jdk-11 as builder
 LABEL maintainer "layer8 <layer8@spotify.com>"
 
+RUN apt-get update && apt-get install -y git
 COPY . .
 RUN tools/install-repackaged
 RUN _JAVA_OPTIONS=-Djdk.net.URLClassPath.disableClassPathURLCheck=true ./gradlew clean assemble
