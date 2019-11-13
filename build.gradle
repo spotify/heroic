@@ -218,7 +218,7 @@ allprojects {
                 entry 'slf4j-api'
             }
 
-            dependencySet(group: 'org.eclipse.jetty', version: '9.4.17.v20190418') {
+            dependencySet(group: 'org.eclipse.jetty', version: '9.4.22.v20191022') {
                 entry 'jetty-webapp'
                 entry 'jetty-server'
                 entry 'jetty-rewrite'
@@ -227,7 +227,7 @@ allprojects {
 
             dependency 'javax.xml.bind:jaxb-api:2.3.1'
 
-            dependency 'org.eclipse.jetty.http2:http2-server:9.4.12.v20180830'
+            dependency 'org.eclipse.jetty.http2:http2-server:9.4.22.v20191022'
 
             dependency 'javax.servlet:javax.servlet-api:3.1.0'
             dependencySet(group: 'org.glassfish.jersey.containers', version: '2.27') {
