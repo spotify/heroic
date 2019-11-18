@@ -12,6 +12,7 @@ import com.spotify.heroic.HeroicConfiguration;
 import com.spotify.heroic.HeroicContext;
 import com.spotify.heroic.scheduler.Scheduler;
 import com.spotify.heroic.statistics.QueryReporter;
+import com.spotify.heroic.usagetracking.UsageTracking;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import java.util.Map;
@@ -53,6 +54,9 @@ public class CoreClusterManagerTest {
     @Mock
     private QueryReporter reporter;
 
+    @Mock
+    private UsageTracking usageTracking;
+
     private CoreClusterManager manager;
 
     @Before
@@ -60,7 +64,7 @@ public class CoreClusterManagerTest {
         final boolean useLocal = true;
 
         manager = spy(new CoreClusterManager(async, discovery, localMetadata, protocols, scheduler,
-            useLocal, options, local, context, ImmutableSet.of(), reporter));
+            useLocal, options, local, context, ImmutableSet.of(), reporter, usageTracking));
     }
 
     @Test

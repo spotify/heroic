@@ -31,16 +31,17 @@ import com.spotify.heroic.metadata.MetadataComponent;
 import com.spotify.heroic.metric.MetricComponent;
 import com.spotify.heroic.querylogging.QueryLoggingComponent;
 import com.spotify.heroic.suggest.SuggestComponent;
+import com.spotify.heroic.usagetracking.UsageTrackingComponent;
 import dagger.Component;
 
 @Component(dependencies = {
     PrimaryComponent.class, MetadataComponent.class, MetricComponent.class,
     AnalyticsComponent.class, SuggestComponent.class, ConsumersComponent.class,
     QueryComponent.class, QueryLoggingComponent.class, IngestionComponent.class,
-    ClusterComponent.class, GeneratorComponent.class
+    ClusterComponent.class, GeneratorComponent.class, UsageTrackingComponent.class
 })
 public interface CoreComponent
     extends PrimaryComponent, MetadataComponent, MetricComponent, AnalyticsComponent,
     SuggestComponent, ConsumersComponent, QueryComponent, QueryLoggingComponent,
-    IngestionComponent, ClusterComponent, GeneratorComponent {
+    IngestionComponent, ClusterComponent, GeneratorComponent, UsageTrackingComponent {
 }

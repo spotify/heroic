@@ -1,0 +1,10 @@
+apply plugin: 'kotlin-kapt'
+
+dependencies {
+    kapt 'com.google.dagger:dagger-compiler'
+    implementation project(':heroic-component')
+    implementation 'com.squareup.okhttp3:okhttp'
+}
+
+group = 'com.spotify.heroic.usagetracking'
+description = 'Heroic: Google Analytics'

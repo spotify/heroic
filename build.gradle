@@ -131,6 +131,8 @@ allprojects {
 
             dependency 'com.google.protobuf:protobuf-java:3.5.1'
 
+            dependency 'com.squareup.okhttp3:okhttp:3.10.0'
+
             dependencySet(group: 'org.jetbrains.kotlin', version: '1.3.21') {
                 entry 'kotlin-stdlib-jdk-8'
                 entry 'kotlin-test'

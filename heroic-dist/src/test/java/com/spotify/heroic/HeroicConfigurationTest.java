@@ -1,6 +1,7 @@
 package com.spotify.heroic;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
@@ -12,11 +13,15 @@ import com.spotify.heroic.lifecycle.CoreLifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycleNamedHook;
 import com.spotify.heroic.querylogging.HttpContext;
 import com.spotify.heroic.querylogging.QueryContext;
+import com.spotify.heroic.usagetracking.UsageTracking;
+import com.spotify.heroic.usagetracking.disabled.DisabledUsageTracking;
+import com.spotify.heroic.usagetracking.google.GoogleAnalytics;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import org.hamcrest.core.IsInstanceOf;
 import org.junit.Test;
 
 public class HeroicConfigurationTest {
@@ -27,7 +32,6 @@ public class HeroicConfigurationTest {
 
     @Test
     public void testAll() throws Exception {
-        // @formatter:off
         final List<String> referenceStarters = ImmutableList.of(
             "com.spotify.heroic.analytics.bigtable.BigtableMetricAnalytics",
             "com.spotify.heroic.cluster.CoreClusterManager",
@@ -40,9 +44,7 @@ public class HeroicConfigurationTest {
             "com.spotify.heroic.shell.ShellServer",
             "com.spotify.heroic.suggest.elasticsearch.SuggestBackendKV"
         );
-        // @formatter:on
 
-        // @formatter:off
         final List<String> referenceStoppers = ImmutableList.of(
             "com.spotify.heroic.analytics.bigtable.BigtableMetricAnalytics",
             "com.spotify.heroic.cluster.CoreClusterManager",
@@ -55,20 +57,15 @@ public class HeroicConfigurationTest {
             "com.spotify.heroic.shell.ShellServer",
             "com.spotify.heroic.suggest.elasticsearch.SuggestBackendKV"
         );
-        // @formatter:on
 
-        // @formatter:off
         final List<String> referenceInternalStarters = ImmutableList.of(
             "startup future"
         );
-        // @formatter:on
 
-        // @formatter:off
         final List<String> referenceInternalStoppers = ImmutableList.of(
             "loading executor",
             "loading scheduler"
         );
-        // @formatter:on
 
         final HeroicCoreInstance instance = testConfiguration("heroic-all.yml");
 
@@ -117,6 +114,15 @@ public class HeroicConfigurationTest {
 
         assertEquals(internalStarters, referenceInternalStarters);
         assertEquals(internalStoppers, referenceInternalStoppers);
+
+        // Check default usage tracking settings
+        instance.inject(coreComponent -> {
+            UsageTracking tracking = coreComponent.usageTracking();
+            IsInstanceOf usageTrackingMatcher = new IsInstanceOf(GoogleAnalytics.class);
+            assertTrue(usageTrackingMatcher.matches(tracking));
+            return null;
+        });
+
     }
 
     @Test
@@ -169,6 +175,20 @@ public class HeroicConfigurationTest {
             assertEquals(FeatureSet.of(Feature.CACHE_QUERY),
                 conditional.match(context1));
             assertEquals(FeatureSet.empty(), conditional.match(context2));
+
+            return null;
+        });
+    }
+
+    @Test
+    public void testDisabledUsageTracking() throws Exception {
+        HeroicCoreInstance instance = testConfiguration("heroic-disabled-tracking.yml");
+
+        instance.inject(coreComponent -> {
+            UsageTracking tracking = coreComponent.usageTracking();
+            IsInstanceOf matcher = new IsInstanceOf(DisabledUsageTracking.class);
+
+            assertTrue(matcher.matches(tracking));
 
             return null;
         });

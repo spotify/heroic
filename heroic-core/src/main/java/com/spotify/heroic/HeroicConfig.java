@@ -58,6 +58,8 @@ import com.spotify.heroic.statistics.StatisticsModule;
 import com.spotify.heroic.statistics.noop.NoopStatisticsModule;
 import com.spotify.heroic.suggest.SuggestManagerModule;
 import com.spotify.heroic.tracing.TracingConfig;
+import com.spotify.heroic.usagetracking.UsageTrackingModule;
+import com.spotify.heroic.usagetracking.google.GoogleAnalyticsModule;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -95,6 +97,7 @@ public abstract class HeroicConfig {
         QueryLoggingModule queryLogging,
         Optional<ConditionalFeatures> conditionalFeatures,
         TracingConfig tracing,
+        UsageTrackingModule usageTracking,
         String version,
         String service,
         String commit
@@ -102,7 +105,7 @@ public abstract class HeroicConfig {
         return new AutoValue_HeroicConfig(id, startTimeout, stopTimeout, host, port, connectors,
             enableCors, corsAllowOrigin, features, cluster, metric, metadata,
             suggest, cache, ingestion, consumers, shellServer, analytics, generator, statistics,
-            queryLogging, conditionalFeatures, tracing, version, service, commit);
+            queryLogging, conditionalFeatures, tracing, usageTracking, version, service, commit);
     }
 
     private static final org.slf4j.Logger log = LoggerFactory.getLogger(HeroicConfig.class);
@@ -149,6 +152,7 @@ public abstract class HeroicConfig {
     public abstract QueryLoggingModule queryLogging();
     public abstract Optional<ConditionalFeatures> conditionalFeature();
     public abstract TracingConfig tracing();
+    public abstract UsageTrackingModule usageTracking();
 
     public abstract String version();
     public abstract String service();
@@ -229,6 +233,7 @@ public abstract class HeroicConfig {
         private Optional<QueryLoggingModule> queryLogging = empty();
         private Optional<ConditionalFeatures> conditionalFeatures = empty();
         private Optional<TracingConfig> tracing = empty();
+        private Optional<UsageTrackingModule.Builder> usageTracking = empty();
 
         private Optional<String> version = empty();
         private Optional<String> service = empty();
@@ -261,6 +266,7 @@ public abstract class HeroicConfig {
             @JsonProperty("queryLogging") Optional<QueryLoggingModule> queryLogging,
             @JsonProperty("conditionalFeatures") Optional<ConditionalFeatures> conditionalFeatures,
             @JsonProperty("tracing") Optional<TracingConfig> tracing,
+            @JsonProperty("usageTracking") Optional<UsageTrackingModule.Builder> usageTracking,
             @JsonProperty("version") Optional<String> version,
             @JsonProperty("service") Optional<String> service
         ) {
@@ -287,6 +293,7 @@ public abstract class HeroicConfig {
             this.queryLogging = queryLogging;
             this.conditionalFeatures = conditionalFeatures;
             this.tracing = tracing;
+            this.usageTracking = usageTracking;
             this.version = version;
             this.service = service;
         }
@@ -387,6 +394,11 @@ public abstract class HeroicConfig {
             return this;
         }
 
+        public Builder usageTracking(UsageTrackingModule.Builder usageTracking) {
+            this.usageTracking = of(usageTracking);
+            return this;
+        }
+
         public Builder merge(Builder o) {
             // @formatter:off
             return new Builder(
@@ -413,6 +425,7 @@ public abstract class HeroicConfig {
                 pickOptional(queryLogging, o.queryLogging),
                 pickOptional(conditionalFeatures, o.conditionalFeatures),
                 pickOptional(tracing, o.tracing),
+                pickOptional(usageTracking, o.usageTracking),
                 pickOptional(version, o.version),
                 pickOptional(service, o.service)
             );
@@ -426,7 +439,9 @@ public abstract class HeroicConfig {
                 .map(JettyServerConnector.Builder::build)
                 .iterator());
 
-            // @formatter:off
+            String commit = loadCommit();
+            String version = this.version.orElseGet(this::loadDefaultVersion);
+
             return HeroicConfig.create(
                 id,
                 startTimeout.orElse(DEFAULT_START_TIMEOUT),
@@ -443,8 +458,9 @@ public abstract class HeroicConfig {
                 suggest.orElseGet(SuggestManagerModule::builder).build(),
                 cache.orElseGet(NoopCacheModule::builder).build(),
                 ingestion.orElseGet(IngestionModule::builder).build(),
-                consumers.map(c -> c.stream().map(ConsumerModule.Builder::build).iterator()).map
-                    (ImmutableList::copyOf).orElseGet(ImmutableList::of),
+                consumers.map(c -> c.stream().map(ConsumerModule.Builder::build).iterator())
+                    .map(ImmutableList::copyOf)
+                    .orElseGet(ImmutableList::of),
                 shellServer,
                 analytics.map(AnalyticsModule.Builder::build).orElseGet(NullAnalyticsModule::new),
                 generator.orElseGet(CoreGeneratorModule::builder).build(),
@@ -452,11 +468,13 @@ public abstract class HeroicConfig {
                 queryLogging.orElseGet(NoopQueryLoggingModule::new),
                 conditionalFeatures,
                 tracing.orElse(new TracingConfig()),
-                version.orElseGet(this::loadDefaultVersion),
+                usageTracking.orElseGet(GoogleAnalyticsModule.Builder::new)
+                    .version(version, commit)
+                    .build(),
+                version,
                 service.orElse(DEFAULT_SERVICE),
-                loadCommit()
+                commit
             );
-            // @formatter:on
         }
 
         private String loadDefaultVersion() {

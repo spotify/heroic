@@ -75,11 +75,14 @@ public class HeroicModules {
 
         new com.spotify.heroic.statistics.semantic.Module(),
 
-        new com.spotify.heroic.querylogging.Module()
+        new com.spotify.heroic.querylogging.Module(),
+
+        new com.spotify.heroic.usagetracking.disabled.Module(),
+        new com.spotify.heroic.usagetracking.google.Module()
     );
 
     public static final Map<String, HeroicProfile> PROFILES = ImmutableMap.<String,
-            HeroicProfile>builder()
+        HeroicProfile>builder()
         .put("memory", new MemoryProfile())
         .put("cassandra", new CassandraProfile())
         .put("elasticsearch-metadata", new ElasticsearchMetadataProfile())

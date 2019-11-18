@@ -31,6 +31,7 @@ import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.scheduler.Scheduler;
 import com.spotify.heroic.statistics.QueryReporter;
+import com.spotify.heroic.usagetracking.UsageTracking;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.LazyTransform;
@@ -53,6 +54,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Named;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
 /**
@@ -65,7 +67,7 @@ import org.slf4j.Logger;
  */
 @ClusterScope
 public class CoreClusterManager implements ClusterManager, LifeCycles {
-    public static final QueryTrace.Identifier LOCAL_IDENTIFIER =
+    private static final QueryTrace.Identifier LOCAL_IDENTIFIER =
         QueryTrace.Identifier.create("[local]");
     private static final Logger log = org.slf4j.LoggerFactory.getLogger(CoreClusterManager.class);
     private final AsyncFramework async;
@@ -79,14 +81,15 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
     private final HeroicContext context;
     private final Set<Map<String, String>> expectedTopology;
     private final QueryReporter reporter;
+    private final UsageTracking usageTracking;
 
-    final AtomicReference<Set<URI>> staticNodes = new AtomicReference<>(new HashSet<>());
-    final AtomicReference<NodeRegistry> registry = new AtomicReference<>();
-    final AtomicReference<Map<URI, ClusterNode>> clients =
+    private final AtomicReference<Set<URI>> staticNodes = new AtomicReference<>(new HashSet<>());
+    private final AtomicReference<NodeRegistry> registry = new AtomicReference<>();
+    private final AtomicReference<Map<URI, ClusterNode>> clients =
         new AtomicReference<>(Collections.emptyMap());
-    final AtomicLong refreshId = new AtomicLong();
+    private final AtomicLong refreshId = new AtomicLong();
 
-    final Object updateRegistryLock = new Object();
+    private final Object updateRegistryLock = new Object();
 
   @Inject
   public CoreClusterManager(
@@ -100,8 +103,9 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
       LocalClusterNode local,
       HeroicContext context,
       @Named("topology") Set<Map<String, String>> expectedTopology,
-
-      final QueryReporter reporter) {
+      final QueryReporter reporter,
+      @Named("cluster") UsageTracking usageTracking
+  ) {
         this.async = async;
         this.discovery = discovery;
         this.localMetadata = localMetadata;
@@ -113,6 +117,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
         this.context = context;
         this.expectedTopology = expectedTopology;
         this.reporter = reporter;
+        this.usageTracking = usageTracking;
     }
 
     @Override
@@ -169,6 +174,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
     /**
      * Eventually consistent view of the currently known nodes in the cluster
      */
+    @NotNull
     @Override
     public List<ClusterNode> getNodes() {
         final NodeRegistry registry = this.registry.get();
@@ -213,6 +219,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
      *
      * @return a future indicating the state of the refresh.
      */
+    @NotNull
     @Override
     public AsyncFuture<Void> refresh() {
         final String id = String.format("%08x", refreshId.getAndIncrement());
@@ -245,6 +252,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
         return shards.build();
     }
 
+    @NotNull
     @Override
     public <T> Optional<ClusterManager.NodeResult<T>> withNodeInShardButNotWithId(
         final Map<String, String> shard, final Predicate<ClusterNode> exclude,
@@ -287,12 +295,13 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
         }
     }
 
+    @NotNull
     @Override
     public Set<RpcProtocol> protocols() {
         return ImmutableSet.copyOf(protocols.values());
     }
 
-    AsyncFuture<Void> start() {
+    private AsyncFuture<Void> start() {
         final AsyncFuture<Void> startup;
 
         if (!options.isOneshot()) {
@@ -306,15 +315,20 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
             startup = context.startedFuture();
         }
 
-        startup.lazyTransform(result -> refresh().catchFailed((Throwable e) -> {
-            log.error("initial metadata refresh failed", e);
-            return null;
-        }));
+        startup.lazyTransform(result ->
+            refresh().catchFailed((Throwable e) -> {
+                log.error("initial metadata refresh failed", e);
+                return null;
+            }).onResolved(future -> {
+                int size = registry.get().getOnlineNodes();
+                usageTracking.reportClusterSize(size);
+            })
+        );
 
         return async.resolved();
     }
 
-    AsyncFuture<Void> stop() {
+    private AsyncFuture<Void> stop() {
         final Map<URI, ClusterNode> clients = this.clients.getAndSet(null);
 
         if (clients == null) {
@@ -325,7 +339,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
             clients.values().stream().map(ClusterNode::close).collect(Collectors.toList()));
     }
 
-    Set<Map<String, String>> allShards() {
+    private Set<Map<String, String>> allShards() {
         final NodeRegistry registry = this.registry.get();
 
         if (registry == null) {
@@ -355,7 +369,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
         return withExpected;
     }
 
-    Set<Map<String, String>> extractKnownShards(Set<ClusterNode> entries) {
+    private Set<Map<String, String>> extractKnownShards(Set<ClusterNode> entries) {
         final Set<Map<String, String>> knownShards = new HashSet<>();
 
         for (final ClusterNode e : entries) {
@@ -365,7 +379,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
         return knownShards;
     }
 
-    AsyncFuture<Update> createClusterNode(final String id, final URI uri) {
+    private AsyncFuture<Update> createClusterNode(final String id, final URI uri) {
         final RpcProtocol protocol = protocols.get(uri.getScheme());
 
         if (protocol == null) {
@@ -420,7 +434,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
      * @param id id of the operation
      * @return a lazy transform
      */
-    LazyTransform<Collection<List<URI>>, Void> refreshSweep(final String id) {
+    private LazyTransform<Collection<List<URI>>, Void> refreshSweep(final String id) {
         return uriLists -> {
             final List<URI> uris = ImmutableList.copyOf(Iterables.concat(uriLists));
 
@@ -484,7 +498,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
      * @param oldClients map of clients that should be replaced by a new map of clients
      * @return a lazy transform
      */
-    LazyTransform<Collection<Update>, Void> refreshLogAndPrepare(
+    private LazyTransform<Collection<Update>, Void> refreshLogAndPrepare(
         final String id, final List<RemovedNode> removedNodes,
         final Map<URI, ClusterNode> oldClients
     ) {
@@ -539,7 +553,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
      * @param failedNodes list of nodes that failed and should be excluded until they are ok again
      * @return a lazy transform
      */
-    AsyncFuture<Void> refreshFinalize(
+    private AsyncFuture<Void> refreshFinalize(
         final String id, final Map<URI, ClusterNode> oldClients,
         final Map<URI, ClusterNode> newClients, final Set<ClusterNode> okNodes,
         final List<SuccessfulUpdate> okUpdates, final List<RemovedNode> removedNodes,

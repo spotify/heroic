@@ -81,6 +81,7 @@ import com.spotify.heroic.statistics.StatisticsComponent;
 import com.spotify.heroic.suggest.CoreSuggestComponent;
 import com.spotify.heroic.suggest.DaggerCoreSuggestComponent;
 import com.spotify.heroic.tracing.TracingConfig;
+import com.spotify.heroic.usagetracking.UsageTrackingComponent;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
@@ -127,23 +128,25 @@ import org.slf4j.LoggerFactory;
  */
 public class HeroicCore implements HeroicConfiguration {
     private static final Logger log = LoggerFactory.getLogger(HeroicCore.class);
-    static final String DEFAULT_HOST = "0.0.0.0";
-    static final int DEFAULT_PORT = 8080;
+    private static final String DEFAULT_HOST = "0.0.0.0";
+    private static final int DEFAULT_PORT = 8080;
 
-    static final boolean DEFAULT_SETUP_SERVICE = true;
-    static final boolean DEFAULT_ONESHOT = false;
-    static final boolean DEFAULT_DISABLE_BACKENDS = false;
-    static final boolean DEFAULT_SETUP_SHELL_SERVER = true;
+    private static final boolean DEFAULT_SETUP_SERVICE = true;
+    private static final boolean DEFAULT_ONESHOT = false;
+    private static final boolean DEFAULT_DISABLE_BACKENDS = false;
+    private static final boolean DEFAULT_SETUP_SHELL_SERVER = true;
 
-    static final UncaughtExceptionHandler uncaughtExceptionHandler = (Thread t, Throwable e) -> {
-        try {
-            System.err.println(
-                String.format("Uncaught exception caught in thread %s, exiting...", t));
-            e.printStackTrace(System.err);
-        } finally {
-            System.exit(1);
-        }
-    };
+    private static final UncaughtExceptionHandler uncaughtExceptionHandler =
+        (Thread t, Throwable e) -> {
+            //noinspection finally
+            try {
+                System.err.println(
+                    String.format("Uncaught exception caught in thread %s, exiting...", t));
+                e.printStackTrace(System.err);
+            } finally {
+                System.exit(1);
+            }
+        };
 
     /**
      * Built-in modules that should always be loaded.
@@ -284,7 +287,8 @@ public class HeroicCore implements HeroicConfiguration {
         primary.loadingLifeCycle().install();
 
         primary.internalLifeCycleRegistry().scoped("startup future").start(() -> {
-            ((CoreHeroicContext) primary.context()).resolveCoreFuture();
+            primary.context().resolveStartedFuture();
+            primary.usageTracking().reportStartup();
             return primary.async().resolved(null);
         });
 
@@ -296,7 +300,6 @@ public class HeroicCore implements HeroicConfiguration {
         return instance;
     }
 
-    @SuppressWarnings("unchecked")
     private void enableTracing(TracingConfig config) throws IOException {
         final TracingConfig.Lightstep lightstep = config.getLightstep();
 
@@ -466,6 +469,8 @@ public class HeroicCore implements HeroicConfiguration {
 
         final QueryLoggingComponent queryLogging = config.queryLogging().component(primary);
 
+        final UsageTrackingComponent usageTracking = config.usageTracking().module(primary);
+
         final Optional<HttpServer> server = setupServer(config, life, primary);
 
         final CacheComponent cache = config.cache().module(primary);
@@ -523,6 +528,7 @@ public class HeroicCore implements HeroicConfiguration {
             .suggestComponent(suggest)
             .clusterManagerModule(config.cluster())
             .clusterDiscoveryComponent(config.cluster().getDiscovery().module(primary))
+            .usageTrackingComponent(usageTracking)
             .build();
 
         life.add(cluster.clusterLife());
@@ -579,6 +585,7 @@ public class HeroicCore implements HeroicConfiguration {
             .ingestionComponent(ingestion)
             .clusterComponent(cluster)
             .generatorComponent(generator)
+            .usageTrackingComponent(usageTracking)
             .build();
     }
 
