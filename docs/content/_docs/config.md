@@ -1028,7 +1028,7 @@ usageTracking:
   type: <string> optional
 ```
 
-By default, an event is sent on startup that contains an anonymized hostname, number of nodes in the cluster, JVM version, and the version of Heroic.
+By default, an event is sent on startup that contains an anonymized hostname, number of nodes in the cluster, JVM version, and the version of Heroic. An event that includes service uptime is also sent once every 24 hours.
 
 This data collection be disabled by setting the type to `disabled`.
 

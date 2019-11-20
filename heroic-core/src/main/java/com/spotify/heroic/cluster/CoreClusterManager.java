@@ -104,7 +104,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
       HeroicContext context,
       @Named("topology") Set<Map<String, String>> expectedTopology,
       final QueryReporter reporter,
-      @Named("cluster") UsageTracking usageTracking
+      UsageTracking usageTracking
   ) {
         this.async = async;
         this.discovery = discovery;
