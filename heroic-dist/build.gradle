@@ -42,8 +42,8 @@ dependencies {
     api project(':heroic-rpc-jvm')
     api project(':heroic-statistics-semantic')
     api project(':heroic-elasticsearch-utils')
-    api project(':heroic-usagetracking-disabled')
-    api project(':heroic-usagetracking-google')
+    api project(':heroic-usage-tracking-disabled')
+    api project(':heroic-usage-tracking-google-analytics')
 
     implementation 'com.spotify.heroic.repackaged:datastax-driver-core'
     implementation 'org.apache.logging.log4j:log4j-core'

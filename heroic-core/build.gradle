@@ -51,7 +51,7 @@ dependencies {
 
     // Default usage tracking module. Normally different module dependencies are handled in
     // heroic-dist, but defaults need to be accessible in heroic-core.
-    implementation project(':heroic-usagetracking-google')
+    implementation project(':heroic-usage-tracking-google-analytics')
     
     testImplementation project(':heroic-test')
     testImplementation project(path: ':heroic-component', configuration: 'testRuntime')
