@@ -22,12 +22,15 @@
 package com.spotify.heroic.usagetracking.google
 
 import com.google.common.hash.Hashing
+import com.spotify.heroic.scheduler.Scheduler
 import com.spotify.heroic.usagetracking.UsageTracking
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.lang.management.ManagementFactory
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Named
 
@@ -39,21 +42,26 @@ private val BASE_REQUEST = Request.Builder()
 
 class GoogleAnalytics @Inject constructor(
     @Named("version") val version: String,
-    @Named("commit") val commit: String
+    @Named("commit") val commit: String,
+    val scheduler: Scheduler
 ): UsageTracking {
+    private val runtimeBean = ManagementFactory.getRuntimeMXBean()
     private val clientId: String
+    private val eventVersion = "$version:$commit"
 
     init {
         val hostname = lookupHostname()
         clientId = if (hostname == null) "UNKNOWN_HOST"
         else Hashing.sha256().hashString(hostname, Charsets.UTF_8).toString()
+
+        scheduler.periodically(24, TimeUnit.HOURS, ::reportUptime)
     }
 
     override fun reportStartup() {
         val event = Event(clientId)
             .category("deployment")
             .action("startup")
-            .version("$version:$commit")
+            .version(eventVersion)
         sendEvent(event)
     }
 
@@ -61,8 +69,20 @@ class GoogleAnalytics @Inject constructor(
         val event = Event(clientId)
             .category("deployment")
             .action("cluster_refresh")
-            .version("$version:$commit")
+            .version(eventVersion)
             .value(size.toString())
+        sendEvent(event)
+    }
+
+    /**
+     * Report time, in milliseconds, since the JVM started.
+     */
+    private fun reportUptime() {
+        val event = Event(clientId)
+            .category("deployment")
+            .action("uptime")
+            .version(eventVersion)
+            .value(runtimeBean.uptime.toString())
         sendEvent(event)
     }
 

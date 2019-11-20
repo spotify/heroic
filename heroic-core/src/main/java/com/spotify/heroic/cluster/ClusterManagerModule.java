@@ -39,7 +39,6 @@ import com.spotify.heroic.metric.MetricComponent;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.QueryReporter;
 import com.spotify.heroic.suggest.SuggestComponent;
-import com.spotify.heroic.usagetracking.UsageTracking;
 import dagger.Module;
 import dagger.Provides;
 import java.util.ArrayList;
@@ -195,13 +194,6 @@ public class ClusterManagerModule {
         life.add(manager.build(cluster));
         protocols.stream().map(p -> p.getRight().life()).forEach(life::add);
         return LifeCycle.combined(life);
-    }
-
-    @Provides
-    @ClusterScope
-    @Named("cluster")
-    UsageTracking usageTracking(UsageTracking usageTracking) {
-        return usageTracking;
     }
 
     public static Builder builder() {
