@@ -60,6 +60,7 @@ import com.spotify.heroic.querylogging.QueryLoggingModule;
 import com.spotify.heroic.requestcondition.RequestCondition;
 import com.spotify.heroic.statistics.StatisticsModule;
 import com.spotify.heroic.suggest.SuggestModule;
+import com.spotify.heroic.usagetracking.UsageTrackingModule;
 
 /**
  * Contains factories for setting up ObjectMapper's for different purposes in Heroic.
@@ -93,6 +94,7 @@ public final class HeroicMappers {
         m.addMixIn(CacheModule.Builder.class, TypeNameMixin.class);
         m.addMixIn(RequestCondition.class, TypeNameMixin.class);
         m.addMixIn(ConditionalFeatures.class, TypeNameMixin.class);
+        m.addMixIn(UsageTrackingModule.Builder.class, TypeNameMixin.class);
 
         m.registerModule(commonSerializers());
 

@@ -1,0 +1,9 @@
+apply plugin: 'kotlin-kapt'
+
+dependencies {
+    kapt 'com.google.dagger:dagger-compiler'
+    implementation project(':heroic-component')
+}
+
+group = 'com.spotify.heroic.usagetracking'
+description = 'Heroic: Disabled Usage Tracking'

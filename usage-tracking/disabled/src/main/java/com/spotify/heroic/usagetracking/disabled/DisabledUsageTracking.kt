@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2019 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,30 +19,13 @@
  * under the License.
  */
 
-package com.spotify.heroic;
+package com.spotify.heroic.usagetracking.disabled
 
-import com.spotify.heroic.dagger.PrimaryScope;
-import eu.toolchain.async.AsyncFramework;
-import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.ResolvableFuture;
-import javax.inject.Inject;
+import com.spotify.heroic.usagetracking.UsageTracking
+import javax.inject.Inject
 
-@PrimaryScope
-public class CoreHeroicContext implements HeroicContext {
-    private final ResolvableFuture<Void> startedFuture;
+class DisabledUsageTracking @Inject constructor(): UsageTracking {
+    override fun reportStartup() {}
 
-    @Inject
-    public CoreHeroicContext(final AsyncFramework async) {
-        this.startedFuture = async.future();
-    }
-
-    @Override
-    public AsyncFuture<Void> startedFuture() {
-        return this.startedFuture;
-    }
-
-    @Override
-    public void resolveStartedFuture() {
-        this.startedFuture.resolve(null);
-    }
+    override fun reportClusterSize(size: Int) {}
 }

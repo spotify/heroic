@@ -26,13 +26,14 @@ import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.metadata.MetadataComponent;
 import com.spotify.heroic.metric.MetricComponent;
 import com.spotify.heroic.suggest.SuggestComponent;
+import com.spotify.heroic.usagetracking.UsageTrackingComponent;
 import dagger.Component;
 import javax.inject.Named;
 
 @ClusterScope
 @Component(modules = ClusterManagerModule.class, dependencies = {
     PrimaryComponent.class, ClusterDiscoveryComponent.class, MetricComponent.class,
-    MetadataComponent.class, SuggestComponent.class
+    MetadataComponent.class, SuggestComponent.class, UsageTrackingComponent.class
 })
 public interface CoreClusterComponent extends ClusterComponent {
     @Override

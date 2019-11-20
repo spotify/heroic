@@ -109,6 +109,9 @@ queryLogging: <query_logging_config>
 
 # Enable distributed tracing of Heroic's operations.
 tracing: <tracing_config>
+
+# Usage analytics provided to the developers
+usageTracking: <usage_tracking_config>
 ```
 
 ### [`<feature>`](#feature)
@@ -1015,3 +1018,18 @@ lightstep:
   # Used to load balance on client side.
   resetClient: <bool> default = false
 ```
+
+### [`<usage_tracking_config>`](#usage_tracking_config)
+
+Configuration for usage statistics to aid in developing Heroic.
+
+```yaml
+usageTracking:
+  type: <string> optional
+```
+
+By default, an event is sent on startup that contains an anonymized hostname, number of nodes in the cluster, JVM version, and the version of Heroic.
+
+This data collection be disabled by setting the type to `disabled`.
+
+The default and only other option is `google-analytics`.

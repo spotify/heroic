@@ -100,7 +100,7 @@ interface ClusterManager: UsableGroupManager<MutableList<ClusterShard>> {
      */
     fun refresh(): AsyncFuture<Void>
 
-    fun getStatistics(): Statistics
+    fun getStatistics(): Statistics?
 
     fun protocols(): Set<RpcProtocol>
 
