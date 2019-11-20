@@ -54,7 +54,7 @@ class GoogleAnalytics @Inject constructor(
         clientId = if (hostname == null) "UNKNOWN_HOST"
         else Hashing.sha256().hashString(hostname, Charsets.UTF_8).toString()
 
-        scheduler.periodically(1, TimeUnit.HOURS, ::reportUptime)
+        scheduler.periodically(24, TimeUnit.HOURS, ::reportUptime)
     }
 
     override fun reportStartup() {
