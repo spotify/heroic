@@ -2,7 +2,6 @@ package com.spotify.heroic.aggregation;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.doThrow;
 
 import java.io.IOException;
 import org.junit.Before;

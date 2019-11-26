@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.aggregation;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
@@ -32,7 +33,7 @@ public class Chain implements Aggregation {
 
     private final List<Aggregation> chain;
 
-    public Chain(List<Aggregation> chain) {
+    public Chain(@JsonProperty("chain") List<Aggregation> chain) {
         this.chain = chain;
     }
 
