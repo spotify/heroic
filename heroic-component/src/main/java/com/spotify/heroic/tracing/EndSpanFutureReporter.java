@@ -26,6 +26,7 @@ import static io.opencensus.trace.AttributeValue.booleanAttributeValue;
 import com.spotify.heroic.statistics.FutureReporter;
 import io.opencensus.trace.Span;
 import io.opencensus.trace.Status;
+import java.util.Optional;
 
 public class EndSpanFutureReporter implements FutureReporter.Context {
   private final Span span;
@@ -37,7 +38,7 @@ public class EndSpanFutureReporter implements FutureReporter.Context {
   @Override
   public void failed(final Throwable cause) throws Exception {
     span.putAttribute("error", booleanAttributeValue(true));
-    span.addAnnotation(cause.getMessage());
+    Optional.ofNullable(cause.getMessage()).ifPresent(span::addAnnotation);
     span.setStatus(Status.INTERNAL);
     span.end();
   }
