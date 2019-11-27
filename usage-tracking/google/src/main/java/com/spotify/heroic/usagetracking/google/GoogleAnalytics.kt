@@ -26,7 +26,6 @@ import com.spotify.heroic.scheduler.Scheduler
 import com.spotify.heroic.usagetracking.UsageTracking
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.Response
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.lang.management.ManagementFactory
@@ -34,9 +33,16 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Named
 
+
+
 private val log: Logger = LoggerFactory.getLogger(GoogleAnalytics::class.java)
 
-private val CLIENT = OkHttpClient()
+private val CLIENT = OkHttpClient.Builder()
+    .connectTimeout(10, TimeUnit.SECONDS)
+    .writeTimeout(10, TimeUnit.SECONDS)
+    .readTimeout(10, TimeUnit.SECONDS)
+    .build()
+
 private val BASE_REQUEST = Request.Builder()
     .url("https://www.google-analytics.com/collect")
 
@@ -86,14 +92,16 @@ class GoogleAnalytics @Inject constructor(
         sendEvent(event)
     }
 
-    private fun sendEvent(event: Event): Response {
+    private fun sendEvent(event: Event) {
         val body = event.build()
         log.debug("Sending event to Google Analytics")
 
-        val result = CLIENT.newCall(BASE_REQUEST.post(body).build()).execute()
-        if (!result.isSuccessful) {
-            log.error("Failed to send event to Google Analytics: {}", result.code())
+        CLIENT.newCall(BASE_REQUEST.post(body).build()).execute().use {
+            r -> {
+                if (!r.isSuccessful) {
+                    log.error("Failed to send event to Google Analytics: {}", r.code())
+                }
+            }
         }
-        return result
     }
 }
