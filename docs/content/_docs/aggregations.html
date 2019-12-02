@@ -16,6 +16,7 @@ title: Aggregations
 
 <ul>
   <li><a href="#average">Average Aggregation</a></li>
+  <li><a href="#chain">Chain Aggregation</a></li>
   <li><a href="#count">Count Aggregation</a></li>
   <li><a href="#delta">Delta Aggregation</a></li>
   <li><a href="#deltapersec">Delta per Second Aggregation</a></li>
@@ -88,6 +89,29 @@ average(size=&lt;duration&gt;)
   The average aggregation takes all samples in a given extent, and calculates the average value over them.
 </p>
 
+<h3 id="chain">
+  Chain Aggregation
+  <a class="link-to" href="#chain"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
+
+<h5>JSON</h5>
+
+<pre><code class="language-json">
+{"type": "chain", "chain": [&lt;aggregation&gt;, ..]}
+</code></pre>
+
+<h5>HQL</h5>
+
+<pre><code class="language-hql">
+&lt;aggregation&gt; | ..
+</code></pre>
+
+<h5>Description</h5>
+
+<p>
+  A chain aggregation applies the specified aggregations in order.
+  The result of the first aggregation is fed into the second, and so forth.
+</p>
 
 <h3 id="count">
   Count Aggregation
