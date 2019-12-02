@@ -1,0 +1,4 @@
+{
+  "filter": ["=", "role", "heroic"],
+  "limit": 10
+}

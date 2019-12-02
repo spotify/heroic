@@ -1,0 +1,25 @@
+{
+  "errors": [],
+  "suggestions": [
+    {
+      "key": "cluster_name",
+      "count": 3,
+      "exactValues": [
+        "heroic-suggest-guc3",
+        "heroic-suggest-gae2",
+        "heroic-suggest-gew1"
+      ]
+    },
+    {
+      "key": "component",
+      "count": 12,
+      "exactValues": [
+        "disk",
+        "output-manager",
+        "input-manager",
+        "output-plugin"
+      ]
+    }
+  ],
+  "limited": false
+}
