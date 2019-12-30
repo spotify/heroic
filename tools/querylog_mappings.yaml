@@ -23,8 +23,8 @@ _raw_object: &raw_object
   enabled: false
 
 _raw_string: &raw_string
-  type: string
-  analyzer: "keyword"
+  type: keyword
+  index: true
 
 _HttpContext: &http_context
   properties:
