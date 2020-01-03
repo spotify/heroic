@@ -26,17 +26,17 @@ import java.util.*
 
 class ShellParameters : AbstractShellTaskParams() {
     @Option(name = "--server", usage = "Start shell as server (enables listen port)")
-    val server = false
+    var server = false
 
     @Option(name = "--shell-server", usage = "Start shell with shell server (enables remote connections)")
-    val shellServer = false
+    var shellServer = false
 
     @Option(name = "--disable-backends", usage = "Start core without configuring backends")
-    val disableBackends = false
+    var disableBackends = false
 
     @Option(name = "--connect", usage = "Connect to a remote heroic server", metaVar = "<host>[:<port>]")
-    val connect: String? = null
+    var connect: String? = null
 
     @Option(name = "-X", usage = "Define an extra parameter", metaVar = "<key>=<value>")
-    val parameters = ArrayList<String>()
+    var parameters = ArrayList<String>()
 }
