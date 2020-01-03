@@ -53,13 +53,13 @@ public class SingleIndexMapping implements IndexMapping {
     }
 
     @Override
-    public String[] readIndices() {
-        return indices;
+    public String[] readIndices(String type) {
+        return new String[]{index + "-" + type};
     }
 
     @Override
-    public String[] writeIndices() {
-        return indices;
+    public String[] writeIndices(String type) {
+        return new String[]{index + "-" + type};
     }
 
     @Override
@@ -70,8 +70,7 @@ public class SingleIndexMapping implements IndexMapping {
     @Override
     public SearchRequestBuilder count(final Client client, final String type) {
         return client
-            .prepareSearch(index)
-            .setTypes(type)
+            .prepareSearch(index + "-" + type)
             .setSource(new SearchSourceBuilder().size(0));
     }
 
@@ -79,7 +78,7 @@ public class SingleIndexMapping implements IndexMapping {
     public List<DeleteRequestBuilder> delete(
         final Client client, final String type, final String id
     ) throws NoIndexSelectedException {
-        return ImmutableList.of(client.prepareDelete(index, type, id));
+        return ImmutableList.of(client.prepareDelete(index + "-" + type, type, id));
     }
 
     public static Builder builder() {

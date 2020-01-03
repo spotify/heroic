@@ -1026,6 +1026,9 @@ public class HeroicCore implements HeroicConfiguration {
             this.start = async.future();
             this.stop = async.future();
 
+            // Required because of https://github.com/elastic/elasticsearch/issues/25741
+            System.setProperty("es.set.netty.runtime.available.processors", "false");
+
             this.started = start.directTransform(n -> {
                 final CoreComponent core = coreInjector.get();
                 assert core != null;

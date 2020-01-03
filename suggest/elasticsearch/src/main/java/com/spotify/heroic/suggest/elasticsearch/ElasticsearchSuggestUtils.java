@@ -29,10 +29,14 @@ import java.io.InputStreamReader;
 import java.util.Map;
 import java.util.function.Function;
 import org.apache.commons.lang3.text.StrSubstitutor;
+import org.elasticsearch.common.xcontent.DeprecationHandler;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ElasticsearchSuggestUtils {
+  private static final Logger log = LoggerFactory.getLogger(ElasticsearchSuggestUtils.class);
     public static Map<String, Object> loadJsonResource(
         String path, Function<String, String> replace
     ) {
@@ -51,7 +55,17 @@ public class ElasticsearchSuggestUtils {
                 replace.apply(CharStreams.toString(new InputStreamReader(input, Charsets.UTF_8)));
 
             return JsonXContent.jsonXContent
-                .createParser(NamedXContentRegistry.EMPTY, content)
+                .createParser(NamedXContentRegistry.EMPTY, new DeprecationHandler() {
+                    @Override
+                    public void usedDeprecatedName(String usedName, String modernName) {
+                        log.warn("Elasticsearch deprecated: {} {}", usedName, modernName);
+                    }
+
+                    @Override
+                    public void usedDeprecatedField(String usedName, String replacedWith) {
+                        log.warn("Elasticsearch deprecated: {} {}", usedName, replacedWith);
+                    }
+                }, content)
                 .map();
         } catch (final IOException e) {
             throw new RuntimeException("Failed to load json resource: " + path);

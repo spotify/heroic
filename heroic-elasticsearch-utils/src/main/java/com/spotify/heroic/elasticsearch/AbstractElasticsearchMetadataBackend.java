@@ -35,6 +35,7 @@ import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.Managed;
+import eu.toolchain.async.ResolvableFuture;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -42,7 +43,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.unit.TimeValue;
@@ -68,20 +68,24 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
     protected abstract Series toSeries(SearchHit hit);
 
     protected <T> AsyncFuture<LimitedSet<T>> scrollEntries(
-        final Connection c, final SearchRequestBuilder request, final OptionalLimit limit,
+        final Connection c,
+        final SearchRequestBuilder request,
+        final OptionalLimit limit,
         final Function<SearchHit, T> converter
     ) {
         final ScrollTransform<T> scrollTransform =
             new ScrollTransform<T>(async, limit, converter, scrollId -> {
                 // Function<> that returns a Supplier
                 return () -> {
-                    final ListenableActionFuture<SearchResponse> execute =
-                        c.prepareSearchScroll(scrollId).setScroll(SCROLL_TIME).execute();
-                    return bind(execute);
+                    final ResolvableFuture<SearchResponse> future = async.future();
+                    c.prepareSearchScroll(scrollId).setScroll(SCROLL_TIME).execute(bind(future));
+                    return future;
                 };
             });
+            final ResolvableFuture<SearchResponse> future = async.future();
+            request.execute(bind(future));
 
-        return bind(request.execute()).lazyTransform(scrollTransform);
+        return future.lazyTransform(scrollTransform);
     }
 
     public static class ScrollTransform<T> implements LazyTransform<SearchResponse, LimitedSet<T>> {
@@ -230,7 +234,10 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
             final OptionalLimit limit = request.getLimit();
             final AsyncObserver<Entries> o = observer.onFinished(c::release);
 
-            bind(builder.execute()).onDone(new FutureDone<SearchResponse>() {
+            final ResolvableFuture<SearchResponse> future = async.future();
+            builder.execute(bind(future));
+
+            future.onDone(new FutureDone<>() {
                 @Override
                 public void failed(Throwable cause) throws Exception {
                     o.fail(cause);
@@ -258,9 +265,13 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
                         return;
                     }
 
-                    bind(c.get().prepareSearchScroll(scrollId).setScroll(ENTRIES_TIMEOUT).execute())
+                    final ResolvableFuture<SearchResponse> future = async.future();
+                    c.get().prepareSearchScroll(scrollId).setScroll(ENTRIES_TIMEOUT)
+                        .execute(bind(future));
+
+                    future
                         .onResolved(result -> {
-                            final SearchHit[] hits = result.getHits().hits();
+                            final SearchHit[] hits = result.getHits().getHits();
 
                             /* no more results */
                             if (hits.length == 0) {

@@ -31,6 +31,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.env.Environment;
 import org.elasticsearch.node.Node;
 
 public class StandaloneClientSetup implements ClientSetup {
@@ -90,7 +91,7 @@ public class StandaloneClientSetup implements ClientSetup {
             .put("transport.type", "local")
             .put("http.enabled", false)
             .build();
-        final Node node = new Node(settings).start();
+        final Node node =  new Node(new Environment(settings, null)).start();
 
         return new ClientWrapper(node.client(), new Runnable() {
             @Override

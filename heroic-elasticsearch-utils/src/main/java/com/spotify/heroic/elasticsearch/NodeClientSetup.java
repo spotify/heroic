@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.List;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.env.Environment;
 import org.elasticsearch.node.Node;
 
 public class NodeClientSetup implements ClientSetup {
@@ -46,12 +47,12 @@ public class NodeClientSetup implements ClientSetup {
         final Settings settings = Settings
             .builder()
             .put("node.name", InetAddress.getLocalHost().getHostName())
-            .putArray("discovery.zen.ping.unicast.hosts", seeds)
+            .putList("discovery.seed_hosts", seeds)
             .put("cluster.name", clusterName)
             .put("node.data", false)
             .build();
 
-        final Node node = new Node(settings);
+        final Node node = new Node(new Environment(settings, null));
 
         return new ClientWrapper(node.client(), new Runnable() {
             @Override

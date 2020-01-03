@@ -39,12 +39,6 @@ public class HeroicLogging {
     public static void configureNetty() {
         com.datastax.shaded.netty.util.internal.logging.InternalLoggerFactory.setDefaultFactory(
             new com.datastax.shaded.netty.util.internal.logging.Slf4JLoggerFactory());
-
-        io.netty.util.internal.logging.InternalLoggerFactory.setDefaultFactory(
-            new io.netty.util.internal.logging.Slf4JLoggerFactory());
-
-        org.jboss.netty.logging.InternalLoggerFactory.setDefaultFactory(
-            new org.jboss.netty.logging.Slf4JLoggerFactory());
     }
 
     /**

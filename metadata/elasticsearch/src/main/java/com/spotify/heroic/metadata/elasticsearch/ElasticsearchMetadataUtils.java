@@ -25,11 +25,15 @@ import com.google.common.collect.ImmutableMap;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
+import org.elasticsearch.common.xcontent.DeprecationHandler;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ElasticsearchMetadataUtils {
-    public static Map<String, Object> loadJsonResource(String path) {
+    private static final Logger log = LoggerFactory.getLogger(ElasticsearchMetadataUtils.class);
+    public static Map<String, Object>   loadJsonResource(String path) {
         final String fullPath =
             ElasticsearchMetadataModule.class.getPackage().getName() + "/" + path;
 
@@ -40,7 +44,22 @@ public class ElasticsearchMetadataUtils {
                 return ImmutableMap.of();
             }
 
-            return JsonXContent.jsonXContent.createParser(NamedXContentRegistry.EMPTY, input).map();
+      return JsonXContent.jsonXContent
+          .createParser(
+              NamedXContentRegistry.EMPTY,
+              new DeprecationHandler() {
+                @Override
+                public void usedDeprecatedName(String usedName, String modernName) {
+                    log.warn("Elasticsearch deprecated: {} {}", usedName, modernName);
+                }
+
+                @Override
+                public void usedDeprecatedField(String usedName, String replacedWith) {
+                    log.warn("Elasticsearch deprecated: {} {}", usedName, replacedWith);
+                }
+              },
+              input)
+          .map();
         } catch (final IOException e) {
             throw new RuntimeException("Failed to load resource: " + path, e);
         }

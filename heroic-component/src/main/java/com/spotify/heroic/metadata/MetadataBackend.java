@@ -30,6 +30,13 @@ import eu.toolchain.async.AsyncFuture;
 import io.opencensus.trace.Span;
 
 public interface MetadataBackend extends Grouped, Initializing, Collected {
+
+    /**
+     * Configure the metadata backend.
+     *
+     * This will assert that all required settings and mappings exists and are configured
+     * correctly for the given backend.
+     */
     AsyncFuture<Void> configure();
 
     /**
@@ -49,27 +56,41 @@ public interface MetadataBackend extends Grouped, Initializing, Collected {
     default AsyncObservable<Entries> entries(Entries.Request request) {
         return AsyncObservable.empty();
     }
-
+    
+    @Deprecated
     AsyncFuture<FindTags> findTags(FindTags.Request request);
 
+    /**
+     * List the full series that match the given filter.
+     */
     AsyncFuture<FindSeries> findSeries(FindSeries.Request request);
-
     default AsyncObservable<FindSeriesStream> findSeriesStream(FindSeries.Request request) {
         return AsyncObservable.empty();
     }
 
+    /**
+     * List only the series id that match the given filter.
+     */
     AsyncFuture<FindSeriesIds> findSeriesIds(FindSeriesIds.Request request);
-
     default AsyncObservable<FindSeriesIdsStream> findSeriesIdsStream(
         FindSeriesIds.Request request
     ) {
         return AsyncObservable.empty();
     }
 
+    /**
+     * Count the number of series that match the given filter.
+     */
     AsyncFuture<CountSeries> countSeries(CountSeries.Request request);
 
+    /**
+     * Delete the series from the backend.
+     */
     AsyncFuture<DeleteSeries> deleteSeries(DeleteSeries.Request request);
 
+    /**
+     * List only the key part of the series that match the given filter.
+     */
     AsyncFuture<FindKeys> findKeys(FindKeys.Request request);
 
     default Statistics getStatistics() {

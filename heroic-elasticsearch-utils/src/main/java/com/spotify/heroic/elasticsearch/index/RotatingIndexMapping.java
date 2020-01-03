@@ -22,10 +22,10 @@
 package com.spotify.heroic.elasticsearch.index;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Optional.ofNullable;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.spotify.heroic.common.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,14 +55,18 @@ public class RotatingIndexMapping implements IndexMapping {
         @JsonProperty("pattern") String pattern
     ) {
         this.interval =
-            Optional.fromNullable(interval).or(DEFAULT_INTERVAL).convert(TimeUnit.MILLISECONDS);
+            ofNullable(interval).orElse(DEFAULT_INTERVAL).convert(TimeUnit.MILLISECONDS);
         this.maxReadIndices =
-            verifyPositiveInt(Optional.fromNullable(maxReadIndices).or(DEFAULT_MAX_READ_INDICES),
+            verifyPositiveInt(
+                ofNullable(maxReadIndices).orElse(DEFAULT_MAX_READ_INDICES),
                 "maxReadIndices");
+
         this.maxWriteIndices =
-            verifyPositiveInt(Optional.fromNullable(maxWriteIndices).or(DEFAULT_MAX_WRITE_INDICES),
+            verifyPositiveInt(
+                ofNullable(maxWriteIndices).orElse(DEFAULT_MAX_WRITE_INDICES),
                 "maxWriteIndices");
-        this.pattern = verifyPattern(Optional.fromNullable(pattern).or(DEFAULT_PATTERN));
+
+        this.pattern = verifyPattern(ofNullable(pattern).orElse(DEFAULT_PATTERN));
     }
 
     private String verifyPattern(String pattern) {
@@ -87,7 +91,7 @@ public class RotatingIndexMapping implements IndexMapping {
         return String.format(pattern, "*");
     }
 
-    private String[] indices(int maxIndices, long now) {
+    private String[] indices(int maxIndices, long now, String type) {
         long curr = now - (now % interval);
         final List<String> indices = new ArrayList<>();
 
@@ -98,14 +102,16 @@ public class RotatingIndexMapping implements IndexMapping {
                 break;
             }
 
-            indices.add(String.format(pattern, date));
+            final String s = pattern.replaceAll("%s", type + "-%s");
+            System.out.println(s);
+            indices.add(String.format(s, date));
         }
 
         return indices.toArray(new String[indices.size()]);
     }
 
-    protected String[] readIndices(long now) throws NoIndexSelectedException {
-        String[] indices = indices(maxReadIndices, now);
+    protected String[] readIndices(long now, String type) throws NoIndexSelectedException {
+        String[] indices = indices(maxReadIndices, now, type);
 
         if (indices.length == 0) {
             throw new NoIndexSelectedException();
@@ -115,33 +121,32 @@ public class RotatingIndexMapping implements IndexMapping {
     }
 
     @Override
-    public String[] readIndices() throws NoIndexSelectedException {
-        return readIndices(System.currentTimeMillis());
+    public String[] readIndices(String type) throws NoIndexSelectedException {
+        return readIndices(System.currentTimeMillis(), type);
     }
 
-    protected String[] writeIndices(long now) {
-        return indices(maxWriteIndices, now);
+    protected String[] writeIndices(long now, String type) {
+        return indices(maxWriteIndices, now, type);
     }
 
     @Override
-    public String[] writeIndices() {
-        return writeIndices(System.currentTimeMillis());
+    public String[] writeIndices(String type) {
+        return writeIndices(System.currentTimeMillis(), type);
     }
 
     @Override
     public SearchRequestBuilder search(
         final Client client, final String type
     ) throws NoIndexSelectedException {
-        return client.prepareSearch(readIndices()).setIndicesOptions(options()).setTypes(type);
+        return client.prepareSearch(readIndices(type)).setIndicesOptions(options());
     }
 
     @Override
     public SearchRequestBuilder count(final Client client, final String type)
         throws NoIndexSelectedException {
         return client
-            .prepareSearch(readIndices())
+            .prepareSearch(readIndices(type))
             .setIndicesOptions(options())
-            .setTypes(type)
             .setSource(new SearchSourceBuilder().size(0));
     }
 
@@ -151,7 +156,7 @@ public class RotatingIndexMapping implements IndexMapping {
     ) throws NoIndexSelectedException {
         final List<DeleteRequestBuilder> requests = new ArrayList<>();
 
-        for (final String index : readIndices()) {
+        for (final String index : readIndices(type)) {
             requests.add(client.prepareDelete(index, type, id));
         }
 

@@ -30,13 +30,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.elasticsearch.action.ActionListener;
-import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateRequestBuilder;
-import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateResponse;
 import org.elasticsearch.action.delete.DeleteRequestBuilder;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchScrollRequestBuilder;
+import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.client.IndicesAdminClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,48 +77,51 @@ public class Connection {
     public AsyncFuture<Void> configure() {
         final IndicesAdminClient indices = client.getClient().admin().indices();
 
-        log.info("[{}] updating template for {}", templateName, index.template());
+        final List<AsyncFuture<AcknowledgedResponse>> writes = new ArrayList<>();
 
-        final PutIndexTemplateRequestBuilder put = indices.preparePutTemplate(templateName);
-
-        put.setSettings(type.getSettings());
-        put.setTemplate(index.template());
-
+        // ES 7+ no longer allows indexes to have multiple types. Each type is now it's own index.
         for (final Map.Entry<String, Map<String, Object>> mapping : type.getMappings().entrySet()) {
-            put.addMapping(mapping.getKey(), mapping.getValue());
-        }
 
-        final ResolvableFuture<Void> future = async.future();
+          final String indexType = mapping.getKey();
 
-        final ListenableActionFuture<PutIndexTemplateResponse> target = put.execute();
+          final String templateWithType = templateName + "-" + indexType;
+          final String s = index.template().replaceAll("\\*", indexType + "-*");
 
-        target.addListener(new ActionListener<PutIndexTemplateResponse>() {
-            @Override
-            public void onResponse(final PutIndexTemplateResponse response) {
+          log.info("[{}] updating template for {}", templateWithType, s);
+
+            final PutIndexTemplateRequestBuilder put = indices.preparePutTemplate(templateWithType)
+                .setSettings(type.getSettings())
+                .setPatterns(List.of(s))
+                .addMapping(mapping.getKey(), mapping.getValue());
+
+            final ResolvableFuture<AcknowledgedResponse> future = async.future();
+            writes.add(future);
+            put.execute(new ActionListener<>() {
+              @Override
+              public void onResponse(AcknowledgedResponse response) {
                 if (!response.isAcknowledged()) {
-                    future.fail(new Exception("request not acknowledged"));
+                  future.fail(new Exception("request not acknowledged"));
                     return;
                 }
-
                 future.resolve(null);
-            }
+              }
 
-            @Override
-            public void onFailure(Exception e) {
-                future.fail(e);
-            }
-        });
+              @Override
+              public void onFailure(Exception e) {
+                  future.fail(e);
+              }
+          });
+        }
 
-        future.onCancelled(() -> target.cancel(false));
-        return future;
+        return async.collectAndDiscard(writes);
     }
 
-    public String[] readIndices() throws NoIndexSelectedException {
-        return index.readIndices();
+    public String[] readIndices(String type) throws NoIndexSelectedException {
+        return index.readIndices(type);
     }
 
-    public String[] writeIndices() throws NoIndexSelectedException {
-        return index.writeIndices();
+    public String[] writeIndices(String type) throws NoIndexSelectedException {
+        return index.writeIndices(type);
     }
 
     public SearchRequestBuilder search(String type) throws NoIndexSelectedException {
