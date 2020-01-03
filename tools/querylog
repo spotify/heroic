@@ -55,8 +55,8 @@ def main():
 
     common = mappings.get('_common', {})
 
-    for (type, mapping) in mappings.items():
-        if type.startswith('_'):
+    for (type_, mapping) in mappings.items():
+        if type_.startswith('_'):
             continue
 
         mapping = dict(mapping)
@@ -83,16 +83,16 @@ def main():
             }
 
         template = {
-            "template": "{}-{}-*".format(index_base, type),
+            "index_patterns": "{}-{}-*".format(index_base, type_),
             "settings": settings,
             "mappings": {
-                "entry": mapping
+                "properties": mapping['properties']
             }
         }
 
         if ns.commit:
             for host in hosts:
-                url = '{}/_template/{}-{}'.format(host, index_base, type)
+                url = '{}/_template/{}-{}'.format(host, index_base, type_)
                 print("PUT", url)
                 response = requests.put(url, json=template)
                 print(response.text)
