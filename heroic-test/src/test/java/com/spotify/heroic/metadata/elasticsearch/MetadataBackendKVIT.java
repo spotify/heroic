@@ -26,16 +26,18 @@ import com.spotify.heroic.elasticsearch.TransportClientSetup;
 import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
 import com.spotify.heroic.metadata.MetadataModule;
 import com.spotify.heroic.test.AbstractMetadataBackendIT;
+import com.spotify.heroic.test.ElasticSearchTestContainer;
 import java.util.List;
 import java.util.UUID;
-import org.junit.BeforeClass;
-import org.testcontainers.elasticsearch.ElasticsearchContainer;
 
 public class MetadataBackendKVIT extends AbstractMetadataBackendIT {
+    private final static ElasticSearchTestContainer esContainer;
 
-    private static ElasticsearchContainer esContainer;
+    static {
+        esContainer = ElasticSearchTestContainer.getInstance();
+    }
 
-    protected String backendType() {
+    private String backendType() {
         return "kv";
     }
 
@@ -45,13 +47,6 @@ public class MetadataBackendKVIT extends AbstractMetadataBackendIT {
 
         // TODO: support findTags?
         findTagsSupport = false;
-    }
-
-    @BeforeClass
-    public static void setupElasticSearch() {
-        esContainer =
-            new ElasticsearchContainer("docker.elastic.co/elasticsearch/elasticsearch:7.5.0");
-        esContainer.start();
     }
 
     @Override

@@ -4,25 +4,20 @@ import com.spotify.heroic.elasticsearch.ConnectionModule;
 import com.spotify.heroic.elasticsearch.TransportClientSetup;
 import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
 import com.spotify.heroic.suggest.SuggestModule;
+import com.spotify.heroic.test.ElasticSearchTestContainer;
 import com.spotify.heroic.test.AbstractSuggestBackendIT;
 import java.util.List;
 import java.util.UUID;
-import org.junit.BeforeClass;
-import org.testcontainers.elasticsearch.ElasticsearchContainer;
 
 public class SuggestBackendKVIT extends AbstractSuggestBackendIT {
+    private final static ElasticSearchTestContainer esContainer;
 
-    private static ElasticsearchContainer esContainer;
-
-    protected String backendType() {
-        return "kv";
+    static {
+        esContainer = ElasticSearchTestContainer.getInstance();
     }
 
-    @BeforeClass
-    public static void setupElasticSearch() {
-        esContainer =
-            new ElasticsearchContainer("docker.elastic.co/elasticsearch/elasticsearch:7.5.0");
-        esContainer.start();
+    private String backendType() {
+        return "kv";
     }
 
     @Override
