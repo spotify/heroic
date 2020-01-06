@@ -255,6 +255,10 @@ allprojects {
             dependency 'junit:junit:4.12'
             dependency 'org.hamcrest:java-hamcrest:2.0.0.0'
             dependency 'org.mockito:mockito-core:3.0.0'
+            dependencySet (group: 'org.testcontainers', version: '1.12.3') {
+                entry 'testcontainers'
+                entry 'elasticsearch'
+            }
             dependencySet(group: 'com.google.code.findbugs', version: '3.0.1') {
                 entry 'annotations'
                 entry 'jsr305'
@@ -292,7 +296,6 @@ subprojects {
     task integrationTest(type: Test) {
         description = 'Runs integration tests.'
         group = 'verification'
-
         testClassesDirs = sourceSets.integrationTest.output.classesDirs
         classpath = sourceSets.integrationTest.runtimeClasspath
         shouldRunAfter test

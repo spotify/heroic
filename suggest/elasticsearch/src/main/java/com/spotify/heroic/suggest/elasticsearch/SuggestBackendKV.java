@@ -460,7 +460,8 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
             builder.execute(bind(future));
 
             return future.directTransform((SearchResponse response) -> {
-                final ImmutableList.Builder<TagSuggest.Suggestion> suggestions = ImmutableList.builder();
+                final ImmutableList.Builder<TagSuggest.Suggestion> suggestions =
+                    ImmutableList.builder();
 
                 final Aggregations aggregations = response.getAggregations();
 

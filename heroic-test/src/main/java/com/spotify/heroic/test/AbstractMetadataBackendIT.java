@@ -68,7 +68,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
 public abstract class AbstractMetadataBackendIT {
@@ -89,14 +89,14 @@ public abstract class AbstractMetadataBackendIT {
 
     protected abstract MetadataModule setupModule() throws Exception;
 
-    protected void setupConditions() {
-    }
+    protected void setupConditions() { }
 
     @Before
     public final void abstractSetup() throws Exception {
         final HeroicConfig.Builder fragment = HeroicConfig
             .builder()
-            .metadata(MetadataManagerModule.builder().backends(ImmutableList.of(setupModule())));
+            .metadata(MetadataManagerModule.builder()
+                .backends(ImmutableList.of(setupModule())));
 
         core = HeroicCore
             .builder()

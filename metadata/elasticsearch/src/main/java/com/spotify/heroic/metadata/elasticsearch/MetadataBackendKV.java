@@ -247,9 +247,11 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                         .setOpType(OpType.CREATE);
 
                     final RequestTimer<WriteMetadata> timer = WriteMetadata.timer();
-                    final FutureReporter.Context writeContext = reporter.setupBackendWriteReporter();
+                    final FutureReporter.Context writeContext =
+                        reporter.setupBackendWriteReporter();
 
-                    final Span writeSpan = tracer.spanBuilder(indexSpanName + ".writeIndex").startSpan();
+                    final Span writeSpan =
+                        tracer.spanBuilder(indexSpanName + ".writeIndex").startSpan();
 
                     final ResolvableFuture<IndexResponse> result = async.future();
                     final ActionListener<IndexResponse> listener =
@@ -323,7 +325,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
               filter.getRange(),
               this::toSeries,
               l -> new FindSeries(l.getSet(), l.isLimited()),
-              builder -> {});
+              builder -> { });
         });
   }
 
@@ -513,7 +515,8 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                     // Function<> that returns a Supplier
                     return () -> {
                         final ResolvableFuture<SearchResponse> future = async.future();
-                        c.prepareSearchScroll(scrollId).setScroll(SCROLL_TIME).execute(bind(future));
+                        c.prepareSearchScroll(
+                            scrollId).setScroll(SCROLL_TIME).execute(bind(future));
                         return future;
                     };
                 });

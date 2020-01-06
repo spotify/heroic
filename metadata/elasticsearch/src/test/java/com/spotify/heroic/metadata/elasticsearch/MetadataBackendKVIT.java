@@ -21,12 +21,20 @@
 
 package com.spotify.heroic.metadata.elasticsearch;
 
-import org.junit.runner.RunWith;
-import org.mockito.runners.MockitoJUnitRunner;
+import com.spotify.heroic.elasticsearch.ConnectionModule;
+import com.spotify.heroic.elasticsearch.TransportClientSetup;
+import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
+import com.spotify.heroic.metadata.MetadataModule;
+import com.spotify.heroic.test.AbstractMetadataBackendIT;
+import java.util.List;
+import java.util.UUID;
+import org.junit.BeforeClass;
+import org.testcontainers.elasticsearch.ElasticsearchContainer;
 
-@RunWith(MockitoJUnitRunner.class)
-public class MetadataBackendKVIT extends AbstractElasticsearchMetadataBackendIT {
-    @Override
+public class MetadataBackendKVIT extends AbstractMetadataBackendIT {
+
+    private static ElasticsearchContainer esContainer;
+
     protected String backendType() {
         return "kv";
     }
@@ -37,5 +45,37 @@ public class MetadataBackendKVIT extends AbstractElasticsearchMetadataBackendIT 
 
         // TODO: support findTags?
         findTagsSupport = false;
+    }
+
+    @BeforeClass
+    public static void setupElasticSearch() {
+        esContainer =
+            new ElasticsearchContainer("docker.elastic.co/elasticsearch/elasticsearch:7.5.0");
+        esContainer.start();
+    }
+
+    @Override
+    protected MetadataModule setupModule() throws Exception {
+        final String testName = "heroic-it-" + UUID.randomUUID().toString();
+
+        final RotatingIndexMapping index =
+            RotatingIndexMapping.builder().pattern(testName + "-%s").build();
+
+        return ElasticsearchMetadataModule
+            .builder()
+            .templateName(testName)
+            .configure(true)
+            .backendType(backendType())
+            .connection(ConnectionModule
+                .builder()
+                .index(index)
+                .clientSetup(TransportClientSetup.builder()
+                    .clusterName("docker-cluster")
+                    .seeds(List.of(
+                        esContainer.getTcpHost().getHostName()
+                        + ":" + esContainer.getTcpHost().getPort()))
+                    .build())
+                .build())
+            .build();
     }
 }

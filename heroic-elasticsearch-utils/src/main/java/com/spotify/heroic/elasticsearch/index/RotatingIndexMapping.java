@@ -60,19 +60,17 @@ public class RotatingIndexMapping implements IndexMapping {
             verifyPositiveInt(
                 ofNullable(maxReadIndices).orElse(DEFAULT_MAX_READ_INDICES),
                 "maxReadIndices");
-
         this.maxWriteIndices =
             verifyPositiveInt(
                 ofNullable(maxWriteIndices).orElse(DEFAULT_MAX_WRITE_INDICES),
                 "maxWriteIndices");
-
         this.pattern = verifyPattern(ofNullable(pattern).orElse(DEFAULT_PATTERN));
     }
 
     private String verifyPattern(String pattern) {
         if (!pattern.contains("%s")) {
             throw new IllegalArgumentException(
-                "pattern '" + pattern + "' does not contain a string substitude '%s'");
+                "pattern '" + pattern + "' does not contain a string substitute '%s'");
         }
 
         return pattern;
@@ -103,7 +101,6 @@ public class RotatingIndexMapping implements IndexMapping {
             }
 
             final String s = pattern.replaceAll("%s", type + "-%s");
-            System.out.println(s);
             indices.add(String.format(s, date));
         }
 

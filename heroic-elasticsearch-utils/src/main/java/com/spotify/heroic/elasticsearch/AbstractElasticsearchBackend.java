@@ -51,7 +51,7 @@ public class AbstractElasticsearchBackend {
             }
         };
     }
-    
+
     protected <T> Transform<Throwable, T> handleVersionConflict(
         Provider<T> emptyProvider, Runnable reportWriteDroppedByDuplicate
     ) {

@@ -528,8 +528,6 @@ Elasticsearch based metadata. Example of the stored metadata:
 
 **WARNING** There are ElasticSearch settings and mappings that must be configured before indexing operations are processed. These are required to make the reads efficient. At Spotify these settings are added when setting up the ElasticSearch cluster with Puppet. [settings/mappings are here](https://github.com/spotify/heroic/blob/7ff07a654048ce760e867835e11f230cd7c5a4ee/metadata/elasticsearch/src/main/resources/com.spotify.heroic.metadata.elasticsearch/kv/metadata.json)
 
-The settings `clusterName`, `seeds`, `sniff`, `nodeSamplerInterval`, and `nodeClient` used to be found under `connection` but are deprecated. The behavior they enabled is now set by configuring an `<es_client_config>` in the `connection`.
-
 ```yaml
 type: elasticsearch
 
@@ -574,7 +572,7 @@ deleteParallelism: <int> default = 20
 # Default name of the template that will be configured in Elasticsearch for this backend.
 templateName: <string> default = heroic-metadata
 
-# Automatically configure the database.
+# Automatically add index mappings and settings.
 configure: <bool> default = false
 ```
 
@@ -616,39 +614,6 @@ pattern: <string> default = heroic-%s
 
 The Elasticsearch client configuration to use.
 
-###### standalone
-
-Complete local cluster. This is typically used when running a fully in-memory configuration of Heroic.
-
-```yaml
-type: standalone
-
-# The name of the cluster to setup.
-clusterName: <string> default = heroic-standalone
-
-# Root directory where indexes will be stored.
-# If omitted, will create a temporary root directory.
-root: <string>
-```
-
-###### node
-
-Join the cluster as a non-data, non-leader node. This can yield better performance since index lookups and aggregations can be performed without having to 'hop' to another node.
-
-However, due the complexity involved in the client this mode is typically recommended against.
-
-```yaml
-type: node
-
-# The name of the cluster to setup.
-clusterName: <string> default = elasticsearch
-
-# Initial nodes in the cluster to connect to.
-seeds:
-  - <string>
-  ...
-```
-
 ###### transport
 
 Connect using the transport protocol. This is the most lightweight method of interacting with the Elasticsearch cluster.
@@ -657,7 +622,7 @@ Connect using the transport protocol. This is the most lightweight method of int
 type: transport
 
 # The name of the cluster to setup.
-clusterName: <string> default = heroic-standalone
+clusterName: <string> default = heroic
 
 # Initial nodes in the cluster to connect to. Any hosts without a port specified
 # are assumed to use port 9300. Useful to have masters that rarely change as seeds.
@@ -751,7 +716,7 @@ distributedCacheSrvRecord: <string> default = empty string
 # Default name of the template that will be configured in Elasticsearch for this backend.
 templateName: <string> default = heroic-suggest
 
-# Automatically configure the database.
+# Automatically add index mappings and settings.
 configure: <bool> default = false
 ```
 

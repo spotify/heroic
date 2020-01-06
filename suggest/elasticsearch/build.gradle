@@ -6,6 +6,8 @@ dependencies {
     implementation project(':heroic-test')
     testImplementation 'org.apache.logging.log4j:log4j-api'
     testImplementation 'org.apache.logging.log4j:log4j-core'
+    testImplementation 'org.testcontainers:testcontainers'
+    testImplementation "org.testcontainers:elasticsearch"
 }
 
 group = 'com.spotify.heroic.suggest'

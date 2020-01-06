@@ -34,7 +34,7 @@ import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
 
 public class TransportClientSetup implements ClientSetup {
-    public static final String DEFAULT_CLUSTER_NAME = "elasticsearch";
+    public static final String DEFAULT_CLUSTER_NAME = "heroic";
     public static final List<String> DEFAULT_SEEDS = ImmutableList.of("localhost");
     public static final int DEFAULT_PORT = 9300;
     public static final boolean DEFAULT_SNIFF = false;
@@ -56,6 +56,13 @@ public class TransportClientSetup implements ClientSetup {
         this.sniff = ofNullable(sniff).orElse(DEFAULT_SNIFF);
         this.nodeSamplerInterval =
           ofNullable(nodeSamplerInterval).orElse(DEFAULT_NODE_SAMPLER_INTERVAL);
+    }
+
+    TransportClientSetup() {
+        this.clusterName = DEFAULT_CLUSTER_NAME;
+        this.seeds = seeds(DEFAULT_SEEDS);
+        this.sniff = DEFAULT_SNIFF;
+        this.nodeSamplerInterval = DEFAULT_NODE_SAMPLER_INTERVAL;
     }
 
     /*
