@@ -56,7 +56,7 @@ public interface MetadataBackend extends Grouped, Initializing, Collected {
     default AsyncObservable<Entries> entries(Entries.Request request) {
         return AsyncObservable.empty();
     }
-    
+
     @Deprecated
     AsyncFuture<FindTags> findTags(FindTags.Request request);
 
