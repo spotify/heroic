@@ -25,9 +25,9 @@ import java.net.InetSocketAddress;
 import org.testcontainers.elasticsearch.ElasticsearchContainer;
 
 /*
-  Create a singleton for metadata and suggest IT tests.
-   One container should be be started instead of two.
- */
+ Create a singleton for metadata and suggest IT tests.
+  One container should be be started instead of two.
+*/
 public class ElasticSearchTestContainer {
   private static ElasticSearchTestContainer instance = null;
 
@@ -42,11 +42,10 @@ public class ElasticSearchTestContainer {
     esContainer.start();
   }
 
-  public synchronized static ElasticSearchTestContainer getInstance() {
+  public static synchronized ElasticSearchTestContainer getInstance() {
     if (instance == null) {
       instance = new ElasticSearchTestContainer();
-  }
+    }
     return instance;
   }
-
 }
