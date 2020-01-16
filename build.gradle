@@ -227,6 +227,7 @@ allprojects {
             dependency 'org.eclipse.jetty.http2:http2-server:9.4.22.v20191022'
 
             dependency 'javax.servlet:javax.servlet-api:3.1.0'
+            dependency 'org.glassfish.jaxb:jaxb-runtime:2.3.2'
             dependencySet(group: 'org.glassfish.jersey.containers', version: '2.27') {
                 entry('jersey-container-servlet-core') {
                     exclude 'org.glassfish.hk2.external:javax.inject'
