@@ -9,4 +9,8 @@ fields:
   required: true
   type_name: Filter
   purpose: A filter to use when quering for tags.
+- name: limit
+  required: false
+  type_name: Limit
+  purpose: Limit the response
 ---
