@@ -20,6 +20,7 @@ title: Aggregations
   <li><a href="#count">Count Aggregation</a></li>
   <li><a href="#delta">Delta Aggregation</a></li>
   <li><a href="#deltapersec">Delta per Second Aggregation</a></li>
+  <li><a href="#ratepersec">Rate per Second Aggregation</a></li>
   <li><a href="#max">Maximum Aggregation</a></li>
   <li><a href="#min">Minimum Aggregation</a></li>
   <li><a href="#notneg">Not Negative Aggregation</a></li>
@@ -157,7 +158,9 @@ delta()
 <h5>Description</h5>
 
 <p>
-  The delta aggregation calculates the change between samples in a given extent.
+  The delta aggregation calculates the difference between samples in a given extent.<br /><br />
+
+  It's intended to be used with gauges and can produce negative values.
 </p>
 
 
@@ -181,7 +184,42 @@ deltaPerSecond()
 <h5>Description</h5>
 
 <p>
-  The delta per second aggregation calculates the change per second between samples in a given extent.
+  The delta per second aggregation calculates the difference per second between samples in a given extent.<br /><br />
+
+  It's intended to be used with gauges and can produce negative values.
+</p>
+
+<h3 id="ratepersec">
+  Rate per Second Aggregation
+  <a class="link-to" href="#ratepersec"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
+
+<h5>JSON</h5>
+
+<pre><code class="language-json">
+{"type": "ratePerSecond"}
+</code></pre>
+
+<h5>HQL</h5>
+
+<pre><code class="language-hql">
+ratePerSecond()
+</code></pre>
+
+<h5>Description</h5>
+
+<p>
+  The rate per second aggregation calculates the rate per second between samples in a given extent.<br /><br />
+
+  Rate per second works with sampling. If a queries resolution is 1 minute and points are published
+  every 30s each bucket will contain 2 points. The rate will be calculated by getting the difference
+  between the two points values and dividing them by the time between the points.<br /><br />
+
+  Note: at least 2 points are required in order to calculate the rate. Otherwise the previous value
+  is unknown.<br /><br />
+
+  It's intended to be used with cumulative counters. It will handle the counters being reset because
+  of restarts, etc.
 </p>
 
 

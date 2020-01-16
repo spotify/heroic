@@ -86,6 +86,9 @@ public class Module implements HeroicModule {
 
             c.register(Max.NAME, Max.class, MaxInstance.class, samplingBuilder(Max::new));
 
+            c.register(RatePerSecond.NAME, RatePerSecond.class, RatePerSecondInstance.class,
+                samplingBuilder(RatePerSecond::new));
+
             c.register(StdDev.NAME, StdDev.class, StdDevInstance.class,
                 samplingBuilder(StdDev::new));
 
