@@ -23,6 +23,7 @@ dependencies {
     implementation 'javax.xml.bind:jaxb-api'
     implementation 'org.eclipse.jetty:jetty-rewrite'
     implementation 'org.eclipse.jetty:jetty-util'
+    implementation 'org.glassfish.jaxb:jaxb-runtime'
     implementation 'org.glassfish.jersey.containers:jersey-container-servlet-core'
     implementation 'org.glassfish.jersey.containers:jersey-container-servlet'
     implementation 'org.glassfish.jersey.containers:jersey-container-jetty-http'
