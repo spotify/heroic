@@ -1,0 +1,23 @@
+port: 8080
+
+cluster:
+  tags:
+    site: london
+
+metrics:
+  backends:
+  - type: memory
+
+metadata:
+  backends:
+  - type: memory
+
+suggest:
+  backends:
+    - type: memory
+
+statistics:
+  type: semantic
+
+shellServer:
+  port: 9192
