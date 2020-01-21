@@ -25,6 +25,7 @@ import static io.opencensus.trace.AttributeValue.stringAttributeValue;
 import static java.text.MessageFormat.format;
 
 import com.spotify.heroic.common.ServiceInfo;
+import com.spotify.heroic.tracing.EnvironmentMetadata;
 import com.spotify.heroic.tracing.TracingConfig;
 import io.opencensus.contrib.http.util.HttpPropagationUtil;
 import io.opencensus.trace.AttributeValue;

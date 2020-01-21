@@ -949,6 +949,9 @@ You'll get the following output in the query log:
 
 Enable distributed tracing output of Heroic's operations. Tracing is instrumented using [OpenCensus](https://opencensus.io/).
 
+A number of tags are added to each span such as hostname and java version. If running on GCP, zone and region tags are added as well.
+
+
 ```yaml
 # Probability, between 0.0 and 1.0, of sampling each trace.
 probability: <float> default = 0.01

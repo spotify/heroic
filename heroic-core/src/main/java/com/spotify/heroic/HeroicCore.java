@@ -321,9 +321,17 @@ public class HeroicCore implements HeroicConfiguration {
                 throw new IllegalArgumentException("Malformed configuration for lightstep.", e);
             }
 
-            log.info("Setting up Lightstep tracing");
+            log.info("Registering lightstep tracing exporter");
             LightStepTraceExporter.createAndRegister(new JRETracer(options));
 
+            log.info("Setting global trace probability to {}", config.getProbability());
+            TraceConfig traceConfig = Tracing.getTraceConfig();
+            traceConfig.updateActiveTraceParams(
+                traceConfig
+                    .getActiveTraceParams()
+                    .toBuilder()
+                    .setSampler(Samplers.probabilitySampler(config.getProbability()))
+                    .build());
         }
 
         if (config.getZpagesPort() > 0) {
@@ -331,15 +339,6 @@ public class HeroicCore implements HeroicConfiguration {
             // Start a web server for tracing data
             ZPageHandlers.startHttpServerAndRegisterAll(config.getZpagesPort());
         }
-
-        log.info("Setting tracing to sample with a probability of {}", config.getProbability());
-        TraceConfig traceConfig = Tracing.getTraceConfig();
-        traceConfig.updateActiveTraceParams(
-            traceConfig
-                .getActiveTraceParams()
-                .toBuilder()
-                .setSampler(Samplers.probabilitySampler(config.getProbability()))
-                .build());
     }
 
     /**

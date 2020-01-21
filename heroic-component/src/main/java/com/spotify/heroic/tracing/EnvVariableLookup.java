@@ -21,37 +21,11 @@
 
 package com.spotify.heroic.tracing;
 
-import static io.opencensus.trace.AttributeValue.booleanAttributeValue;
-
-import com.spotify.heroic.statistics.FutureReporter;
-import io.opencensus.trace.Span;
-import io.opencensus.trace.Status;
 import java.util.Optional;
 
-public class EndSpanFutureReporter implements FutureReporter.Context {
-  private final Span span;
+class EnvVariableLookup {
 
-  public EndSpanFutureReporter(final Span span) {
-    this.span = span;
-  }
-
-  @Override
-  public void failed(final Throwable cause) throws Exception {
-    span.putAttribute("error", booleanAttributeValue(true));
-    Optional.ofNullable(cause.getMessage()).ifPresent(span::addAnnotation);
-    span.setStatus(Status.INTERNAL);
-    span.end();
-  }
-
-  @Override
-  public void resolved(final Object result) throws Exception {
-    span.end();
-  }
-
-  @Override
-  public void cancelled() throws Exception {
-    span.putAttribute("error", booleanAttributeValue(true));
-    span.setStatus(Status.CANCELLED);
-    span.end();
+  static Optional<String> getEnvVariable(final String envVar) {
+    return Optional.ofNullable(System.getenv().get(envVar));
   }
 }

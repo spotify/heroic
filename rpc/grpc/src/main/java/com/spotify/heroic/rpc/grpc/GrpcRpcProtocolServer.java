@@ -167,7 +167,8 @@ public class GrpcRpcProtocolServer implements LifeCycles {
         final Server server = NettyServerBuilder
             .forAddress(address)
             .addService(bindService())
-            .maxMessageSize(maxFrameSize)
+            .intercept(new GrpcOpenCensusInterceptor())
+            .maxInboundMessageSize(maxFrameSize)
             .bossEventLoopGroup(bossGroup)
             .workerEventLoopGroup(workerGroup)
             .build();
@@ -227,7 +228,6 @@ public class GrpcRpcProtocolServer implements LifeCycles {
             final UUID id = UUID.randomUUID();
 
             log.trace("{}: Received request: {}", id, request);
-
             final AsyncFuture<Object> future;
 
             try {

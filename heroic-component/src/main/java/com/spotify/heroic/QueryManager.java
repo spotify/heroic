@@ -38,7 +38,7 @@ import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
 import eu.toolchain.async.AsyncFuture;
-
+import io.opencensus.trace.Span;
 import java.util.List;
 
 public interface QueryManager extends UsableGroupManager<QueryManager.Group> {
@@ -46,6 +46,8 @@ public interface QueryManager extends UsableGroupManager<QueryManager.Group> {
 
     interface Group {
         AsyncFuture<QueryResult> query(Query query, QueryContext queryContext);
+
+        AsyncFuture<QueryResult> query(Query query, QueryContext queryContext, Span parentSpan);
 
         AsyncFuture<FindTags> findTags(final FindTags.Request request);
 

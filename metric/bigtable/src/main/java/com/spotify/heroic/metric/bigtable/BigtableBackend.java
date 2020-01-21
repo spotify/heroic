@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.metric.bigtable;
 
+import static io.opencensus.trace.AttributeValue.booleanAttributeValue;
 import static io.opencensus.trace.AttributeValue.longAttributeValue;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -82,6 +83,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.SortedMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -447,29 +449,36 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                 cell -> p.deserialize(cell.getQualifier(), cell.getValue());
 
             QueryTrace.NamedWatch fs = QueryTrace.watch(FETCH_SEGMENT);
-            final AsyncFuture<List<FlatRow>> readRows =
-              client.readRows(
-                  table,
-                  ReadRowsRequest.builder()
-                      .range(new RowRange(Optional.of(p.rowKeyStart), Optional.of(p.rowKeyEnd)))
-                      .filter(
-                          RowFilter.chain(
-                              Arrays.asList(
-                                  RowFilter.newColumnRangeBuilder(p.columnFamily)
-                                      .startQualifierOpen(p.startQualifierOpen)
-                                      .endQualifierClosed(p.endQualifierClosed)
-                                      .build(),
-                                  RowFilter.onlyLatestCell())))
-                      .build()
-              ).onDone(new EndSpanFutureReporter(readRowsSpan));
 
+            final AsyncFuture<List<FlatRow>> readRows;
+            try (Scope ignored = tracer.withSpan(fetchBatchSpan)) {
+                readRows =
+                    client
+                        .readRows(
+                            table,
+                            ReadRowsRequest.builder()
+                                .range(new RowRange(Optional.of(p.rowKeyStart), Optional.of(p.rowKeyEnd)))
+                                .filter(
+                                    RowFilter.chain(
+                                        Arrays.asList(
+                                            RowFilter.newColumnRangeBuilder(p.columnFamily)
+                                                .startQualifierOpen(p.startQualifierOpen)
+                                                .endQualifierClosed(p.endQualifierClosed)
+                                                .build(),
+                                            RowFilter.onlyLatestCell())))
+                                .build())
+                        .onDone(new EndSpanFutureReporter(readRowsSpan));
+            }
+
+            final AtomicBoolean foundResourceIdentifier = new AtomicBoolean(false);
             fetches.add(readRows.directTransform(result -> {
-                final Span transformSpan = tracer.spanBuilderWithExplicitParent(
-                    "bigtable.transform", readRowsSpan).startSpan();
-                transformSpan.putAttribute("rowsReturned", longAttributeValue(result.size()));
-
+                readRowsSpan.putAttribute("rowsReturned", longAttributeValue(result.size()));
                 for (final FlatRow row : result) {
                     SortedMap<String, String> resource = parseResourceFromRowKey(row.getRowKey());
+
+                    if (!foundResourceIdentifier.get() && resource.size() > 0) {
+                        foundResourceIdentifier.set(true);
+                    }
 
                     watcher.readData(row.getCells().size());
 
@@ -479,7 +488,10 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
                     metricsConsumer.accept(readResult);
                 }
-                transformSpan.end();
+
+                readRowsSpan.putAttribute(
+                    "containsResourceIdentifier", booleanAttributeValue(
+                        foundResourceIdentifier.get()));
 
                 return new FetchData.Result(fs.end());
             }));

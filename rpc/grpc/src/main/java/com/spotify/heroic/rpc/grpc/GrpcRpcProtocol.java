@@ -52,7 +52,10 @@ import io.grpc.ManagedChannel;
 import io.grpc.MethodDescriptor;
 import io.grpc.netty.NettyChannelBuilder;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.opencensus.common.Scope;
 import io.opencensus.trace.Span;
+import io.opencensus.trace.Tracer;
+import io.opencensus.trace.Tracing;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -66,6 +69,7 @@ import javax.inject.Named;
 
 @GrpcRpcScope
 public class GrpcRpcProtocol implements RpcProtocol {
+    private static final Tracer tracer = Tracing.getTracer();
     private final AsyncFramework async;
     private final ObjectMapper mapper;
     private final ResolvableFuture<InetSocketAddress> bindFuture;
@@ -108,7 +112,7 @@ public class GrpcRpcProtocol implements RpcProtocol {
             public AsyncFuture<ManagedChannel> construct() throws Exception {
                 final ManagedChannel channel = NettyChannelBuilder
                     .forAddress(address.getHostName(), address.getPort())
-                    .usePlaintext(true)
+                    .usePlaintext()
                     .executor(workerGroup)
                     .eventLoopGroup(workerGroup)
                     .maxInboundMessageSize(maxFrameSize)
@@ -217,8 +221,9 @@ public class GrpcRpcProtocol implements RpcProtocol {
 
             @Override
             public AsyncFuture<FullQuery> query(final FullQuery.Request request, final Span span) {
-                // TODO: Do we have to use a span here with gRPC since its auto instrumented?
-                return request(METRICS_FULL_QUERY, request);
+                try(Scope ignored = tracer.withSpan(span)) {
+                    return request(METRICS_FULL_QUERY, request);
+                }
             }
 
             @Override

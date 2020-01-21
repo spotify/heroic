@@ -51,6 +51,10 @@ data class QueryResult(
     val trace: QueryTrace,
 
     val limits: ResultLimits,
+
+    /**
+     * Number of raw data points before any aggregations are applied.
+     */
     val preAggregationSampleSize: Long,
 
     /**
