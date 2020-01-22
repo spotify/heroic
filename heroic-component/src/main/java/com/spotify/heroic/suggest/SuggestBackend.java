@@ -29,6 +29,13 @@ import eu.toolchain.async.AsyncFuture;
 import io.opencensus.trace.Span;
 
 public interface SuggestBackend extends Grouped, Initializing, Collected {
+
+    /**
+     * Configure the suggest backend.
+     *
+     * This will assert that all required settings and mappings exists and are configured
+     * correctly for the given backend.
+     */
     AsyncFuture<Void> configure();
 
     /**

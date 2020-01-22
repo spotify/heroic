@@ -27,8 +27,6 @@ import org.elasticsearch.client.Client
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(
-    JsonSubTypes.Type(value = StandaloneClientSetup::class, name = "standalone"),
-    JsonSubTypes.Type(value = NodeClientSetup::class, name = "node"),
     JsonSubTypes.Type(value = TransportClientSetup::class, name = "transport")
 )
 interface ClientSetup {

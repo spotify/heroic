@@ -23,20 +23,20 @@ public class RotatingIndexMappingTest {
 
     @Test
     public void testReadIndex() throws NoIndexSelectedException {
-        final String[] indices = rotating.readIndices(8000);
-        assertArrayEquals(new String[]{"index-8000", "index-7000"}, indices);
+        final String[] indices = rotating.readIndices(8000, "typeA");
+        assertArrayEquals(new String[]{"index-typeA-8000", "index-typeA-7000"}, indices);
     }
 
     @Test
     public void testEmptyReadIndex() throws NoIndexSelectedException {
-        final String[] indices = rotating.readIndices(0);
-        assertArrayEquals(new String[]{"index-0"}, indices);
+        final String[] indices = rotating.readIndices(0, "typeA");
+        assertArrayEquals(new String[]{"index-typeA-0"}, indices);
     }
 
     @Test
     public void testWriteIndex() {
-        final String[] indices = rotating.writeIndices(8000);
-        assertArrayEquals(new String[]{"index-8000"}, indices);
+        final String[] indices = rotating.writeIndices(8000, "typeA");
+        assertArrayEquals(new String[]{"index-typeA-8000"}, indices);
     }
 
     @Test(expected = IllegalArgumentException.class)

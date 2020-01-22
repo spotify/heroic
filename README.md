@@ -33,7 +33,7 @@ Heroic has been tested with the following services:
 * Cassandra (`2.1.x`, `3.5`) when using [metric/datastax](/metric/datastax).
 * [Cloud Bigtable](https://cloud.google.com/bigtable/docs/) when using
   [metric/bigtable](/metric/bigtable).
-* Elasticsearch (`5.x`) when using
+* Elasticsearch (`7.x`) when using
   [metadata/elasticsearch](/metadata/elasticsearch) or
   [suggest/elasticsearch](/suggest/elasticsearch).
 * Kafka (`0.8.x`) when using [consumer/kafka](/consumer/kafka).

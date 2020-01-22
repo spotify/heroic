@@ -1,8 +1,5 @@
 {
   "{{type}}": {
-    "_all": {
-      "enabled": false
-    },
     "properties": {
       "key": {
         "type": "keyword",

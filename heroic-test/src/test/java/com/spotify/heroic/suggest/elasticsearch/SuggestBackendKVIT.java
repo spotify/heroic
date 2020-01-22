@@ -1,14 +1,24 @@
 package com.spotify.heroic.suggest.elasticsearch;
 
 import com.spotify.heroic.elasticsearch.ConnectionModule;
+import com.spotify.heroic.elasticsearch.TransportClientSetup;
 import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
-import com.spotify.heroic.elasticsearch.test.ElasticsearchTestUtils;
 import com.spotify.heroic.suggest.SuggestModule;
+import com.spotify.heroic.test.ElasticSearchTestContainer;
 import com.spotify.heroic.test.AbstractSuggestBackendIT;
+import java.util.List;
 import java.util.UUID;
 
-public abstract class AbstractElasticsearchSuggestBackendIT extends AbstractSuggestBackendIT {
-    protected abstract String backendType();
+public class SuggestBackendKVIT extends AbstractSuggestBackendIT {
+    private final static ElasticSearchTestContainer esContainer;
+
+    static {
+        esContainer = ElasticSearchTestContainer.getInstance();
+    }
+
+    private String backendType() {
+        return "kv";
+    }
 
     @Override
     protected SuggestModule setupModule() throws Exception {
@@ -25,7 +35,12 @@ public abstract class AbstractElasticsearchSuggestBackendIT extends AbstractSugg
             .connection(ConnectionModule
                 .builder()
                 .index(index)
-                .clientSetup(ElasticsearchTestUtils.clientSetup())
+                .clientSetup(TransportClientSetup.builder()
+                    .clusterName("docker-cluster")
+                    .seeds(List.of(
+                        esContainer.getTcpHost().getHostName()
+                        + ":" + esContainer.getTcpHost().getPort()))
+                    .build())
                 .build())
             .build();
     }

@@ -61,13 +61,13 @@ import com.spotify.heroic.suggest.KeySuggest;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
-import com.spotify.heroic.suggest.TagSuggest.Suggestion;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
 import com.spotify.heroic.suggest.WriteSuggest;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
+import eu.toolchain.async.ResolvableFuture;
 import io.opencensus.common.Scope;
 import io.opencensus.trace.AttributeValue;
 import io.opencensus.trace.Span;
@@ -81,7 +81,6 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
@@ -94,6 +93,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import org.apache.commons.lang3.tuple.Pair;
 import org.elasticsearch.action.DocWriteRequest;
+import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.unit.TimeValue;
@@ -105,16 +105,15 @@ import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.Aggregations;
+import org.elasticsearch.search.aggregations.BucketOrder;
 import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
 import org.elasticsearch.search.aggregations.bucket.terms.StringTerms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
-import org.elasticsearch.search.aggregations.bucket.terms.Terms.Bucket;
-import org.elasticsearch.search.aggregations.bucket.terms.Terms.Order;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
-import org.elasticsearch.search.aggregations.metrics.cardinality.Cardinality;
-import org.elasticsearch.search.aggregations.metrics.cardinality.CardinalityAggregationBuilder;
-import org.elasticsearch.search.aggregations.metrics.tophits.TopHits;
-import org.elasticsearch.search.aggregations.metrics.tophits.TopHitsAggregationBuilder;
+import org.elasticsearch.search.aggregations.metrics.Cardinality;
+import org.elasticsearch.search.aggregations.metrics.CardinalityAggregationBuilder;
+import org.elasticsearch.search.aggregations.metrics.TopHits;
+import org.elasticsearch.search.aggregations.metrics.TopHitsAggregationBuilder;
 
 @ElasticsearchScope
 public class SuggestBackendKV extends AbstractElasticsearchBackend
@@ -163,9 +162,11 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
     @Inject
     public SuggestBackendKV(
-        final AsyncFramework async, final Managed<Connection> connection,
+        final AsyncFramework async,
+        final Managed<Connection> connection,
         final SuggestBackendReporter reporter,
-        final RateLimitedCache<Pair<String, HashCode>> writeCache, final Groups groups,
+        final RateLimitedCache<Pair<String, HashCode>> writeCache,
+        final Groups groups,
         @Named("configure") boolean configure
     ) {
         super(async);
@@ -217,7 +218,6 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
             final OptionalLimit limit = request.getLimit();
             final OptionalLimit groupLimit = request.getGroupLimit();
-
             {
                 final TermsAggregationBuilder terms =
                     AggregationBuilders.terms("keys").field(TAG_SKEY_RAW);
@@ -234,7 +234,11 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 terms.subAggregation(cardinality);
             }
 
-            return bind(builder.execute()).directTransform((SearchResponse response) -> {
+            final ResolvableFuture<SearchResponse> future = async.future();
+
+            builder.execute(bind(future));
+
+            return future.directTransform((SearchResponse response) -> {
                 final List<TagValuesSuggest.Suggestion> suggestions = new ArrayList<>();
 
                 if (response.getAggregations() == null) {
@@ -243,12 +247,14 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
                 final Terms terms = response.getAggregations().get("keys");
 
-                final List<Bucket> buckets = terms.getBuckets();
+                // TODO: check type
+                final List<? extends Terms.Bucket> buckets = terms.getBuckets();
 
                 for (final Terms.Bucket bucket : limit.limitList(buckets)) {
                     final Terms valueTerms = bucket.getAggregations().get("values");
 
-                    final List<Bucket> valueBuckets = valueTerms.getBuckets();
+                    // TODO: check type
+                    final List<? extends Terms.Bucket> valueBuckets = valueTerms.getBuckets();
 
                     final SortedSet<String> result = new TreeSet<>();
 
@@ -294,13 +300,17 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
             {
                 final TermsAggregationBuilder terms =
-                    AggregationBuilders.terms("values").field(TAG_SVAL_RAW).order(Order.term(true));
+                    AggregationBuilders.terms("values").field(TAG_SVAL_RAW).order(
+                        BucketOrder.key(true));
 
                 limit.asInteger().ifPresent(l -> terms.size(l + 1));
                 builder.addAggregation(terms);
             }
 
-            return bind(builder.execute()).directTransform((SearchResponse response) -> {
+            final ResolvableFuture<SearchResponse> future = async.future();
+            builder.execute(bind(future));
+
+            return future.directTransform((SearchResponse response) -> {
                 final ImmutableList.Builder<String> suggestions = ImmutableList.builder();
 
                 if (response.getAggregations() == null) {
@@ -309,7 +319,8 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
                 final Terms terms = response.getAggregations().get("values");
 
-                final List<Bucket> buckets = terms.getBuckets();
+                // TODO: Check type
+                final List<? extends Terms.Bucket> buckets = terms.getBuckets();
 
                 for (final Terms.Bucket bucket : limit.limitList(buckets)) {
                     suggestions.add(bucket.getKeyAsString());
@@ -349,7 +360,10 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 });
             }
 
-            return bind(builder.execute()).directTransform((SearchResponse response) -> {
+            final ResolvableFuture<SearchResponse> future = async.future();
+            builder.execute(bind(future));
+
+            return future.directTransform((SearchResponse response) -> {
                 final Set<TagKeyCount.Suggestion> suggestions = new LinkedHashSet<>();
 
                 if (response.getAggregations() == null) {
@@ -358,7 +372,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
                 final Terms keys = response.getAggregations().get("keys");
 
-                final List<Bucket> buckets = keys.getBuckets();
+                final List<? extends Terms.Bucket> buckets = keys.getBuckets();
 
                 for (final Terms.Bucket bucket : limit.limitList(buckets)) {
                     final Cardinality cardinality = bucket.getAggregations().get("cardinality");
@@ -442,8 +456,12 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 builder.addAggregation(terms);
             }
 
-            return bind(builder.execute()).directTransform((SearchResponse response) -> {
-                final ImmutableList.Builder<Suggestion> suggestions = ImmutableList.builder();
+            final ResolvableFuture<SearchResponse> future = async.future();
+            builder.execute(bind(future));
+
+            return future.directTransform((SearchResponse response) -> {
+                final ImmutableList.Builder<TagSuggest.Suggestion> suggestions =
+                    ImmutableList.builder();
 
                 final Aggregations aggregations = response.getAggregations();
 
@@ -457,12 +475,12 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                     final TopHits topHits = bucket.getAggregations().get("hits");
                     final SearchHits hits = topHits.getHits();
                     final SearchHit hit = hits.getAt(0);
-                    final Map<String, Object> doc = hit.getSource();
+                    final Map<String, Object> doc = hit.getSourceAsMap();
 
                     final String k = (String) doc.get(TAG_SKEY);
                     final String v = (String) doc.get(TAG_SVAL);
 
-                    suggestions.add(new Suggestion(hits.getMaxScore(), k, v));
+                    suggestions.add(new TagSuggest.Suggestion(hits.getMaxScore(), k, v));
                 }
 
                 return new TagSuggest(suggestions.build());
@@ -487,7 +505,6 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
             });
 
             QueryBuilder query = bool.hasClauses() ? bool : matchAllQuery();
-
             if (!(request.getFilter() instanceof TrueFilter)) {
                 query = new BoolQueryBuilder().must(query).filter(filter(request.getFilter()));
             }
@@ -508,7 +525,10 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 builder.addAggregation(keys);
             }
 
-            return bind(builder.execute()).directTransform((SearchResponse response) -> {
+            final ResolvableFuture<SearchResponse> future = async.future();
+            builder.execute(bind(future));
+
+            return future.directTransform((SearchResponse response) -> {
                 final Set<KeySuggest.Suggestion> suggestions = new LinkedHashSet<>();
 
                 if (response.getAggregations() == null) {
@@ -534,115 +554,131 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
         return write(request, tracer.getCurrentSpan());
     }
 
-    @Override
-    public AsyncFuture<WriteSuggest> write(
-        final WriteSuggest.Request request, final Span parentSpan
-    ) {
-        return connection.doto((final Connection c) -> {
-            final String rootSpanName = "SuggestBackendKV.write";
-            final Span rootSpan = tracer
-                .spanBuilderWithExplicitParent(rootSpanName, parentSpan)
-                .startSpan();
-            final Scope rootScope = tracer.withSpan(rootSpan);
+  @Override
+  public AsyncFuture<WriteSuggest> write(
+      final WriteSuggest.Request request, final Span parentSpan) {
 
-            final Series s = request.getSeries();
-            final String seriesId = s.hash();
-            rootSpan.putAttribute("id", AttributeValue.stringAttributeValue(seriesId));
+    return connection.doto(
+        (final Connection c) -> {
+          final String rootSpanName = "SuggestBackendKV.write";
+          final Span rootSpan =
+              tracer.spanBuilderWithExplicitParent(rootSpanName, parentSpan).startSpan();
+          final Scope rootScope = tracer.withSpan(rootSpan);
 
-            final String[] indices;
+          final Series s = request.getSeries();
+          final String seriesId = s.hash();
+          rootSpan.putAttribute("id", AttributeValue.stringAttributeValue(seriesId));
 
-            try {
-                indices = c.writeIndices();
-            } catch (NoIndexSelectedException e) {
-                rootSpan.setStatus(Status.INTERNAL.withDescription(e.toString()));
-                rootSpan.end();
-                rootScope.close();
-                return async.failed(e);
+          final String[] seriesIndex;
+          final String[] tagsIndexes;
+
+          try {
+            seriesIndex = c.writeIndices(SERIES_TYPE);
+            tagsIndexes = c.writeIndices(TAG_TYPE);
+          } catch (NoIndexSelectedException e) {
+            rootSpan.setStatus(Status.INTERNAL.withDescription(e.toString()));
+            rootSpan.end();
+            rootScope.close();
+            return async.failed(e);
+          }
+
+          final RequestTimer<WriteSuggest> timer = WriteSuggest.timer();
+          final List<AsyncFuture<WriteSuggest>> writes = new ArrayList<>();
+          final List<Span> indexSpans = new ArrayList<>();
+
+          for (final String index : seriesIndex) {
+            final String indexSpanName = rootSpanName + ".index";
+            final Span indexSpan = tracer.spanBuilder(indexSpanName).startSpan();
+            indexSpans.add(indexSpan);
+
+            final Scope indexScope = tracer.withSpan(indexSpan);
+            indexSpan.putAttribute("index", AttributeValue.stringAttributeValue(index));
+
+            final Pair<String, HashCode> key = Pair.of(index, s.getHashCodeTagOnly());
+
+            if (!writeCache.acquire(key, reporter::reportWriteDroppedByCacheHit)) {
+              indexSpan.setStatus(
+                  Status.ALREADY_EXISTS.withDescription("Write dropped by cache hit"));
+              indexScope.close();
+              indexSpan.end();
+              continue;
             }
 
-            final RequestTimer<WriteSuggest> timer = WriteSuggest.timer();
-            final List<AsyncFuture<WriteSuggest>> writes = new ArrayList<>();
-            final List<Span> indexSpans = new ArrayList<>();
+            indexSpan.addAnnotation("Write cache rate limit acquired");
 
-            for (final String index : indices) {
-                final String indexSpanName = rootSpanName + ".index";
-                final Span indexSpan = tracer.spanBuilder(indexSpanName).startSpan();
-                indexSpans.add(indexSpan);
+            final XContentBuilder series = XContentFactory.jsonBuilder();
 
-                final Scope indexScope = tracer.withSpan(indexSpan);
-                indexSpan.putAttribute("index", AttributeValue.stringAttributeValue(index));
+            series.startObject();
+            buildContext(series, s);
+            series.endObject();
 
-                final Pair<String, HashCode> key = Pair.of(index, s.getHashCodeTagOnly());
-
-                if (!writeCache.acquire(key, reporter::reportWriteDroppedByCacheHit)) {
-                    indexSpan.setStatus(
-                        Status.ALREADY_EXISTS.withDescription("Write dropped by cache hit"));
-                    indexScope.close();
-                    indexSpan.end();
-                    continue;
-                }
-                indexSpan.addAnnotation("Write cache rate limit acquired");
-
-                final XContentBuilder series = XContentFactory.jsonBuilder();
-
-                series.startObject();
-                buildContext(series, s);
-                series.endObject();
-
-                final Span indexWriteSpan = tracer
+            final Span indexWriteSpan =
+                tracer
                     .spanBuilderWithExplicitParent(indexSpanName + ".writeIndex", indexSpan)
                     .startSpan();
-                writes.add(bind(c.index(index, SERIES_TYPE)
-                    .setId(seriesId)
-                    .setSource(series)
-                    .setOpType(DocWriteRequest.OpType.CREATE)
-                    .execute()).directTransform(response -> timer.end())
+
+            final ResolvableFuture<IndexResponse> seriesWrite = async.future();
+            c.index(index, SERIES_TYPE)
+                .setId(seriesId)
+                .setSource(series)
+                .setOpType(DocWriteRequest.OpType.CREATE)
+                .execute(bind(seriesWrite));
+
+            writes.add(
+                seriesWrite
+                    .directTransform(response -> timer.end())
                     .onFinished(indexWriteSpan::end));
 
-                for (final Map.Entry<String, String> e : s.getTags().entrySet()) {
-                    final Span tagSpan = tracer
+            for (final String tagIndex : tagsIndexes) {
+              for (final Map.Entry<String, String> e : s.getTags().entrySet()) {
+                final Span tagSpan =
+                    tracer
                         .spanBuilderWithExplicitParent(indexSpanName + ".writeTags", indexSpan)
                         .startSpan();
-                    tagSpan.putAttribute("index", AttributeValue.stringAttributeValue(index));
+                tagSpan.putAttribute("index", AttributeValue.stringAttributeValue(tagIndex));
 
-                    final XContentBuilder suggest = XContentFactory.jsonBuilder();
+                final XContentBuilder suggest = XContentFactory.jsonBuilder();
 
-                    suggest.startObject();
-                    buildContext(suggest, s);
-                    buildTag(suggest, e);
-                    suggest.endObject();
+                suggest.startObject();
+                buildContext(suggest, s);
+                buildTag(suggest, e);
+                suggest.endObject();
 
-                    final String suggestId =
-                        seriesId + ":" + Integer.toHexString(e.hashCode());
-                    tagSpan.putAttribute("suggestId",
-                        AttributeValue.stringAttributeValue(suggestId));
-                    final FutureReporter.Context writeContext =
-                        reporter.setupWriteReporter();
+                final String suggestId = seriesId + ":" + Integer.toHexString(e.hashCode());
+                tagSpan.putAttribute("suggestId", AttributeValue.stringAttributeValue(suggestId));
+                final FutureReporter.Context writeContext = reporter.setupWriteReporter();
 
-                    writes.add(bind(c
-                        .index(index, TAG_TYPE)
-                        .setId(suggestId)
-                        .setSource(suggest)
-                        .setOpType(DocWriteRequest.OpType.CREATE)
-                        .execute())
+                final ResolvableFuture<IndexResponse> tagWrite = async.future();
+                c.index(tagIndex, TAG_TYPE)
+                    .setId(suggestId)
+                    .setSource(suggest)
+                    .setOpType(DocWriteRequest.OpType.CREATE)
+                    .execute(bind(tagWrite));
+
+                writes.add(
+                    tagWrite
                         .directTransform(response -> timer.end())
-                        .catchFailed(handleVersionConflict(WriteSuggest::new,
-                            reporter::reportWriteDroppedByDuplicate))
+                        .catchFailed(
+                            handleVersionConflict(
+                                WriteSuggest::new, reporter::reportWriteDroppedByDuplicate))
                         .onDone(writeContext)
                         .onFinished(tagSpan::end));
-                }
-
-                indexScope.close();
+              }
             }
 
-            rootScope.close();
-            return async.collect(writes, WriteSuggest.reduce()).onFinished(() -> {
-                indexSpans.forEach(Span::end);
-                rootSpan.end();
-            });
+            indexScope.close();
+          }
+
+          rootScope.close();
+          return async
+              .collect(writes, WriteSuggest.reduce())
+              .onFinished(
+                  () -> {
+                    indexSpans.forEach(Span::end);
+                    rootSpan.end();
+                  });
         });
     }
-
     @Override
     public Statistics getStatistics() {
         return new Statistics(WRITE_CACHE_SIZE, writeCache.size());
@@ -713,7 +749,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
         b.field(SERIES_ID, series.hash());
     }
 
-    static void buildTag(final XContentBuilder b, Entry<String, String> e) throws IOException {
+    static void buildTag(final XContentBuilder b, Map.Entry<String, String> e) throws IOException {
         b.field(TAG_SKEY, e.getKey());
         b.field(TAG_SVAL, e.getValue());
         b.field(TAG_KV, e.getKey() + TAG_DELIMITER + e.getValue());
@@ -793,11 +829,11 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
         return () -> {
             final Map<String, Map<String, Object>> mappings = new HashMap<>();
 
-            mappings.put(TAG_TYPE,
-                loadJsonResource("kv/tag.json", variables(ImmutableMap.of("type", TAG_TYPE))));
+            mappings.put(TAG_TYPE, loadJsonResource(
+                "kv/tag.json", variables(ImmutableMap.of("type", TAG_TYPE))));
 
-            mappings.put(SERIES_TYPE, loadJsonResource("kv/series.json",
-                variables(ImmutableMap.of("type", SERIES_TYPE))));
+            mappings.put(SERIES_TYPE, loadJsonResource(
+                "kv/series.json", variables(ImmutableMap.of("type", SERIES_TYPE))));
 
             final Map<String, Object> settings =
                 loadJsonResource("kv/settings.json", Function.identity());

@@ -34,11 +34,12 @@ import org.elasticsearch.client.Client;
     @JsonSubTypes.Type(value = SingleIndexMapping.class, name = "single")
 })
 public interface IndexMapping {
+    // Index template
     String template();
 
-    String[] readIndices() throws NoIndexSelectedException;
+    String[] readIndices(String type) throws NoIndexSelectedException;
 
-    String[] writeIndices() throws NoIndexSelectedException;
+    String[] writeIndices(String type) throws NoIndexSelectedException;
 
     SearchRequestBuilder search(Client client, String type) throws NoIndexSelectedException;
 

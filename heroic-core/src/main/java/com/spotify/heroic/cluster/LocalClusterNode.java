@@ -40,9 +40,12 @@ import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
+import com.spotify.heroic.suggest.WriteSuggest;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import io.opencensus.trace.Span;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
 
@@ -167,7 +170,19 @@ public class LocalClusterNode implements ClusterNode {
 
         @Override
         public AsyncFuture<WriteMetadata> writeSeries(final WriteMetadata.Request request) {
-            return metadata().write(request);
+            final List<AsyncFuture<WriteMetadata>> results = new ArrayList<>();
+
+            final AsyncFuture<WriteMetadata> metadata = metadata().write(request);
+            results.add(metadata);
+
+            // Transform a suggest future into a metadata future and collect results.
+            final AsyncFuture<WriteMetadata> suggest = suggest()
+                .write(new WriteSuggest.Request(request.getSeries(), request.getRange()))
+                .directTransform(s -> new WriteMetadata(
+                    s.getTimes().stream().mapToLong(Long::longValue).sum()));
+            results.add(suggest);
+
+            return async.collect(results, WriteMetadata.reduce());
         }
 
         @Override

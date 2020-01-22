@@ -30,18 +30,18 @@ import java.net.UnknownHostException;
 import java.util.List;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
 
 public class TransportClientSetup implements ClientSetup {
-    public static final String DEFAULT_CLUSTER_NAME = "elasticsearch";
+    public static final String DEFAULT_CLUSTER_NAME = "heroic";
     public static final List<String> DEFAULT_SEEDS = ImmutableList.of("localhost");
     public static final int DEFAULT_PORT = 9300;
     public static final boolean DEFAULT_SNIFF = false;
     public static final String DEFAULT_NODE_SAMPLER_INTERVAL = "30s";
 
     private final String clusterName;
-    private final List<InetSocketTransportAddress> seeds;
+    private final List<TransportAddress> seeds;
     private final Boolean sniff;
     private final String nodeSamplerInterval;
 
@@ -56,6 +56,13 @@ public class TransportClientSetup implements ClientSetup {
         this.sniff = ofNullable(sniff).orElse(DEFAULT_SNIFF);
         this.nodeSamplerInterval =
           ofNullable(nodeSamplerInterval).orElse(DEFAULT_NODE_SAMPLER_INTERVAL);
+    }
+
+    TransportClientSetup() {
+        this.clusterName = DEFAULT_CLUSTER_NAME;
+        this.seeds = seeds(DEFAULT_SEEDS);
+        this.sniff = DEFAULT_SNIFF;
+        this.nodeSamplerInterval = DEFAULT_NODE_SAMPLER_INTERVAL;
     }
 
     /*
@@ -73,24 +80,24 @@ public class TransportClientSetup implements ClientSetup {
 
         final TransportClient client = new PreBuiltTransportClient(settings);
 
-        for (final InetSocketTransportAddress seed : seeds) {
+        for (final TransportAddress seed : seeds) {
             client.addTransportAddress(seed);
         }
         return new ClientWrapper(client, client::close);
     }
 
-    private static List<InetSocketTransportAddress> seeds(final List<String> rawSeeds) {
+    private static List<TransportAddress> seeds(final List<String> rawSeeds) {
         return ImmutableList.copyOf(rawSeeds
             .stream()
             .map(TransportClientSetup::parseInetSocketTransportAddress)
             .iterator());
     }
 
-    private static InetSocketTransportAddress parseInetSocketTransportAddress(final String seed) {
+    private static TransportAddress parseInetSocketTransportAddress(final String seed) {
         if (seed.contains(":")) {
             final String[] parts = seed.split(":");
             try {
-                return new InetSocketTransportAddress(java.net.InetAddress.getByName(parts[0]),
+                return new TransportAddress(java.net.InetAddress.getByName(parts[0]),
                     Integer.parseInt(parts[1]));
             } catch (UnknownHostException e) {
                 throw new RuntimeException(e);
@@ -98,7 +105,7 @@ public class TransportClientSetup implements ClientSetup {
         }
 
         try {
-            return new InetSocketTransportAddress(java.net.InetAddress.getByName(seed),
+            return new TransportAddress(java.net.InetAddress.getByName(seed),
                 DEFAULT_PORT);
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);

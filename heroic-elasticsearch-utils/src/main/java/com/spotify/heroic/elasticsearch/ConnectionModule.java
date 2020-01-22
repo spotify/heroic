@@ -33,57 +33,28 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
-import java.util.List;
 
 @Module
 public class ConnectionModule {
-    private final String clusterName;
-    private final List<String> seeds;
-    private final Boolean sniff;
-    private final String nodeSamplerInterval;
-    private final Boolean nodeClient;
     private final IndexMapping index;
     private final String templateName;
     private final ClientSetup clientSetup;
 
     @JsonCreator
     public ConnectionModule(
-        @JsonProperty("clusterName") String clusterName,
-        @JsonProperty("seeds") List<String> seeds,
-        @JsonProperty("sniff") Boolean sniff,
-        @JsonProperty("nodeSamplerInterval") String nodeSamplerInterval,
-        @JsonProperty("nodeClient") Boolean nodeClient,
         @JsonProperty("index") IndexMapping index,
         @JsonProperty("templateName") String templateName,
         @JsonProperty("client") ClientSetup clientSetup
     ) {
-        this.clusterName = ofNullable(clusterName)
-            .orElse(TransportClientSetup.DEFAULT_CLUSTER_NAME);
-        this.seeds = ofNullable(seeds).orElse(TransportClientSetup.DEFAULT_SEEDS);
-        this.sniff = ofNullable(sniff).orElse(TransportClientSetup.DEFAULT_SNIFF);
-        this.nodeSamplerInterval = ofNullable(nodeSamplerInterval).orElse(
-            TransportClientSetup.DEFAULT_NODE_SAMPLER_INTERVAL);
-        this.nodeClient = ofNullable(nodeClient).orElse(false);
         this.index = ofNullable(index).orElseGet(RotatingIndexMapping.builder()::build);
         // templateName defaults to the value from the backend config, and doesn't have to also
         // be set under these connection params
         this.templateName = templateName;
-        this.clientSetup = ofNullable(clientSetup).orElseGet(this::defaultClientSetup);
-    }
-
-    /**
-     * Setup the default client setup to be backwards compatible.
-     */
-    private ClientSetup defaultClientSetup() {
-        if (nodeClient) {
-            return new NodeClientSetup(clusterName, seeds);
-        }
-
-        return new TransportClientSetup(clusterName, seeds, sniff, nodeSamplerInterval);
+        this.clientSetup = ofNullable(clientSetup).orElseGet(TransportClientSetup::new);
     }
 
     public static ConnectionModule buildDefault() {
-        return new ConnectionModule(null, null, null, null, null, null, null, null);
+        return new ConnectionModule(null, null, null);
     }
 
     @Provides
@@ -124,39 +95,9 @@ public class ConnectionModule {
     }
 
     public static final class Builder {
-        private String clusterName;
-        private List<String> seeds;
-        private Boolean sniff;
-        private String nodeSamplerInterval;
-        private Boolean nodeClient;
         private IndexMapping index;
         private String templateName;
         private ClientSetup clientSetup;
-
-        public Builder clusterName(String clusterName) {
-            this.clusterName = clusterName;
-            return this;
-        }
-
-        public Builder seeds(List<String> seeds) {
-            this.seeds = seeds;
-            return this;
-        }
-
-        public Builder sniff(Boolean sniff) {
-            this.sniff = sniff;
-            return this;
-        }
-
-        public Builder nodeSamplerInterval(String nodeSamplerInterval) {
-            this.nodeSamplerInterval = nodeSamplerInterval;
-            return this;
-        }
-
-        public Builder nodeClient(Boolean nodeClient) {
-            this.nodeClient = nodeClient;
-            return this;
-        }
 
         public Builder index(IndexMapping index) {
             this.index = index;
@@ -174,8 +115,7 @@ public class ConnectionModule {
         }
 
         public ConnectionModule build() {
-            return new ConnectionModule(clusterName, seeds,
-              sniff, nodeSamplerInterval, nodeClient, index, templateName, clientSetup);
+            return new ConnectionModule(index, templateName, clientSetup);
         }
     }
 }

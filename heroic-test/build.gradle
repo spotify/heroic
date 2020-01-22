@@ -4,6 +4,12 @@ dependencies {
     
     implementation 'junit:junit'
     implementation 'org.mockito:mockito-core'
+    implementation 'org.testcontainers:testcontainers'
+    implementation "org.testcontainers:elasticsearch"
+
+    testImplementation project(':heroic-elasticsearch-utils')
+    testImplementation project(':heroic-suggest-elasticsearch')
+    testImplementation project(':heroic-metadata-elasticsearch')
 }
 
 description = 'Heroic: Test Utilities Base Project'

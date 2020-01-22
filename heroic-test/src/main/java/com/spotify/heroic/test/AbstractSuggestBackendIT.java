@@ -63,10 +63,11 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
 public abstract class AbstractSuggestBackendIT {
+
     private final Series s1 = Series.of("aa1", ImmutableMap.of("role", "foo"));
     private final Series s2 = Series.of("aa2", ImmutableMap.of("role", "bar"));
     private final Series s3 = Series.of("bb3", ImmutableMap.of("role", "baz"));
@@ -113,7 +114,8 @@ public abstract class AbstractSuggestBackendIT {
     public final void abstractSetup() throws Exception {
         final HeroicConfig.Builder fragment = HeroicConfig
             .builder()
-            .suggest(SuggestManagerModule.builder().backends(ImmutableList.of(setupModule())));
+            .suggest(SuggestManagerModule.builder()
+                .backends(ImmutableList.of(setupModule())));
 
         core = HeroicCore
             .builder()
@@ -136,6 +138,7 @@ public abstract class AbstractSuggestBackendIT {
                 .map(GroupMember::getMember)
                 .findFirst())
             .orElseThrow(() -> new IllegalStateException("Failed to find backend"));
+
     }
 
     @After
