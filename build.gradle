@@ -152,7 +152,13 @@ allprojects {
                 entry 'tiny-serializer-processor'
             }
 
-            dependency 'io.netty:netty-transport:4.1.31.Final'
+            dependencySet(group: 'io.netty', version: '4.1.31.Final') {
+                entry 'netty-transport'
+                entry 'netty-transport-native-epoll'
+                entry 'netty-codec'
+            }
+
+            dependency 'io.netty:netty-tcnative-boringssl-static:2.0.28.Final'
 
             dependencySet(group: 'io.grpc', version: '1.16.1') {
                 entry 'grpc-auth'
