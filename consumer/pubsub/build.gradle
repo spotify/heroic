@@ -1,6 +1,7 @@
 dependencies {
     implementation 'com.google.cloud:google-cloud-pubsub'
     implementation 'io.grpc:grpc-netty'
+    implementation 'io.netty:netty-tcnative-boringssl-static'
     implementation project(':heroic-component')
     implementation 'com.fasterxml.jackson.core:jackson-annotations'
     implementation 'com.fasterxml.jackson.core:jackson-databind'
