@@ -3,7 +3,7 @@ apply plugin: 'kotlin-kapt'
 dependencies {
     implementation project(':heroic-component')
     implementation project(':heroic-elasticsearch-utils')
-    implementation 'com.typesafe.akka:akka-actor_2.12'
+    implementation 'com.typesafe.akka:akka-actor-typed_2.13'
     kapt 'com.google.dagger:dagger-compiler'
 }
 
