@@ -30,7 +30,7 @@ allprojects {
     group = 'com.spotify.heroic'
 
     version = System.getenv('TRAVIS_TAG') ?: System.getenv('DOCKER_TAG') ?: '0.0.1-SNAPSHOT'
-    
+
     ext.gitCommit = getGitHash()
 
     apply plugin: "io.spring.dependency-management"
@@ -261,7 +261,7 @@ allprojects {
 
             dependency 'javax.annotation:javax.annotation-api:1.3.2'
 
-            dependency 'com.typesafe.akka:akka-actor_2.12:2.5.26'
+            dependency 'com.typesafe.akka:akka-actor-typed_2.13:2.6.3'
         }
     }
 }

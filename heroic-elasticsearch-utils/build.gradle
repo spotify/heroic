@@ -2,7 +2,7 @@ dependencies {
     implementation project(':heroic-component')
     implementation 'com.spotify:folsom'
     api 'org.elasticsearch.client:transport:5.3.2'
-    implementation 'com.typesafe.akka:akka-actor_2.12'
+    implementation 'com.typesafe.akka:akka-actor-typed_2.13'
 
     implementation project(path: ':heroic-component', configuration: 'testRuntime')
 }

@@ -17,7 +17,7 @@ dependencies {
     implementation 'io.opencensus:opencensus-contrib-zpages'
     implementation 'io.opencensus:opencensus-contrib-grpc-util'
     implementation 'com.google.protobuf:protobuf-java'
-    implementation 'com.typesafe.akka:akka-actor_2.12'
+    implementation 'com.typesafe.akka:akka-actor-typed_2.13'
 }
 
 task testJar(type: Jar) {
