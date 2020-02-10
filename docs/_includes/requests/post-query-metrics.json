@@ -1,5 +1,11 @@
 {
   "range": {"type": "relative", "unit": "HOURS", "value": 2},
   "filter": ["and", ["key", "foo"], ["=", "foo", "bar"], ["+", "role"]],
-  "groupBy": ["site"]
+  "aggregation": {
+    "type": "group",
+    "of": ["site"],
+    "each": {
+      "type": "sum"
+    }
+  }
 }
