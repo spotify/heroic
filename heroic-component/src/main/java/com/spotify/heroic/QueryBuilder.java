@@ -26,7 +26,6 @@ import static com.spotify.heroic.common.Optionals.pickOptional;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.aggregation.Group;
 import com.spotify.heroic.common.FeatureSet;
 import com.spotify.heroic.filter.AndFilter;
 import com.spotify.heroic.filter.Filter;
@@ -43,7 +42,6 @@ public class QueryBuilder {
     private Optional<Map<String, String>> tags = Optional.empty();
     private Optional<String> key = Optional.empty();
     private Optional<Filter> filter = Optional.empty();
-    private Optional<List<String>> groupBy = Optional.empty();
     private Optional<QueryDateRange> range = Optional.empty();
     private Optional<Aggregation> aggregation = Optional.empty();
     private Optional<QueryOptions> options = Optional.empty();
@@ -70,17 +68,6 @@ public class QueryBuilder {
     public QueryBuilder tags(Optional<Map<String, String>> tags) {
         checkNotNull(tags, "tags must not be null");
         this.tags = pickOptional(this.tags, tags);
-        return this;
-    }
-
-    /**
-     * Specify a group by to use.
-     *
-     * @deprecated Use the group aggregation instead.
-     */
-    public QueryBuilder groupBy(final Optional<List<String>> groupBy) {
-        checkNotNull(groupBy, "groupBy must not be null");
-        this.groupBy = pickOptional(this.groupBy, groupBy);
         return this;
     }
 
@@ -153,21 +140,9 @@ public class QueryBuilder {
     }
 
     public Query build() {
-        return new Query(legacyAggregation(), source, range, legacyFilter(), options, features);
+        return new Query(aggregation, source, range, legacyFilter(), options, features);
     }
 
-    /**
-     * Support a legacy kind of aggregation where groupBy is specified independently.
-     *
-     * @return an optional aggregation
-     */
-    Optional<Aggregation> legacyAggregation() {
-        if (groupBy.isPresent()) {
-            return Optional.of(Group.createFromAggregation(groupBy, aggregation));
-        }
-
-        return aggregation;
-    }
 
     /**
      * Convert a MetricsRequest into a filter.

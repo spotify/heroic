@@ -13,7 +13,6 @@ fields:
 - name: aggregation
   type_name: Aggregation
   purpose: Aggregation to use when down-sampling.
-- name: groupBy
 - name: features
   type_json: '[&lt;string&gt;, ...]'
   purpose: |

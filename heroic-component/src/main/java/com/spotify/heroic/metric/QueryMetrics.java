@@ -52,7 +52,7 @@ public abstract class QueryMetrics {
         Optional<JsonNode> clientContext
     ) {
         return legacyCreate(query, aggregation, source, range, filter, options, clientContext,
-             Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+             Optional.empty(), Optional.empty(), Optional.empty(),
             Optional.empty(), false);
     }
 
@@ -69,7 +69,6 @@ public abstract class QueryMetrics {
         @JsonProperty("aggregators") Optional<List<Aggregation>> aggregators,
         @JsonProperty("key") Optional<String> key,
         @JsonProperty("tags") Optional<Map<String, String>> tags,
-        @JsonProperty("groupBy") Optional<List<String>> groupBy,
         @JsonProperty("features") Optional<FeatureSet> features,
         /* ignored */ @JsonProperty("noCache") Boolean noCache
     ) {
@@ -79,7 +78,7 @@ public abstract class QueryMetrics {
         final Optional<MetricType> sourceMetric = source.flatMap(MetricType::fromIdentifier);
 
         return new AutoValue_QueryMetrics(query, legitAggregation, sourceMetric, range, filter,
-            options, clientContext, key, tags, groupBy, features);
+            options, clientContext, key, tags, features);
     }
 
     @JsonProperty("query")
@@ -102,8 +101,6 @@ public abstract class QueryMetrics {
     public abstract Optional<String> key();
     @JsonProperty("tags")
     public abstract Optional<Map<String, String>> tags();
-    @JsonProperty("groupBy")
-    public abstract Optional<List<String>> groupBy();
     @JsonProperty("features")
     public abstract Optional<FeatureSet> features();
 
@@ -111,7 +108,6 @@ public abstract class QueryMetrics {
         final Supplier<? extends QueryBuilder> supplier = () -> new QueryBuilder()
             .key(key())
             .tags(tags())
-            .groupBy(groupBy())
             .filter(filter())
             .range(range())
             .aggregation(aggregation())
