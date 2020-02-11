@@ -299,12 +299,26 @@ subprojects {
         options.encoding = 'UTF-8'
     }
 
+    test {
+        testLogging {
+            events "passed", "skipped", "failed", "standardOut", "standardError"
+            outputs.upToDateWhen { false }
+            exceptionFormat "full"
+        }
+    }
+
     task integrationTest(type: Test) {
         description = 'Runs integration tests.'
         group = 'verification'
         testClassesDirs = sourceSets.integrationTest.output.classesDirs
         classpath = sourceSets.integrationTest.runtimeClasspath
         shouldRunAfter test
+
+        testLogging {
+            events "passed", "skipped", "failed", "standardOut", "standardError"
+            outputs.upToDateWhen { false }
+            exceptionFormat "full"
+        }
 
         jacoco {
             destinationFile = file("$buildDir/jacoco/integrationTest.exec")
