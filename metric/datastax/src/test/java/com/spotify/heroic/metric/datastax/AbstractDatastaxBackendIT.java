@@ -4,25 +4,21 @@ import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.datastax.schema.SchemaModule;
 import com.spotify.heroic.test.AbstractMetricBackendIT;
-import com.spotify.heroic.test.TestProperties;
-import java.util.Optional;
 import java.util.UUID;
+import org.testcontainers.containers.CassandraContainer;
 
 public abstract class AbstractDatastaxBackendIT extends AbstractMetricBackendIT {
-    private final TestProperties properties = TestProperties.ofPrefix("it.datastax");
+    private final static CassandraContainer container = new CassandraContainer();
 
     @Override
-    protected Optional<MetricModule> setupModule() {
-        return properties.getOptionalString("remote").map(v -> {
-            final String keyspace = "heroic_it_" + UUID.randomUUID().toString().replace('-', '_');
+    protected MetricModule setupModule() {
+        final String keyspace = "heroic_it_" + UUID.randomUUID().toString().replace('-', '_');
 
-            final DatastaxMetricModule.Builder builder =
-                DatastaxMetricModule.builder().schema(setupSchema(keyspace)).configure(true);
-
-            properties.getOptionalString("seed").map(ImmutableSet::of).ifPresent(builder::seeds);
-
-            return builder.build();
-        });
+        return DatastaxMetricModule.builder()
+            .schema(setupSchema(keyspace))
+            .configure(true)
+            .seeds(ImmutableSet.of(container.getContainerIpAddress()))
+            .build();
     }
 
     abstract protected SchemaModule setupSchema(final String keyspace);

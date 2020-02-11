@@ -8,6 +8,7 @@ dependencies {
 
     testImplementation project(':heroic-test')
     testImplementation project(path: ':heroic-component', configuration: 'testRuntime')
+    testImplementation 'org.testcontainers:cassandra'
 }
 
 group = 'com.spotify.heroic.metric'

@@ -261,9 +261,10 @@ allprojects {
             dependency 'junit:junit:4.12'
             dependency 'org.hamcrest:java-hamcrest:2.0.0.0'
             dependency 'org.mockito:mockito-core:3.0.0'
-            dependencySet (group: 'org.testcontainers', version: '1.12.3') {
+            dependencySet (group: 'org.testcontainers', version: '1.12.5') {
                 entry 'testcontainers'
                 entry 'elasticsearch'
+                entry 'cassandra'
             }
             dependencySet(group: 'com.google.code.findbugs', version: '3.0.1') {
                 entry 'annotations'

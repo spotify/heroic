@@ -14,7 +14,7 @@ public class MemoryBackendIT extends AbstractMetricBackendIT {
     }
 
     @Override
-    protected Optional<MetricModule> setupModule() {
-        return Optional.of(MemoryMetricModule.builder().build());
+    protected MetricModule setupModule() {
+        return MemoryMetricModule.builder().build();
     }
 }

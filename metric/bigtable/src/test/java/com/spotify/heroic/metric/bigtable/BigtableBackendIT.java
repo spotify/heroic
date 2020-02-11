@@ -1,7 +1,6 @@
 package com.spotify.heroic.metric.bigtable;
 
 import com.spotify.heroic.metric.MetricModule;
-import com.spotify.heroic.metric.bigtable.credentials.ComputeEngineCredentialsBuilder;
 import com.spotify.heroic.metric.bigtable.credentials.DefaultCredentialsBuilder;
 import com.spotify.heroic.metric.bigtable.credentials.JsonCredentialsBuilder;
 import com.spotify.heroic.test.AbstractMetricBackendIT;
@@ -29,7 +28,7 @@ public class BigtableBackendIT extends AbstractMetricBackendIT {
     }
 
     @Override
-    public Optional<MetricModule> setupModule() {
+    public MetricModule setupModule() {
         final String table = "heroic_it_" + UUID.randomUUID();
 
         final Optional<MetricModule> remote = properties.getOptionalString("remote").map(v -> {
@@ -55,18 +54,15 @@ public class BigtableBackendIT extends AbstractMetricBackendIT {
                 .build();
         });
 
-        if (remote.isPresent()) {
-            return remote;
-        }
+        return remote.orElseGet(() ->
+            BigtableMetricModule
+                .builder()
+                .configure(true)
+                .project("fake")
+                .table(table)
+                .fake(true)
+                .build()
+        );
 
-        final BigtableMetricModule module = BigtableMetricModule
-            .builder()
-            .configure(true)
-            .project("fake")
-            .table(table)
-            .fake(true)
-            .build();
-
-        return Optional.of(module);
     }
 }
