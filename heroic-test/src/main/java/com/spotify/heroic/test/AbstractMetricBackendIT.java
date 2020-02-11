@@ -65,12 +65,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
 import org.junit.runners.model.Statement;
-import org.slf4j.Logger;
 
 public abstract class AbstractMetricBackendIT {
-    private static final Logger log = org.slf4j.LoggerFactory
-        .getLogger(AbstractMetricBackendIT.class);
-
     protected final Series s1 =
         new Series("s1", ImmutableSortedMap.of("id", "s1"), ImmutableSortedMap.of("resource", "a"));
     protected final Series s2 =

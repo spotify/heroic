@@ -30,7 +30,7 @@ allprojects {
     group = 'com.spotify.heroic'
 
     version = System.getenv('TRAVIS_TAG') ?: System.getenv('DOCKER_TAG') ?: '0.0.1-SNAPSHOT'
-    
+
     ext.gitCommit = getGitHash()
 
     apply plugin: "io.spring.dependency-management"
@@ -47,13 +47,6 @@ allprojects {
     repositories {
         mavenLocal()
         mavenCentral()
-
-        // Needed for finding the repackaged jars when building the debian package
-        if (project.hasProperty('MAVEN_HOME')) {
-            maven {
-                url "${MAVEN_HOME}/.m2/repository"
-            }
-        }
     }
 
     sourceSets {
@@ -116,7 +109,7 @@ allprojects {
     // Dependency management defines shared versions across all submodules to ensure consistency
     dependencyManagement {
         dependencies {
-            dependency 'com.spotify.heroic.repackaged:datastax-driver-core:3.2.0'
+            dependency 'com.datastax.cassandra:cassandra-driver-core:3.8.0'
             dependency 'com.spotify:folsom:1.6.2'
 
             dependencySet(group: 'com.spotify.metrics', version: '1.0.2') {

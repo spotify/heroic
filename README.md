@@ -43,18 +43,13 @@ Heroic has been tested with the following services:
 
 ### Building from source
 
-In order to compile Heroic, you'll need a working Java 11 JDK, Maven 3 and Gradle.
+In order to compile Heroic, you'll need:
 
-There are some repackaged dependencies that you have to make available, you do
-this by running `tools/install-repackaged`.
+- A Java 11 JDK
+- Maven 3
+- Gradle
 
-```bash
-$ tools/install-repackaged
-Installing repackaged/x
-...
-```
-
-After this, the project is built using Gradle:
+The project is built using Gradle:
 
 ```bash
 # full build, runs all tests and builds the shaded jar
@@ -254,42 +249,11 @@ class which is the central building block for setting up a Heroic instance.
 utilities for interacting with Elasticsearch. This is separate since we have
 more than one backend that needs to talk with elasticsearch.
 
-Anything in the [`repackaged`](repackaged) directory is dependencies that
-include one or more Java packages that must be relocated to avoid conflicts.
-These are exported under the `com.spotify.heroic.repackaged` groupId.
-
 Finally there is [`heroic-dist`](heroic-dist), a small project that depends on all module. Here is where everything is bound together into a distribution
 &mdash; a shaded jar. It also provides the entry-point for services, namely
 [`com.spotify.heroic.HeroicService`](heroic-dist/src/main/java/com/spotify/heroic/HeroicService.java)
 or through an interactive shell [`com.spotify.heroic.HeroicShell`](heroic-shell/src/main/java/com/spotify/heroic/HeroicShell.java).
 The shell can either be run standalone or connected to an existing Heroic instance for administration.
-
-### Repackaged Dependencies
-
-These are third-party dependencies that has to be repackaged to avoid binary
-incompatibilities with dependencies.
-
-Every time these are upgraded, they must be inspected for new conflicts.
-The easiest way to do this, is to build the project and look at the warnings
-for the shaded jar.
-
-```
-$> ./gradlew clean assemble
-...
-[WARNING] foo-3.5.jar, foo-4.5.jar define 10 overlapping classes:
-[WARNING]   - com.foo.ConflictingClass
-...
-```
-
-This would indicate that there is a package called foo with overlapping
-classes.
-
-You can find the culprit using the `dependencies` task.
-
-```
-$> ./gradlew <module>:dependencies
-```
-
 
 ## Contributing
 
