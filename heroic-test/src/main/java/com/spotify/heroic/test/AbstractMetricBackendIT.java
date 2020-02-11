@@ -65,12 +65,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
 import org.junit.runners.model.Statement;
-import org.slf4j.Logger;
 
 public abstract class AbstractMetricBackendIT {
-    private static final Logger log = org.slf4j.LoggerFactory
-        .getLogger(AbstractMetricBackendIT.class);
-
     protected final Series s1 =
         new Series("s1", ImmutableSortedMap.of("id", "s1"), ImmutableSortedMap.of("resource", "a"));
     protected final Series s2 =
@@ -92,37 +88,33 @@ public abstract class AbstractMetricBackendIT {
     public TestRule setupBackend = (base, description) -> new Statement() {
         @Override
         public void evaluate() throws Throwable {
-            Optional<MetricModule> module = setupModule();
-            if (module.isPresent()) {
-                final MetricManagerModule.Builder metric =
-                    MetricManagerModule.builder().backends(ImmutableList.of(module.get()));
+            MetricModule module = setupModule();
+            final MetricManagerModule.Builder metric =
+                MetricManagerModule.builder().backends(ImmutableList.of(module));
 
-                final HeroicConfig.Builder fragment = HeroicConfig.builder().metrics(metric);
+            final HeroicConfig.Builder fragment = HeroicConfig.builder().metrics(metric);
 
-                final HeroicCoreInstance core = HeroicCore
-                    .builder()
-                    .setupShellServer(false)
-                    .setupService(false)
-                    .configFragment(fragment)
-                    .build()
-                    .newInstance();
+            final HeroicCoreInstance core = HeroicCore
+                .builder()
+                .setupShellServer(false)
+                .setupService(false)
+                .configFragment(fragment)
+                .build()
+                .newInstance();
 
-                core.start().get();
+            core.start().get();
 
-                backend = core
-                    .inject(c -> c
-                        .metricManager()
-                        .groupSet()
-                        .inspectAll()
-                        .stream()
-                        .map(GroupMember::getMember)
-                        .findFirst())
-                    .orElseThrow(() -> new IllegalStateException("Failed to find backend"));
-                base.evaluate();
-                core.shutdown().get();
-            } else {
-                log.info("Omitting " + description + " since module is not configured");
-            }
+            backend = core
+                .inject(c -> c
+                    .metricManager()
+                    .groupSet()
+                    .inspectAll()
+                    .stream()
+                    .map(GroupMember::getMember)
+                    .findFirst())
+                .orElseThrow(() -> new IllegalStateException("Failed to find backend"));
+            base.evaluate();
+            core.shutdown().get();
         }
     };
 
@@ -131,7 +123,7 @@ public abstract class AbstractMetricBackendIT {
         setupSupport();
     }
 
-    protected abstract Optional<MetricModule> setupModule();
+    protected abstract MetricModule setupModule();
 
     protected Optional<Long> period() {
         return Optional.empty();

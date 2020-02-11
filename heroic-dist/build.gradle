@@ -45,7 +45,7 @@ dependencies {
     api project(':heroic-usage-tracking-disabled')
     api project(':heroic-usage-tracking-google-analytics')
 
-    implementation 'com.spotify.heroic.repackaged:datastax-driver-core'
+    implementation 'com.datastax.cassandra:cassandra-driver-core'
     implementation 'org.apache.logging.log4j:log4j-core'
     implementation 'org.apache.logging.log4j:log4j-1.2-api'
     implementation 'org.apache.logging.log4j:log4j-slf4j-impl'

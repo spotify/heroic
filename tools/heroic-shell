@@ -20,7 +20,6 @@ fi
 
 if [[ -d $dist ]]; then
     if [[ ! -f $dist_jar ]]; then
-        $root/tools/install-repackaged
         (cd $root && $GRADLE $GRADLE_OPTS clean $DIST_TASK)
     fi
 
