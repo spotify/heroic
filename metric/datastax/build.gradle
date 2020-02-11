@@ -1,6 +1,6 @@
 dependencies {
     implementation project(':heroic-component')
-    implementation 'com.spotify.heroic.repackaged:datastax-driver-core'
+    implementation 'com.datastax.cassandra:cassandra-driver-core'
     implementation 'eu.toolchain.serializer:tiny-serializer-core'
     implementation 'eu.toolchain.async:tiny-async-api'
     implementation 'eu.toolchain.serializer:tiny-serializer-api'
@@ -8,6 +8,7 @@ dependencies {
 
     testImplementation project(':heroic-test')
     testImplementation project(path: ':heroic-component', configuration: 'testRuntime')
+    testImplementation 'org.testcontainers:cassandra'
 }
 
 group = 'com.spotify.heroic.metric'

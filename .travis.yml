@@ -24,9 +24,6 @@ before_install:
   - curl https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-243.0.0-linux-x86_64.tar.gz | tar xzf -
   - ./google-cloud-sdk/install.sh --quiet --usage-reporting false --additional-components pubsub-emulator beta
 
-install:
-  - tools/install-repackaged
-
 before_script:
   - |
     ./google-cloud-sdk/bin/gcloud beta emulators pubsub start &

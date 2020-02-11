@@ -23,28 +23,15 @@ package com.spotify.heroic;
 
 import org.slf4j.bridge.SLF4JBridgeHandler;
 
-public class HeroicLogging {
-    public static void configure() {
-        configureNetty();
+class HeroicLogging {
+    static void configure() {
         configureJUL();
-    }
-
-    /**
-     * Initialize all Netty logging consistently.
-     * <p>
-     * Netty decided it was a good idea to build their own logging framework. From this follows that
-     * every time netty has been shaded, it needs to be initialized independently to properly
-     * redirect all logging to SLF4j.
-     */
-    public static void configureNetty() {
-        com.datastax.shaded.netty.util.internal.logging.InternalLoggerFactory.setDefaultFactory(
-            new com.datastax.shaded.netty.util.internal.logging.Slf4JLoggerFactory());
     }
 
     /**
      * Initialize java.util.logging to SLF4J.
      */
-    public static void configureJUL() {
+    private static void configureJUL() {
         SLF4JBridgeHandler.removeHandlersForRootLogger();
         SLF4JBridgeHandler.install();
     }
