@@ -29,7 +29,6 @@ import eu.toolchain.async.ResolvableFuture;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import javax.annotation.Nonnull;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateRequestBuilder;
 import org.elasticsearch.action.delete.DeleteRequestBuilder;
@@ -142,7 +141,6 @@ public class Connection {
         return client.getClient().prepareSearchScroll(scrollId);
     }
 
-    @Nonnull
     public ClearScrollRequestBuilder clearSearchScroll(String scrollId) {
       return client.getClient().prepareClearScroll().addScrollId(scrollId);
     }
