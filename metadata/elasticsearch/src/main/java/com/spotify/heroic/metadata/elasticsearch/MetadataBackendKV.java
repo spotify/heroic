@@ -22,6 +22,7 @@
 package com.spotify.heroic.metadata.elasticsearch;
 
 import static com.spotify.heroic.metadata.elasticsearch.ElasticsearchMetadataUtils.loadJsonResource;
+import static java.util.Optional.ofNullable;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 import static org.elasticsearch.index.query.QueryBuilders.prefixQuery;
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
@@ -38,8 +39,8 @@ import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.elasticsearch.AbstractElasticsearchMetadataBackend;
 import com.spotify.heroic.elasticsearch.BackendType;
 import com.spotify.heroic.elasticsearch.Connection;
-import com.spotify.heroic.elasticsearch.ScrollTransformResult;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
+import com.spotify.heroic.elasticsearch.ScrollTransformResult;
 import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
 import com.spotify.heroic.filter.AndFilter;
 import com.spotify.heroic.filter.FalseFilter;
@@ -454,7 +455,8 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                 c, builder, limit, converter);
 
             return scroll
-                .onResolved(r -> c.clearSearchScroll(r.getLastScrollId()).execute())
+                .onResolved(r -> ofNullable(r.getLastScrollId())
+                    .ifPresent(id -> c.clearSearchScroll(id).execute()))
                 .directTransform(collector);
         });
     }
