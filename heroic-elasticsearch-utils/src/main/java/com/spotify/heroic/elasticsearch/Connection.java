@@ -33,6 +33,7 @@ import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateRequestBuilder;
 import org.elasticsearch.action.delete.DeleteRequestBuilder;
 import org.elasticsearch.action.index.IndexRequestBuilder;
+import org.elasticsearch.action.search.ClearScrollRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchScrollRequestBuilder;
 import org.elasticsearch.action.support.master.AcknowledgedResponse;
@@ -138,6 +139,10 @@ public class Connection {
 
     public SearchScrollRequestBuilder prepareSearchScroll(String scrollId) {
         return client.getClient().prepareSearchScroll(scrollId);
+    }
+
+    public ClearScrollRequestBuilder clearSearchScroll(String scrollId) {
+      return client.getClient().prepareClearScroll().addScrollId(scrollId);
     }
 
     public List<DeleteRequestBuilder> delete(String type, String id)

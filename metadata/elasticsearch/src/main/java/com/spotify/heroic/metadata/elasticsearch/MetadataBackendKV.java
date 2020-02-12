@@ -38,7 +38,7 @@ import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.elasticsearch.AbstractElasticsearchMetadataBackend;
 import com.spotify.heroic.elasticsearch.BackendType;
 import com.spotify.heroic.elasticsearch.Connection;
-import com.spotify.heroic.elasticsearch.LimitedSet;
+import com.spotify.heroic.elasticsearch.ScrollTransformResult;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
 import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
 import com.spotify.heroic.filter.AndFilter;
@@ -322,7 +322,6 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
           return entries(
               filter.getFilter(),
               filter.getLimit(),
-              filter.getRange(),
               this::toSeries,
               l -> new FindSeries(l.getSet(), l.isLimited()),
               builder -> { });
@@ -338,7 +337,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
     @Override
     public AsyncFuture<FindSeriesIds> findSeriesIds(final FindSeriesIds.Request request) {
-        return entries(request.getFilter(), request.getLimit(), request.getRange(), this::toId,
+        return entries(request.getFilter(), request.getLimit(), this::toId,
             l -> new FindSeriesIds(l.getSet(), l.isLimited()), builder -> {
                 builder.setFetchSource(false);
             });
@@ -435,8 +434,10 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     }
 
     private <T, O> AsyncFuture<O> entries(
-        final Filter filter, final OptionalLimit limit, final DateRange range,
-        final Function<SearchHit, T> converter, final Transform<LimitedSet<T>, O> collector,
+        final Filter filter,
+        final OptionalLimit limit,
+        final Function<SearchHit, T> converter,
+        final Transform<ScrollTransformResult<T>, O> collector,
         final Consumer<SearchRequestBuilder> modifier
     ) {
         final QueryBuilder f = filter(filter);
@@ -449,8 +450,12 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
             modifier.accept(builder);
 
-            AsyncFuture<LimitedSet<T>> scroll = scrollEntries(c, builder, limit, converter);
-            return scroll.directTransform(collector);
+            AsyncFuture<ScrollTransformResult<T>> scroll = scrollEntries(
+                c, builder, limit, converter);
+
+            return scroll
+                .onResolved(r -> c.clearSearchScroll(r.getLastScrollId()).execute())
+                .directTransform(collector);
         });
     }
 

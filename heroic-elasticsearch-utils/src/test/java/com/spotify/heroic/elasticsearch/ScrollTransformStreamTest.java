@@ -40,7 +40,7 @@ public class ScrollTransformStreamTest {
     private AsyncFramework async;
 
     @Mock
-    private AsyncFuture<LimitedSet> resolved;
+    private AsyncFuture<ScrollTransformResult> resolved;
 
     @Mock
     private Supplier<AsyncFuture<SearchResponse>> scroller;
@@ -82,12 +82,12 @@ public class ScrollTransformStreamTest {
 
         doReturn(scroller).when(scrollerFactory).apply(any(String.class));
         doReturn(response).when(scroller).get();
-        doAnswer(new Answer<AsyncFuture<LimitedSet<Integer>>>() {
-            public AsyncFuture<LimitedSet<Integer>> answer(
+        doAnswer(new Answer<AsyncFuture<ScrollTransformResult<Integer>>>() {
+            public AsyncFuture<ScrollTransformResult<Integer>> answer(
                 InvocationOnMock invocation
             ) throws Exception {
-                final LazyTransform<SearchResponse, LimitedSet<Integer>> transform =
-                    (LazyTransform<SearchResponse, LimitedSet<Integer>>) invocation.getArguments
+                final LazyTransform<SearchResponse, ScrollTransformResult<Integer>> transform =
+                    (LazyTransform<SearchResponse, ScrollTransformResult<Integer>>) invocation.getArguments
                         ()[0];
                 return transform.transform(searchResponse);
             }
@@ -101,12 +101,12 @@ public class ScrollTransformStreamTest {
             }
         }).when(seriesFunction).apply(any());
 
-        doAnswer(new Answer<AsyncFuture<LimitedSet<Integer>>>() {
-            public AsyncFuture<LimitedSet<Integer>> answer(
+        doAnswer(new Answer<AsyncFuture<ScrollTransformResult<Integer>>>() {
+            public AsyncFuture<ScrollTransformResult<Integer>> answer(
                 InvocationOnMock invocation
             ) throws Exception {
-                final LazyTransform<Void, LimitedSet<Integer>> transform =
-                    (LazyTransform<Void, LimitedSet<Integer>>) invocation.getArguments()[0];
+                final LazyTransform<Void, ScrollTransformResult<Integer>> transform =
+                    (LazyTransform<Void, ScrollTransformResult<Integer>>) invocation.getArguments()[0];
                 final Void ignore = null;
                 return transform.transform(ignore);
             }
