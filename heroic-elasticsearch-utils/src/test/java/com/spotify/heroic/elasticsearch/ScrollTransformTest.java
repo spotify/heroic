@@ -27,11 +27,10 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
-import org.mockito.runners.MockitoJUnitRunner;
 import org.mockito.stubbing.Answer;
 import org.mockito.stubbing.OngoingStubbing;
 
-@RunWith(MockitoJUnitRunner.class)
+@RunWith(org.mockito.junit.MockitoJUnitRunner.class)
 public class ScrollTransformTest {
     private final String scrollID = "scroller1";
 
@@ -39,7 +38,7 @@ public class ScrollTransformTest {
     private AsyncFramework async;
 
     @Mock
-    private AsyncFuture<LimitedSet> resolved;
+    private AsyncFuture<ScrollTransformResult> resolved;
 
     @Mock
     Supplier<AsyncFuture<SearchResponse>> scroller;
@@ -68,18 +67,18 @@ public class ScrollTransformTest {
 
     @Before
     public void setup() {
-        doReturn(resolved).when(async).resolved(any(LimitedSet.class));
+        doReturn(resolved).when(async).resolved(any(ScrollTransformResult.class));
         doReturn(searchHits).when(searchResponse).getHits();
         doReturn(scrollID).when(searchResponse).getScrollId();
 
         doReturn(scroller).when(scrollerFactory).apply(any(String.class));
         doReturn(response).when(scroller).get();
-        doAnswer(new Answer<AsyncFuture<LimitedSet<Integer>>>() {
-            public AsyncFuture<LimitedSet<Integer>> answer(
+        doAnswer(new Answer<AsyncFuture<ScrollTransformResult<Integer>>>() {
+            public AsyncFuture<ScrollTransformResult<Integer>> answer(
                 InvocationOnMock invocation
             ) throws Exception {
-                final LazyTransform<SearchResponse, LimitedSet<Integer>> transform =
-                    (LazyTransform<SearchResponse, LimitedSet<Integer>>) invocation.getArguments
+                final LazyTransform<SearchResponse, ScrollTransformResult<Integer>> transform =
+                    (LazyTransform<SearchResponse, ScrollTransformResult<Integer>>) invocation.getArguments
                         ()[0];
                 return transform.transform(searchResponse);
             }
@@ -101,7 +100,7 @@ public class ScrollTransformTest {
         return new ScrollTransform<>(async, optionalLimit, Function.identity(), scrollerFactory);
     }
 
-    public LimitedSet<SearchHit> createLimitSet(Integer limit, SearchHit[]... pages) {
+    public ScrollTransformResult<SearchHit> createLimitSet(Integer limit, SearchHit[]... pages) {
         final Set<SearchHit> set = new HashSet<>();
 
         Stream<SearchHit> stream =
@@ -113,7 +112,7 @@ public class ScrollTransformTest {
 
         stream.map(Function.identity()).forEach(set::add);
 
-        return new LimitedSet<>(set, limit != null);
+        return new ScrollTransformResult<>(set, limit != null, scrollID);
     }
 
     @Test

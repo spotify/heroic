@@ -67,20 +67,25 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
 
     protected abstract Series toSeries(SearchHit hit);
 
-    protected <T> AsyncFuture<LimitedSet<T>> scrollEntries(
+    protected <T> AsyncFuture<ScrollTransformResult<T>> scrollEntries(
         final Connection c,
         final SearchRequestBuilder request,
         final OptionalLimit limit,
         final Function<SearchHit, T> converter
     ) {
-        final ScrollTransform<T> scrollTransform =
-            new ScrollTransform<T>(async, limit, converter, scrollId -> {
-                // Function<> that returns a Supplier
-                return () -> {
-                    final ResolvableFuture<SearchResponse> future = async.future();
-                    c.prepareSearchScroll(scrollId).setScroll(SCROLL_TIME).execute(bind(future));
-                    return future;
-                };
+
+    final ScrollTransform<T> scrollTransform =
+        new ScrollTransform<T>(
+            async,
+            limit,
+            converter,
+            scrollId -> {
+              // Function<> that returns a Supplier
+              return () -> {
+                final ResolvableFuture<SearchResponse> future = async.future();
+                c.prepareSearchScroll(scrollId).setScroll(SCROLL_TIME).execute(bind(future));
+                return future;
+              };
             });
             final ResolvableFuture<SearchResponse> future = async.future();
             request.execute(bind(future));
@@ -88,7 +93,9 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
         return future.lazyTransform(scrollTransform);
     }
 
-    public static class ScrollTransform<T> implements LazyTransform<SearchResponse, LimitedSet<T>> {
+    public static class ScrollTransform<T>
+        implements LazyTransform<SearchResponse, ScrollTransformResult<T>> {
+
         private final AsyncFramework async;
         private final OptionalLimit limit;
 
@@ -112,9 +119,10 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
         }
 
         @Override
-        public AsyncFuture<LimitedSet<T>> transform(final SearchResponse response)
+        public AsyncFuture<ScrollTransformResult<T>> transform(final SearchResponse response)
             throws Exception {
             final SearchHit[] hits = response.getHits().getHits();
+            final String scrollId = response.getScrollId();
 
             for (final SearchHit hit : hits) {
                 final T convertedHit = converter.apply(hit);
@@ -127,17 +135,17 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
 
                 if (limit.isGreater(size)) {
                     results.remove(convertedHit);
-                    return async.resolved(new LimitedSet<>(limit.limitSet(results), true));
+                    return async.resolved(
+                        new ScrollTransformResult<>(limit.limitSet(results), true, scrollId));
                 }
             }
 
             if (hits.length == 0) {
-                return async.resolved(new LimitedSet<>(results, false));
+                return async.resolved(new ScrollTransformResult<>(results, false, scrollId));
             }
 
-            final String scrollId = response.getScrollId();
             if (scrollId == null) {
-                return async.resolved(LimitedSet.of());
+                return async.resolved(ScrollTransformResult.of());
             }
 
             // Fetch the next page in the scrolling search. The result will be handled by a new call
