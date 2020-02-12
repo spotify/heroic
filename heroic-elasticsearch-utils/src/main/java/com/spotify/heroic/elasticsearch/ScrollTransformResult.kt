@@ -23,10 +23,12 @@ package com.spotify.heroic.elasticsearch
 
 import com.google.common.collect.ImmutableSet
 
-data class LimitedSet<T>(val set: Set<T>?, val isLimited: Boolean) {
+data class ScrollTransformResult<T>(
+    val set: Set<T>, val isLimited: Boolean, val lastScrollId: String?) {
+
     companion object {
-        @JvmStatic fun <T> of(): LimitedSet<T> {
-            return LimitedSet(ImmutableSet.of<T>(), false)
+        @JvmStatic fun <T> of(): ScrollTransformResult<T> {
+            return ScrollTransformResult(ImmutableSet.of<T>(), false, null)
         }
     }
 }
