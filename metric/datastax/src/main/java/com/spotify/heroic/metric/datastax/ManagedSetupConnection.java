@@ -53,8 +53,10 @@ public class ManagedSetupConnection implements ManagedSetup<Connection> {
                                         "readTimeout", "consistencyLevel", "retryPolicy",
                                         "authentication", "poolingOptions" })
     public ManagedSetupConnection(final AsyncFramework async,
-                                  final Collection<InetSocketAddress> seeds, final Schema schema,
-                                  final boolean configure, final int fetchSize,
+                                  final Collection<InetSocketAddress> seeds,
+                                  final Schema schema,
+                                  final boolean configure,
+                                  final int fetchSize,
                                   final Duration readTimeout,
                                   final ConsistencyLevel consistencyLevel,
                                   final RetryPolicy retryPolicy,
@@ -88,8 +90,8 @@ public class ManagedSetupConnection implements ManagedSetup<Connection> {
                 .withRetryPolicy(retryPolicy)
                 .withQueryOptions(queryOptions)
                 .withSocketOptions(socketOptions)
-                .withLoadBalancingPolicy(new TokenAwarePolicy(new RoundRobinPolicy()));
-            // @formatter:on
+                .withLoadBalancingPolicy(new TokenAwarePolicy(new RoundRobinPolicy()))
+                .withoutJMXReporting();
 
             authentication.accept(cluster);
             poolingOptions.apply(cluster);
@@ -98,16 +100,11 @@ public class ManagedSetupConnection implements ManagedSetup<Connection> {
         });
 
         if (configure) {
-            session = session.lazyTransform(s -> {
-                return schema.configure(s).directTransform(i -> s);
-            });
+            session = session.lazyTransform(s -> schema.configure(s).directTransform(i -> s));
         }
 
-        return session.lazyTransform(s -> {
-            return schema.instance(s).directTransform(schema -> {
-                return new Connection(s, schema);
-            });
-        });
+        return session.lazyTransform(
+            s -> schema.instance(s).directTransform(schema -> new Connection(s, schema)));
     }
 
     @Override

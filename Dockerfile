@@ -17,5 +17,6 @@ COPY --from=builder heroic-dist/build/libs/heroic-dist-0.0.1-SNAPSHOT-shaded.jar
 COPY example/heroic-memory-example.yml /heroic.yml
 COPY run-heroic.sh /usr/bin/heroic.sh
 
+ENV JVM_DEFAULT_ARGS -Dcom.datastax.driver.FORCE_NIO=true
 ENTRYPOINT ["/usr/bin/heroic.sh"]
 CMD ["/heroic.yml"]
