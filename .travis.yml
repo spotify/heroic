@@ -23,6 +23,11 @@ env:
 before_install:
   - curl https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-243.0.0-linux-x86_64.tar.gz | tar xzf -
   - ./google-cloud-sdk/install.sh --quiet --usage-reporting false --additional-components pubsub-emulator beta
+  - pyenv global 3.8.1
+
+install:
+  - pip install -r system-tests/requirements.txt
+  - ./gradlew assemble
 
 before_script:
   - |
@@ -31,6 +36,7 @@ before_script:
 
 script:
   - ./gradlew --info check jacocoRootReport
+  - cd system-tests && pytest
 
 after_script:
   - kill -9 $PUBSUB_PID

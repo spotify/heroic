@@ -5,6 +5,9 @@ Dockerfile
 /.idea/
 *.png
 *.md
+.travis.yml
 build/
 out/
 .gradle
+
+/system-tests/

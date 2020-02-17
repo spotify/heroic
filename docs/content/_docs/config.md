@@ -87,8 +87,7 @@ consumers:
   - ...
 
 # Caching for aggregations.
-cache:
-  backend: <cache_backend>
+cache: <cache_backend>
 
 # Binding settings for the Heroic shell server. This allows full control over the Heroic node and should
 # be restricted.
@@ -768,7 +767,9 @@ threadsPerTopic: <int> default = 2
 # An object that will be provided to the Kafka consumer as configuration.
 # See the official documentation for what is expected:
 # https://kafka.apache.org/08/configuration.html#consumerconfigs
-config: {}
+config:
+  zookeeper.connect: <string> required
+  group.id: <string> required
 
 # If enabled, consumer offsets will be committed periodically. All threads are paused so there are no in-progress
 # requests while the commit is occurring.
