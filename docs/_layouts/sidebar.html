@@ -14,20 +14,6 @@ layout: default
 
       <li {% if page.title == 'Getting Started' %}class="active"{% endif %}>
         <a href="{{ 'docs/getting_started' | relative_url }}">Getting Started</a>
-
-        <ul class="nav">
-          <li {% if page.title == 'Compile Heroic' %}class="active"{% endif %}>
-            <a href="{{ 'docs/getting_started/compile' | relative_url }}">Compile Heroic</a>
-          </li>
-
-          <li {% if page.title == 'Install Dependencies' %}class="active"{% endif %}>
-            <a href="{{ 'docs/getting_started/installation' | relative_url }}">Install Dependencies</a>
-          </li>
-
-          <li {% if page.title == 'Configure Cluster' %}class="active"{% endif %}>
-            <a href="{{ 'docs/getting_started/configuration' | relative_url }}">Configure Cluster</a>
-          </li>
-        </ul>
       </li>
 
       <li {% if page.title == 'Configuration' %}class="active"{% endif %}>
