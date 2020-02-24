@@ -31,7 +31,7 @@ There are 2 durable metric backends, Bigtable and Cassandra.
 
 #### Configuration
 
-If you want to use Google Cloud Bigtable to store metrics, you can configure it with the following command using the the <a href="docs/shell">Heroic shell</a>. This will create tables and column families.
+If you want to use Google Cloud Bigtable to store metrics, you can configure it with the following command using the the <a href="shell">Heroic shell</a>. This will create tables and column families.
 
 ```bash
 tools/heroic-shell -P bigtable \
@@ -47,7 +47,7 @@ heroic> configure
 
 #### Configuration
 
-Heroic by default uses the `heroic` keyspace, which can be configured using the <a href="docs/shell">Heroic shell</a>.
+Heroic by default uses the `heroic` keyspace, which can be configured using the <a href="shell">Heroic shell</a>.
 
 ```bash
 tools/heroic-shell -P cassandra -X cassandra.seeds=<seeds> -X datastax.configure
@@ -67,7 +67,7 @@ When running Elasticsearch on k8s, a headless service should be configured in or
 
 #### Configuration
 
-Elasticsearch is also configured using the <a href="docs/shell">Heroic shell</a> or having `configure: true` in the config for the backend.
+Elasticsearch is also configured using the <a href="shell">Heroic shell</a> or having `configure: true` in the config for the backend.
 
 ```bash
 tools/heroic-shell -P elasticsearch-suggest -P elasticsearch-metadata -X elasticsearch.seeds=<seeds>
