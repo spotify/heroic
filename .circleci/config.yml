@@ -1,0 +1,96 @@
+version: 2.1
+
+jobs:
+  validate_branch:
+    docker:
+      - image: circleci/openjdk:11
+    steps:
+      # CircleCI has terrible support for filtering PRs/branches, this is a hacky workaround
+      - run: ([[ $CIRCLE_PULL_REQUESTS == "" ]]) && echo $CIRCLE_BRANCH | grep -Evq "^(master)|([0-9]+\.[0-9]+\.[0-9]+)$" && echo "not a PR / branch to build" && circleci step halt || echo "will build"
+
+  build:
+    docker:
+      - image: circleci/openjdk:11
+    steps:
+      - checkout
+      # Restore gradle deps
+      - restore_cache:
+          keys:
+            - gradle-cache-{{ checksum "build.gradle" }}
+            - gradle-cache
+      - run: ./gradlew assemble
+      - save_cache:
+          paths:
+            - .gradle/
+            - ~/.gradle/
+          key: gradle-cache-{{ checksum "build.gradle" }}
+      - persist_to_workspace:
+          root: .
+          paths:
+            - '*/build'
+            - '*/*/build'
+            - '*/out'
+            - '*/*/out'
+
+  install_gcloud:
+    docker:
+      - image: circleci/openjdk:11
+    steps:
+      - restore_cache:
+          keys:
+            - gcloud-243
+      - run: curl https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-243.0.0-linux-x86_64.tar.gz | tar xzf -
+      - run: ./google-cloud-sdk/install.sh --quiet --usage-reporting false --additional-components pubsub-emulator beta
+      - save_cache:
+          paths:
+            - ./google-cloud-sdk
+          key: gcloud-243
+      - persist_to_workspace:
+          root: .
+          paths:
+            - google-cloud-sdk
+
+  test:
+    machine:
+      # Required for running testcontainer docker images
+      image: ubuntu-1604:201903-01
+    environment:
+      PUBSUB_EMULATOR_HOST: localhost:8085
+    steps:
+      - run:
+          name: Install Java 11
+          command: |
+            sudo mkdir -p /usr/lib/jvm
+            curl -s https://download.java.net/openjdk/jdk11/ri/openjdk-11+28_linux-x64_bin.tar.gz | sudo tar xfz - --directory /usr/lib/jvm
+            sudo sh -c 'for bin in /usr/lib/jvm/jdk-11/bin/*; do update-alternatives --install /usr/bin/$(basename $bin) $(basename $bin) $bin 100; done'
+            sudo sh -c 'for bin in /usr/lib/jvm/jdk-11/bin/*; do update-alternatives --set $(basename $bin) $bin; done'
+      - checkout
+      - restore_cache:
+          keys:
+            - gradle-cache-{{ checksum "build.gradle" }}
+            - gradle-cache
+      - attach_workspace:
+          at: /tmp/workspace
+      - run: cp -r /tmp/workspace/* ~/project/
+      - run:
+          name: Run PubSub emulator
+          command: ./google-cloud-sdk/bin/gcloud beta emulators pubsub start
+          background: true
+      - run: ./gradlew --info check jacocoRootReport
+      - run: 'bash <(curl -s https://codecov.io/bash)'
+
+
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - validate_branch
+      - install_gcloud
+      - build:
+          requires:
+            - validate_branch
+      - test:
+          requires:
+            - build
+            - validate_branch
+            - install_gcloud
