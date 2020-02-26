@@ -58,11 +58,14 @@ import com.spotify.heroic.querylogging.QueryLoggerFactory;
 import com.spotify.heroic.statistics.DataInMemoryReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 import com.spotify.heroic.tracing.EndSpanFutureReporter;
+import com.spotify.heroic.tracing.RandomParentSampler;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.StreamCollector;
+import io.opencensus.trace.Sampler;
 import io.opencensus.trace.Span;
+import io.opencensus.trace.SpanBuilder;
 import io.opencensus.trace.Tracer;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -184,6 +187,7 @@ public class LocalMetricManager implements MetricManager {
         }
 
         private class Transform implements LazyTransform<FindSeries, FullQuery> {
+
             private final AggregationInstance aggregation;
             private final boolean failOnLimits;
             private final OptionalLimit seriesLimit;
@@ -196,6 +200,9 @@ public class LocalMetricManager implements MetricManager {
             private final DataInMemoryReporter dataInMemoryReporter;
             private final Span parentSpan;
             private final MetricType source;
+
+            private static final double PROBABILITY = 0.005;
+            private final Sampler randomParentSampler = new RandomParentSampler(PROBABILITY);
 
             private Transform(
                 final FullQuery.Request request,
@@ -309,10 +316,15 @@ public class LocalMetricManager implements MetricManager {
                 final List<Callable<AsyncFuture<FetchData.Result>>> fetches = new ArrayList<>();
                 accept(metricBackend -> {
                     for (final Series series : result.getSeries()) {
-                        // Without sampling spans this would produce too many. Ideally there would
-                        // be a local sample strategy to only send the outliers.
-                        final Span fetchSeries = tracer.spanBuilderWithExplicitParent(
-                            "localMetricsManager.fetchSeries", fetchSpan).startSpan();
+                        // Without sampling spans this would produce way too many.
+                        final SpanBuilder fetchSeriesSpanBuilder =
+                            tracer.spanBuilderWithExplicitParent(
+                                "localMetricsManager.fetchSeries", fetchSpan);
+                        if (result.getSeries().size() > 100) {
+                            fetchSeriesSpanBuilder.setSampler(randomParentSampler);
+                        }
+
+                        final Span fetchSeries = fetchSeriesSpanBuilder.startSpan();
 
                         fetchSeries.addAnnotation(series.toString());
                         fetches.add(() -> metricBackend.fetch(
