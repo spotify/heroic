@@ -1,6 +1,6 @@
 # [![Heroic](/logo.42.png?raw=true "The Heroic Time Series Database")](/assets/logo_on_light.svg) Heroic
 
-[![Build Status](https://travis-ci.org/spotify/heroic.svg?branch=master)](https://travis-ci.org/spotify/heroic)
+[![Build Status](https://circleci.com/gh/spotify/heroic.svg?style=svg)](https://circleci.com/gh/spotify/heroic)
 [![Codecov](https://img.shields.io/codecov/c/github/spotify/heroic.svg)](https://codecov.io/gh/spotify/heroic)
 [![License](https://img.shields.io/github/license/spotify/heroic.svg)](LICENSE)
 
