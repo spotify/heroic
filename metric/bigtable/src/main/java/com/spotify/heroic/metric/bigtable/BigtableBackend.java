@@ -457,7 +457,8 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                         .readRows(
                             table,
                             ReadRowsRequest.builder()
-                                .range(new RowRange(Optional.of(p.rowKeyStart), Optional.of(p.rowKeyEnd)))
+                                .range(new RowRange(
+                                    Optional.of(p.rowKeyStart), Optional.of(p.rowKeyEnd)))
                                 .filter(
                                     RowFilter.chain(
                                         Arrays.asList(
