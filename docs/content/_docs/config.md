@@ -13,7 +13,7 @@ Heroic is divided up into a few components, each whose configuration will affect
 
 ## Configuration file
 
-The configuration for Heroic is loaded from [a YAML file](https://en.wikipedia.org/wiki/YAML) at runtime. A valid example file can be found [in the example directory on GitHub](https://github.com/spotify/heroic/blob/master/example/heroic.example.yml).
+The configuration for Heroic is loaded from [a YAML file](https://en.wikipedia.org/wiki/YAML) at runtime. A valid example file can be found [in the example directory on GitHub](https://github.com/spotify/heroic/blob/master/example/heroic-memory-example.yml).
 
 ```yaml
 # id, version, and service are used as metadata for the node.
