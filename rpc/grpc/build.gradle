@@ -2,6 +2,7 @@ apply plugin: 'kotlin-kapt'
 
 dependencies {
     implementation project(':heroic-component')
+    implementation project(':heroic-core')
     implementation 'io.grpc:grpc-stub'
     implementation 'io.grpc:grpc-netty'
     kapt 'com.google.dagger:dagger-compiler'
