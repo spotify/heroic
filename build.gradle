@@ -29,7 +29,7 @@ def getGitHash = { ->
 allprojects {
     group = 'com.spotify.heroic'
 
-    version = System.getenv('TRAVIS_TAG') ?: System.getenv('DOCKER_TAG') ?: '0.0.1-SNAPSHOT'
+    version = System.getenv('CIRCLE_TAG') ?: System.getenv('DOCKER_TAG') ?: '0.0.1-SNAPSHOT'
 
     ext.gitCommit = getGitHash()
 
