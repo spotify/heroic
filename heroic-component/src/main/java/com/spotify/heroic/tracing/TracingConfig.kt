@@ -16,4 +16,3 @@ data class TracingConfig (
         val resetClient: Boolean = false
     )
 }
-

@@ -21,17 +21,17 @@
 
 package com.spotify.heroic.tracing;
 
-import static com.spotify.heroic.tracing.EnvVariableLookup.getEnvVariable;
 import static io.opencensus.trace.AttributeValue.stringAttributeValue;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.Objects.isNull;
 
+import com.google.cloud.MetadataConfig;
 import io.opencensus.trace.AttributeValue;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-public class EnvironmentMetadata implements TracingMetadataProvider {
+public class EnvironmentMetadata {
     /** The absolute max size of attributes, including optional ones */
     private static final int MAX_ATTRIBUTE_SIZE = 8;
     private static Map<String, AttributeValue> attributes;
@@ -39,21 +39,22 @@ public class EnvironmentMetadata implements TracingMetadataProvider {
     private EnvironmentMetadata() { }
 
     private static void addGcpMetadata() {
-        String projectId = GcpMetadataLookup.getProjectId();
+
+        String projectId = MetadataConfig.getProjectId();
 
         if (isNull(projectId) || projectId.isBlank()) {
             return;
         }
 
-        attributes.put("gcp.project", stringAttributeValue(GcpMetadataLookup.getProjectId()));
-        String zone = GcpMetadataLookup.getZone();
+        attributes.put("gcp.project", stringAttributeValue(MetadataConfig.getProjectId()));
+        String zone = MetadataConfig.getZone();
         attributes.put("gcp.zone", stringAttributeValue(zone));
         attributes.put(
             "gcp.region", stringAttributeValue(zone.substring(0, zone.lastIndexOf("-"))));
     }
 
     private static void addHostname() {
-        final Optional<String> hostname = getEnvVariable("HOSTNAME");
+        final Optional<String> hostname = EnvVariableLookup.getEnvVariable("HOSTNAME");
         hostname.ifPresent(h -> attributes.put("hostname", stringAttributeValue(h)));
     }
 
@@ -81,7 +82,6 @@ public class EnvironmentMetadata implements TracingMetadataProvider {
         return new EnvironmentMetadata();
     }
 
-    @Override
     public Map<String, AttributeValue> toAttributes() {
         return attributes;
     }
