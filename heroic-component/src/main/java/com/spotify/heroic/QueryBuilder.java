@@ -37,6 +37,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class QueryBuilder {
     private Optional<MetricType> source = Optional.empty();
@@ -49,14 +51,19 @@ public class QueryBuilder {
     private Optional<QueryOptions> options = Optional.empty();
     private Optional<JsonNode> clientContext = Optional.empty();
     private Optional<FeatureSet> features = Optional.empty();
+    private static final Logger log = LoggerFactory.getLogger(QueryBuilder.class);
+
 
     /**
      * Specify a set of tags that has to match.
      *
-     * @deprecated Use {@link #filter(java.util.Optional)}} with the appropriate filter instead.
+     * @deprecated Use {@link #filter(java.util.Optional)} with the appropriate filter instead.
      * These can be built using {@link com.spotify.heroic.filter.MatchKeyFilter(String)}.
      */
+    @Deprecated
     public QueryBuilder key(Optional<String> key) {
+        log.warn("key is deprecated, use #filter(java.util.Optional) with the appropriate filter"
+                 + " instead");
         this.key = key;
         return this;
     }
@@ -67,7 +74,10 @@ public class QueryBuilder {
      * @deprecated Use {@link #filter(java.util.Optional)} with the appropriate filter instead.
      * These can be built using {@link com.spotify.heroic.filter.MatchTagFilter(String, String)}.
      */
+    @Deprecated
     public QueryBuilder tags(Optional<Map<String, String>> tags) {
+        log.warn("tags is deprecated, use #filter(java.util.Optional) with the appropriate filter"
+               + " instead");
         checkNotNull(tags, "tags must not be null");
         this.tags = pickOptional(this.tags, tags);
         return this;

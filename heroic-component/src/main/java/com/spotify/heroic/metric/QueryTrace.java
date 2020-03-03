@@ -35,11 +35,13 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
-
+import com.spotify.heroic.QueryBuilder;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @JsonSerialize(using = QueryTrace.Serializer.class)
 @JsonDeserialize(using = QueryTrace.Deserializer.class)
@@ -48,6 +50,8 @@ public interface QueryTrace {
     PassiveTrace PASSIVE = PassiveTrace.create();
     NamedWatch PASSIVE_NAMED_WATCH = PassiveNamedWatch.create();
     Joiner PASSIVE_JOINER = new PassiveJoiner();
+    Logger log = LoggerFactory.getLogger(QueryBuilder.class);
+
 
     /**
      * Create an active query trace.
@@ -56,7 +60,9 @@ public interface QueryTrace {
      * @return a {@link com.spotify.heroic.metric.QueryTrace}
      * @deprecated use {@link #watch(com.spotify.heroic.metric.QueryTrace.Identifier)}
      */
+    @Deprecated
     static QueryTrace of(final Identifier what) {
+        log.warn("of is deprecated, use #watch(com.spotify.heroic.metric.QueryTrace.Identifier)");
         return ActiveTrace.create(what, 0L, ImmutableList.of());
     }
 
@@ -68,7 +74,9 @@ public interface QueryTrace {
      * @return a {@link com.spotify.heroic.metric.QueryTrace}
      * @deprecated use {@link #watch(com.spotify.heroic.metric.QueryTrace.Identifier)}
      */
+    @Deprecated
     static QueryTrace of(final Identifier what, final long elapsed) {
+        log.warn("of is deprecated, use #watch(com.spotify.heroic.metric.QueryTrace.Identifier)");
         return ActiveTrace.create(what, elapsed, ImmutableList.of());
     }
 
@@ -81,9 +89,11 @@ public interface QueryTrace {
      * @return a {@link com.spotify.heroic.metric.QueryTrace}
      * @deprecated use {@link #watch(com.spotify.heroic.metric.QueryTrace.Identifier)}
      */
+    @Deprecated
     static QueryTrace of(
         final Identifier what, final long elapsed, final List<QueryTrace> children
     ) {
+        log.warn("of is deprecated, use #watch(com.spotify.heroic.metric.QueryTrace.Identifier)");
         return ActiveTrace.create(what, elapsed, children);
     }
 
@@ -124,7 +134,9 @@ public interface QueryTrace {
      * @return a {@link com.spotify.heroic.metric.QueryTrace.Watch}
      * @deprecated use {@link Tracing#watch()}
      */
+    @Deprecated
     static Watch watch() {
+        log.warn("watch is deprecated, use Tracing#watch()");
         return ActiveWatch.create(Stopwatch.createStarted());
     }
 
@@ -134,7 +146,9 @@ public interface QueryTrace {
      * @return a {@link com.spotify.heroic.metric.QueryTrace.Watch}
      * @deprecated use {@link Tracing#watch(Identifier)}
      */
+    @Deprecated
     static NamedWatch watch(final Identifier what) {
+        log.warn("watch is deprecated, use Tracing#watch(Identifier)");
         return ActiveNamedWatch.create(what, Stopwatch.createStarted());
     }
 
@@ -287,6 +301,7 @@ public interface QueryTrace {
          * @return microseconds
          * @deprecated Makes not distinction between passive and active watches
          */
+        @Deprecated
         long elapsed();
     }
 
@@ -411,6 +426,7 @@ public interface QueryTrace {
          * @return milliseconds since unix epoch
          * @deprecated Makes no distinction between active and passive watches.
          */
+        @Deprecated
         long elapsed();
     }
 
