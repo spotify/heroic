@@ -29,7 +29,6 @@ import com.google.cloud.MetadataConfig;
 import io.opencensus.trace.AttributeValue;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 public class EnvironmentMetadata {
     /** The absolute max size of attributes, including optional ones */
@@ -53,17 +52,11 @@ public class EnvironmentMetadata {
             "gcp.region", stringAttributeValue(zone.substring(0, zone.lastIndexOf("-"))));
     }
 
-    private static void addHostname() {
-        final Optional<String> hostname = EnvVariableLookup.getEnvVariable("HOSTNAME");
-        hostname.ifPresent(h -> attributes.put("hostname", stringAttributeValue(h)));
-    }
-
     private static void initialize() {
         attributes = new HashMap<>(MAX_ATTRIBUTE_SIZE);
 
         attributes.put("java.version", stringAttributeValue(System.getProperty("java.version")));
 
-        addHostname();
         addGcpMetadata();
 
         EnvironmentMetadata.attributes = unmodifiableMap(attributes);
