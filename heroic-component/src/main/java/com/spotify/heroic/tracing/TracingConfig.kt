@@ -4,7 +4,7 @@ data class TracingConfig (
     val probability: Double = 0.01,
     val zpagesPort: Int = 0,
     val requestHeadersToTags: List<String> = listOf(),
-    val tags: Map<String, String> = mutableMapOf(),
+    val tags: Map<String, String> = mapOf(),
     val lightstep: Lightstep = Lightstep()
 ) {
     data class Lightstep (
