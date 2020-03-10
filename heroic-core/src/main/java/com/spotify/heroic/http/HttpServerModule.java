@@ -80,13 +80,6 @@ public class HttpServerModule {
     }
 
     @Provides
-    @Named("tracingConfig")
-    @HttpServerScope
-    TracingConfig tracingConfig() {
-        return tracingConfig;
-    }
-
-    @Provides
     @HttpServerScope
     @Named("heroicServer")
     LifeCycle life(LifeCycleManager manager, HttpServer server) {

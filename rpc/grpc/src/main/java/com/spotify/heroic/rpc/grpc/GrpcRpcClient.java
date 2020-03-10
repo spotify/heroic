@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.rpc.grpc;
 
+import static io.opencensus.trace.AttributeValue.stringAttributeValue;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.metrics.Meter;
@@ -78,6 +80,7 @@ public class GrpcRpcClient {
     ) {
 
         final Span rootSpan = tracer.getCurrentSpan();
+        rootSpan.putAttribute("peer.address", stringAttributeValue(getUri()));
 
         return channel.doto(channel -> {
             final byte[] body;
@@ -93,8 +96,6 @@ public class GrpcRpcClient {
             final Metadata metadata = new Metadata();
 
             final ResolvableFuture<R> future = async.future();
-
-
 
             call.start(new ClientCall.Listener<byte[]>() {
                 @Override
