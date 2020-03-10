@@ -949,6 +949,9 @@ You'll get the following output in the query log:
 
 Enable distributed tracing output of Heroic's operations. Tracing is instrumented using [OpenCensus](https://opencensus.io/).
 
+A few tags are added to incoming requests such as the java version. If running on GCP, zone and region tags are added as well.
+
+
 ```yaml
 # Probability, between 0.0 and 1.0, of sampling each trace.
 probability: <float> default = 0.01
@@ -960,7 +963,12 @@ zpagesPort: <int>
 requestHeadersToTags:
 - x-user-request
 
-# Configuration for exporting traces to LightStep.
+# These tags are added to all incoming requests and are useful to identify the workload such 
+# as the hostname.
+tags:
+  hostname: foobar
+
+# Configuration for exporting traces to Lightstep.
 lightstep:
 
   # Collector host and port running the Lightstep satellite.

@@ -136,11 +136,6 @@ public class QueryResource {
 
         query.getQueries().ifPresent(queries -> {
             for (final Map.Entry<String, QueryMetrics> e : queries.entrySet()) {
-
-                final Span span = tracer
-                    .spanBuilderWithExplicitParent("batch.query", currentSpan)
-                    .startSpan();
-
                 final String queryKey = e.getKey();
                 final QueryMetrics qm = e.getValue();
                 final Query q = qm
@@ -153,9 +148,8 @@ public class QueryResource {
                 queryLogger.logHttpQueryJson(queryContext, qm);
 
                 futures.add(g
-                    .query(q, queryContext)
-                    .directTransform(r -> Triple.of(queryKey, queryContext, r))
-                    .onFinished(span::end));
+                    .query(q, queryContext, currentSpan)
+                    .directTransform(r -> Triple.of(queryKey, queryContext, r)));
             }
         });
 

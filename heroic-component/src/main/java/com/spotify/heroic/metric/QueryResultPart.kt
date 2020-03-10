@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.metric
 
-import com.spotify.heroic.aggregation.Aggregation
 import com.spotify.heroic.aggregation.AggregationInstance
 import com.spotify.heroic.cluster.ClusterShard
 import eu.toolchain.async.Transform
@@ -45,6 +44,10 @@ data class QueryResultPart(
     val queryTrace: QueryTrace,
 
     val limits: ResultLimits,
+
+    /**
+     * Number of raw data points before any aggregations are applied.
+     */
     val preAggregationSampleSize: Long
 ) {
     fun isEmpty() = groups.all { it.isEmpty() }

@@ -34,6 +34,7 @@ import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestManager;
+import com.spotify.heroic.tracing.TracingConfig;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.FutureDone;
@@ -74,6 +75,7 @@ public class GrpcRpcProtocolServer implements LifeCycles {
     private final int maxFrameSize;
     private final NioEventLoopGroup bossGroup;
     private final NioEventLoopGroup workerGroup;
+    private final TracingConfig tracingConfig;
     private final GrpcRpcContainer container;
 
     private final AtomicReference<Server> server = new AtomicReference<>();
@@ -90,7 +92,8 @@ public class GrpcRpcProtocolServer implements LifeCycles {
         @Named("grpcBindAddress") InetSocketAddress address,
         @Named("maxFrameSize") int maxFrameSize,
         @Named("boss") NioEventLoopGroup bossGroup,
-        @Named("worker") NioEventLoopGroup workerGroup
+        @Named("worker") NioEventLoopGroup workerGroup,
+        @Named("tracingConfig") TracingConfig tracingConfig
     ) {
         this.async = async;
         this.metrics = metrics;
@@ -103,6 +106,7 @@ public class GrpcRpcProtocolServer implements LifeCycles {
         this.maxFrameSize = maxFrameSize;
         this.bossGroup = bossGroup;
         this.workerGroup = workerGroup;
+        this.tracingConfig = tracingConfig;
         this.container = setupContainer();
     }
 
@@ -167,7 +171,8 @@ public class GrpcRpcProtocolServer implements LifeCycles {
         final Server server = NettyServerBuilder
             .forAddress(address)
             .addService(bindService())
-            .maxMessageSize(maxFrameSize)
+            .intercept(new GrpcOpenCensusInterceptor(this.tracingConfig))
+            .maxInboundMessageSize(maxFrameSize)
             .bossEventLoopGroup(bossGroup)
             .workerEventLoopGroup(workerGroup)
             .build();
@@ -227,7 +232,6 @@ public class GrpcRpcProtocolServer implements LifeCycles {
             final UUID id = UUID.randomUUID();
 
             log.trace("{}: Received request: {}", id, request);
-
             final AsyncFuture<Object> future;
 
             try {

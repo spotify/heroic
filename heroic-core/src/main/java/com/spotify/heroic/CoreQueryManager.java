@@ -79,6 +79,8 @@ import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
 import com.spotify.heroic.time.Clock;
 import com.spotify.heroic.tracing.EndSpanFutureReporter;
+import com.spotify.heroic.tracing.EnvironmentMetadata;
+import com.spotify.heroic.tracing.TracingConfig;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Collector;
@@ -92,6 +94,7 @@ import java.util.SortedSet;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Named;
 import org.slf4j.Logger;
@@ -105,7 +108,9 @@ public class CoreQueryManager implements QueryManager {
     public static final QueryTrace.Identifier QUERY =
         QueryTrace.identifier(CoreQueryManager.class, "query");
     private static boolean hasWarnedSlicedDataFetch = false;
+
     private static final Tracer tracer = io.opencensus.trace.Tracing.getTracer();
+    private static final EnvironmentMetadata envMetadata = EnvironmentMetadata.create();
 
     private final Features features;
     private final AsyncFramework async;
@@ -117,6 +122,7 @@ public class CoreQueryManager implements QueryManager {
     private final OptionalLimit groupLimit;
     private final QueryReporter reporter;
     private final QueryLogger queryLogger;
+    private final TracingConfig tracingConfig;
     private final Optional<ConditionalFeatures> conditionalFeatures;
 
     private final long smallQueryThreshold;
@@ -134,7 +140,8 @@ public class CoreQueryManager implements QueryManager {
         @Named("smallQueryThreshold") final long smallQueryThreshold,
         final QueryReporter reporter,
         final Optional<ConditionalFeatures> conditionalFeatures,
-        final QueryLoggerFactory queryLoggerFactory
+        final QueryLoggerFactory queryLoggerFactory,
+        @Named("tracingConfig") final TracingConfig tracingConfig
     ) {
         this.features = features;
         this.async = async;
@@ -148,6 +155,7 @@ public class CoreQueryManager implements QueryManager {
         this.smallQueryThreshold = smallQueryThreshold;
         this.conditionalFeatures = conditionalFeatures;
         this.queryLogger = queryLoggerFactory.create("CoreQueryManager");
+        this.tracingConfig = tracingConfig;
     }
 
     @Override
@@ -215,7 +223,14 @@ public class CoreQueryManager implements QueryManager {
         }
 
         @Override
-        public AsyncFuture<QueryResult> query(final Query q, final QueryContext queryContext) {
+        public AsyncFuture<QueryResult> query(Query query, QueryContext queryContext) {
+            return query(query, queryContext, null);
+        }
+
+        @Override
+        public AsyncFuture<QueryResult> query(
+            final Query q, final QueryContext queryContext, @Nullable Span parentSpan) {
+
             final QueryOptions options = q.getOptions().orElseGet(QueryOptions::defaults);
             final Tracing tracing = options.tracing();
 
@@ -281,12 +296,18 @@ public class CoreQueryManager implements QueryManager {
             queryLogger.logOutgoingRequestToShards(queryContext, request);
 
 
-            final Span rootSpan = tracer.spanBuilder("coreQueryManager.query").startSpan();
+            final Span queryManagerSpan = tracer.spanBuilderWithExplicitParent(
+                "coreQueryManager.query", parentSpan).startSpan();
+            // TODO: Remove once http parent span is linked here!
+            queryManagerSpan.putAttributes(envMetadata.toAttributes());
+            tracingConfig.getTags().forEach(
+                (key, value) -> queryManagerSpan.putAttribute(key, stringAttributeValue(value)));
+
             final AsyncFuture<QueryResult> query = queryCache.load(request, () -> {
 
                 for (final ClusterShard shard : shards) {
                     final Span shardSpan = tracer.spanBuilderWithExplicitParent(
-                        "coreQueryManager.shard", rootSpan).startSpan();
+                        "coreQueryManager.shard", queryManagerSpan).startSpan();
                     shardSpan.putAttribute(
                         "shard", stringAttributeValue(shard.getShard().toString()));
 
@@ -322,16 +343,16 @@ public class CoreQueryManager implements QueryManager {
               .directTransform(result -> {
                   reportCompletedQuery(result, fullQueryWatch);
                   if (result.getErrors().size() > 0) {
-                      rootSpan.addAnnotation(result.getErrors().toString());
-                      rootSpan.putAttribute("error", booleanAttributeValue(true));
+                      queryManagerSpan.addAnnotation(result.getErrors().toString());
+                      queryManagerSpan.putAttribute("error", booleanAttributeValue(true));
                   }
-                  rootSpan.putAttribute("preAggregationSampleSize",
+                  queryManagerSpan.putAttribute("preAggregationSampleSize",
                       longAttributeValue(result.getPreAggregationSampleSize()));
 
                   return result;
               })
               .onDone(reporter.reportQuery())
-              .onDone(new EndSpanFutureReporter(rootSpan));
+              .onDone(new EndSpanFutureReporter(queryManagerSpan));
         }
 
         private void reportCompletedQuery(

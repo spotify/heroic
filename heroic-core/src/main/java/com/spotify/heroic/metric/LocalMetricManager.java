@@ -62,7 +62,6 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.StreamCollector;
-import io.opencensus.trace.BlankSpan;
 import io.opencensus.trace.Span;
 import io.opencensus.trace.Tracer;
 import java.util.ArrayList;
@@ -85,7 +84,6 @@ import org.slf4j.Logger;
 @MetricScope
 public class LocalMetricManager implements MetricManager {
     private static final Tracer tracer = io.opencensus.trace.Tracing.getTracer();
-
     private static final QueryTrace.Identifier QUERY =
         QueryTrace.identifier(LocalMetricManager.class, "query");
     private static final QueryTrace.Identifier FETCH =
@@ -186,6 +184,7 @@ public class LocalMetricManager implements MetricManager {
         }
 
         private class Transform implements LazyTransform<FindSeries, FullQuery> {
+
             private final AggregationInstance aggregation;
             private final boolean failOnLimits;
             private final OptionalLimit seriesLimit;
@@ -311,8 +310,11 @@ public class LocalMetricManager implements MetricManager {
                 final List<Callable<AsyncFuture<FetchData.Result>>> fetches = new ArrayList<>();
                 accept(metricBackend -> {
                     for (final Series series : result.getSeries()) {
-                        final Span fetchSeries = tracer.spanBuilderWithExplicitParent(
-                            "localMetricsManager.fetchSeries", fetchSpan).startSpan();
+                        // Requires the squashing exporter otherwise too many spans are produced.
+                        final Span fetchSeries =
+                            tracer.spanBuilderWithExplicitParent(
+                                "localMetricsManager.fetchSeries", fetchSpan).startSpan();
+
                         fetchSeries.addAnnotation(series.toString());
                         fetches.add(() -> metricBackend.fetch(
                             new FetchData.Request(source, series, range, options),
@@ -330,24 +332,25 @@ public class LocalMetricManager implements MetricManager {
 
         @Override
         public AsyncFuture<FullQuery> query(final FullQuery.Request request) {
-            return query(request, BlankSpan.INSTANCE);
+            return query(request, tracer.getCurrentSpan());
         }
 
         @Override
-        public AsyncFuture<FullQuery> query(final FullQuery.Request request, final Span span) {
+        public AsyncFuture<FullQuery> query(
+            final FullQuery.Request request, final Span parentSpan) {
             if (!concurrentQueries.tryAcquire()) {
                 // There's currently too many concurrent queries. Fail now so that the QueryManager
                 // gets an opportunity to try another node in the same shard instead.
                 final String e =
                     "Node has reached maximum number of concurrent MetricManager requests (" +
                     concurrentQueriesBackoff + ")";
-                span.addAnnotation(e);
-                span.end();
+                parentSpan.addAnnotation(e);
+                parentSpan.end();
                 return async.failed(new GoAwayException(e));
             }
 
             try {
-                return protectedQuery(request, span).onFinished(concurrentQueries::release);
+                return protectedQuery(request, parentSpan).onFinished(concurrentQueries::release);
             } catch (Exception e) {
                 concurrentQueries.release();
                 throw new RuntimeException(e);
@@ -394,9 +397,9 @@ public class LocalMetricManager implements MetricManager {
             return metadata
                 .findSeries(new FindSeries.Request(request.filter(), request.range(), seriesLimit))
                 .onDone(reporter.reportFindSeries())
+                .onDone(new EndSpanFutureReporter(findSeriesSpan))
                 .onResolved(t -> findSeriesSpan.putAttribute(
                     "seriesCount", longAttributeValue(t.getSeries().size())))
-                .onDone(new EndSpanFutureReporter(findSeriesSpan))
                 .lazyTransform(transform)
                 .directTransform(fullQuery -> {
                     queryLogger.logOutgoingResponseAtNode(queryContext, fullQuery);
