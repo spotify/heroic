@@ -24,6 +24,7 @@ package com.spotify.heroic.rpc.grpc;
 import static io.opencensus.trace.AttributeValue.stringAttributeValue;
 
 import com.spotify.heroic.tracing.EnvironmentMetadata;
+import com.spotify.heroic.tracing.TracingConfig;
 import io.grpc.Metadata;
 import io.grpc.ServerCall;
 import io.grpc.ServerCallHandler;
@@ -38,9 +39,12 @@ import io.opencensus.trace.Tracing;
  */
 public class GrpcOpenCensusInterceptor implements ServerInterceptor {
     private final Tracer tracer = Tracing.getTracer();
+    private final TracingConfig tracingConfig;
 
     private static final EnvironmentMetadata environmentMetadata = EnvironmentMetadata.create();
-    public GrpcOpenCensusInterceptor() { }
+    public GrpcOpenCensusInterceptor(TracingConfig tracingConfig) {
+        this.tracingConfig = tracingConfig;
+    }
 
     @Override
     public <ReqT, RespT> ServerCall.Listener<ReqT> interceptCall(
@@ -51,6 +55,9 @@ public class GrpcOpenCensusInterceptor implements ServerInterceptor {
         span.putAttributes(environmentMetadata.toAttributes());
         span.putAttribute("protocol", stringAttributeValue("grpc"));
         span.putAttribute("span.kind", stringAttributeValue("server"));
+
+        tracingConfig.getTags().forEach(
+            (key, value) -> span.putAttribute(key, stringAttributeValue(value)));
 
         return next.startCall(call, headers);
     }

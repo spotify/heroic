@@ -76,7 +76,7 @@ public class HttpServer implements LifeCycles {
     private final List<JettyServerConnector> connectors;
     private final Supplier<Boolean> stopping;
     private final ServiceInfo service;
-    private final TracingConfig config;
+    private final TracingConfig tracingConfig;
 
     private volatile Server server = null;
     private final Object lock = new Object();
@@ -93,7 +93,7 @@ public class HttpServer implements LifeCycles {
         final List<JettyServerConnector> connectors,
         @Named("stopping") final Supplier<Boolean> stopping,
         final ServiceInfo service,
-        @Named("tracingConfig") final TracingConfig config
+        @Named("tracingConfig") final TracingConfig tracingConfig
     ) {
         this.address = address;
         this.instance = instance;
@@ -105,7 +105,7 @@ public class HttpServer implements LifeCycles {
         this.connectors = connectors;
         this.stopping = stopping;
         this.service = service;
-        this.config = config;
+        this.tracingConfig = tracingConfig;
     }
 
     @Override
@@ -260,7 +260,7 @@ public class HttpServer implements LifeCycles {
     private ResourceConfig setupResourceConfig() throws Exception {
         final ResourceConfig config = new ResourceConfig();
 
-        config.register(new OpenCensusFeature(this.config, this.service));
+        config.register(new OpenCensusFeature(this.tracingConfig, this.service));
 
         int count = 0;
 

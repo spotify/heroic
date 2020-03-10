@@ -80,6 +80,7 @@ import com.spotify.heroic.suggest.TagValuesSuggest;
 import com.spotify.heroic.time.Clock;
 import com.spotify.heroic.tracing.EndSpanFutureReporter;
 import com.spotify.heroic.tracing.EnvironmentMetadata;
+import com.spotify.heroic.tracing.TracingConfig;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Collector;
@@ -121,6 +122,7 @@ public class CoreQueryManager implements QueryManager {
     private final OptionalLimit groupLimit;
     private final QueryReporter reporter;
     private final QueryLogger queryLogger;
+    private final TracingConfig tracingConfig;
     private final Optional<ConditionalFeatures> conditionalFeatures;
 
     private final long smallQueryThreshold;
@@ -138,7 +140,8 @@ public class CoreQueryManager implements QueryManager {
         @Named("smallQueryThreshold") final long smallQueryThreshold,
         final QueryReporter reporter,
         final Optional<ConditionalFeatures> conditionalFeatures,
-        final QueryLoggerFactory queryLoggerFactory
+        final QueryLoggerFactory queryLoggerFactory,
+        @Named("tracingConfig") final TracingConfig tracingConfig
     ) {
         this.features = features;
         this.async = async;
@@ -152,6 +155,7 @@ public class CoreQueryManager implements QueryManager {
         this.smallQueryThreshold = smallQueryThreshold;
         this.conditionalFeatures = conditionalFeatures;
         this.queryLogger = queryLoggerFactory.create("CoreQueryManager");
+        this.tracingConfig = tracingConfig;
     }
 
     @Override
@@ -296,6 +300,8 @@ public class CoreQueryManager implements QueryManager {
                 "coreQueryManager.query", parentSpan).startSpan();
             // TODO: Remove once http parent span is linked here!
             queryManagerSpan.putAttributes(envMetadata.toAttributes());
+            tracingConfig.getTags().forEach(
+                (key, value) -> queryManagerSpan.putAttribute(key, stringAttributeValue(value)));
 
             final AsyncFuture<QueryResult> query = queryCache.load(request, () -> {
 

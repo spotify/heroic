@@ -221,7 +221,7 @@ public class GrpcRpcProtocol implements RpcProtocol {
 
             @Override
             public AsyncFuture<FullQuery> query(final FullQuery.Request request, final Span span) {
-                try(Scope ignored = tracer.withSpan(span)) {
+                try (Scope ignored = tracer.withSpan(span)) {
                     return request(METRICS_FULL_QUERY, request);
                 }
             }

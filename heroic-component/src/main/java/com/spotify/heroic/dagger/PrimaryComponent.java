@@ -30,7 +30,7 @@ import com.spotify.heroic.conditionalfeatures.ConditionalFeatures;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
 import com.spotify.heroic.statistics.HeroicReporter;
-
+import com.spotify.heroic.tracing.TracingConfig;
 import java.util.Optional;
 import javax.inject.Named;
 
@@ -57,4 +57,8 @@ public interface PrimaryComponent extends EarlyComponent {
     HeroicContext context();
 
     Optional<ConditionalFeatures> conditionalFeatures();
+
+    @Named("tracingConfig")
+    TracingConfig tracingConfig();
+
 }

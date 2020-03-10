@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.http.tracing;
 
+import static io.opencensus.trace.AttributeValue.booleanAttributeValue;
 import static io.opencensus.trace.AttributeValue.stringAttributeValue;
 import static java.text.MessageFormat.format;
 
@@ -106,15 +107,18 @@ class OpenCensusApplicationEventListener implements ApplicationEventListener {
 
         final Span span = spanBuilder.startSpan();
 
-        span.putAttribute("version",
-            stringAttributeValue(serviceInfo.getVersion() + ":" +  serviceInfo.getCommit()));
+        span.putAttribute("version", stringAttributeValue(
+            serviceInfo.getVersion() + ":" + serviceInfo.getCommit()));
         span.putAttribute("span.kind", stringAttributeValue("server"));
         span.putAttribute("http.method", stringAttributeValue(request.getMethod()));
         span.putAttribute("http.url", stringAttributeValue(
             request.getRequestUri().toASCIIString()));
-        span.putAttribute("http.has_request_entity", AttributeValue.booleanAttributeValue(
-            request.hasEntity()));
+        span.putAttribute("http.has_request_entity", booleanAttributeValue(request.hasEntity()));
         span.putAttributes(environmentMetadata.toAttributes());
+
+        tracing.getTags().forEach(
+            (key, value) -> span.putAttribute(key, stringAttributeValue(value)));
+
         request.getHeaders().entrySet()
             .stream()
             .filter(entry -> tracing.getRequestHeadersToTags().contains(entry.getKey()))
@@ -223,10 +227,10 @@ class OpenCensusApplicationEventListener implements ApplicationEventListener {
                 case ON_EXCEPTION:
                     if (resourceSpan != null) {
                         resourceSpan.putAttribute("error",
-                            AttributeValue.booleanAttributeValue(true));
+                            booleanAttributeValue(true));
                         resourceSpan.end();
                     }
-                    requestSpan.putAttribute("error", AttributeValue.booleanAttributeValue(true));
+                    requestSpan.putAttribute("error", booleanAttributeValue(true));
                     logError(event.getException());
                     break;
 
@@ -251,14 +255,14 @@ class OpenCensusApplicationEventListener implements ApplicationEventListener {
                             requestSpan.putAttribute("http.status_code",
                                 AttributeValue.longAttributeValue(status));
                             requestSpan.putAttribute("http.has_response_entity",
-                                AttributeValue.booleanAttributeValue(response.hasEntity()));
+                                booleanAttributeValue(response.hasEntity()));
                             requestSpan.putAttribute("http.response_length",
                                 AttributeValue.longAttributeValue(response.getLength()));
                             requestSpan.setStatus(OpenCensusUtils.mapStatusCode(status));
 
                             if (status >= 400) {
                                 requestSpan.putAttribute("error",
-                                    AttributeValue.booleanAttributeValue(true));
+                                    booleanAttributeValue(true));
                             }
                         }
                         requestSpan.end();

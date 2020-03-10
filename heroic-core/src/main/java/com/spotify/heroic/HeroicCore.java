@@ -462,8 +462,12 @@ public class HeroicCore implements HeroicConfiguration {
         final CorePrimaryComponent primary = DaggerCorePrimaryComponent
             .builder()
             .coreEarlyComponent(early)
-            .primaryModule(new PrimaryModule(instance, config.features(), reporter,
-                config.conditionalFeature()))
+            .primaryModule(new PrimaryModule(
+                instance,
+                config.features(),
+                reporter,
+                config.conditionalFeature(),
+                config.tracing()))
             .build();
 
         final QueryLoggingComponent queryLogging = config.queryLogging().component(primary);

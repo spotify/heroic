@@ -963,7 +963,12 @@ zpagesPort: <int>
 requestHeadersToTags:
 - x-user-request
 
-# Configuration for exporting traces to LightStep.
+# These tags are added to all incoming requests and are useful to identify the workload such 
+# as the hostname.
+tags:
+  hostname: foobar
+
+# Configuration for exporting traces to Lightstep.
 lightstep:
 
   # Collector host and port running the Lightstep satellite.

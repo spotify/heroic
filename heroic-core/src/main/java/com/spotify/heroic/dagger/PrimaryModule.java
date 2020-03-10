@@ -42,6 +42,7 @@ import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.ShellTaskDefinition;
 import com.spotify.heroic.shell.Tasks;
 import com.spotify.heroic.statistics.HeroicReporter;
+import com.spotify.heroic.tracing.TracingConfig;
 import dagger.Module;
 import dagger.Provides;
 import eu.toolchain.async.AsyncFramework;
@@ -57,15 +58,18 @@ public class PrimaryModule {
     private final FeatureSet features;
     private final HeroicReporter reporter;
     private final Optional<ConditionalFeatures> conditionalFeatures;
+    private final TracingConfig tracingConfig;
 
     public PrimaryModule(final HeroicCoreInstance instance,
                          final FeatureSet features,
                          final HeroicReporter reporter,
-                         final Optional<ConditionalFeatures> conditionalFeatures) {
+                         final Optional<ConditionalFeatures> conditionalFeatures,
+                         final TracingConfig tracingConfig) {
         this.instance = instance;
         this.features = features;
         this.reporter = reporter;
         this.conditionalFeatures = conditionalFeatures;
+        this.tracingConfig = tracingConfig;
     }
 
     @Provides
@@ -103,6 +107,13 @@ public class PrimaryModule {
     @PrimaryScope
     Features features() {
         return Features.DEFAULT.applySet(features);
+    }
+
+    @Provides
+    @Named("tracingConfig")
+    @PrimaryScope
+    TracingConfig tracingConfig() {
+        return this.tracingConfig;
     }
 
     @Provides
