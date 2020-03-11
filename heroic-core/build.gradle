@@ -46,6 +46,7 @@ dependencies {
     implementation 'com.lightstep.tracer:tracer-okhttp'
     implementation 'com.lightstep.tracer:java-common'
     implementation 'com.lightstep.opencensus:lightstep-opencensus-exporter'
+    implementation 'com.spotify.tracing:squashing-census-exporter'
 
     implementation 'com.typesafe:config:1.3.2'
     implementation 'net.jodah:expiringmap:0.5.1'
