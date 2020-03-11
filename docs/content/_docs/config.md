@@ -961,12 +961,14 @@ zpagesPort: <int>
 
 # Add request headers if present as tags to the trace.
 requestHeadersToTags:
-- x-user-request
+  - <string>
+  - ...
 
-# These tags are added to all incoming requests and are useful to identify the workload such 
+# These tags are added to all incoming requests and are useful to identify the workload such
 # as the hostname.
 tags:
-  hostname: foobar
+  <string>: <string> | <int> | <bool>
+  ...
 
 # Configuration for exporting traces to Lightstep.
 lightstep:
@@ -990,6 +992,17 @@ lightstep:
   # If enabled, the client connection will be reset at regular intervals.
   # Used to load balance on client side.
   resetClient: <bool> default = false
+
+# Configuration for squashing sibling spans into a summary span. These options are passed to
+# the squashing exporter: https://github.com/spotify/squashing-census-exporter
+squash:
+  # Name of spans that are eligible to be squashed. To allow all spans, set `whitelist: null`
+  whitelist:
+    - <string>
+    - ...
+
+  # Number of repetitive sibling spans required to trigger a squash.
+  threshold: <int> default = 100
 ```
 
 ### [`<usage_tracking_config>`](#usage_tracking_config)

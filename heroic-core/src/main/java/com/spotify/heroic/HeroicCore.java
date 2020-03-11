@@ -29,7 +29,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.lightstep.opencensus.exporter.LightStepTraceExporter;
+import com.lightstep.opencensus.exporter.LightStepExporterHandler;
 import com.lightstep.tracer.jre.JRETracer;
 import com.lightstep.tracer.shared.Options;
 import com.spotify.heroic.analytics.AnalyticsComponent;
@@ -82,6 +82,7 @@ import com.spotify.heroic.suggest.CoreSuggestComponent;
 import com.spotify.heroic.suggest.DaggerCoreSuggestComponent;
 import com.spotify.heroic.tracing.TracingConfig;
 import com.spotify.heroic.usagetracking.UsageTrackingComponent;
+import com.spotify.tracing.SquashingTraceExporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
@@ -318,11 +319,18 @@ public class HeroicCore implements HeroicConfiguration {
             try {
                 options = optionsBuilder.build();
             } catch (MalformedURLException e) {
-                throw new IllegalArgumentException("Malformed configuration for lightstep.", e);
+                throw new IllegalArgumentException("Malformed configuration for LightStep.", e);
             }
 
-            log.info("Registering lightstep tracing exporter");
-            LightStepTraceExporter.createAndRegister(new JRETracer(options));
+            log.info("Creating LightStep tracing exporter");
+            LightStepExporterHandler handler =
+                new LightStepExporterHandler(new JRETracer(options));
+            log.info("Registering LightStep exporter as the SquashingTraceExporter delegate");
+            SquashingTraceExporter.createAndRegister(
+                handler,
+                config.getSquash().getThreshold(),
+                config.getSquash().getWhitelist()
+            );
 
             log.info("Setting global trace probability to {}", config.getProbability());
             TraceConfig traceConfig = Tracing.getTraceConfig();
