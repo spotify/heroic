@@ -397,7 +397,6 @@ public class LocalMetricManager implements MetricManager {
             return metadata
                 .findSeries(new FindSeries.Request(request.filter(), request.range(), seriesLimit))
                 .onDone(reporter.reportFindSeries())
-                .onDone(new EndSpanFutureReporter(findSeriesSpan))
                 .onResolved(t -> findSeriesSpan.putAttribute(
                     "seriesCount", longAttributeValue(t.getSeries().size())))
                 .lazyTransform(transform)
@@ -405,7 +404,8 @@ public class LocalMetricManager implements MetricManager {
                     queryLogger.logOutgoingResponseAtNode(queryContext, fullQuery);
                     return fullQuery;
                 })
-                .onDone(reporter.reportQueryMetrics());
+                .onDone(reporter.reportQueryMetrics())
+                .onDone(new EndSpanFutureReporter(findSeriesSpan));
         }
 
 
