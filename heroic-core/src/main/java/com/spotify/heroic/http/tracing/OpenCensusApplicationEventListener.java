@@ -97,11 +97,9 @@ class OpenCensusApplicationEventListener implements ApplicationEventListener {
 
         try {
             final SpanContext spanContext = textFormat.extract(request, textFormatGetter);
-            spanBuilder = globalTracer
-                .spanBuilderWithRemoteParent(spanName, spanContext);
+            spanBuilder = globalTracer.spanBuilderWithRemoteParent(spanName, spanContext);
 
         } catch (SpanContextParseException e) {
-
             spanBuilder = globalTracer.spanBuilder(spanName);
         }
 
@@ -188,9 +186,10 @@ class OpenCensusApplicationEventListener implements ApplicationEventListener {
                         invocable.getDefinitionMethod()));
 
                     final String spanName = invocable.getHandler().getHandlerClass().getName();
-                    resourceSpan = globalTracer
+                    globalTracer
                         .spanBuilderWithExplicitParent(spanName, requestSpan)
-                        .startSpan();
+                        .startScopedSpan();
+                    resourceSpan = globalTracer.getCurrentSpan();
 
                     event.getContainerRequest()
                         .setProperty(OpenCensusFeature.SPAN_CONTEXT_PROPERTY, resourceSpan);
