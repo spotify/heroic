@@ -69,7 +69,9 @@ public class QueryResource {
 
     @Inject
     public QueryResource(
-        final JavaxRestFramework httpAsync, final QueryManager query, final AsyncFramework async,
+        final JavaxRestFramework httpAsync,
+        final QueryManager query,
+        final AsyncFramework async,
         final QueryLoggerFactory queryLoggerFactory
     ) {
         this.httpAsync = httpAsync;

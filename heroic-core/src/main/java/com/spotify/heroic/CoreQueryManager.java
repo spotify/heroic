@@ -224,7 +224,7 @@ public class CoreQueryManager implements QueryManager {
 
         @Override
         public AsyncFuture<QueryResult> query(Query query, QueryContext queryContext) {
-            return query(query, queryContext, null);
+            return query(query, queryContext, tracer.getCurrentSpan());
         }
 
         @Override
