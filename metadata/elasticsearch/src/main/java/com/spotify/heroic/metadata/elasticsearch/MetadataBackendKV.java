@@ -27,7 +27,6 @@ import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 import static org.elasticsearch.index.query.QueryBuilders.prefixQuery;
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.HashCode;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.DateRange;
@@ -678,7 +677,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
         mappings.put(METADATA_TYPE, loadJsonResource("kv/metadata.json"));
 
-        return new BackendType(mappings, ImmutableMap.of(), MetadataBackendKV.class);
+        return new BackendType(MetadataBackendKV.class, mappings);
     }
 
     public String toString() {

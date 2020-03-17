@@ -21,8 +21,8 @@
 
 package com.spotify.heroic.elasticsearch
 
-data class BackendType(
-    val mappings: Map<String, Map<String, Any>>?,
-    val settings: Map<String, Any>?,
-    val type: Class<*>?
+data class BackendType @JvmOverloads constructor(
+    val type: Class<*>?,
+    val mappings: Map<String, Map<String, Any>>,
+    val settings: Map<String, Any> = mapOf()
 )

@@ -24,7 +24,9 @@ package com.spotify.heroic.elasticsearch.index;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.elasticsearch.action.delete.DeleteRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
@@ -32,24 +34,30 @@ import org.elasticsearch.client.Client;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 
 public class SingleIndexMapping implements IndexMapping {
-    public static final String DEFAULT_INDEX = "heroic";
+    private static final String DEFAULT_INDEX = "heroic";
 
     private final String index;
     private final String[] indices;
+    private final Map<String, Object> settings;
 
     @JsonCreator
-    public SingleIndexMapping(@JsonProperty("index") Optional<String> index) {
+    public SingleIndexMapping(
+        @JsonProperty("index") Optional<String> index,
+        @JsonProperty("settings") Optional<Map<String, Object>> settings
+    ) {
         this.index = index.orElse(DEFAULT_INDEX);
         this.indices = new String[]{this.index};
-    }
-
-    public static SingleIndexMapping createDefault() {
-        return new SingleIndexMapping(Optional.empty());
+        this.settings = settings.orElse(new HashMap<>());
     }
 
     @Override
     public String template() {
         return index;
+    }
+
+    @Override
+    public Map<String, Object> settings() {
+        return settings;
     }
 
     @Override
@@ -77,7 +85,7 @@ public class SingleIndexMapping implements IndexMapping {
     @Override
     public List<DeleteRequestBuilder> delete(
         final Client client, final String type, final String id
-    ) throws NoIndexSelectedException {
+    ) {
         return ImmutableList.of(client.prepareDelete(getFullIndexName(type), type, id));
     }
 
@@ -96,14 +104,20 @@ public class SingleIndexMapping implements IndexMapping {
 
     public static class Builder {
         private Optional<String> index = Optional.empty();
+        private Optional<Map<String, Object>> settings = Optional.empty();
 
         public Builder index(String index) {
             this.index = Optional.of(index);
             return this;
         }
 
+        public Builder settings(Map<String, Object> settings) {
+            this.settings = Optional.of(settings);
+            return this;
+        }
+
         public SingleIndexMapping build() {
-            return new SingleIndexMapping(index);
+            return new SingleIndexMapping(index, settings);
         }
     }
 }
