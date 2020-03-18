@@ -93,7 +93,7 @@ public class Connection {
 
             log.info("[{}] updating template for {}", templateWithType, pattern);
 
-            Map<String, Object> settings = new HashMap<>();
+            Map<String, Object> settings = new HashMap<>(type.getSettings());
             settings.put("index", index.getSettings());
 
             final PutIndexTemplateRequestBuilder put = indices.preparePutTemplate(templateWithType)
