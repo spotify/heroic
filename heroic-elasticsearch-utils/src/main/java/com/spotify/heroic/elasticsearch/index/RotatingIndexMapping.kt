@@ -43,15 +43,10 @@ data class RotatingIndexMapping(
     private val maxReadIndices: Int = DEFAULT_MAX_READ_INDICES,
     private val maxWriteIndices: Int = DEFAULT_MAX_WRITE_INDICES,
     private val pattern: String = DEFAULT_PATTERN,
-    private val settings: Map<String, Any> = emptyMap()
+    override val settings: Map<String, Any> = emptyMap()
 ): IndexMapping {
     private val interval = intervalDuration.convert(TimeUnit.MILLISECONDS)
-
-    override fun template(): String {
-        return pattern.format("*")
-    }
-
-    override fun settings() = settings
+    override val template = pattern.format("*")
 
     private fun indices(maxIndices: Int, now: Long, type: String): Array<String> {
         val curr = now - (now % interval)

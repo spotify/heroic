@@ -89,12 +89,12 @@ public class Connection {
         for (final Map.Entry<String, Map<String, Object>> mapping : type.getMappings().entrySet()) {
             final String indexType = mapping.getKey();
             final String templateWithType = templateName + "-" + indexType;
-            final String pattern = index.template().replaceAll("\\*", indexType + "-*");
+            final String pattern = index.getTemplate().replaceAll("\\*", indexType + "-*");
 
             log.info("[{}] updating template for {}", templateWithType, pattern);
 
             Map<String, Object> settings = new HashMap<>();
-            settings.put("index", index.settings());
+            settings.put("index", index.getSettings());
 
             final PutIndexTemplateRequestBuilder put = indices.preparePutTemplate(templateWithType)
                 .setSettings(settings)
