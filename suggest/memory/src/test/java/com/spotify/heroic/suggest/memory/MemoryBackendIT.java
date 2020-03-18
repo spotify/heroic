@@ -8,4 +8,7 @@ public class MemoryBackendIT extends AbstractSuggestBackendIT {
     protected SuggestModule setupModule() {
         return MemorySuggestModule.builder().build();
     }
+
+    @Override
+    public void writeDuplicatesReturnErrorInResponse() { }
 }

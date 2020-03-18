@@ -323,6 +323,11 @@ subprojects {
 
     check.dependsOn integrationTest
 
+    // disable verbosity running with ./gradlew --info
+    [checkstyleMain, checkstyleTest].each { task ->
+        task.logging.setLevel(LogLevel.LIFECYCLE)
+    }
+    
     checkstyle {
         toolVersion = '6.13'
         configFile = rootProject.file('checkstyle.xml')

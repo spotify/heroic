@@ -45,4 +45,5 @@ public class SuggestBackendKVIT extends AbstractSuggestBackendIT {
                 .build())
             .build();
     }
+
 }
