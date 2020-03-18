@@ -32,6 +32,7 @@ public class SuggestBackendKVIT extends AbstractSuggestBackendIT {
             .templateName(testName)
             .configure(true)
             .backendType(backendType())
+            .writeCacheMaxSize(0)
             .connection(ConnectionModule
                 .builder()
                 .index(index)
