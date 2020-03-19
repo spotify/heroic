@@ -23,15 +23,19 @@ package com.spotify.heroic.elasticsearch;
 
 import com.spotify.heroic.elasticsearch.index.IndexMapping;
 import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
+
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateRequestBuilder;
+import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.delete.DeleteRequestBuilder;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.ClearScrollRequestBuilder;
@@ -150,6 +154,10 @@ public class Connection {
 
     public ClearScrollRequestBuilder clearSearchScroll(String scrollId) {
       return client.getClient().prepareClearScroll().addScrollId(scrollId);
+    }
+
+    public BulkRequestBuilder prepareBulkRequest() {
+      return client.getClient().prepareBulk();
     }
 
     public List<DeleteRequestBuilder> delete(String type, String id)
