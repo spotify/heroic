@@ -21,11 +21,13 @@
 
 package com.spotify.heroic.test;
 
+import static com.spotify.heroic.filter.Filter.matchKey;
+import static org.junit.Assert.assertEquals;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
-
 import com.spotify.heroic.HeroicConfig;
 import com.spotify.heroic.HeroicCore;
 import com.spotify.heroic.HeroicCoreInstance;
@@ -45,19 +47,9 @@ import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
 import com.spotify.heroic.suggest.WriteSuggest;
-
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.RetryPolicy;
-
-import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.commons.lang3.tuple.Pair;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.junit.MockitoJUnitRunner;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -65,9 +57,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
-
-import static com.spotify.heroic.filter.Filter.matchKey;
-import static org.junit.Assert.assertEquals;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
 public abstract class AbstractSuggestBackendIT {
@@ -78,7 +74,7 @@ public abstract class AbstractSuggestBackendIT {
 
     protected final DateRange range = new DateRange(0L, 0L);
 
-    private final List<Pair<Series, DateRange>> testSeries =
+    protected final List<Pair<Series, DateRange>> testSeries =
         new ArrayList<Pair<Series, DateRange>>() {
             {
                 add(new ImmutablePair<>(s1, range));
@@ -150,16 +146,7 @@ public abstract class AbstractSuggestBackendIT {
         core.shutdown().get();
     }
 
-    @Test
-    public void writeDuplicatesReturnErrorInResponse() throws Exception {
-        final WriteSuggest firstWrite =
-            backend.write(new WriteSuggest.Request(testSeries.get(0).getKey(), range)).get();
-        final WriteSuggest secondWrite =
-            backend.write(new WriteSuggest.Request(testSeries.get(0).getKey(), range)).get();
 
-        assertEquals(0, firstWrite.getErrors().size());
-        assertEquals(2, secondWrite.getErrors().size());
-    }
 
     @Test
     public void tagValuesSuggest() throws Exception {
