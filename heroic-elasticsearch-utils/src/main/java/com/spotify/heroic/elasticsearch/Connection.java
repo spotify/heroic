@@ -99,7 +99,8 @@ public class Connection {
             final PutIndexTemplateRequestBuilder put = indices.preparePutTemplate(templateWithType)
                 .setSettings(settings)
                 .setPatterns(List.of(pattern))
-                .addMapping(mapping.getKey(), mapping.getValue());
+                .addMapping(mapping.getKey(), mapping.getValue())
+                .setOrder(100);
 
             final ResolvableFuture<AcknowledgedResponse> future = async.future();
             writes.add(future);
