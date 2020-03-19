@@ -27,6 +27,7 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.elasticsearch.action.ActionListener;
@@ -54,9 +55,13 @@ public class Connection {
     private final BackendType type;
 
     @java.beans.ConstructorProperties({ "async", "index", "client", "templateName", "type" })
-    public Connection(final AsyncFramework async, final IndexMapping index,
-                      final ClientSetup.ClientWrapper client, final String templateName,
-                      final BackendType type) {
+    public Connection(
+        final AsyncFramework async,
+        final IndexMapping index,
+        final ClientSetup.ClientWrapper client,
+        final String templateName,
+        final BackendType type
+    ) {
         this.async = async;
         this.index = index;
         this.client = client;
@@ -82,36 +87,37 @@ public class Connection {
 
         // ES 7+ no longer allows indexes to have multiple types. Each type is now it's own index.
         for (final Map.Entry<String, Map<String, Object>> mapping : type.getMappings().entrySet()) {
+            final String indexType = mapping.getKey();
+            final String templateWithType = templateName + "-" + indexType;
+            final String pattern = index.getTemplate().replaceAll("\\*", indexType + "-*");
 
-          final String indexType = mapping.getKey();
+            log.info("[{}] updating template for {}", templateWithType, pattern);
 
-          final String templateWithType = templateName + "-" + indexType;
-          final String s = index.template().replaceAll("\\*", indexType + "-*");
-
-          log.info("[{}] updating template for {}", templateWithType, s);
+            Map<String, Object> settings = new HashMap<>(type.getSettings());
+            settings.put("index", index.getSettings());
 
             final PutIndexTemplateRequestBuilder put = indices.preparePutTemplate(templateWithType)
-                .setSettings(type.getSettings())
-                .setPatterns(List.of(s))
+                .setSettings(settings)
+                .setPatterns(List.of(pattern))
                 .addMapping(mapping.getKey(), mapping.getValue());
 
             final ResolvableFuture<AcknowledgedResponse> future = async.future();
             writes.add(future);
             put.execute(new ActionListener<>() {
-              @Override
-              public void onResponse(AcknowledgedResponse response) {
-                if (!response.isAcknowledged()) {
-                  future.fail(new Exception("request not acknowledged"));
-                    return;
+                @Override
+                public void onResponse(AcknowledgedResponse response) {
+                    if (!response.isAcknowledged()) {
+                        future.fail(new Exception("request not acknowledged"));
+                        return;
+                    }
+                    future.resolve(null);
                 }
-                future.resolve(null);
-              }
 
-              @Override
-              public void onFailure(Exception e) {
-                  future.fail(e);
-              }
-          });
+                @Override
+                public void onFailure(Exception e) {
+                    future.fail(e);
+                }
+            });
         }
 
         return async.collectAndDiscard(writes);
