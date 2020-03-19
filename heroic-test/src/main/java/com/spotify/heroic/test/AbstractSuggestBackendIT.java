@@ -74,7 +74,7 @@ public abstract class AbstractSuggestBackendIT {
 
     protected final DateRange range = new DateRange(0L, 0L);
 
-    private final List<Pair<Series, DateRange>> testSeries =
+    protected final List<Pair<Series, DateRange>> testSeries =
         new ArrayList<Pair<Series, DateRange>>() {
             {
                 add(new ImmutablePair<>(s1, range));
@@ -145,6 +145,8 @@ public abstract class AbstractSuggestBackendIT {
     public final void abstractTeardown() throws Exception {
         core.shutdown().get();
     }
+
+
 
     @Test
     public void tagValuesSuggest() throws Exception {

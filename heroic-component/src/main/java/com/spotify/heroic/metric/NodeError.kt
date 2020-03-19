@@ -43,5 +43,10 @@ data class NodeError(
             val cause = e.cause ?: return message
             return "$message, caused by ${errorMessage(cause)}"
         }
+
+        @JvmStatic
+        fun internalError(error: String): NodeError {
+            return NodeError(UUID.randomUUID(), "", mapOf(), error, true)
+        }
     }
 }
