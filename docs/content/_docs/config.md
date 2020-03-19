@@ -588,6 +588,11 @@ type: single
 
 # Name of the index.
 index: <string> default = heroic
+
+# Map of settings to apply to the index when `configure: true` is set. `index.` will be prefixed to all settings
+# set here. For possible settings and their descriptions, see:
+# https://www.elastic.co/guide/en/elasticsearch/reference/current/index-modules.html#index-modules-settings
+settings: <map>
 ```
 
 ###### rotating
@@ -608,6 +613,11 @@ maxWriteIndices: <int> default = 1
 # Pattern to use when creating an index. The pattern must contain a single '%s' that will be
 # replaced with the base time stamp of the index.
 pattern: <string> default = heroic-%s
+
+# Map of settings to apply to the index when `configure: true` is set. `index.` will be prefixed to all settings
+# set here. For possible settings and their descriptions, see:
+# https://www.elastic.co/guide/en/elasticsearch/reference/current/index-modules.html#index-modules-settings
+settings: <map>
 ```
 
 ##### `<es_client_config>`

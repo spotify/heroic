@@ -838,7 +838,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
             final Map<String, Object> settings =
                 loadJsonResource("kv/settings.json", Function.identity());
 
-            return new BackendType(mappings, settings, SuggestBackendKV.class);
+            return new BackendType(SuggestBackendKV.class, mappings, settings);
         };
     }
 

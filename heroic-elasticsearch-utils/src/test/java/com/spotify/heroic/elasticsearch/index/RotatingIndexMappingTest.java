@@ -1,12 +1,12 @@
 package com.spotify.heroic.elasticsearch.index;
 
+import static org.junit.Assert.assertArrayEquals;
+
 import com.spotify.heroic.common.Duration;
+import java.util.HashMap;
+import java.util.concurrent.TimeUnit;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.util.concurrent.TimeUnit;
-
-import static org.junit.Assert.assertArrayEquals;
 
 public class RotatingIndexMappingTest {
     private RotatingIndexMapping rotating;
@@ -18,7 +18,8 @@ public class RotatingIndexMappingTest {
 
     @Before
     public void setup() {
-        rotating = new RotatingIndexMapping(interval, maxReadIndices, maxWriteIndices, pattern);
+        rotating = new RotatingIndexMapping(interval, maxReadIndices, maxWriteIndices, pattern,
+            new HashMap<>());
     }
 
     @Test
@@ -37,10 +38,5 @@ public class RotatingIndexMappingTest {
     public void testWriteIndex() {
         final String[] indices = rotating.writeIndices(8000, "typeA");
         assertArrayEquals(new String[]{"index-typeA-8000"}, indices);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testNoIndexSelectedException() throws IllegalArgumentException {
-        new RotatingIndexMapping(interval, 0, 0, pattern);
     }
 }
