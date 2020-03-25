@@ -109,6 +109,12 @@ allprojects {
     // Dependency management defines shared versions across all submodules to ensure consistency
     dependencyManagement {
         dependencies {
+            dependencySet(group: 'org.elasticsearch.client', version: '7.5.0') {
+                entry 'transport'
+                entry 'elasticsearch-rest-client'
+                entry 'elasticsearch-rest-high-level-client'
+            }
+            
             dependency 'com.datastax.cassandra:cassandra-driver-core:3.8.0'
             dependency 'com.spotify:folsom:1.6.2'
 

@@ -3,7 +3,7 @@ package com.spotify.heroic.suggest.elasticsearch;
 import static org.junit.Assert.assertEquals;
 
 import com.spotify.heroic.elasticsearch.ConnectionModule;
-import com.spotify.heroic.elasticsearch.TransportClientSetup;
+import com.spotify.heroic.elasticsearch.TransportClientWrapper;
 import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
 import com.spotify.heroic.suggest.SuggestModule;
 import com.spotify.heroic.suggest.WriteSuggest;
@@ -40,7 +40,7 @@ public class SuggestBackendKVIT extends AbstractSuggestBackendIT {
             .connection(ConnectionModule
                 .builder()
                 .index(index)
-                .clientSetup(TransportClientSetup.builder()
+                .clientSetup(TransportClientWrapper.builder()
                     .clusterName("docker-cluster")
                     .seeds(List.of(
                         esContainer.getTcpHost().getHostName()

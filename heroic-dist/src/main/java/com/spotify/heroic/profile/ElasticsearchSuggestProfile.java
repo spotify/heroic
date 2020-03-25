@@ -30,7 +30,7 @@ import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.HeroicConfig;
 import com.spotify.heroic.ParameterSpecification;
 import com.spotify.heroic.elasticsearch.ConnectionModule;
-import com.spotify.heroic.elasticsearch.TransportClientSetup;
+import com.spotify.heroic.elasticsearch.TransportClientWrapper;
 import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
 import com.spotify.heroic.suggest.SuggestManagerModule;
 import com.spotify.heroic.suggest.SuggestModule;
@@ -49,7 +49,7 @@ public class ElasticsearchSuggestProfile extends HeroicProfileBase {
 
         final ConnectionModule.Builder connection = ConnectionModule.builder().index(index.build());
 
-        final TransportClientSetup.Builder esClient = TransportClientSetup.builder();
+        final TransportClientWrapper.Builder esClient = TransportClientWrapper.builder();
         params.get("clusterName").map(esClient::clusterName);
         params.get("seeds").map(s -> esClient.seeds(ImmutableList.copyOf(splitter.split(s))));
 

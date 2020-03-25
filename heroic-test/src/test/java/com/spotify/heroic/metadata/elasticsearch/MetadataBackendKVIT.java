@@ -22,7 +22,7 @@
 package com.spotify.heroic.metadata.elasticsearch;
 
 import com.spotify.heroic.elasticsearch.ConnectionModule;
-import com.spotify.heroic.elasticsearch.TransportClientSetup;
+import com.spotify.heroic.elasticsearch.TransportClientWrapper;
 import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
 import com.spotify.heroic.metadata.MetadataModule;
 import com.spotify.heroic.test.AbstractMetadataBackendIT;
@@ -64,7 +64,7 @@ public class MetadataBackendKVIT extends AbstractMetadataBackendIT {
             .connection(ConnectionModule
                 .builder()
                 .index(index)
-                .clientSetup(TransportClientSetup.builder()
+                .clientSetup(TransportClientWrapper.builder()
                     .clusterName("docker-cluster")
                     .seeds(List.of(
                         esContainer.getTcpHost().getHostName()

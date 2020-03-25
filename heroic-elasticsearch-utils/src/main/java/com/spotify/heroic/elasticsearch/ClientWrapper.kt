@@ -23,15 +23,19 @@ package com.spotify.heroic.elasticsearch
 
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
-import org.elasticsearch.client.Client
+import com.spotify.heroic.elasticsearch.index.IndexMapping
+import eu.toolchain.async.AsyncFramework
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(
-    JsonSubTypes.Type(value = TransportClientSetup::class, name = "transport")
+    JsonSubTypes.Type(value = TransportClientWrapper::class, name = "transport"),
+    JsonSubTypes.Type(value = RestClientWrapper::class, name = "rest")
 )
-interface ClientSetup {
-    @Throws(Exception::class)
-    fun setup(): ClientWrapper
-
-    data class ClientWrapper(val client: Client, val shutdown: Runnable)
+interface ClientWrapper {
+    fun start(
+        async: AsyncFramework,
+        index: IndexMapping,
+        templateName: String,
+        type: BackendType
+    ): Connection
 }

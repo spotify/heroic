@@ -23,16 +23,13 @@ package com.spotify.heroic.elasticsearch;
 
 import com.spotify.heroic.elasticsearch.index.IndexMapping;
 import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
-
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateRequestBuilder;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
@@ -43,49 +40,54 @@ import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchScrollRequestBuilder;
 import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.client.IndicesAdminClient;
+import org.elasticsearch.client.transport.TransportClient;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Common connection abstraction between Node and TransportClient.
+ * Connection abstraction for TransportClient.
  */
-public class Connection {
-    private static final Logger log = LoggerFactory.getLogger(Connection.class);
+public class TransportConnection implements Connection {
+    private static final Logger log = LoggerFactory.getLogger(TransportClientWrapper.class);
     private final AsyncFramework async;
     private final IndexMapping index;
-    private final ClientSetup.ClientWrapper client;
+    private final TransportClient client;
 
     private final String templateName;
     private final BackendType type;
 
-    @java.beans.ConstructorProperties({ "async", "index", "client", "templateName", "type" })
-    public Connection(
+    TransportConnection(
         final AsyncFramework async,
         final IndexMapping index,
-        final ClientSetup.ClientWrapper client,
         final String templateName,
-        final BackendType type
+        final BackendType type,
+        final TransportClient client
     ) {
         this.async = async;
         this.index = index;
-        this.client = client;
         this.templateName = templateName;
         this.type = type;
+        this.client = client;
     }
 
+    @Override
+    @NotNull
     public AsyncFuture<Void> close() {
         final List<AsyncFuture<Void>> futures = new ArrayList<>();
 
         futures.add(async.call(() -> {
-            client.getShutdown().run();
+            client.close();
             return null;
         }));
 
         return async.collectAndDiscard(futures);
     }
 
+    @Override
+    @NotNull
     public AsyncFuture<Void> configure() {
-        final IndicesAdminClient indices = client.getClient().admin().indices();
+        final IndicesAdminClient indices = client.admin().indices();
 
         final List<AsyncFuture<AcknowledgedResponse>> writes = new ArrayList<>();
 
@@ -128,44 +130,63 @@ public class Connection {
         return async.collectAndDiscard(writes);
     }
 
-    public String[] readIndices(String type) throws NoIndexSelectedException {
+
+    @Override
+    @NotNull
+    public String[] readIndices(@NotNull String type) throws NoIndexSelectedException {
         return index.readIndices(type);
     }
 
-    public String[] writeIndices(String type) throws NoIndexSelectedException {
+    @Override
+    @NotNull
+    public String[] writeIndices(@NotNull String type) throws NoIndexSelectedException {
         return index.writeIndices(type);
     }
 
-    public SearchRequestBuilder search(String type) throws NoIndexSelectedException {
-        return index.search(client.getClient(), type);
+    @Override
+    @NotNull
+    public SearchRequestBuilder search(@NotNull String type) throws NoIndexSelectedException {
+        return index.search(client, type);
     }
 
-    public SearchRequestBuilder count(String type) throws NoIndexSelectedException {
-        return index.count(client.getClient(), type);
+    @Override
+    @NotNull
+    public SearchRequestBuilder count(@NotNull String type) throws NoIndexSelectedException {
+        return index.count(client, type);
     }
 
-    public IndexRequestBuilder index(String index, String type) {
-        return client.getClient().prepareIndex(index, type);
+    @Override
+    @NotNull
+    public IndexRequestBuilder index(@NotNull String index, @NotNull String type) {
+        return client.prepareIndex(index, type);
     }
 
-    public SearchScrollRequestBuilder prepareSearchScroll(String scrollId) {
-        return client.getClient().prepareSearchScroll(scrollId);
+    @Override
+    @NotNull
+    public SearchScrollRequestBuilder prepareSearchScroll(@NotNull String scrollId) {
+        return client.prepareSearchScroll(scrollId);
     }
 
-    public ClearScrollRequestBuilder clearSearchScroll(String scrollId) {
-      return client.getClient().prepareClearScroll().addScrollId(scrollId);
+    @Override
+    @NotNull
+    public ClearScrollRequestBuilder clearSearchScroll(@NotNull String scrollId) {
+      return client.prepareClearScroll().addScrollId(scrollId);
     }
 
+    @Override
+    @NotNull
     public BulkRequestBuilder prepareBulkRequest() {
-      return client.getClient().prepareBulk();
+      return client.prepareBulk();
     }
 
-    public List<DeleteRequestBuilder> delete(String type, String id)
+    @Override
+    @NotNull
+    public List<DeleteRequestBuilder> delete(@NotNull String type, @NotNull String id)
         throws NoIndexSelectedException {
-        return index.delete(client.getClient(), type, id);
+        return index.delete(client, type, id);
     }
 
     public String toString() {
-        return "Connection(index=" + this.index + ", client=" + this.client + ")";
+        return "Connection(index=" + this.index + ", clientWrapper=" + this.client + ")";
     }
 }

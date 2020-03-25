@@ -33,24 +33,26 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
+import javax.inject.Named;
 
 @Module
 public class ConnectionModule {
     private final IndexMapping index;
     private final String templateName;
-    private final ClientSetup clientSetup;
+    private final ClientWrapper clientWrapper;
 
     @JsonCreator
     public ConnectionModule(
         @JsonProperty("index") IndexMapping index,
         @JsonProperty("templateName") String templateName,
-        @JsonProperty("client") ClientSetup clientSetup
+        @JsonProperty("client") ClientWrapper clientWrapper
     ) {
         this.index = ofNullable(index).orElseGet(RotatingIndexMapping.builder()::build);
         // templateName defaults to the value from the backend config, and doesn't have to also
         // be set under these connection params
         this.templateName = templateName;
-        this.clientSetup = ofNullable(clientSetup).orElseGet(TransportClientSetup::new);
+        this.clientWrapper = ofNullable(clientWrapper).orElseGet(
+            () -> TransportClientWrapper.builder().build());
     }
 
     public static ConnectionModule buildDefault() {
@@ -65,8 +67,7 @@ public class ConnectionModule {
     public class Provider {
         private final AsyncFramework async;
 
-        @java.beans.ConstructorProperties({ "async" })
-        public Provider(final AsyncFramework async) {
+        public Provider(@Named("async") final AsyncFramework async) {
             this.async = async;
         }
 
@@ -75,16 +76,16 @@ public class ConnectionModule {
         ) {
             final String template = ofNullable(templateName).orElse(defaultTemplateName);
 
-            return async.managed(new ManagedSetup<Connection>() {
+            return async.managed(new ManagedSetup<>() {
                 @Override
                 public AsyncFuture<Connection> construct() {
                     return async.call(
-                        () -> new Connection(async, index, clientSetup.setup(), template, type));
+                        () -> clientWrapper.start(async, index, template, type));
                 }
 
                 @Override
-                public AsyncFuture<Void> destruct(Connection value) {
-                    return value.close();
+                public AsyncFuture<Void> destruct(Connection conn) {
+                    return conn.close();
                 }
             });
         }
@@ -97,7 +98,7 @@ public class ConnectionModule {
     public static final class Builder {
         private IndexMapping index;
         private String templateName;
-        private ClientSetup clientSetup;
+        private ClientWrapper clientWrapper;
 
         public Builder index(IndexMapping index) {
             this.index = index;
@@ -109,13 +110,13 @@ public class ConnectionModule {
             return this;
         }
 
-        public Builder clientSetup(ClientSetup clientSetup) {
-            this.clientSetup = clientSetup;
+        public Builder clientSetup(ClientWrapper clientWrapper) {
+            this.clientWrapper = clientWrapper;
             return this;
         }
 
         public ConnectionModule build() {
-            return new ConnectionModule(index, templateName, clientSetup);
+            return new ConnectionModule(index, templateName, clientWrapper);
         }
     }
 }
