@@ -30,7 +30,6 @@ import com.spotify.heroic.elasticsearch.index.IndexMapping;
 import eu.toolchain.async.AsyncFramework;
 import java.net.UnknownHostException;
 import java.util.List;
-import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.TransportAddress;

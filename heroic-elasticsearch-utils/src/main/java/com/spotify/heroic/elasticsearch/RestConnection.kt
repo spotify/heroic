@@ -21,20 +21,32 @@
 
 package com.spotify.heroic.elasticsearch
 
+import com.spotify.heroic.elasticsearch.index.IndexMapping
 import eu.toolchain.async.AsyncFramework
 import eu.toolchain.async.AsyncFuture
+import org.elasticsearch.action.ActionFuture
+import org.elasticsearch.action.ActionListener
+import org.elasticsearch.action.bulk.BulkRequest
 import org.elasticsearch.action.bulk.BulkRequestBuilder
+import org.elasticsearch.action.bulk.BulkResponse
+import org.elasticsearch.action.delete.DeleteRequest
 import org.elasticsearch.action.delete.DeleteRequestBuilder
+import org.elasticsearch.action.delete.DeleteResponse
+import org.elasticsearch.action.index.IndexRequest
 import org.elasticsearch.action.index.IndexRequestBuilder
-import org.elasticsearch.action.search.ClearScrollRequestBuilder
-import org.elasticsearch.action.search.SearchRequestBuilder
-import org.elasticsearch.action.search.SearchScrollRequestBuilder
+import org.elasticsearch.action.index.IndexResponse
+import org.elasticsearch.action.search.*
+import org.elasticsearch.client.RequestOptions
 import org.elasticsearch.client.RestHighLevelClient
+import org.elasticsearch.common.unit.TimeValue
 
 class RestConnection(
+    private val client: RestHighLevelClient,
     private val async: AsyncFramework,
-    private val client: RestHighLevelClient
+    override val index: IndexMapping
 ): Connection {
+    private val options = RequestOptions.DEFAULT
+
     override fun close(): AsyncFuture<Void?> {
         val future = async.call(client::close).directTransform { null }
         return async.collectAndDiscard(listOf(future))
@@ -44,40 +56,33 @@ class RestConnection(
         TODO("not implemented")
     }
 
-    override fun readIndices(type: String): Array<String> {
+    override fun searchScroll(
+        scrollId: String, timeout: TimeValue, listener: ActionListener<SearchResponse>
+    ) {
         TODO("not implemented")
     }
 
-    override fun writeIndices(type: String): Array<String> {
+    override fun clearSearchScroll(scrollId: String): ActionFuture<ClearScrollResponse> {
         TODO("not implemented")
     }
 
-    override fun search(type: String): SearchRequestBuilder {
-        TODO("not implemented")
+    override fun execute(request: SearchRequest): SearchResponse {
+        return client.search(request, options)
     }
 
-    override fun count(type: String): SearchRequestBuilder {
-        TODO("not implemented")
+    override fun execute(request: SearchRequest, listener: ActionListener<SearchResponse>) {
+        client.searchAsync(request, options, listener)
     }
 
-    override fun index(index: String, type: String): IndexRequestBuilder {
-        TODO("not implemented")
+    override fun execute(request: DeleteRequest, listener: ActionListener<DeleteResponse>) {
+        client.deleteAsync(request, options, listener)
     }
 
-    override fun prepareSearchScroll(scrollId: String): SearchScrollRequestBuilder {
-        TODO("not implemented")
+    override fun execute(request: BulkRequest, listener: ActionListener<BulkResponse>) {
+        client.bulkAsync(request, options, listener)
     }
 
-    override fun clearSearchScroll(scrollId: String): ClearScrollRequestBuilder {
-        TODO("not implemented")
+    override fun execute(request: IndexRequest, listener: ActionListener<IndexResponse>) {
+        client.indexAsync(request, options, listener)
     }
-
-    override fun prepareBulkRequest(): BulkRequestBuilder {
-        TODO("not implemented")
-    }
-
-    override fun delete(type: String, id: String): List<DeleteRequestBuilder> {
-        TODO("not implemented")
-    }
-
 }

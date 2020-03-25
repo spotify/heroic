@@ -22,7 +22,6 @@
 package com.spotify.heroic.elasticsearch;
 
 import com.spotify.heroic.elasticsearch.index.IndexMapping;
-import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
@@ -30,17 +29,24 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.elasticsearch.action.ActionFuture;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateRequestBuilder;
-import org.elasticsearch.action.bulk.BulkRequestBuilder;
-import org.elasticsearch.action.delete.DeleteRequestBuilder;
-import org.elasticsearch.action.index.IndexRequestBuilder;
-import org.elasticsearch.action.search.ClearScrollRequestBuilder;
-import org.elasticsearch.action.search.SearchRequestBuilder;
-import org.elasticsearch.action.search.SearchScrollRequestBuilder;
+import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.bulk.BulkResponse;
+import org.elasticsearch.action.delete.DeleteRequest;
+import org.elasticsearch.action.delete.DeleteResponse;
+import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.index.IndexResponse;
+import org.elasticsearch.action.search.ClearScrollRequest;
+import org.elasticsearch.action.search.ClearScrollResponse;
+import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.search.SearchScrollRequest;
 import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.client.IndicesAdminClient;
 import org.elasticsearch.client.transport.TransportClient;
+import org.elasticsearch.common.unit.TimeValue;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,6 +75,16 @@ public class TransportConnection implements Connection {
         this.templateName = templateName;
         this.type = type;
         this.client = client;
+    }
+
+    public String toString() {
+        return "Connection(index=" + this.index + ", clientWrapper=" + this.client + ")";
+    }
+
+    @NotNull
+    @Override
+    public IndexMapping getIndex() {
+        return index;
     }
 
     @Override
@@ -130,63 +146,60 @@ public class TransportConnection implements Connection {
         return async.collectAndDiscard(writes);
     }
 
-
     @Override
-    @NotNull
-    public String[] readIndices(@NotNull String type) throws NoIndexSelectedException {
-        return index.readIndices(type);
+    public void searchScroll(
+        @NotNull String scrollId,
+        @NotNull TimeValue timeout,
+        @NotNull ActionListener<SearchResponse> listener
+    ) {
+        SearchScrollRequest request = new SearchScrollRequest(scrollId);
+        client.searchScroll(request, listener);
     }
 
     @Override
     @NotNull
-    public String[] writeIndices(@NotNull String type) throws NoIndexSelectedException {
-        return index.writeIndices(type);
+    public ActionFuture<ClearScrollResponse> clearSearchScroll(@NotNull String scrollId) {
+
+        ClearScrollRequest request = new ClearScrollRequest();
+        request.addScrollId(scrollId);
+        return client.clearScroll(request);
     }
 
     @Override
+    public void execute(
+        @NotNull SearchRequest request,
+        @NotNull ActionListener<SearchResponse> listener
+    ) {
+        client.search(request, listener);
+    }
+
     @NotNull
-    public SearchRequestBuilder search(@NotNull String type) throws NoIndexSelectedException {
-        return index.search(client, type);
+    @Override
+    public SearchResponse execute(@NotNull SearchRequest request) {
+        return client.search(request).actionGet();
     }
 
     @Override
-    @NotNull
-    public SearchRequestBuilder count(@NotNull String type) throws NoIndexSelectedException {
-        return index.count(client, type);
+    public void execute(
+        @NotNull DeleteRequest request,
+        @NotNull ActionListener<DeleteResponse> listener
+    ) {
+        client.delete(request, listener);
     }
 
     @Override
-    @NotNull
-    public IndexRequestBuilder index(@NotNull String index, @NotNull String type) {
-        return client.prepareIndex(index, type);
+    public void execute(
+        @NotNull BulkRequest request,
+        @NotNull ActionListener<BulkResponse> listener
+    ) {
+        client.bulk(request, listener);
     }
 
     @Override
-    @NotNull
-    public SearchScrollRequestBuilder prepareSearchScroll(@NotNull String scrollId) {
-        return client.prepareSearchScroll(scrollId);
-    }
-
-    @Override
-    @NotNull
-    public ClearScrollRequestBuilder clearSearchScroll(@NotNull String scrollId) {
-      return client.prepareClearScroll().addScrollId(scrollId);
-    }
-
-    @Override
-    @NotNull
-    public BulkRequestBuilder prepareBulkRequest() {
-      return client.prepareBulk();
-    }
-
-    @Override
-    @NotNull
-    public List<DeleteRequestBuilder> delete(@NotNull String type, @NotNull String id)
-        throws NoIndexSelectedException {
-        return index.delete(client, type, id);
-    }
-
-    public String toString() {
-        return "Connection(index=" + this.index + ", clientWrapper=" + this.client + ")";
+    public void execute(
+        @NotNull IndexRequest request,
+        @NotNull ActionListener<IndexResponse> listener
+    ) {
+        client.index(request, listener);
     }
 }

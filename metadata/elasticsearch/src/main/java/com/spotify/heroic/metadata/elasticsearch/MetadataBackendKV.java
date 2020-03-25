@@ -98,11 +98,11 @@ import javax.inject.Named;
 import org.apache.commons.lang3.tuple.Pair;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.DocWriteRequest.OpType;
-import org.elasticsearch.action.delete.DeleteRequestBuilder;
+import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.delete.DeleteResponse;
-import org.elasticsearch.action.index.IndexRequestBuilder;
+import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexResponse;
-import org.elasticsearch.action.search.SearchRequestBuilder;
+import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -113,6 +113,7 @@ import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
 
 @ElasticsearchScope
 public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
@@ -209,7 +210,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
             final String[] indices;
 
             try {
-                indices = c.writeIndices(METADATA_TYPE);
+                indices = c.getIndex().writeIndices(METADATA_TYPE);
             } catch (NoIndexSelectedException e) {
                 rootSpan.setStatus(Status.INTERNAL.withDescription(e.toString()));
                 rootSpan.end();
@@ -240,11 +241,10 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                     buildContext(source, series);
                     source.endObject();
 
-                    final IndexRequestBuilder builder = c
-                        .index(index, METADATA_TYPE)
-                        .setId(id)
-                        .setSource(source)
-                        .setOpType(OpType.CREATE);
+                    IndexRequest indexRequest = new IndexRequest(index, METADATA_TYPE)
+                        .id(id)
+                        .source(source)
+                        .opType(OpType.CREATE);
 
                     final RequestTimer<WriteMetadata> timer = WriteMetadata.timer();
                     final FutureReporter.Context writeContext =
@@ -267,7 +267,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                             }
                         };
 
-                    builder.execute(listener);
+                    c.execute(indexRequest, listener);
 
                     final AsyncFuture<WriteMetadata> writeMetadataAsyncFuture = result
                         .directTransform(response -> timer.end())
@@ -300,14 +300,13 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
             final QueryBuilder f = filter(filter.getFilter());
 
-            final SearchRequestBuilder builder = c.count(METADATA_TYPE);
-            limit.asInteger().ifPresent(builder::setTerminateAfter);
-
-            builder.setQuery(new BoolQueryBuilder().must(f));
-            builder.setSize(0);
+            SearchRequest request = c.getIndex().count(METADATA_TYPE);
+            SearchSourceBuilder sourceBuilder = request.source();
+            limit.asInteger().ifPresent(sourceBuilder::terminateAfter);
+            sourceBuilder.query(new BoolQueryBuilder().must(f));
 
             final ResolvableFuture<SearchResponse> future = async.future();
-            builder.execute(bind(future));
+            c.execute(request, bind(future));
 
             return future.directTransform(
                 r -> new CountSeries(r.getHits().getTotalHits().value, false));
@@ -318,39 +317,49 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
   @Override
   public AsyncFuture<FindSeries> findSeries(final FindSeries.Request filter) {
     return doto(
-        c -> {
-          return entries(
-              filter.getFilter(),
-              filter.getLimit(),
-              this::toSeries,
-              l -> new FindSeries(l.getSet(), l.isLimited()),
-              builder -> { });
-        });
+        c -> entries(
+            filter.getFilter(),
+            filter.getLimit(),
+            this::toSeries,
+            l -> new FindSeries(l.getSet(), l.isLimited()),
+            request -> { }));
   }
 
     @Override
     public AsyncObservable<FindSeriesStream> findSeriesStream(final FindSeries.Request request) {
-        return entriesStream(request.getLimit(), request.getFilter(), request.getRange(),
-            this::toSeries, FindSeriesStream::new, builder -> {
-            });
+        return entriesStream(
+            request.getLimit(),
+            request.getFilter(),
+            request.getRange(),
+            this::toSeries,
+            FindSeriesStream::new,
+            builder -> { }
+        );
     }
 
     @Override
     public AsyncFuture<FindSeriesIds> findSeriesIds(final FindSeriesIds.Request request) {
-        return entries(request.getFilter(), request.getLimit(), this::toId,
-            l -> new FindSeriesIds(l.getSet(), l.isLimited()), builder -> {
-                builder.setFetchSource(false);
-            });
+        return entries(
+            request.getFilter(),
+            request.getLimit(),
+            this::toId,
+            l -> new FindSeriesIds(l.getSet(), l.isLimited()),
+            searchRequest -> searchRequest.source().fetchSource(false)
+        );
     }
 
     @Override
     public AsyncObservable<FindSeriesIdsStream> findSeriesIdsStream(
         final FindSeriesIds.Request request
     ) {
-        return entriesStream(request.getLimit(), request.getFilter(), request.getRange(),
-            this::toId, FindSeriesIdsStream::new, builder -> {
-                builder.setFetchSource(false);
-            });
+        return entriesStream(
+            request.getLimit(),
+            request.getFilter(),
+            request.getRange(),
+            this::toId,
+            FindSeriesIdsStream::new,
+            searchRequest -> searchRequest.source().fetchSource(false)
+        );
     }
 
     @Override
@@ -365,13 +374,13 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
             for (final String id : ids.getIds()) {
                 deletes.add(() -> {
-                    final List<DeleteRequestBuilder> requests = c.delete(METADATA_TYPE, id);
+                    final List<DeleteRequest> requests = c.getIndex().delete(METADATA_TYPE, id);
 
                     return async.collectAndDiscard(requests
                         .stream()
-                        .map(deleteRequestBuilder -> {
+                        .map(deleteRequest -> {
                             final ResolvableFuture<DeleteResponse> future = async.future();
-                            deleteRequestBuilder.execute(bind(future));
+                            c.execute(deleteRequest, bind(future));
                             return future;
                         })
                         .collect(Collectors.toList()));
@@ -387,23 +396,21 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     public AsyncFuture<FindKeys> findKeys(final FindKeys.Request request) {
         return doto(c -> {
             final QueryBuilder f = filter(request.getFilter());
-
-            final SearchRequestBuilder builder = c.search(METADATA_TYPE);
-
-            builder.setQuery(new BoolQueryBuilder().must(f));
+            SearchRequest searchRequest = c.getIndex().search(METADATA_TYPE);
+            searchRequest.source().query(new BoolQueryBuilder().must(f));
 
             {
                 final AggregationBuilder terms = AggregationBuilders.terms("terms").field(KEY);
-                builder.addAggregation(terms);
+                searchRequest.source().aggregation(terms);
             }
 
             final ResolvableFuture<SearchResponse> future = async.future();
-            future.resolve(builder.execute().get());
+            future.resolve(c.execute(searchRequest));
 
             return future.directTransform(response -> {
-                final Terms terms = (Terms) response.getAggregations().get("terms");
+                final Terms terms = response.getAggregations().get("terms");
 
-                final Set<String> keys = new HashSet<String>();
+                final Set<String> keys = new HashSet<>();
 
                 int size = terms.getBuckets().size();
                 int duplicates = 0;
@@ -438,24 +445,25 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         final OptionalLimit limit,
         final Function<SearchHit, T> converter,
         final Transform<ScrollTransformResult<T>, O> collector,
-        final Consumer<SearchRequestBuilder> modifier
+        final Consumer<SearchRequest> modifier
     ) {
         final QueryBuilder f = filter(filter);
 
         return doto(c -> {
-            final SearchRequestBuilder builder = c.search(METADATA_TYPE).setScroll(SCROLL_TIME);
+            SearchRequest request = c.getIndex().search(METADATA_TYPE);
+            request.scroll(SCROLL_TIME);
+            request.source()
+                .size(limit.asMaxInteger(SCROLL_SIZE))
+                .query(new BoolQueryBuilder().must(f));
 
-            builder.setSize(limit.asMaxInteger(SCROLL_SIZE));
-            builder.setQuery(new BoolQueryBuilder().must(f));
-
-            modifier.accept(builder);
+            modifier.accept(request);
 
             AsyncFuture<ScrollTransformResult<T>> scroll = scrollEntries(
-                c, builder, limit, converter);
+                c, request, limit, converter);
 
             return scroll
                 .onResolved(r -> ofNullable(r.getLastScrollId())
-                    .ifPresent(id -> c.clearSearchScroll(id).execute()))
+                    .ifPresent(c::clearSearchScroll))
                 .directTransform(collector);
         });
     }
@@ -467,26 +475,26 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
      * @return a {@link eu.toolchain.async.StreamCollector}
      */
     private StreamCollector<Void, DeleteSeries> newDeleteCollector() {
-        return new StreamCollector<Void, DeleteSeries>() {
+        return new StreamCollector<>() {
             final ConcurrentLinkedQueue<Throwable> errors = new ConcurrentLinkedQueue<>();
 
             @Override
-            public void resolved(final Void result) throws Exception {
+            public void resolved(final Void result) {
             }
 
             @Override
-            public void failed(final Throwable cause) throws Exception {
+            public void failed(final Throwable cause) {
                 errors.add(cause);
             }
 
             @Override
-            public void cancelled() throws Exception {
+            public void cancelled() {
             }
 
             @Override
             public DeleteSeries end(
                 final int resolved, final int failed, final int cancelled
-            ) throws Exception {
+            ) {
                 final List<RequestError> errors = this.errors
                     .stream()
                     .map(QueryError::new)
@@ -503,17 +511,17 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         final DateRange range,
         final Function<SearchHit, T> converter,
         final Function<Set<T>, O> collector,
-        final Consumer<SearchRequestBuilder> modifier
+        final Consumer<SearchRequest> modifier
     ) {
         final QueryBuilder filter = filter(f);
 
         return observer -> connection.doto(c -> {
-            final SearchRequestBuilder builder = c.search(METADATA_TYPE).setScroll(SCROLL_TIME);
+            SearchRequest request = c.getIndex().search(METADATA_TYPE).scroll(SCROLL_TIME);
+            request.source()
+                .size(limit.asMaxInteger(SCROLL_SIZE))
+                .query(new BoolQueryBuilder().must(filter));
 
-            builder.setSize(limit.asMaxInteger(SCROLL_SIZE));
-            builder.setQuery(new BoolQueryBuilder().must(filter));
-
-            modifier.accept(builder);
+            modifier.accept(request);
 
             final ScrollTransformStream<T> scrollTransform =
                 new ScrollTransformStream<>(limit, set -> observer.observe(collector.apply(set)),
@@ -521,14 +529,13 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                     // Function<> that returns a Supplier
                     return () -> {
                         final ResolvableFuture<SearchResponse> future = async.future();
-                        c.prepareSearchScroll(
-                            scrollId).setScroll(SCROLL_TIME).execute(bind(future));
+                        c.searchScroll(scrollId, SCROLL_TIME, bind(future));
                         return future;
                     };
                 });
 
             final ResolvableFuture<SearchResponse> future = async.future();
-            builder.execute(bind(future));
+            c.execute(request, bind(future));
 
             return future.lazyTransform(scrollTransform);
         }).onDone(observer.onDone());

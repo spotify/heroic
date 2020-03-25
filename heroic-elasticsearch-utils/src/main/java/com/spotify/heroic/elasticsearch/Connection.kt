@@ -21,40 +21,54 @@
 
 package com.spotify.heroic.elasticsearch
 
-import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException
+import com.spotify.heroic.elasticsearch.index.IndexMapping
 import eu.toolchain.async.AsyncFuture
-import org.elasticsearch.action.bulk.BulkRequestBuilder
-import org.elasticsearch.action.delete.DeleteRequestBuilder
-import org.elasticsearch.action.index.IndexRequestBuilder
-import org.elasticsearch.action.search.ClearScrollRequestBuilder
-import org.elasticsearch.action.search.SearchRequestBuilder
-import org.elasticsearch.action.search.SearchScrollRequestBuilder
+import org.elasticsearch.action.ActionFuture
+import org.elasticsearch.action.ActionListener
+import org.elasticsearch.action.bulk.BulkRequest
+import org.elasticsearch.action.bulk.BulkResponse
+import org.elasticsearch.action.delete.DeleteRequest
+import org.elasticsearch.action.delete.DeleteResponse
+import org.elasticsearch.action.index.IndexRequest
+import org.elasticsearch.action.index.IndexResponse
+import org.elasticsearch.action.search.ClearScrollResponse
+import org.elasticsearch.action.search.SearchRequest
+import org.elasticsearch.action.search.SearchResponse
+import org.elasticsearch.common.unit.TimeValue
 
 interface Connection {
+    val index: IndexMapping
+
     fun close(): AsyncFuture<Void?>
 
     fun configure(): AsyncFuture<Void?>
 
-    @Throws(NoIndexSelectedException::class)
-    fun readIndices(type: String): Array<String>
+    fun searchScroll(scrollId: String, timeout: TimeValue, listener: ActionListener<SearchResponse>)
 
-    @Throws(NoIndexSelectedException::class)
-    fun writeIndices(type: String): Array<String>
+    fun clearSearchScroll(scrollId: String): ActionFuture<ClearScrollResponse>
 
-    @Throws(NoIndexSelectedException::class)
-    fun search(type: String): SearchRequestBuilder
+    /**
+     * Synchronously execute a search request.
+     */
+    fun execute(request: SearchRequest): SearchResponse
 
-    @Throws(NoIndexSelectedException::class)
-    fun count(type: String): SearchRequestBuilder
+    /**
+     * Execute a search request asynchronously and pass the result to the listener.
+     */
+    fun execute(request: SearchRequest, listener: ActionListener<SearchResponse>)
 
-    fun index(index: String, type: String): IndexRequestBuilder
+    /**
+     * Execute a delete request asynchronously and pass the result to the listener.
+     */
+    fun execute(request: DeleteRequest, listener: ActionListener<DeleteResponse>)
 
-    fun prepareSearchScroll(scrollId: String): SearchScrollRequestBuilder
+    /**
+     * Execute a bulk request asynchronously and pass the result to the listener.
+     */
+    fun execute(request: BulkRequest, listener: ActionListener<BulkResponse>)
 
-    fun clearSearchScroll(scrollId: String): ClearScrollRequestBuilder
-
-    fun prepareBulkRequest(): BulkRequestBuilder
-
-    @Throws(NoIndexSelectedException::class)
-    fun delete(type: String, id: String): List<DeleteRequestBuilder>
+    /**
+     * Execute an index request asynchronously and pass the result to the listener.
+     */
+    fun execute(request: IndexRequest, listener: ActionListener<IndexResponse>)
 }

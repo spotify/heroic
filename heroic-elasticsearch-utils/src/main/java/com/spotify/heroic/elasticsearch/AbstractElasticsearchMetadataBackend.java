@@ -43,7 +43,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import org.elasticsearch.action.search.SearchRequestBuilder;
+import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.query.BoolQueryBuilder;
@@ -52,7 +52,7 @@ import org.elasticsearch.search.SearchHit;
 
 public abstract class AbstractElasticsearchMetadataBackend extends AbstractElasticsearchBackend
     implements MetadataBackend {
-    public static final TimeValue SCROLL_TIME = TimeValue.timeValueSeconds(5);
+    private static final TimeValue SCROLL_TIME = TimeValue.timeValueSeconds(5);
 
     private final String type;
 
@@ -68,27 +68,27 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
     protected abstract Series toSeries(SearchHit hit);
 
     protected <T> AsyncFuture<ScrollTransformResult<T>> scrollEntries(
-        final Connection c,
-        final SearchRequestBuilder request,
+        final Connection connection,
+        final SearchRequest request,
         final OptionalLimit limit,
         final Function<SearchHit, T> converter
     ) {
 
     final ScrollTransform<T> scrollTransform =
-        new ScrollTransform<T>(
+        new ScrollTransform<>(
             async,
             limit,
             converter,
             scrollId -> {
-              // Function<> that returns a Supplier
-              return () -> {
-                final ResolvableFuture<SearchResponse> future = async.future();
-                c.prepareSearchScroll(scrollId).setScroll(SCROLL_TIME).execute(bind(future));
-                return future;
-              };
+                // Function<> that returns a Supplier
+                return () -> {
+                    final ResolvableFuture<SearchResponse> future = async.future();
+                    connection.searchScroll(scrollId, SCROLL_TIME, bind(future));
+                    return future;
+                };
             });
             final ResolvableFuture<SearchResponse> future = async.future();
-            request.execute(bind(future));
+            connection.execute(request, bind(future));
 
         return future.lazyTransform(scrollTransform);
     }
@@ -178,7 +178,7 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
         }
 
         @Override
-        public AsyncFuture<Void> transform(final SearchResponse response) throws Exception {
+        public AsyncFuture<Void> transform(final SearchResponse response) {
             final SearchHit[] hits = response.getHits().getHits();
 
             final Set<T> batch = new HashSet<>();
@@ -226,38 +226,41 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
 
         return observer -> {
             final AtomicLong index = new AtomicLong();
-            final SearchRequestBuilder builder;
+            SearchRequest searchRequest;
+            Connection connection = c.get();
 
             try {
-                builder = c
-                    .get()
+                searchRequest = connection
+                    .getIndex()
                     .search(type)
-                    .setSize(ENTRIES_SCAN_SIZE)
-                    .setScroll(ENTRIES_TIMEOUT)
-                    .setQuery(query);
+                    .scroll(ENTRIES_TIMEOUT);
             } catch (NoIndexSelectedException e) {
                 throw new IllegalArgumentException("no valid index selected", e);
             }
+
+            searchRequest.source()
+                .size(ENTRIES_SCAN_SIZE)
+                .query(query);
 
             final OptionalLimit limit = request.getLimit();
             final AsyncObserver<Entries> o = observer.onFinished(c::release);
 
             final ResolvableFuture<SearchResponse> future = async.future();
-            builder.execute(bind(future));
+            connection.execute(searchRequest, bind(future));
 
             future.onDone(new FutureDone<>() {
                 @Override
-                public void failed(Throwable cause) throws Exception {
+                public void failed(Throwable cause) {
                     o.fail(cause);
                 }
 
                 @Override
-                public void cancelled() throws Exception {
+                public void cancelled() {
                     o.cancel();
                 }
 
                 @Override
-                public void resolved(final SearchResponse result) throws Exception {
+                public void resolved(final SearchResponse result) {
                     final String scrollId = result.getScrollId();
 
                     if (scrollId == null) {
@@ -267,15 +270,14 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
                     handleNext(scrollId);
                 }
 
-                private void handleNext(final String scrollId) throws Exception {
+                private void handleNext(final String scrollId) {
                     if (limit.isGreater(index.get())) {
                         o.end();
                         return;
                     }
 
                     final ResolvableFuture<SearchResponse> future = async.future();
-                    c.get().prepareSearchScroll(scrollId).setScroll(ENTRIES_TIMEOUT)
-                        .execute(bind(future));
+                    c.get().searchScroll(scrollId, ENTRIES_TIMEOUT, bind(future));
 
                     future
                         .onResolved(result -> {

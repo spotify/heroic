@@ -21,8 +21,9 @@
 
 package com.spotify.heroic.elasticsearch.index
 
+import org.elasticsearch.action.delete.DeleteRequest
 import org.elasticsearch.action.delete.DeleteRequestBuilder
-import org.elasticsearch.action.search.SearchRequestBuilder
+import org.elasticsearch.action.search.SearchRequest
 import org.elasticsearch.client.Client
 import org.elasticsearch.search.builder.SearchSourceBuilder
 
@@ -33,7 +34,6 @@ data class SingleIndexMapping(
     private val index: String = DEFAULT_INDEX,
     override val settings: Map<String, Any> = DEFAULT_SETTINGS
 ): IndexMapping {
-    private val indices = arrayOf(index)
     override val template = index
 
     override fun readIndices(type: String): Array<String> {
@@ -44,16 +44,16 @@ data class SingleIndexMapping(
         return arrayOf(getFullIndexName(type))
     }
 
-    override fun search(client: Client, type: String): SearchRequestBuilder {
-        return client.prepareSearch(getFullIndexName(type))
+    override fun search(type: String): SearchRequest {
+        return SearchRequest(getFullIndexName(type))
     }
 
-    override fun count(client: Client, type: String): SearchRequestBuilder {
-        return search(client, type).setSource(SearchSourceBuilder().size(0))
+    override fun count(type: String): SearchRequest {
+        return search(type).source(SearchSourceBuilder().size(0))
     }
 
-    override fun delete(client: Client, type: String, id: String?): List<DeleteRequestBuilder> {
-        return listOf(client.prepareDelete(getFullIndexName(type), type, id))
+    override fun delete(type: String, id: String): List<DeleteRequest> {
+        return listOf(DeleteRequest(getFullIndexName(type), type, id))
     }
 
     private fun getFullIndexName(type: String) = "$index-$type"
