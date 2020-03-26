@@ -33,7 +33,6 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
-import javax.inject.Named;
 
 @Module
 public class ConnectionModule {
@@ -51,8 +50,7 @@ public class ConnectionModule {
         // templateName defaults to the value from the backend config, and doesn't have to also
         // be set under these connection params
         this.templateName = templateName;
-        this.clientWrapper = ofNullable(clientWrapper).orElseGet(
-            () -> TransportClientWrapper.builder().build());
+        this.clientWrapper = ofNullable(clientWrapper).orElseGet(RestClientWrapper::new);
     }
 
     public static ConnectionModule buildDefault() {
@@ -67,7 +65,7 @@ public class ConnectionModule {
     public class Provider {
         private final AsyncFramework async;
 
-        public Provider(@Named("async") final AsyncFramework async) {
+        public Provider(final AsyncFramework async) {
             this.async = async;
         }
 

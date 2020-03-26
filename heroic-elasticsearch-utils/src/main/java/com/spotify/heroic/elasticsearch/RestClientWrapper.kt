@@ -42,7 +42,7 @@ data class RestClientWrapper(
         templateName: String,
         type: BackendType
     ): Connection {
-        return RestConnection(client, async, index)
+        return RestConnection(client, async, index, templateName, type)
     }
 
     private fun parseSeeds(): Array<HttpHost> {

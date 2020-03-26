@@ -121,7 +121,7 @@ public class TransportConnection implements Connection {
             final PutIndexTemplateRequestBuilder put = indices.preparePutTemplate(templateWithType)
                 .setSettings(settings)
                 .setPatterns(List.of(pattern))
-                .addMapping(mapping.getKey(), mapping.getValue())
+                .addMapping(indexType, mapping.getValue())
                 .setOrder(100);
 
             final ResolvableFuture<AcknowledgedResponse> future = async.future();
@@ -159,7 +159,6 @@ public class TransportConnection implements Connection {
     @Override
     @NotNull
     public ActionFuture<ClearScrollResponse> clearSearchScroll(@NotNull String scrollId) {
-
         ClearScrollRequest request = new ClearScrollRequest();
         request.addScrollId(scrollId);
         return client.clearScroll(request);

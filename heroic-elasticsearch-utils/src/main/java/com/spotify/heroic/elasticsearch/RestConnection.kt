@@ -26,6 +26,7 @@ import eu.toolchain.async.AsyncFramework
 import eu.toolchain.async.AsyncFuture
 import org.elasticsearch.action.ActionFuture
 import org.elasticsearch.action.ActionListener
+import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateRequest
 import org.elasticsearch.action.bulk.BulkRequest
 import org.elasticsearch.action.bulk.BulkRequestBuilder
 import org.elasticsearch.action.bulk.BulkResponse
@@ -36,14 +37,23 @@ import org.elasticsearch.action.index.IndexRequest
 import org.elasticsearch.action.index.IndexRequestBuilder
 import org.elasticsearch.action.index.IndexResponse
 import org.elasticsearch.action.search.*
+import org.elasticsearch.action.support.PlainActionFuture
+import org.elasticsearch.action.support.master.AcknowledgedResponse
 import org.elasticsearch.client.RequestOptions
+import org.elasticsearch.client.Response
 import org.elasticsearch.client.RestHighLevelClient
 import org.elasticsearch.common.unit.TimeValue
+import org.slf4j.LoggerFactory
+import java.lang.Exception
+
+private val logger = LoggerFactory.getLogger(RestConnection::class.java)
 
 class RestConnection(
     private val client: RestHighLevelClient,
     private val async: AsyncFramework,
-    override val index: IndexMapping
+    override val index: IndexMapping,
+    private val templateName: String,
+    private val type: BackendType
 ): Connection {
     private val options = RequestOptions.DEFAULT
 
@@ -53,17 +63,54 @@ class RestConnection(
     }
 
     override fun configure(): AsyncFuture<Void?> {
-        TODO("not implemented")
+        val writes = type.mappings.map { (indexType, map) ->
+            val templateWithType = "$templateName-$indexType"
+            val pattern = index.template.replace("\\*", "$indexType-*")
+
+            logger.info("[{}] updating template for {}", templateWithType, pattern)
+
+            val settings = type.settings.toMutableMap()
+            settings["index"] = index.settings
+
+            val request = PutIndexTemplateRequest(templateWithType)
+                .settings(settings)
+                .patterns(listOf(pattern))
+                .mapping(indexType, map)
+                .order(100)
+
+            val future = async.future<AcknowledgedResponse>()
+            val listener = object: ActionListener<AcknowledgedResponse> {
+                override fun onFailure(e: Exception) {
+                    future.fail(e)
+                }
+
+                override fun onResponse(response: AcknowledgedResponse) {
+                    if (!response.isAcknowledged) {
+                        future.fail(Exception("request not acknowledged"))
+                    }
+                    future.resolve(null)
+                }
+            }
+
+            client.indices().putTemplateAsync(request, options, listener)
+            future
+        }
+
+        return async.collectAndDiscard(writes)
     }
 
     override fun searchScroll(
         scrollId: String, timeout: TimeValue, listener: ActionListener<SearchResponse>
     ) {
-        TODO("not implemented")
+        client.scrollAsync(SearchScrollRequest(scrollId), options, listener)
     }
 
     override fun clearSearchScroll(scrollId: String): ActionFuture<ClearScrollResponse> {
-        TODO("not implemented")
+        val request = ClearScrollRequest()
+        request.addScrollId(scrollId)
+        val future = PlainActionFuture.newFuture<ClearScrollResponse>()
+        client.clearScrollAsync(request, options, future)
+        return future
     }
 
     override fun execute(request: SearchRequest): SearchResponse {
