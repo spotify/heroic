@@ -113,6 +113,7 @@ allprojects {
                 entry 'transport'
                 entry 'elasticsearch-rest-client'
                 entry 'elasticsearch-rest-high-level-client'
+                entry 'elasticsearch-rest-client-sniffer'
             }
             
             dependency 'com.datastax.cassandra:cassandra-driver-core:3.8.0'

@@ -636,6 +636,12 @@ type: rest
 seeds:
   - <string> default = localhost:9200
   ...
+
+# Dynamically sniff new nodes.
+sniff: <bool> default = false
+
+# Sets the interval between consecutive sniff executions when sniff is enabled.
+sniffInterval: <duration> default = 5m
 ```
 
 ###### transport

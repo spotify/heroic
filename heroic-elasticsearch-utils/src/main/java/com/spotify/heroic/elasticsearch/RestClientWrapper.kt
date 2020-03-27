@@ -21,20 +21,33 @@
 
 package com.spotify.heroic.elasticsearch
 
+import com.spotify.heroic.common.Duration
 import com.spotify.heroic.elasticsearch.index.IndexMapping
 import eu.toolchain.async.AsyncFramework
 import org.apache.http.HttpHost
 import org.elasticsearch.client.RestClient
 import org.elasticsearch.client.RestHighLevelClient
+import org.elasticsearch.client.sniff.Sniffer
 import java.net.InetAddress
 import java.net.UnknownHostException
+import java.util.concurrent.TimeUnit
 
 private const val DEFAULT_PORT = 9200
 
 data class RestClientWrapper(
-    val seeds: List<String> = listOf("localhost")
+    val seeds: List<String> = listOf("localhost"),
+    val sniff: Boolean = false,
+    val sniffInterval: Duration = Duration.of(5, TimeUnit.MINUTES)
 ): ClientWrapper {
-    val client = RestHighLevelClient(RestClient.builder(*parseSeeds()))
+    private val client = RestHighLevelClient(RestClient.builder(*parseSeeds()))
+
+    private val sniffer: Sniffer? = if (sniff) {
+        Sniffer.builder(client.lowLevelClient)
+            .setSniffIntervalMillis(sniffInterval.toMilliseconds().toInt())
+            .build()
+    } else {
+        null
+    }
 
     override fun start(
         async: AsyncFramework,
@@ -42,7 +55,7 @@ data class RestClientWrapper(
         templateName: String,
         type: BackendType
     ): Connection {
-        return RestConnection(client, async, index, templateName, type)
+        return RestConnection(client, sniffer, async, index, templateName, type)
     }
 
     private fun parseSeeds(): Array<HttpHost> {

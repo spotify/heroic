@@ -24,10 +24,8 @@ package com.spotify.heroic.elasticsearch.index
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.spotify.heroic.common.Duration
 import org.elasticsearch.action.delete.DeleteRequest
-import org.elasticsearch.action.delete.DeleteRequestBuilder
 import org.elasticsearch.action.search.SearchRequest
 import org.elasticsearch.action.support.IndicesOptions
-import org.elasticsearch.client.Client
 import org.elasticsearch.search.builder.SearchSourceBuilder
 import java.util.concurrent.TimeUnit
 

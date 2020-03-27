@@ -42,6 +42,7 @@ import org.elasticsearch.action.support.master.AcknowledgedResponse
 import org.elasticsearch.client.RequestOptions
 import org.elasticsearch.client.Response
 import org.elasticsearch.client.RestHighLevelClient
+import org.elasticsearch.client.sniff.Sniffer
 import org.elasticsearch.common.unit.TimeValue
 import org.slf4j.LoggerFactory
 import java.lang.Exception
@@ -50,6 +51,7 @@ private val logger = LoggerFactory.getLogger(RestConnection::class.java)
 
 class RestConnection(
     private val client: RestHighLevelClient,
+    private val sniffer: Sniffer?,
     private val async: AsyncFramework,
     override val index: IndexMapping,
     private val templateName: String,
@@ -58,7 +60,10 @@ class RestConnection(
     private val options = RequestOptions.DEFAULT
 
     override fun close(): AsyncFuture<Void?> {
-        val future = async.call(client::close).directTransform { null }
+        val future = async.call {
+            sniffer?.close()
+            client.close()
+        }
         return async.collectAndDiscard(listOf(future))
     }
 
