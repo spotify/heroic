@@ -34,7 +34,7 @@ import java.util.concurrent.TimeUnit
 
 private const val DEFAULT_PORT = 9200
 
-data class RestClientWrapper(
+data class RestClientWrapper @JvmOverloads constructor(
     val seeds: List<String> = listOf("localhost"),
     val sniff: Boolean = false,
     val sniffInterval: Duration = Duration.of(5, TimeUnit.MINUTES)

@@ -37,6 +37,10 @@ public class ElasticSearchTestContainer {
     return esContainer.getTcpHost();
   }
 
+  public ElasticsearchContainer getContainer() {
+    return esContainer;
+  }
+
   private ElasticSearchTestContainer() {
     esContainer = new ElasticsearchContainer("docker.elastic.co/elasticsearch/elasticsearch:7.5.0");
     esContainer.start();
