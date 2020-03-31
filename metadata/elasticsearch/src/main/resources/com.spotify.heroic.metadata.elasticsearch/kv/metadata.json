@@ -1,18 +1,16 @@
 {
-  "metadata": {
-    "properties": {
-      "key": {
-        "type": "keyword",
-        "doc_values": true
-      },
-      "tags": {
-        "type": "keyword",
-        "doc_values": true
-      },
-      "tag_keys": {
-        "type": "keyword",
-        "doc_values": true
-      }
+  "properties": {
+    "key": {
+      "type": "keyword",
+      "doc_values": true
+    },
+    "tags": {
+      "type": "keyword",
+      "doc_values": true
+    },
+    "tag_keys": {
+      "type": "keyword",
+      "doc_values": true
     }
   }
 }

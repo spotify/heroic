@@ -28,6 +28,7 @@ import org.apache.http.HttpHost
 import org.elasticsearch.client.RestClient
 import org.elasticsearch.client.RestHighLevelClient
 import org.elasticsearch.client.sniff.Sniffer
+import org.elasticsearch.search.aggregations.bucket.terms.ParsedStringTerms
 import java.net.InetAddress
 import java.net.UnknownHostException
 import java.util.concurrent.TimeUnit
@@ -38,7 +39,7 @@ data class RestClientWrapper @JvmOverloads constructor(
     val seeds: List<String> = listOf("localhost"),
     val sniff: Boolean = false,
     val sniffInterval: Duration = Duration.of(5, TimeUnit.MINUTES)
-): ClientWrapper {
+): ClientWrapper<ParsedStringTerms> {
     private val client = RestHighLevelClient(RestClient.builder(*parseSeeds()))
 
     private val sniffer: Sniffer? = if (sniff) {
@@ -54,7 +55,7 @@ data class RestClientWrapper @JvmOverloads constructor(
         index: IndexMapping,
         templateName: String,
         type: BackendType
-    ): Connection {
+    ): Connection<ParsedStringTerms> {
         return RestConnection(client, sniffer, async, index, templateName, type)
     }
 

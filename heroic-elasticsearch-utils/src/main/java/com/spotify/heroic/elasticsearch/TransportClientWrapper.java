@@ -33,10 +33,11 @@ import java.util.List;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.TransportAddress;
+import org.elasticsearch.search.aggregations.bucket.terms.StringTerms;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.jetbrains.annotations.NotNull;
 
-public class TransportClientWrapper implements ClientWrapper {
+public class TransportClientWrapper implements ClientWrapper<StringTerms> {
     private static final String DEFAULT_CLUSTER_NAME = "heroic";
     private static final List<String> DEFAULT_SEEDS = ImmutableList.of("localhost");
     private static final int DEFAULT_PORT = 9300;
@@ -74,7 +75,7 @@ public class TransportClientWrapper implements ClientWrapper {
 
     @NotNull
     @Override
-    public Connection start(
+    public Connection<StringTerms> start(
         @NotNull AsyncFramework async,
         @NotNull IndexMapping index,
         @NotNull String templateName,

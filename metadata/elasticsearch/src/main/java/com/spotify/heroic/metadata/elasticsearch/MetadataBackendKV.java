@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.metadata.elasticsearch;
 
-import static com.spotify.heroic.metadata.elasticsearch.ElasticsearchMetadataUtils.loadJsonResource;
+import static com.spotify.heroic.elasticsearch.ResourceLoader.loadJson;
 import static java.util.Optional.ofNullable;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 import static org.elasticsearch.index.query.QueryBuilders.prefixQuery;
@@ -120,17 +120,17 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     implements MetadataBackend, LifeCycles {
 
     private static final Tracer tracer = Tracing.getTracer();
-    public static final String WRITE_CACHE_SIZE = "write-cache-size";
+    private static final String WRITE_CACHE_SIZE = "write-cache-size";
 
-    static final String KEY = "key";
-    static final String TAGS = "tags";
-    static final String TAG_KEYS = "tag_keys";
-    static final Character TAG_DELIMITER = '\0';
+    private static final String KEY = "key";
+    private static final String TAGS = "tags";
+    private static final String TAG_KEYS = "tag_keys";
+    private static final Character TAG_DELIMITER = '\0';
 
-    static final String METADATA_TYPE = "metadata";
+    private static final String METADATA_TYPE = "metadata";
 
-    static final TimeValue SCROLL_TIME = TimeValue.timeValueMillis(5000);
-    static final int SCROLL_SIZE = 1000;
+    private static final TimeValue SCROLL_TIME = TimeValue.timeValueMillis(5000);
+    private static final int SCROLL_SIZE = 1000;
 
     private final Groups groups;
     private final MetadataBackendReporter reporter;
@@ -223,7 +223,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
             for (final String index : indices) {
                 final String indexSpanName = rootSpanName + ".index";
                 final Span span = tracer.spanBuilder(indexSpanName).startSpan();
-                try (Scope ws = tracer.withSpan(span)) {
+                try (Scope ignored = tracer.withSpan(span)) {
                     span.putAttribute("index", AttributeValue.stringAttributeValue(index));
 
                     if (!writeCache.acquire(Pair.of(index, series.getHashCodeTagOnly()),
@@ -241,7 +241,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                     buildContext(source, series);
                     source.endObject();
 
-                    IndexRequest indexRequest = new IndexRequest(index, METADATA_TYPE)
+                    IndexRequest indexRequest = new IndexRequest(index)
                         .id(id)
                         .source(source)
                         .opType(OpType.CREATE);
@@ -596,7 +596,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     }
 
     private static final Filter.Visitor<QueryBuilder> FILTER_CONVERTER =
-        new Filter.Visitor<QueryBuilder>() {
+        new Filter.Visitor<>() {
             @Override
             public QueryBuilder visitTrue(final TrueFilter t) {
                 return matchAllQuery();
@@ -679,10 +679,9 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         return new Statistics(WRITE_CACHE_SIZE, writeCache.size());
     }
 
-    public static BackendType backendType() {
+    static BackendType backendType() {
         final Map<String, Map<String, Object>> mappings = new HashMap<>();
-
-        mappings.put(METADATA_TYPE, loadJsonResource("kv/metadata.json"));
+        mappings.put(METADATA_TYPE, loadJson(MetadataBackendKV.class, "kv/metadata.json"));
 
         return new BackendType(MetadataBackendKV.class, mappings);
     }

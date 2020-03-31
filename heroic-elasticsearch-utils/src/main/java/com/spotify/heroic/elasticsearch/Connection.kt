@@ -35,8 +35,11 @@ import org.elasticsearch.action.search.ClearScrollResponse
 import org.elasticsearch.action.search.SearchRequest
 import org.elasticsearch.action.search.SearchResponse
 import org.elasticsearch.common.unit.TimeValue
+import org.elasticsearch.search.SearchHits
+import org.elasticsearch.search.aggregations.Aggregation
+import java.util.stream.Stream
 
-interface Connection {
+interface Connection<in T: Aggregation> {
     val index: IndexMapping
 
     fun close(): AsyncFuture<Void?>
@@ -71,4 +74,10 @@ interface Connection {
      * Execute an index request asynchronously and pass the result to the listener.
      */
     fun execute(request: IndexRequest, listener: ActionListener<IndexResponse>)
+
+    /**
+     * Temporary helper to handle different classes returned from the REST and transport clients.
+     * TODO: Remove once the transport client is removed.
+     */
+    fun parseHits(terms: T): Stream<Pair<String, SearchHits>>
 }

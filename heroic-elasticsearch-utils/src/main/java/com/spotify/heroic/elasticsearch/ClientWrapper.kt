@@ -25,17 +25,18 @@ import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.spotify.heroic.elasticsearch.index.IndexMapping
 import eu.toolchain.async.AsyncFramework
+import org.elasticsearch.search.aggregations.Aggregation
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(
     JsonSubTypes.Type(value = TransportClientWrapper::class, name = "transport"),
     JsonSubTypes.Type(value = RestClientWrapper::class, name = "rest")
 )
-interface ClientWrapper {
+interface ClientWrapper<in T: Aggregation> {
     fun start(
         async: AsyncFramework,
         index: IndexMapping,
         templateName: String,
         type: BackendType
-    ): Connection
+    ): Connection<T>
 }

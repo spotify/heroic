@@ -26,26 +26,25 @@ import eu.toolchain.async.AsyncFramework
 import eu.toolchain.async.AsyncFuture
 import org.elasticsearch.action.ActionFuture
 import org.elasticsearch.action.ActionListener
-import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateRequest
 import org.elasticsearch.action.bulk.BulkRequest
-import org.elasticsearch.action.bulk.BulkRequestBuilder
 import org.elasticsearch.action.bulk.BulkResponse
 import org.elasticsearch.action.delete.DeleteRequest
-import org.elasticsearch.action.delete.DeleteRequestBuilder
 import org.elasticsearch.action.delete.DeleteResponse
 import org.elasticsearch.action.index.IndexRequest
-import org.elasticsearch.action.index.IndexRequestBuilder
 import org.elasticsearch.action.index.IndexResponse
 import org.elasticsearch.action.search.*
 import org.elasticsearch.action.support.PlainActionFuture
 import org.elasticsearch.action.support.master.AcknowledgedResponse
 import org.elasticsearch.client.RequestOptions
-import org.elasticsearch.client.Response
 import org.elasticsearch.client.RestHighLevelClient
+import org.elasticsearch.client.indices.PutIndexTemplateRequest
 import org.elasticsearch.client.sniff.Sniffer
 import org.elasticsearch.common.unit.TimeValue
+import org.elasticsearch.search.SearchHits
+import org.elasticsearch.search.aggregations.bucket.terms.ParsedStringTerms
+import org.elasticsearch.search.aggregations.metrics.TopHits
 import org.slf4j.LoggerFactory
-import java.lang.Exception
+import java.util.stream.Stream
 
 private val logger = LoggerFactory.getLogger(RestConnection::class.java)
 
@@ -56,7 +55,7 @@ class RestConnection(
     override val index: IndexMapping,
     private val templateName: String,
     private val type: BackendType
-): Connection {
+): Connection<ParsedStringTerms> {
     private val options = RequestOptions.DEFAULT
 
     override fun close(): AsyncFuture<Void?> {
@@ -80,7 +79,7 @@ class RestConnection(
             val request = PutIndexTemplateRequest(templateWithType)
                 .settings(settings)
                 .patterns(listOf(pattern))
-                .mapping(indexType, map)
+                .mapping(map)
                 .order(100)
 
             val future = async.future<AcknowledgedResponse>()
@@ -136,5 +135,13 @@ class RestConnection(
 
     override fun execute(request: IndexRequest, listener: ActionListener<IndexResponse>) {
         client.indexAsync(request, options, listener)
+    }
+
+    override fun parseHits(terms: ParsedStringTerms): Stream<Pair<String, SearchHits>> {
+        return terms.buckets
+            .stream()
+            .map {
+                it.keyAsString to it.aggregations.get<TopHits>("hits").hits
+            }
     }
 }

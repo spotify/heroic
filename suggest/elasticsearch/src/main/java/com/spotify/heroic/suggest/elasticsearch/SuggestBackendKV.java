@@ -21,8 +21,7 @@
 
 package com.spotify.heroic.suggest.elasticsearch;
 
-import static com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestUtils.loadJsonResource;
-import static com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestUtils.variables;
+import static com.spotify.heroic.elasticsearch.ResourceLoader.loadJson;
 import static org.elasticsearch.index.query.QueryBuilders.boolQuery;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 import static org.elasticsearch.index.query.QueryBuilders.prefixQuery;
@@ -30,7 +29,6 @@ import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.HashCode;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Groups;
@@ -87,10 +85,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.inject.Named;
 import org.apache.commons.lang3.tuple.Pair;
@@ -113,12 +111,10 @@ import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.Aggregations;
 import org.elasticsearch.search.aggregations.BucketOrder;
 import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
-import org.elasticsearch.search.aggregations.bucket.terms.StringTerms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.elasticsearch.search.aggregations.metrics.Cardinality;
 import org.elasticsearch.search.aggregations.metrics.CardinalityAggregationBuilder;
-import org.elasticsearch.search.aggregations.metrics.TopHits;
 import org.elasticsearch.search.aggregations.metrics.TopHitsAggregationBuilder;
 
 @ElasticsearchScope
@@ -493,11 +489,11 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                             return new TagSuggest();
                         }
 
-                        final StringTerms terms = aggregations.get("terms");
+                        Stream<kotlin.Pair<String, SearchHits>> buckets =
+                            c.parseHits(aggregations.get("terms"));
 
-                        for (final Terms.Bucket bucket : terms.getBuckets()) {
-                            final TopHits topHits = bucket.getAggregations().get("hits");
-                            final SearchHits hits = topHits.getHits();
+                        buckets.forEach(bucket -> {
+                            SearchHits hits = bucket.getSecond();
                             final SearchHit hit = hits.getAt(0);
                             final Map<String, Object> doc = hit.getSourceAsMap();
 
@@ -505,7 +501,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                             final String v = (String) doc.get(TAG_SVAL);
 
                             suggestions.add(new TagSuggest.Suggestion(hits.getMaxScore(), k, v));
-                        }
+                        });
 
                         return new TagSuggest(suggestions.build());
                     });
@@ -565,14 +561,14 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                             return new KeySuggest(Collections.emptyList());
                         }
 
-                        final StringTerms terms = response.getAggregations().get("keys");
+                        Stream<kotlin.Pair<String, SearchHits>> buckets =
+                            c.parseHits(response.getAggregations().get("keys"));
 
-                        for (final Terms.Bucket bucket : terms.getBuckets()) {
-                            final TopHits topHits = bucket.getAggregations().get("hits");
-                            final SearchHits hits = topHits.getHits();
+                        buckets.forEach(bucket -> {
+                            SearchHits hits = bucket.getSecond();
                             suggestions.add(new KeySuggest.Suggestion(
-                                hits.getMaxScore(), bucket.getKeyAsString()));
-                        }
+                                hits.getMaxScore(), bucket.getFirst()));
+                        });
 
                         return new KeySuggest(ImmutableList.copyOf(suggestions));
                     });
@@ -615,8 +611,6 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 final ResolvableFuture<BulkResponse> future = async.future();
                 final FutureReporter.Context writeContext = reporter.setupWriteReporter();
                 final RequestTimer<WriteSuggest> timer = WriteSuggest.timer();
-                final List<Span> indexSpans = new ArrayList<>();
-
 
                 final BulkRequest bulkRequest = new BulkRequest();
                 for (final String index : seriesIndex) {
@@ -640,7 +634,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                     buildContext(series, s);
                     series.endObject();
 
-                    IndexRequest seriesIndexRequest = new IndexRequest(index, SERIES_TYPE)
+                    IndexRequest seriesIndexRequest = new IndexRequest(index)
                         .id(seriesId)
                         .source(series)
                         .opType(DocWriteRequest.OpType.CREATE);
@@ -658,7 +652,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                             final String suggestId =
                                 seriesId + ":" + Integer.toHexString(e.hashCode());
                             final IndexRequest tagIndexRequest =
-                                new IndexRequest(tagIndex, TAG_TYPE)
+                                new IndexRequest(tagIndex)
                                     .id(suggestId)
                                     .source(suggest)
                                     .opType(DocWriteRequest.OpType.CREATE);
@@ -700,11 +694,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                                 ImmutableList.of());
                         })
                     .onDone(writeContext)
-                    .onFinished(
-                        () -> {
-                            indexSpans.forEach(Span::end);
-                            rootSpan.end();
-                        });
+                    .onFinished(rootSpan::end);
             });
     }
 
@@ -785,7 +775,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     }
 
     private static final Filter.Visitor<QueryBuilder> FILTER_CONVERTER =
-        new Filter.Visitor<QueryBuilder>() {
+        new Filter.Visitor<>() {
             @Override
             public QueryBuilder visitTrue(final TrueFilter t) {
                 return matchAllQuery();
@@ -857,15 +847,11 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     public static Supplier<BackendType> factory() {
         return () -> {
             final Map<String, Map<String, Object>> mappings = new HashMap<>();
-
-            mappings.put(TAG_TYPE, loadJsonResource(
-                "kv/tag.json", variables(ImmutableMap.of("type", TAG_TYPE))));
-
-            mappings.put(SERIES_TYPE, loadJsonResource(
-                "kv/series.json", variables(ImmutableMap.of("type", SERIES_TYPE))));
+            mappings.put(TAG_TYPE, loadJson(SuggestBackendKV.class, "kv/tag.json"));
+            mappings.put(SERIES_TYPE, loadJson(SuggestBackendKV.class, "kv/series.json"));
 
             final Map<String, Object> settings =
-                loadJsonResource("kv/settings.json", Function.identity());
+                loadJson(SuggestBackendKV.class, "kv/settings.json");
 
             return new BackendType(SuggestBackendKV.class, mappings, settings);
         };

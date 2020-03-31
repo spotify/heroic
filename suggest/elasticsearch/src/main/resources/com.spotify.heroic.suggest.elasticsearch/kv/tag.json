@@ -1,54 +1,52 @@
 {
-  "{{type}}": {
-    "properties": {
-      "key": {
-        "type": "keyword",
-        "doc_values": true
-      },
-      "tags": {
-        "type": "keyword",
-        "doc_values": true
-      },
-      "series_id": {
-        "type": "keyword",
-        "doc_values": true
-      },
-      "tag_keys": {
-        "type": "keyword",
-        "doc_values": true
-      },
-      "sval": {
-        "type": "text",
-        "analyzer": "bag_analyzer",
-        "fields": {
-          "raw": {
-            "doc_values": true,
-            "type": "keyword"
-          },
-          "prefix": {
-            "type": "text",
-            "analyzer": "prefix_analyzer"
-          }
+  "properties": {
+    "key": {
+      "type": "keyword",
+      "doc_values": true
+    },
+    "tags": {
+      "type": "keyword",
+      "doc_values": true
+    },
+    "series_id": {
+      "type": "keyword",
+      "doc_values": true
+    },
+    "tag_keys": {
+      "type": "keyword",
+      "doc_values": true
+    },
+    "sval": {
+      "type": "text",
+      "analyzer": "bag_analyzer",
+      "fields": {
+        "raw": {
+          "doc_values": true,
+          "type": "keyword"
+        },
+        "prefix": {
+          "type": "text",
+          "analyzer": "prefix_analyzer"
         }
-      },
-      "skey": {
-        "type": "text",
-        "analyzer": "bag_analyzer",
-        "fields": {
-          "raw": {
-            "type": "keyword",
-            "doc_values": true
-          },
-          "prefix": {
-            "type": "text",
-            "analyzer": "prefix_analyzer"
-          }
-        }
-      },
-      "kv": {
-        "type": "keyword",
-        "doc_values": true
       }
+    },
+    "skey": {
+      "type": "text",
+      "analyzer": "bag_analyzer",
+      "fields": {
+        "raw": {
+          "type": "keyword",
+          "doc_values": true
+        },
+        "prefix": {
+          "type": "text",
+          "analyzer": "prefix_analyzer"
+        }
+      }
+    },
+    "kv": {
+      "type": "keyword",
+      "doc_values": true
     }
   }
 }

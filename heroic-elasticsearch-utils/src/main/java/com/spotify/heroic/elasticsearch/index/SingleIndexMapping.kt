@@ -22,9 +22,7 @@
 package com.spotify.heroic.elasticsearch.index
 
 import org.elasticsearch.action.delete.DeleteRequest
-import org.elasticsearch.action.delete.DeleteRequestBuilder
 import org.elasticsearch.action.search.SearchRequest
-import org.elasticsearch.client.Client
 import org.elasticsearch.search.builder.SearchSourceBuilder
 
 private const val DEFAULT_INDEX = "heroic"
@@ -53,7 +51,7 @@ data class SingleIndexMapping(
     }
 
     override fun delete(type: String, id: String): List<DeleteRequest> {
-        return listOf(DeleteRequest(getFullIndexName(type), type, id))
+        return listOf(DeleteRequest(getFullIndexName(type), id))
     }
 
     private fun getFullIndexName(type: String) = "$index-$type"

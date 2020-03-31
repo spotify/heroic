@@ -29,6 +29,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
+import kotlin.Pair;
 import org.elasticsearch.action.ActionFuture;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateRequestBuilder;
@@ -47,6 +49,9 @@ import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.client.IndicesAdminClient;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.aggregations.bucket.terms.StringTerms;
+import org.elasticsearch.search.aggregations.metrics.TopHits;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,7 +59,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Connection abstraction for TransportClient.
  */
-public class TransportConnection implements Connection {
+public class TransportConnection implements Connection<StringTerms> {
     private static final Logger log = LoggerFactory.getLogger(TransportClientWrapper.class);
     private final AsyncFramework async;
     private final IndexMapping index;
@@ -121,7 +126,7 @@ public class TransportConnection implements Connection {
             final PutIndexTemplateRequestBuilder put = indices.preparePutTemplate(templateWithType)
                 .setSettings(settings)
                 .setPatterns(List.of(pattern))
-                .addMapping(indexType, mapping.getValue())
+                .addMapping("_doc", mapping.getValue())
                 .setOrder(100);
 
             final ResolvableFuture<AcknowledgedResponse> future = async.future();
@@ -200,5 +205,16 @@ public class TransportConnection implements Connection {
         @NotNull ActionListener<IndexResponse> listener
     ) {
         client.index(request, listener);
+    }
+
+    @NotNull
+    @Override
+    public Stream<Pair<String, SearchHits>> parseHits(@NotNull StringTerms terms) {
+        return terms.getBuckets()
+            .stream()
+            .map(bucket -> {
+                TopHits hits = bucket.getAggregations().get("hits");
+                return new Pair<>(bucket.getKeyAsString(), hits.getHits());
+            });
     }
 }

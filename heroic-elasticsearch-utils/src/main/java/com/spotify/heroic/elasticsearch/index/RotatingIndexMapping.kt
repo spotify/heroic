@@ -92,7 +92,7 @@ data class RotatingIndexMapping(
 
     @Throws(NoIndexSelectedException::class)
     override fun delete(type: String, id: String): List<DeleteRequest> {
-        return readIndices(type).map { DeleteRequest(it, type, id) }
+        return readIndices(type).map { DeleteRequest(it, id) }
     }
 
     class Builder {
