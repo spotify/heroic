@@ -38,7 +38,7 @@ private const val DEFAULT_PORT = 9200
 data class RestClientWrapper @JvmOverloads constructor(
     val seeds: List<String> = listOf("localhost"),
     val sniff: Boolean = false,
-    val sniffInterval: Duration = Duration.of(5, TimeUnit.MINUTES)
+    val sniffInterval: Duration = Duration.of(30, TimeUnit.SECONDS)
 ): ClientWrapper<ParsedStringTerms> {
     private val client = RestHighLevelClient(RestClient.builder(*parseSeeds()))
 
