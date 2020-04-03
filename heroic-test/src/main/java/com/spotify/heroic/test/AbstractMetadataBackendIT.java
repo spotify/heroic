@@ -64,6 +64,7 @@ import eu.toolchain.async.RetryPolicy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -72,6 +73,8 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
 public abstract class AbstractMetadataBackendIT {
+    protected final String testName = "heroic-it-" + UUID.randomUUID().toString();
+
     private AsyncFramework async;
 
     private final Series s1 = Series.of("s1", ImmutableMap.of("role", "foo"));

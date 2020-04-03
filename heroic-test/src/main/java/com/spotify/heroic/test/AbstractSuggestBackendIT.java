@@ -55,6 +55,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -67,6 +68,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
 public abstract class AbstractSuggestBackendIT {
+    protected final String testName = "heroic-it-" + UUID.randomUUID().toString();
 
     private final Series s1 = Series.of("aa1", ImmutableMap.of("role", "foo"));
     private final Series s2 = Series.of("aa2", ImmutableMap.of("role", "bar"));
@@ -75,7 +77,7 @@ public abstract class AbstractSuggestBackendIT {
     protected final DateRange range = new DateRange(0L, 0L);
 
     protected final List<Pair<Series, DateRange>> testSeries =
-        new ArrayList<Pair<Series, DateRange>>() {
+        new ArrayList<>() {
             {
                 add(new ImmutablePair<>(s1, range));
                 add(new ImmutablePair<>(s2, range));

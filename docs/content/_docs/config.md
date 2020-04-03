@@ -545,7 +545,7 @@ connection:
   index: <es_index_config> default = rotating
 
   # The Elasticsearch client configuration to use.
-  client: <es_client_config> default = transport
+  client: <es_client_config> default = rest
 
 # The number of writes this backend allows per second before rate-limiting kicks in.
 writesPerSecond: <int> default = 3000
@@ -624,9 +624,31 @@ settings: <map>
 
 The Elasticsearch client configuration to use.
 
+###### rest
+
+Connect using the High Level REST client. This is the preferred client for Elasticsearch and a replacement for the older transport client. This is compatabile with Elasticsearch node versions >= 7.5 and < 8.0.
+
+```yaml
+type: rest
+
+# Initial nodes in the cluster to connect to. Any hosts without a port specified
+# are assumed to use port 9200. Useful to have masters that rarely change as seeds.
+seeds:
+  - <string> default = localhost:9200
+  ...
+
+# Dynamically sniff new nodes.
+sniff: <bool> default = false
+
+# Sets the interval between consecutive sniff executions when sniff is enabled.
+sniffInterval: <duration> default = 5m
+```
+
 ###### transport
 
-Connect using the transport protocol. This is the most lightweight method of interacting with the Elasticsearch cluster.
+*DEPRECATED AS OF ELASTICSEARCH 7.0.0*
+
+Connect using the transport protocol. This is the most lightweight method of interacting with the Elasticsearch cluster. This mode can cause compatability issues if the Elasticsearch nodes are a different version than the Elasticsearch client in Heroic (currently 7.5.0).
 
 ```yaml
 type: transport

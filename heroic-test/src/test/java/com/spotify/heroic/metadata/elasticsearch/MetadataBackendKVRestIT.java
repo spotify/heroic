@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Spotify AB.
+ * Copyright (c) 2020 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,19 +19,19 @@
  * under the License.
  */
 
-package com.spotify.heroic.elasticsearch
+package com.spotify.heroic.metadata.elasticsearch;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes
-import com.fasterxml.jackson.annotation.JsonTypeInfo
-import org.elasticsearch.client.Client
+import com.spotify.heroic.elasticsearch.ClientWrapper;
+import com.spotify.heroic.elasticsearch.RestClientWrapper;
+import java.util.List;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes(
-    JsonSubTypes.Type(value = TransportClientSetup::class, name = "transport")
-)
-interface ClientSetup {
-    @Throws(Exception::class)
-    fun setup(): ClientWrapper
+public class MetadataBackendKVRestIT extends AbstractMetadataBackendKVIT {
+    @Override
+    protected ClientWrapper setupClient() {
+        List<String> seeds = List.of(
+            esContainer.getTcpHost().getHostName()
+            + ":" + esContainer.getContainer().getMappedPort(9200));
 
-    data class ClientWrapper(val client: Client, val shutdown: Runnable)
+        return new RestClientWrapper(seeds);
+    }
 }

@@ -23,10 +23,9 @@ package com.spotify.heroic.elasticsearch.index
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.spotify.heroic.common.Duration
-import org.elasticsearch.action.delete.DeleteRequestBuilder
-import org.elasticsearch.action.search.SearchRequestBuilder
+import org.elasticsearch.action.delete.DeleteRequest
+import org.elasticsearch.action.search.SearchRequest
 import org.elasticsearch.action.support.IndicesOptions
-import org.elasticsearch.client.Client
 import org.elasticsearch.search.builder.SearchSourceBuilder
 import java.util.concurrent.TimeUnit
 
@@ -82,22 +81,18 @@ data class RotatingIndexMapping(
     }
 
     @Throws(NoIndexSelectedException::class)
-    override fun search(client: Client, type: String): SearchRequestBuilder {
-        return client.prepareSearch(*readIndices(type)).setIndicesOptions(OPTIONS)
+    override fun search(type: String): SearchRequest {
+        return SearchRequest(*readIndices(type)).indicesOptions(OPTIONS)
     }
 
     @Throws(NoIndexSelectedException::class)
-    override fun count(client: Client, type: String): SearchRequestBuilder {
-        return client
-            .prepareSearch(*readIndices(type))
-            .setIndicesOptions(OPTIONS)
-            .setSource(SearchSourceBuilder().size(0))
+    override fun count(type: String): SearchRequest {
+        return search(type).source(SearchSourceBuilder().size(0))
     }
 
     @Throws(NoIndexSelectedException::class)
-    override fun delete(client: Client, type: String, id: String?): List<DeleteRequestBuilder> {
-        return readIndices(type)
-            .map { index -> client.prepareDelete(index, type, id) }
+    override fun delete(type: String, id: String): List<DeleteRequest> {
+        return readIndices(type).map { DeleteRequest(it, id) }
     }
 
     class Builder {

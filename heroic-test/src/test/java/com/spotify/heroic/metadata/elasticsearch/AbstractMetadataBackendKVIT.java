@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2020 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -21,25 +21,21 @@
 
 package com.spotify.heroic.metadata.elasticsearch;
 
+import com.spotify.heroic.elasticsearch.ClientWrapper;
 import com.spotify.heroic.elasticsearch.ConnectionModule;
-import com.spotify.heroic.elasticsearch.TransportClientSetup;
 import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
 import com.spotify.heroic.metadata.MetadataModule;
 import com.spotify.heroic.test.AbstractMetadataBackendIT;
 import com.spotify.heroic.test.ElasticSearchTestContainer;
-import java.util.List;
-import java.util.UUID;
 
-public class MetadataBackendKVIT extends AbstractMetadataBackendIT {
-    private final static ElasticSearchTestContainer esContainer;
+public abstract class AbstractMetadataBackendKVIT extends AbstractMetadataBackendIT {
+    final static ElasticSearchTestContainer esContainer;
 
     static {
         esContainer = ElasticSearchTestContainer.getInstance();
     }
 
-    private String backendType() {
-        return "kv";
-    }
+    protected abstract ClientWrapper setupClient();
 
     @Override
     protected void setupConditions() {
@@ -50,26 +46,19 @@ public class MetadataBackendKVIT extends AbstractMetadataBackendIT {
     }
 
     @Override
-    protected MetadataModule setupModule() throws Exception {
-        final String testName = "heroic-it-" + UUID.randomUUID().toString();
-
-        final RotatingIndexMapping index =
+    protected MetadataModule setupModule() {
+        RotatingIndexMapping index =
             RotatingIndexMapping.builder().pattern(testName + "-%s").build();
 
         return ElasticsearchMetadataModule
             .builder()
             .templateName(testName)
             .configure(true)
-            .backendType(backendType())
+            .backendType("kv")
             .connection(ConnectionModule
                 .builder()
                 .index(index)
-                .clientSetup(TransportClientSetup.builder()
-                    .clusterName("docker-cluster")
-                    .seeds(List.of(
-                        esContainer.getTcpHost().getHostName()
-                        + ":" + esContainer.getTcpHost().getPort()))
-                    .build())
+                .clientSetup(setupClient())
                 .build())
             .build();
     }

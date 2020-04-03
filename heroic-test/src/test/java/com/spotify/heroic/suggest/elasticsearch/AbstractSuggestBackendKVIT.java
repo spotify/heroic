@@ -1,55 +1,64 @@
+/*
+ * Copyright (c) 2020 Spotify AB.
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package com.spotify.heroic.suggest.elasticsearch;
 
 import static org.junit.Assert.assertEquals;
 
+import com.spotify.heroic.elasticsearch.ClientWrapper;
 import com.spotify.heroic.elasticsearch.ConnectionModule;
-import com.spotify.heroic.elasticsearch.TransportClientSetup;
 import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
 import com.spotify.heroic.suggest.SuggestModule;
 import com.spotify.heroic.suggest.WriteSuggest;
-import com.spotify.heroic.test.ElasticSearchTestContainer;
 import com.spotify.heroic.test.AbstractSuggestBackendIT;
-import java.util.List;
-import java.util.UUID;
+import com.spotify.heroic.test.ElasticSearchTestContainer;
 import org.junit.Test;
 
-public class SuggestBackendKVIT extends AbstractSuggestBackendIT {
-    private final static ElasticSearchTestContainer esContainer;
+public abstract class AbstractSuggestBackendKVIT extends AbstractSuggestBackendIT {
+    final static ElasticSearchTestContainer esContainer;
 
     static {
         esContainer = ElasticSearchTestContainer.getInstance();
     }
 
-    private String backendType() {
-        return "kv";
-    }
+    protected abstract ClientWrapper setupClient();
 
     @Override
-    protected SuggestModule setupModule() throws Exception {
-        final String testName = "heroic-it-" + UUID.randomUUID().toString();
-
-        final RotatingIndexMapping index =
+    protected SuggestModule setupModule() {
+        RotatingIndexMapping index =
             RotatingIndexMapping.builder().pattern(testName + "-%s").build();
 
         return ElasticsearchSuggestModule
             .builder()
             .templateName(testName)
             .configure(true)
-            .backendType(backendType())
+            .backendType("kv")
             .writeCacheMaxSize(0)
             .connection(ConnectionModule
                 .builder()
                 .index(index)
-                .clientSetup(TransportClientSetup.builder()
-                    .clusterName("docker-cluster")
-                    .seeds(List.of(
-                        esContainer.getTcpHost().getHostName()
-                        + ":" + esContainer.getTcpHost().getPort()))
-                    .build())
+                .clientSetup(setupClient())
                 .build())
             .build();
     }
-
 
     @Test
     public void writeDuplicatesReturnErrorInResponse() throws Exception {
@@ -61,5 +70,4 @@ public class SuggestBackendKVIT extends AbstractSuggestBackendIT {
         assertEquals(0, firstWrite.getErrors().size());
         assertEquals(2, secondWrite.getErrors().size());
     }
-
 }

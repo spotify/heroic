@@ -1,32 +1,30 @@
 {
-  "{{type}}": {
-    "properties": {
-      "key": {
-        "type": "keyword",
-        "doc_values": true,
-        "fields": {
-          "analyzed": {
-            "type": "text",
-            "analyzer": "bag_analyzer"
-          },
-          "prefix": {
-            "type": "text",
-            "analyzer": "prefix_analyzer"
-          }
+  "properties": {
+    "key": {
+      "type": "keyword",
+      "doc_values": true,
+      "fields": {
+        "analyzed": {
+          "type": "text",
+          "analyzer": "bag_analyzer"
+        },
+        "prefix": {
+          "type": "text",
+          "analyzer": "prefix_analyzer"
         }
-      },
-      "tags": {
-        "type": "keyword",
-        "doc_values": true
-      },
-      "tag_keys": {
-        "type": "keyword",
-        "doc_values": true
-      },
-      "series_id": {
-        "type": "keyword",
-        "doc_values": true
       }
+    },
+    "tags": {
+      "type": "keyword",
+      "doc_values": true
+    },
+    "tag_keys": {
+      "type": "keyword",
+      "doc_values": true
+    },
+    "series_id": {
+      "type": "keyword",
+      "doc_values": true
     }
   }
 }

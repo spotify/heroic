@@ -23,9 +23,8 @@ package com.spotify.heroic.elasticsearch.index
 
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
-import org.elasticsearch.action.delete.DeleteRequestBuilder
-import org.elasticsearch.action.search.SearchRequestBuilder
-import org.elasticsearch.client.Client
+import org.elasticsearch.action.delete.DeleteRequest
+import org.elasticsearch.action.search.SearchRequest
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(
@@ -43,19 +42,18 @@ interface IndexMapping {
     fun writeIndices(type: String): Array<String>
 
     @Throws(NoIndexSelectedException::class)
-    fun search(client: Client, type: String): SearchRequestBuilder
+    fun search(type: String): SearchRequest
 
     @Throws(NoIndexSelectedException::class)
-    fun count(client: Client, type: String): SearchRequestBuilder
+    fun count(type: String): SearchRequest
 
     /**
-     * Create a delete request using the given client.
+     * Create a delete request.
      *
-     * @param client Client to create request with
      * @param type Type of document to delete
      * @param id Id of document to delete
-     * @return a new delete request
+     * @return a list of new delete requests
      */
     @Throws(NoIndexSelectedException::class)
-    fun delete(client: Client, type: String, id: String?): List<DeleteRequestBuilder>
+    fun delete(type: String, id: String): List<DeleteRequest>
 }
