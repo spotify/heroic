@@ -32,8 +32,6 @@ import java.util.List;
 import java.util.UUID;
 
 public class MetadataBackendKVTransportIT extends AbstractMetadataBackendKVIT {
-
-
     @Override
     protected ClientWrapper setupClient() {
         List<String> seeds = List.of(
