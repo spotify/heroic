@@ -106,7 +106,8 @@ class RestConnection(
     override fun searchScroll(
         scrollId: String, timeout: TimeValue, listener: ActionListener<SearchResponse>
     ) {
-        client.scrollAsync(SearchScrollRequest(scrollId), options, listener)
+        val request = SearchScrollRequest(scrollId).scroll(timeout)
+        client.scrollAsync(request, options, listener)
     }
 
     override fun clearSearchScroll(scrollId: String): ActionFuture<ClearScrollResponse> {

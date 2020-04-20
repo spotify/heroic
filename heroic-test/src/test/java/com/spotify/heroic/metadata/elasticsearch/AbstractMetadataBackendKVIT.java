@@ -60,6 +60,7 @@ public abstract class AbstractMetadataBackendKVIT extends AbstractMetadataBacken
                 .index(index)
                 .clientSetup(setupClient())
                 .build())
+            .scrollSize(numSeries / 2)
             .build();
     }
 }

@@ -130,7 +130,6 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     private static final String METADATA_TYPE = "metadata";
 
     private static final TimeValue SCROLL_TIME = TimeValue.timeValueMillis(5000);
-    private static final int SCROLL_SIZE = 1000;
 
     private final Groups groups;
     private final MetadataBackendReporter reporter;
@@ -139,6 +138,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     private final RateLimitedCache<Pair<String, HashCode>> writeCache;
     private final boolean configure;
     private final int deleteParallelism;
+    private final int scrollSize;
 
     @Inject
     public MetadataBackendKV(
@@ -148,7 +148,8 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         Managed<Connection> connection,
         RateLimitedCache<Pair<String, HashCode>> writeCache,
         @Named("configure") boolean configure,
-        @Named("deleteParallelism") int deleteParallelism
+        @Named("deleteParallelism") int deleteParallelism,
+        @Named("scrollSize") int scrollSize
     ) {
         super(async, METADATA_TYPE);
         this.groups = groups;
@@ -158,6 +159,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         this.writeCache = writeCache;
         this.configure = configure;
         this.deleteParallelism = deleteParallelism;
+        this.scrollSize = scrollSize;
     }
 
     @Override
@@ -453,7 +455,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
             SearchRequest request = c.getIndex().search(METADATA_TYPE);
             request.scroll(SCROLL_TIME);
             request.source()
-                .size(limit.asMaxInteger(SCROLL_SIZE))
+                .size(limit.asMaxInteger(scrollSize))
                 .query(new BoolQueryBuilder().must(f));
 
             modifier.accept(request);
@@ -518,7 +520,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         return observer -> connection.doto(c -> {
             SearchRequest request = c.getIndex().search(METADATA_TYPE).scroll(SCROLL_TIME);
             request.source()
-                .size(limit.asMaxInteger(SCROLL_SIZE))
+                .size(limit.asMaxInteger(scrollSize))
                 .query(new BoolQueryBuilder().must(filter));
 
             modifier.accept(request);

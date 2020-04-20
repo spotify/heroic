@@ -77,6 +77,8 @@ public abstract class AbstractMetadataBackendIT {
 
     private AsyncFramework async;
 
+    protected final int numSeries = 3;
+
     private final Series s1 = Series.of("s1", ImmutableMap.of("role", "foo"));
     private final Series s2 = Series.of("s2", ImmutableMap.of("role", "bar"));
     private final Series s3 = Series.of("s3", ImmutableMap.of("role", "baz"));
