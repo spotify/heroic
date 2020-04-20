@@ -574,6 +574,9 @@ templateName: <string> default = heroic-metadata
 
 # Automatically add index mappings and settings.
 configure: <bool> default = false
+
+# Number of results to return in each response when using Elasticsearch scrolling.
+scrollSize: <int> default = 1000
 ```
 
 ##### `<es_index_config>`

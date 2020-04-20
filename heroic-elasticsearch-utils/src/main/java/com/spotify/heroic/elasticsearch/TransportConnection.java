@@ -157,7 +157,7 @@ public class TransportConnection implements Connection<StringTerms> {
         @NotNull TimeValue timeout,
         @NotNull ActionListener<SearchResponse> listener
     ) {
-        SearchScrollRequest request = new SearchScrollRequest(scrollId);
+        SearchScrollRequest request = new SearchScrollRequest(scrollId).scroll(timeout);
         client.searchScroll(request, listener);
     }
 
