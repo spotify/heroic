@@ -22,9 +22,7 @@
 package com.spotify.heroic.metadata
 
 import com.spotify.heroic.cluster.ClusterShard
-import com.spotify.heroic.common.DateRange
 import com.spotify.heroic.common.OptionalLimit
-import com.spotify.heroic.filter.Filter
 import com.spotify.heroic.metric.RequestError
 import com.spotify.heroic.metric.ShardError
 import eu.toolchain.async.Collector
@@ -64,11 +62,5 @@ data class FindSeriesIds(
             }
         }
     }
-
-    data class Request(
-        val filter: Filter,
-        val range: DateRange,
-        val limit: OptionalLimit
-    )
 }
 

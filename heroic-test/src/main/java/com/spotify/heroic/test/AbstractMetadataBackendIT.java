@@ -40,6 +40,7 @@ import com.spotify.heroic.HeroicConfig;
 import com.spotify.heroic.HeroicCore;
 import com.spotify.heroic.HeroicCoreInstance;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Features;
 import com.spotify.heroic.common.GroupMember;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.Series;
@@ -142,16 +143,20 @@ public abstract class AbstractMetadataBackendIT {
     @Test
     public void findSeriesComplexTest() throws Exception {
         final FindSeries.Request f =
-            new FindSeries.Request(and(matchKey("s2"), startsWith("role", "ba")), range,
-                OptionalLimit.empty());
+            new FindSeries.Request(
+                and(matchKey("s2"), startsWith("role", "ba")),
+                range,
+                OptionalLimit.empty(),
+                Features.DEFAULT
+            );
 
         assertEquals(ImmutableSet.of(s2), backend.findSeries(f).get().getSeries());
     }
 
     @Test
     public void findSeriesTest() throws Exception {
-        final FindSeries.Request f =
-            new FindSeries.Request(TrueFilter.get(), range, OptionalLimit.empty());
+        final FindSeries.Request f = new FindSeries.Request(
+            TrueFilter.get(), range, OptionalLimit.empty(), Features.DEFAULT);
 
         final FindSeries result = backend.findSeries(f).get();
 
@@ -160,15 +165,19 @@ public abstract class AbstractMetadataBackendIT {
 
     @Test
     public void findSeriesLimitedTest() throws Exception {
+        FindSeries.Request req1 =
+            new FindSeries.Request(TrueFilter.get(), range, OptionalLimit.of(1L), Features.DEFAULT);
         final FindSeries r1 = backend
-            .findSeries(new FindSeries.Request(TrueFilter.get(), range, OptionalLimit.of(1L)))
+            .findSeries(req1)
             .get();
 
         assertTrue("Result should be limited", r1.getLimited());
         assertEquals("Result size should be same as limit", 1, r1.getSeries().size());
 
+        FindSeries.Request req2 =
+            new FindSeries.Request(TrueFilter.get(), range, OptionalLimit.of(3L), Features.DEFAULT);
         final FindSeries r2 = backend
-            .findSeries(new FindSeries.Request(TrueFilter.get(), range, OptionalLimit.of(3L)))
+            .findSeries(req2)
             .get();
 
         assertFalse("Result should not be limited", r2.getLimited());
@@ -209,8 +218,12 @@ public abstract class AbstractMetadataBackendIT {
 
     @Test
     public void findSeriesIdsTest() throws Exception {
-        final FindSeriesIds.Request f =
-            new FindSeriesIds.Request(not(matchKey(s2.getKey())), range, OptionalLimit.empty());
+        final FindSeries.Request f = new FindSeries.Request(
+            not(matchKey(s2.getKey())),
+            range,
+            OptionalLimit.empty(),
+            Features.DEFAULT
+        );
 
         final FindSeriesIds result = backend.findSeriesIds(f).get();
         assertEquals(ImmutableSet.of(s1.hash(), s3.hash()), result.getIds());
@@ -230,8 +243,8 @@ public abstract class AbstractMetadataBackendIT {
         /* deletes are eventually consistent, wait until they are no longer present
          * but only for a limited period of time */
         retrySome(() -> {
-            final FindSeries.Request f =
-                new FindSeries.Request(TrueFilter.get(), range, OptionalLimit.empty());
+            final FindSeries.Request f = new FindSeries.Request(
+                TrueFilter.get(), range, OptionalLimit.empty(), Features.DEFAULT);
 
             final FindSeries result = backend.findSeries(f).get();
 
@@ -290,16 +303,21 @@ public abstract class AbstractMetadataBackendIT {
 
     private Set<String> findIds(final Filter filter) throws Exception {
         return backend
-            .findSeriesIds(new FindSeriesIds.Request(filter, range, OptionalLimit.empty()))
+            .findSeriesIds(
+                new FindSeries.Request(filter, range, OptionalLimit.empty(), Features.DEFAULT))
             .get()
             .getIds();
     }
 
     private AsyncFuture<Void> writeSeries(
         final MetadataBackend metadata, final Series s, final DateRange range
-    ) throws Exception {
-        final FindSeries.Request f =
-            new FindSeries.Request(MatchKeyFilter.create(s.getKey()), range, OptionalLimit.empty());
+    ) {
+        final FindSeries.Request f = new FindSeries.Request(
+            MatchKeyFilter.create(s.getKey()),
+            range,
+            OptionalLimit.empty(),
+            Features.DEFAULT
+        );
 
         return metadata.write(new WriteMetadata.Request(s, range)).lazyTransform(ignore -> async
                 .retryUntilResolved(() -> metadata.findSeries(f).directTransform(result -> {

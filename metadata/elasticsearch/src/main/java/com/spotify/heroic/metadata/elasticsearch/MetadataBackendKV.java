@@ -30,6 +30,7 @@ import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 import com.google.common.hash.HashCode;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Features;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RequestTimer;
@@ -316,23 +317,20 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         });
     }
 
-  @Override
-  public AsyncFuture<FindSeries> findSeries(final FindSeries.Request filter) {
-    return doto(
-        c -> entries(
-            filter.getFilter(),
-            filter.getLimit(),
-            this::toSeries,
-            l -> new FindSeries(l.getSet(), l.isLimited()),
-            request -> { }));
-  }
+    @Override
+    public AsyncFuture<FindSeries> findSeries(final FindSeries.Request filter) {
+        return doto(
+            c -> entries(
+                filter,
+                this::toSeries,
+                l -> new FindSeries(l.getSet(), l.isLimited()),
+                request -> { }));
+    }
 
     @Override
     public AsyncObservable<FindSeriesStream> findSeriesStream(final FindSeries.Request request) {
         return entriesStream(
-            request.getLimit(),
-            request.getFilter(),
-            request.getRange(),
+            request,
             this::toSeries,
             FindSeriesStream::new,
             builder -> { }
@@ -340,11 +338,10 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     }
 
     @Override
-    public AsyncFuture<FindSeriesIds> findSeriesIds(final FindSeriesIds.Request request) {
+    public AsyncFuture<FindSeriesIds> findSeriesIds(final FindSeries.Request request) {
         return entries(
-            request.getFilter(),
-            request.getLimit(),
-            this::toId,
+            request,
+            SearchHit::getId,
             l -> new FindSeriesIds(l.getSet(), l.isLimited()),
             searchRequest -> searchRequest.source().fetchSource(false)
         );
@@ -352,13 +349,11 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
     @Override
     public AsyncObservable<FindSeriesIdsStream> findSeriesIdsStream(
-        final FindSeriesIds.Request request
+        final FindSeries.Request request
     ) {
         return entriesStream(
-            request.getLimit(),
-            request.getFilter(),
-            request.getRange(),
-            this::toId,
+            request,
+            SearchHit::getId,
             FindSeriesIdsStream::new,
             searchRequest -> searchRequest.source().fetchSource(false)
         );
@@ -368,8 +363,8 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     public AsyncFuture<DeleteSeries> deleteSeries(final DeleteSeries.Request request) {
         final DateRange range = request.getRange();
 
-        final FindSeriesIds.Request findIds =
-            new FindSeriesIds.Request(request.getFilter(), range, request.getLimit());
+        final FindSeries.Request findIds = new FindSeries.Request(
+            request.getFilter(), range, request.getLimit(), Features.DEFAULT);
 
         return doto(c -> findSeriesIds(findIds).lazyTransform(ids -> {
             final List<Callable<AsyncFuture<Void>>> deletes = new ArrayList<>();
@@ -443,13 +438,13 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     }
 
     private <T, O> AsyncFuture<O> entries(
-        final Filter filter,
-        final OptionalLimit limit,
+        final FindSeries.Request seriesRequest,
         final Function<SearchHit, T> converter,
         final Transform<ScrollTransformResult<T>, O> collector,
         final Consumer<SearchRequest> modifier
     ) {
-        final QueryBuilder f = filter(filter);
+        final QueryBuilder f = filter(seriesRequest.getFilter());
+        OptionalLimit limit = seriesRequest.getLimit();
 
         return doto(c -> {
             SearchRequest request = c.getIndex().search(METADATA_TYPE);
@@ -508,14 +503,13 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     }
 
     private <T, O> AsyncObservable<O> entriesStream(
-        final OptionalLimit limit,
-        final Filter f,
-        final DateRange range,
+        final FindSeries.Request findRequest,
         final Function<SearchHit, T> converter,
         final Function<Set<T>, O> collector,
         final Consumer<SearchRequest> modifier
     ) {
-        final QueryBuilder filter = filter(f);
+        final QueryBuilder filter = filter(findRequest.getFilter());
+        OptionalLimit limit = findRequest.getLimit();
 
         return observer -> connection.doto(c -> {
             SearchRequest request = c.getIndex().search(METADATA_TYPE).scroll(SCROLL_TIME);
@@ -541,10 +535,6 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
             return future.lazyTransform(scrollTransform);
         }).onDone(observer.onDone());
-    }
-
-    private String toId(SearchHit hit) {
-        return hit.getId();
     }
 
     private <T> AsyncFuture<T> doto(ManagedAction<Connection, T> action) {

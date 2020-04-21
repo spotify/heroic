@@ -40,7 +40,7 @@ data class MetadataQueryBody(
     // The date range to query for.
     val range: Optional<QueryDateRange>,
     val limit: Optional<Int>
-    ) {
+) {
     companion object {
         const val DEFAULT_LIMIT = 50
     }

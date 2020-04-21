@@ -23,6 +23,7 @@ package com.spotify.heroic.shell.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.async.AsyncObserver;
+import com.spotify.heroic.common.Features;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.Filter;
@@ -111,10 +112,12 @@ public class MetadataFindSeries implements ShellTask {
         }
 
         final ResolvableFuture<Void> future = async.future();
+        FindSeries.Request request =
+            new FindSeries.Request(filter, params.getRange(), params.getLimit(), Features.DEFAULT);
 
         group
-            .findSeriesStream(new FindSeries.Request(filter, params.getRange(), params.getLimit()))
-            .observe(new AsyncObserver<FindSeriesStream>() {
+            .findSeriesStream(request)
+            .observe(new AsyncObserver<>() {
                 @Override
                 public AsyncFuture<Void> observe(final FindSeriesStream value) {
                     value.getSeries().forEach(printer);

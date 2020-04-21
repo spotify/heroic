@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.QueryManager;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Features;
 import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.Series;
@@ -113,12 +114,16 @@ public class MetadataResource {
     public void getTimeSeries(
         @Suspended final AsyncResponse response, final MetadataQueryBody request
     ) {
-        final RequestCriteria c = toCriteria(request::getFilter, request::getRange,
-            () -> OptionalLimit.of(request.getLimit().orElse(MetadataQueryBody.DEFAULT_LIMIT)));
+        RequestCriteria criteria = toCriteria(
+            request::getFilter,
+            request::getRange,
+            () -> OptionalLimit.of(request.getLimit().orElse(MetadataQueryBody.DEFAULT_LIMIT))
+        );
 
-        httpAsync.bind(response, query
-            .useDefaultGroup()
-            .findSeries(new FindSeries.Request(c.getFilter(), c.getRange(), c.getLimit())));
+        FindSeries.Request seriesRequest = new FindSeries.Request(
+            criteria.getFilter(), criteria.getRange(), criteria.getLimit(), Features.DEFAULT);
+
+        httpAsync.bind(response, query.useDefaultGroup().findSeries(seriesRequest));
     }
 
     @DELETE

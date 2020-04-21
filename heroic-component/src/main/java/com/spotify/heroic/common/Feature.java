@@ -72,7 +72,12 @@ public enum Feature {
     /**
      * Permit caching of the query results.
      */
-    CACHE_QUERY("com.spotify.heroic.cache_query");
+    CACHE_QUERY("com.spotify.heroic.cache_query"),
+
+    /**
+     * When paginating metadata results, use a live cursor instead of a snapshot scroll.
+     */
+    METADATA_LIVE_CURSOR("com.spotify.heroic.metadata.live_CURSOR");
 
     private final String id;
 

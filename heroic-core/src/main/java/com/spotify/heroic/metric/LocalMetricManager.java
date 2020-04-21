@@ -395,7 +395,7 @@ public class LocalMetricManager implements MetricManager {
                     findSeriesSpan);
 
             return metadata
-                .findSeries(new FindSeries.Request(request.filter(), request.range(), seriesLimit))
+                .findSeries(FindSeries.Request.withLimit(request, seriesLimit))
                 .onDone(reporter.reportFindSeries())
                 .onResolved(t -> findSeriesSpan.putAttribute(
                     "seriesCount", longAttributeValue(t.getSeries().size())))

@@ -22,6 +22,7 @@
 package com.spotify.heroic.shell.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.spotify.heroic.common.Features;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.Filter;
@@ -66,10 +67,12 @@ public class MetadataFetch implements ShellTask {
         final MetadataFetchParameters params = (MetadataFetchParameters) base;
 
         final Filter filter = Tasks.setupFilter(parser, params);
+        FindSeries.Request request =
+            new FindSeries.Request(filter, params.getRange(), params.getLimit(), Features.DEFAULT);
 
         return metadata
             .useOptionalGroup(params.getGroup())
-            .findSeries(new FindSeries.Request(filter, params.getRange(), params.getLimit()))
+            .findSeries(request)
             .directTransform(result -> {
                 int i = 0;
 

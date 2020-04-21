@@ -156,14 +156,14 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
 
         @Override
         public AsyncFuture<FindSeriesIds> findSeriesIds(
-            final FindSeriesIds.Request request
+            final FindSeries.Request request
         ) {
             return delegate.findSeriesIds(request).onDone(findSeriesIds.setup());
         }
 
         @Override
         public AsyncObservable<FindSeriesIdsStream> findSeriesIdsStream(
-            final FindSeriesIds.Request request
+            final FindSeries.Request request
         ) {
             return delegate.findSeriesIdsStream(request);
         }
