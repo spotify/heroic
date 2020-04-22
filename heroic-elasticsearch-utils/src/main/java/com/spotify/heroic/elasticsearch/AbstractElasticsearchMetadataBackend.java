@@ -67,15 +67,15 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
 
     protected abstract Series toSeries(SearchHit hit);
 
-    protected <T> AsyncFuture<ScrollTransformResult<T>> scrollEntries(
+    protected <T> AsyncFuture<SearchTransformResult<T>> scrollEntries(
         final Connection connection,
         final SearchRequest request,
         final OptionalLimit limit,
         final Function<SearchHit, T> converter
     ) {
 
-        final ScrollTransform<T> scrollTransform =
-            new ScrollTransform<>(
+        final SearchTransform<T> searchTransform =
+            new SearchTransform<>(
                 async,
                 limit,
                 converter,
@@ -90,11 +90,11 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
         final ResolvableFuture<SearchResponse> future = async.future();
         connection.execute(request, bind(future));
 
-        return future.lazyTransform(scrollTransform);
+        return future.lazyTransform(searchTransform);
     }
 
-    public static class ScrollTransform<T>
-        implements LazyTransform<SearchResponse, ScrollTransformResult<T>> {
+    public static class SearchTransform<T>
+        implements LazyTransform<SearchResponse, SearchTransformResult<T>> {
 
         private final AsyncFramework async;
         private final OptionalLimit limit;
@@ -103,23 +103,22 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
         int duplicates = 0;
         final Set<T> results = new HashSet<>();
         final Function<SearchHit, T> converter;
-        final Function<String, Supplier<AsyncFuture<SearchResponse>>> scrollFactory;
+        final Function<String, Supplier<AsyncFuture<SearchResponse>>> searchFactory;
 
-        @java.beans.ConstructorProperties({ "async", "limit", "converter", "scrollFactory" })
-        public ScrollTransform(
+        public SearchTransform(
             final AsyncFramework async,
             final OptionalLimit limit,
             final Function<SearchHit, T> converter,
-            final Function<String, Supplier<AsyncFuture<SearchResponse>>> scrollFactory
+            final Function<String, Supplier<AsyncFuture<SearchResponse>>> searchFactory
         ) {
             this.async = async;
             this.limit = limit;
             this.converter = converter;
-            this.scrollFactory = scrollFactory;
+            this.searchFactory = searchFactory;
         }
 
         @Override
-        public AsyncFuture<ScrollTransformResult<T>> transform(final SearchResponse response) {
+        public AsyncFuture<SearchTransformResult<T>> transform(final SearchResponse response) {
             final SearchHit[] hits = response.getHits().getHits();
             final String scrollId = response.getScrollId();
 
@@ -135,45 +134,45 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
                 if (limit.isGreater(size)) {
                     results.remove(convertedHit);
                     return async.resolved(
-                        new ScrollTransformResult<>(limit.limitSet(results), true, scrollId));
+                        new SearchTransformResult<>(limit.limitSet(results), true, scrollId));
                 }
             }
 
             if (hits.length == 0) {
-                return async.resolved(new ScrollTransformResult<>(results, false, scrollId));
+                return async.resolved(new SearchTransformResult<>(results, false, scrollId));
             }
 
             if (scrollId == null) {
-                return async.resolved(ScrollTransformResult.of());
+                return async.resolved(SearchTransformResult.of());
             }
 
             // Fetch the next page in the scrolling search. The result will be handled by a new call
             // to this method.
-            final Supplier<AsyncFuture<SearchResponse>> scroller = scrollFactory.apply(scrollId);
+            final Supplier<AsyncFuture<SearchResponse>> scroller = searchFactory.apply(scrollId);
             return scroller.get().lazyTransform(this);
         }
     }
 
-    public static class ScrollTransformStream<T> implements LazyTransform<SearchResponse, Void> {
+    public static class SearchTransformStream<T> implements LazyTransform<SearchResponse, Void> {
         private final OptionalLimit limit;
         private final Function<Set<T>, AsyncFuture<Void>> seriesFunction;
         private final Function<SearchHit, T> converter;
-        private final Function<String, Supplier<AsyncFuture<SearchResponse>>> scrollFactory;
+        private final Function<String, Supplier<AsyncFuture<SearchResponse>>> searchFactory;
 
         int size = 0;
 
         @java.beans.ConstructorProperties({ "limit", "seriesFunction", "converter",
                                             "scrollFactory" })
-        public ScrollTransformStream(
+        public SearchTransformStream(
             final OptionalLimit limit,
             final Function<Set<T>, AsyncFuture<Void>> seriesFunction,
             final Function<SearchHit, T> converter,
-            final Function<String, Supplier<AsyncFuture<SearchResponse>>> scrollFactory
+            final Function<String, Supplier<AsyncFuture<SearchResponse>>> searchFactory
         ) {
             this.limit = limit;
             this.seriesFunction = seriesFunction;
             this.converter = converter;
-            this.scrollFactory = scrollFactory;
+            this.searchFactory = searchFactory;
         }
 
         @Override
@@ -202,9 +201,9 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
 
             // Fetch the next page in the scrolling search. The result will be handled by a new call
             // to this method.
-            return seriesFunction.apply(batch).lazyTransform(v -> {
-                return scrollFactory.apply(scrollId).get().lazyTransform(this);
-            });
+            return seriesFunction
+                .apply(batch)
+                .lazyTransform(v -> searchFactory.apply(scrollId).get().lazyTransform(this));
         }
     }
 

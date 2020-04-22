@@ -9,7 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.elasticsearch.AbstractElasticsearchMetadataBackend.ScrollTransform;
+import com.spotify.heroic.elasticsearch.AbstractElasticsearchMetadataBackend.SearchTransform;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.LazyTransform;
@@ -31,14 +31,14 @@ import org.mockito.stubbing.Answer;
 import org.mockito.stubbing.OngoingStubbing;
 
 @RunWith(org.mockito.junit.MockitoJUnitRunner.class)
-public class ScrollTransformTest {
+public class SearchTransformTest {
     private final String scrollID = "scroller1";
 
     @Mock
     private AsyncFramework async;
 
     @Mock
-    private AsyncFuture<ScrollTransformResult> resolved;
+    private AsyncFuture<SearchTransformResult> resolved;
 
     @Mock
     Supplier<AsyncFuture<SearchResponse>> scroller;
@@ -67,18 +67,18 @@ public class ScrollTransformTest {
 
     @Before
     public void setup() {
-        doReturn(resolved).when(async).resolved(any(ScrollTransformResult.class));
+        doReturn(resolved).when(async).resolved(any(SearchTransformResult.class));
         doReturn(searchHits).when(searchResponse).getHits();
         doReturn(scrollID).when(searchResponse).getScrollId();
 
         doReturn(scroller).when(scrollerFactory).apply(any(String.class));
         doReturn(response).when(scroller).get();
-        doAnswer(new Answer<AsyncFuture<ScrollTransformResult<Integer>>>() {
-            public AsyncFuture<ScrollTransformResult<Integer>> answer(
+        doAnswer(new Answer<AsyncFuture<SearchTransformResult<Integer>>>() {
+            public AsyncFuture<SearchTransformResult<Integer>> answer(
                 InvocationOnMock invocation
             ) throws Exception {
-                final LazyTransform<SearchResponse, ScrollTransformResult<Integer>> transform =
-                    (LazyTransform<SearchResponse, ScrollTransformResult<Integer>>) invocation.getArguments
+                final LazyTransform<SearchResponse, SearchTransformResult<Integer>> transform =
+                    (LazyTransform<SearchResponse, SearchTransformResult<Integer>>) invocation.getArguments
                         ()[0];
                 return transform.transform(searchResponse);
             }
@@ -93,14 +93,14 @@ public class ScrollTransformTest {
         }
     }
 
-    public ScrollTransform<SearchHit> createScrollTransform(
+    public SearchTransform<SearchHit> createScrollTransform(
         Integer limit
     ) {
         final OptionalLimit optionalLimit = OptionalLimit.of(limit);
-        return new ScrollTransform<>(async, optionalLimit, Function.identity(), scrollerFactory);
+        return new SearchTransform<>(async, optionalLimit, Function.identity(), scrollerFactory);
     }
 
-    public ScrollTransformResult<SearchHit> createLimitSet(Integer limit, SearchHit[]... pages) {
+    public SearchTransformResult<SearchHit> createLimitSet(Integer limit, SearchHit[]... pages) {
         final Set<SearchHit> set = new HashSet<>();
 
         Stream<SearchHit> stream =
@@ -112,7 +112,7 @@ public class ScrollTransformTest {
 
         stream.map(Function.identity()).forEach(set::add);
 
-        return new ScrollTransformResult<>(set, limit != null, scrollID);
+        return new SearchTransformResult<>(set, limit != null, scrollID);
     }
 
     @Test
@@ -120,9 +120,9 @@ public class ScrollTransformTest {
         setSearchHitPages(searchHits1, emptySearchHits);
         final Integer limit = searchHits1.length - 1;
 
-        final ScrollTransform<SearchHit> scrollTransform = createScrollTransform(limit);
+        final SearchTransform<SearchHit> searchTransform = createScrollTransform(limit);
 
-        scroller.get().lazyTransform(scrollTransform);
+        scroller.get().lazyTransform(searchTransform);
 
         verify(async).resolved(createLimitSet(limit, searchHits1));
         verify(scroller).get();
@@ -133,9 +133,9 @@ public class ScrollTransformTest {
         setSearchHitPages(searchHits1, searchHits1, searchHits2, emptySearchHits);
         final Integer limit = searchHits1.length + searchHits2.length - 1;
 
-        final ScrollTransform<SearchHit> scrollTransform = createScrollTransform(limit);
+        final SearchTransform<SearchHit> searchTransform = createScrollTransform(limit);
 
-        scroller.get().lazyTransform(scrollTransform);
+        scroller.get().lazyTransform(searchTransform);
 
         verify(async).resolved(createLimitSet(limit, searchHits1, searchHits2));
         verify(scroller, times(3)).get();
@@ -146,9 +146,9 @@ public class ScrollTransformTest {
         setSearchHitPages(searchHits1, emptySearchHits);
         final Integer limit = searchHits1.length;
 
-        final ScrollTransform<SearchHit> scrollTransform = createScrollTransform(limit);
+        final SearchTransform<SearchHit> searchTransform = createScrollTransform(limit);
 
-        scroller.get().lazyTransform(scrollTransform);
+        scroller.get().lazyTransform(searchTransform);
 
         verify(async).resolved(createLimitSet(null, searchHits1));
         verify(scroller, times(2)).get();
@@ -159,9 +159,9 @@ public class ScrollTransformTest {
         setSearchHitPages(searchHits1, searchHits1, searchHits2, emptySearchHits);
         final Integer limit = searchHits1.length + searchHits2.length;
 
-        final ScrollTransform<SearchHit> scrollTransform = createScrollTransform(limit);
+        final SearchTransform<SearchHit> searchTransform = createScrollTransform(limit);
 
-        scroller.get().lazyTransform(scrollTransform);
+        scroller.get().lazyTransform(searchTransform);
 
         verify(async).resolved(createLimitSet(null, searchHits1, searchHits2));
         verify(scroller, times(4)).get();

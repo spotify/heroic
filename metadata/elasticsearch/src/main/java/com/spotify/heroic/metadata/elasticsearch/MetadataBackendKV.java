@@ -40,7 +40,7 @@ import com.spotify.heroic.elasticsearch.AbstractElasticsearchMetadataBackend;
 import com.spotify.heroic.elasticsearch.BackendType;
 import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
-import com.spotify.heroic.elasticsearch.ScrollTransformResult;
+import com.spotify.heroic.elasticsearch.SearchTransformResult;
 import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
 import com.spotify.heroic.filter.AndFilter;
 import com.spotify.heroic.filter.FalseFilter;
@@ -319,12 +319,11 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
     @Override
     public AsyncFuture<FindSeries> findSeries(final FindSeries.Request filter) {
-        return doto(
-            c -> entries(
-                filter,
-                this::toSeries,
-                l -> new FindSeries(l.getSet(), l.isLimited()),
-                request -> { }));
+        return entries(
+            filter,
+            this::toSeries,
+            l -> new FindSeries(l.getSet(), l.isLimited()),
+            request -> { });
     }
 
     @Override
@@ -440,7 +439,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     private <T, O> AsyncFuture<O> entries(
         final FindSeries.Request seriesRequest,
         final Function<SearchHit, T> converter,
-        final Transform<ScrollTransformResult<T>, O> collector,
+        final Transform<SearchTransformResult<T>, O> collector,
         final Consumer<SearchRequest> modifier
     ) {
         final QueryBuilder f = filter(seriesRequest.getFilter());
@@ -455,7 +454,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
             modifier.accept(request);
 
-            AsyncFuture<ScrollTransformResult<T>> scroll = scrollEntries(
+            AsyncFuture<SearchTransformResult<T>> scroll = scrollEntries(
                 c, request, limit, converter);
 
             return scroll
@@ -519,8 +518,8 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
             modifier.accept(request);
 
-            final ScrollTransformStream<T> scrollTransform =
-                new ScrollTransformStream<>(limit, set -> observer.observe(collector.apply(set)),
+            final SearchTransformStream<T> scrollTransform =
+                new SearchTransformStream<>(limit, set -> observer.observe(collector.apply(set)),
                     converter, scrollId -> {
                     // Function<> that returns a Supplier
                     return () -> {
