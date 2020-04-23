@@ -16,7 +16,6 @@ import com.spotify.heroic.querylogging.QueryLogger;
 import com.spotify.heroic.querylogging.QueryLoggerFactory;
 import com.spotify.heroic.statistics.QueryReporter;
 import com.spotify.heroic.time.Clock;
-import com.spotify.heroic.tracing.TracingConfig;
 import eu.toolchain.async.AsyncFramework;
 import java.util.Optional;
 import org.junit.Before;
@@ -44,9 +43,6 @@ public class CoreQueryManagerTest {
     @Mock
     private AggregationFactory aggregations;
 
-    @Mock
-    private TracingConfig tracingConfig;
-
     @Before
     public void setup() {
         QueryReporter queryReporter = mock(QueryReporter.class);
@@ -58,7 +54,7 @@ public class CoreQueryManagerTest {
 
         manager = new CoreQueryManager(Features.empty(), async, Clock.system(), cluster, parser,
             queryCache, aggregations, OptionalLimit.empty(), smallQueryThreshold, queryReporter,
-            Optional.empty(), queryLoggerFactory, tracingConfig);
+            Optional.empty(), queryLoggerFactory);
     }
 
     @Test
