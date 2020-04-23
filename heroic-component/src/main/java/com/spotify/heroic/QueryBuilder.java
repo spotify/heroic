@@ -60,8 +60,6 @@ public class QueryBuilder {
      */
     @Deprecated
     public QueryBuilder key(Optional<String> key) {
-        log.warn("key is deprecated, use #filter(java.util.Optional) with the appropriate filter"
-                 + " instead");
         this.key = key;
         return this;
     }
@@ -74,8 +72,6 @@ public class QueryBuilder {
      */
     @Deprecated
     public QueryBuilder tags(Optional<Map<String, String>> tags) {
-        log.warn("tags is deprecated, use #filter(java.util.Optional) with the appropriate filter"
-               + " instead");
         checkNotNull(tags, "tags must not be null");
         this.tags = pickOptional(this.tags, tags);
         return this;
