@@ -74,21 +74,21 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
         final Function<SearchHit, T> converter
     ) {
 
-    final ScrollTransform<T> scrollTransform =
-        new ScrollTransform<>(
-            async,
-            limit,
-            converter,
-            scrollId -> {
-                // Function<> that returns a Supplier
-                return () -> {
-                    final ResolvableFuture<SearchResponse> future = async.future();
-                    connection.searchScroll(scrollId, SCROLL_TIME, bind(future));
-                    return future;
-                };
-            });
-            final ResolvableFuture<SearchResponse> future = async.future();
-            connection.execute(request, bind(future));
+        final ScrollTransform<T> scrollTransform =
+            new ScrollTransform<>(
+                async,
+                limit,
+                converter,
+                scrollId -> {
+                    // Function<> that returns a Supplier
+                    return () -> {
+                        final ResolvableFuture<SearchResponse> future = async.future();
+                        connection.searchScroll(scrollId, SCROLL_TIME, bind(future));
+                        return future;
+                    };
+                });
+        final ResolvableFuture<SearchResponse> future = async.future();
+        connection.execute(request, bind(future));
 
         return future.lazyTransform(scrollTransform);
     }
@@ -119,8 +119,7 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
         }
 
         @Override
-        public AsyncFuture<ScrollTransformResult<T>> transform(final SearchResponse response)
-            throws Exception {
+        public AsyncFuture<ScrollTransformResult<T>> transform(final SearchResponse response) {
             final SearchHit[] hits = response.getHits().getHits();
             final String scrollId = response.getScrollId();
 

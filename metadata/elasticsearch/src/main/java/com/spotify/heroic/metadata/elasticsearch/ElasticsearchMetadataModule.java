@@ -80,6 +80,8 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
     private static final int DEFAULT_WRITE_CACHE_CONCURRENCY = 4;
     private static final long DEFAULT_WRITE_CACHE_MAX_SIZE = 30_000_000L;
 
+    private static final int DEFAULT_SCROLL_SIZE = 1000;
+
     private static final String DEFAULT_GROUP = "elasticsearch";
     private static final String DEFAULT_TEMPLATE_NAME = "heroic-metadata";
 
@@ -95,6 +97,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
     private final String distributedCacheSrvRecord;
     private final int deleteParallelism;
     private final boolean configure;
+    private final int scrollSize;
 
     private static Supplier<BackendType> defaultSetup = MetadataBackendKV::backendType;
 
@@ -125,7 +128,8 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
         @JsonProperty("deleteParallelism") Optional<Integer> deleteParallelism,
         @JsonProperty("templateName") Optional<String> templateName,
         @JsonProperty("backendType") Optional<String> backendType,
-        @JsonProperty("configure") Optional<Boolean> configure
+        @JsonProperty("configure") Optional<Boolean> configure,
+        @JsonProperty("scrollSize") Optional<Integer> scrollSize
     ) {
         this.id = id;
         this.groups = groups.orElseGet(Groups::empty).or(DEFAULT_GROUP);
@@ -138,6 +142,8 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
             writeCacheDurationMinutes.orElse(DEFAULT_WRITE_CACHE_DURATION_MINUTES);
         this.writeCacheConcurrency = writeCacheConcurrency.orElse(DEFAULT_WRITE_CACHE_CONCURRENCY);
         this.writeCacheMaxSize = writeCacheMaxSize.orElse(DEFAULT_WRITE_CACHE_MAX_SIZE);
+
+        this.scrollSize = scrollSize.orElse(DEFAULT_SCROLL_SIZE);
 
         this.distributedCacheSrvRecord = distributedCacheSrvRecord.orElse("");
 
@@ -233,6 +239,13 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
 
         @Provides
         @ElasticsearchScope
+        @Named("scrollSize")
+        public int scrollSize() {
+            return scrollSize;
+        }
+
+        @Provides
+        @ElasticsearchScope
         public RateLimitedCache<Pair<String, HashCode>> writeCache(HeroicReporter reporter) {
             final Cache<Pair<String, HashCode>, Boolean> cache = CacheBuilder
                 .newBuilder()
@@ -292,6 +305,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
         private Optional<String> templateName = empty();
         private Optional<String> backendType = empty();
         private Optional<Boolean> configure = empty();
+        private Optional<Integer> scrollSize = empty();
 
         public Builder id(final String id) {
             checkNotNull(id, "id");
@@ -365,21 +379,27 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
             return this;
         }
 
+        public Builder scrollSize(int scrollSize) {
+            this.scrollSize = of(scrollSize);
+            return this;
+        }
+
         public ElasticsearchMetadataModule build() {
             return new ElasticsearchMetadataModule(
-              id,
-              groups,
-              connection,
-              writesPerSecond,
-              rateLimitSlowStartSeconds,
-              writeCacheDurationMinutes,
-              writeCacheConcurrency,
-              writeCacheMaxSize,
-              distributedCacheSrvRecord,
-              deleteParallelism,
-              templateName,
-              backendType,
-              configure
+                id,
+                groups,
+                connection,
+                writesPerSecond,
+                rateLimitSlowStartSeconds,
+                writeCacheDurationMinutes,
+                writeCacheConcurrency,
+                writeCacheMaxSize,
+                distributedCacheSrvRecord,
+                deleteParallelism,
+                templateName,
+                backendType,
+                configure,
+                scrollSize
             );
         }
     }
