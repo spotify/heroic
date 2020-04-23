@@ -24,9 +24,11 @@ package com.spotify.heroic.metadata
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.spotify.heroic.cluster.ClusterShard
 import com.spotify.heroic.common.DateRange
+import com.spotify.heroic.common.Features
 import com.spotify.heroic.common.OptionalLimit
 import com.spotify.heroic.common.Series
 import com.spotify.heroic.filter.Filter
+import com.spotify.heroic.metric.FullQuery
 import com.spotify.heroic.metric.RequestError
 import com.spotify.heroic.metric.ShardError
 import eu.toolchain.async.Collector
@@ -73,6 +75,14 @@ data class FindSeries(
     data class Request(
         val filter: Filter,
         val range: DateRange,
-        val limit: OptionalLimit
-    )
+        val limit: OptionalLimit,
+        val features: Features
+    ) {
+        companion object {
+            @JvmStatic
+            fun withLimit(request: FullQuery.Request, limit: OptionalLimit): Request {
+                return Request(request.filter(), request.range(), limit, request.features())
+            }
+        }
+    }
 }

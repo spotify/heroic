@@ -71,10 +71,8 @@ public interface MetadataBackend extends Grouped, Initializing, Collected {
     /**
      * List only the series id that match the given filter.
      */
-    AsyncFuture<FindSeriesIds> findSeriesIds(FindSeriesIds.Request request);
-    default AsyncObservable<FindSeriesIdsStream> findSeriesIdsStream(
-        FindSeriesIds.Request request
-    ) {
+    AsyncFuture<FindSeriesIds> findSeriesIds(FindSeries.Request request);
+    default AsyncObservable<FindSeriesIdsStream> findSeriesIdsStream(FindSeries.Request request) {
         return AsyncObservable.empty();
     }
 

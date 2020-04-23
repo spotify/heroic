@@ -22,14 +22,8 @@
 package com.spotify.heroic.metadata.elasticsearch;
 
 import com.spotify.heroic.elasticsearch.ClientWrapper;
-import com.spotify.heroic.elasticsearch.ConnectionModule;
 import com.spotify.heroic.elasticsearch.TransportClientWrapper;
-import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
-import com.spotify.heroic.metadata.MetadataModule;
-import com.spotify.heroic.test.AbstractMetadataBackendIT;
-import com.spotify.heroic.test.ElasticSearchTestContainer;
 import java.util.List;
-import java.util.UUID;
 
 public class MetadataBackendKVTransportIT extends AbstractMetadataBackendKVIT {
     @Override

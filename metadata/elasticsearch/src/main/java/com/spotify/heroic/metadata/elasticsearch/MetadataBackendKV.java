@@ -30,6 +30,8 @@ import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 import com.google.common.hash.HashCode;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Feature;
+import com.spotify.heroic.common.Features;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.RequestTimer;
@@ -39,7 +41,7 @@ import com.spotify.heroic.elasticsearch.AbstractElasticsearchMetadataBackend;
 import com.spotify.heroic.elasticsearch.BackendType;
 import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
-import com.spotify.heroic.elasticsearch.ScrollTransformResult;
+import com.spotify.heroic.elasticsearch.SearchTransformResult;
 import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
 import com.spotify.heroic.filter.AndFilter;
 import com.spotify.heroic.filter.FalseFilter;
@@ -114,6 +116,7 @@ import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.elasticsearch.search.sort.FieldSortBuilder;
 
 @ElasticsearchScope
 public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
@@ -316,23 +319,19 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         });
     }
 
-  @Override
-  public AsyncFuture<FindSeries> findSeries(final FindSeries.Request filter) {
-    return doto(
-        c -> entries(
-            filter.getFilter(),
-            filter.getLimit(),
+    @Override
+    public AsyncFuture<FindSeries> findSeries(final FindSeries.Request filter) {
+        return entries(
+            filter,
             this::toSeries,
             l -> new FindSeries(l.getSet(), l.isLimited()),
-            request -> { }));
-  }
+            request -> { });
+    }
 
     @Override
     public AsyncObservable<FindSeriesStream> findSeriesStream(final FindSeries.Request request) {
         return entriesStream(
-            request.getLimit(),
-            request.getFilter(),
-            request.getRange(),
+            request,
             this::toSeries,
             FindSeriesStream::new,
             builder -> { }
@@ -340,11 +339,10 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     }
 
     @Override
-    public AsyncFuture<FindSeriesIds> findSeriesIds(final FindSeriesIds.Request request) {
+    public AsyncFuture<FindSeriesIds> findSeriesIds(final FindSeries.Request request) {
         return entries(
-            request.getFilter(),
-            request.getLimit(),
-            this::toId,
+            request,
+            SearchHit::getId,
             l -> new FindSeriesIds(l.getSet(), l.isLimited()),
             searchRequest -> searchRequest.source().fetchSource(false)
         );
@@ -352,13 +350,11 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
     @Override
     public AsyncObservable<FindSeriesIdsStream> findSeriesIdsStream(
-        final FindSeriesIds.Request request
+        final FindSeries.Request request
     ) {
         return entriesStream(
-            request.getLimit(),
-            request.getFilter(),
-            request.getRange(),
-            this::toId,
+            request,
+            SearchHit::getId,
             FindSeriesIdsStream::new,
             searchRequest -> searchRequest.source().fetchSource(false)
         );
@@ -368,8 +364,8 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     public AsyncFuture<DeleteSeries> deleteSeries(final DeleteSeries.Request request) {
         final DateRange range = request.getRange();
 
-        final FindSeriesIds.Request findIds =
-            new FindSeriesIds.Request(request.getFilter(), range, request.getLimit());
+        final FindSeries.Request findIds = new FindSeries.Request(
+            request.getFilter(), range, request.getLimit(), Features.DEFAULT);
 
         return doto(c -> findSeriesIds(findIds).lazyTransform(ids -> {
             final List<Callable<AsyncFuture<Void>>> deletes = new ArrayList<>();
@@ -437,36 +433,42 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     protected Series toSeries(SearchHit hit) {
         final Map<String, Object> source = hit.getSourceAsMap();
         final String key = (String) source.get(KEY);
+
+        @SuppressWarnings("unchecked")
         final Iterator<Map.Entry<String, String>> tags =
             ((List<String>) source.get(TAGS)).stream().map(this::buildTag).iterator();
+
         return Series.of(key, tags);
     }
 
     private <T, O> AsyncFuture<O> entries(
-        final Filter filter,
-        final OptionalLimit limit,
+        final FindSeries.Request seriesRequest,
         final Function<SearchHit, T> converter,
-        final Transform<ScrollTransformResult<T>, O> collector,
+        final Transform<SearchTransformResult<T>, O> collector,
         final Consumer<SearchRequest> modifier
     ) {
-        final QueryBuilder f = filter(filter);
+        final QueryBuilder f = filter(seriesRequest.getFilter());
+        OptionalLimit limit = seriesRequest.getLimit();
 
         return doto(c -> {
             SearchRequest request = c.getIndex().search(METADATA_TYPE);
-            request.scroll(SCROLL_TIME);
             request.source()
                 .size(limit.asMaxInteger(scrollSize))
-                .query(new BoolQueryBuilder().must(f));
+                .query(new BoolQueryBuilder().must(f))
+                .sort(new FieldSortBuilder("_doc"));
 
             modifier.accept(request);
 
-            AsyncFuture<ScrollTransformResult<T>> scroll = scrollEntries(
-                c, request, limit, converter);
-
-            return scroll
-                .onResolved(r -> ofNullable(r.getLastScrollId())
-                    .ifPresent(c::clearSearchScroll))
-                .directTransform(collector);
+            if (seriesRequest.getFeatures().hasFeature(Feature.METADATA_LIVE_CURSOR)) {
+                return pageEntries(c, request, limit, converter)
+                    .directTransform(collector);
+            } else {
+                request.scroll(SCROLL_TIME);
+                return scrollEntries(c, request, limit, converter)
+                    .onResolved(r ->
+                        ofNullable(r.getLastScrollId()).ifPresent(c::clearSearchScroll))
+                    .directTransform(collector);
+            }
         });
     }
 
@@ -508,14 +510,13 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     }
 
     private <T, O> AsyncObservable<O> entriesStream(
-        final OptionalLimit limit,
-        final Filter f,
-        final DateRange range,
+        final FindSeries.Request findRequest,
         final Function<SearchHit, T> converter,
         final Function<Set<T>, O> collector,
         final Consumer<SearchRequest> modifier
     ) {
-        final QueryBuilder filter = filter(f);
+        final QueryBuilder filter = filter(findRequest.getFilter());
+        OptionalLimit limit = findRequest.getLimit();
 
         return observer -> connection.doto(c -> {
             SearchRequest request = c.getIndex().search(METADATA_TYPE).scroll(SCROLL_TIME);
@@ -525,8 +526,8 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
             modifier.accept(request);
 
-            final ScrollTransformStream<T> scrollTransform =
-                new ScrollTransformStream<>(limit, set -> observer.observe(collector.apply(set)),
+            final SearchTransformStream<T> scrollTransform =
+                new SearchTransformStream<>(limit, set -> observer.observe(collector.apply(set)),
                     converter, scrollId -> {
                     // Function<> that returns a Supplier
                     return () -> {
@@ -543,15 +544,11 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         }).onDone(observer.onDone());
     }
 
-    private String toId(SearchHit hit) {
-        return hit.getId();
-    }
-
     private <T> AsyncFuture<T> doto(ManagedAction<Connection, T> action) {
         return connection.doto(action);
     }
 
-    AsyncFuture<Void> start() {
+    private AsyncFuture<Void> start() {
         final AsyncFuture<Void> future = connection.start();
 
         if (!configure) {
@@ -561,11 +558,11 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         return future.lazyTransform(v -> configure());
     }
 
-    AsyncFuture<Void> stop() {
+    private AsyncFuture<Void> stop() {
         return connection.stop();
     }
 
-    Map.Entry<String, String> buildTag(String kv) {
+    private Map.Entry<String, String> buildTag(String kv) {
         final int index = kv.indexOf(TAG_DELIMITER);
 
         if (index == -1) {
@@ -577,7 +574,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         return Pair.of(tk, tv);
     }
 
-    static void buildContext(final XContentBuilder b, Series series) throws IOException {
+    private static void buildContext(final XContentBuilder b, Series series) throws IOException {
         b.field(KEY, series.getKey());
 
         b.startArray(TAGS);

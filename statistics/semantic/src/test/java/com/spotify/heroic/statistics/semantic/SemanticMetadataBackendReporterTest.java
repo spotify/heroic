@@ -8,7 +8,6 @@ import static org.mockito.Mockito.verify;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metadata.FindSeries;
-import com.spotify.heroic.metadata.FindSeriesIds;
 import com.spotify.heroic.metadata.FindSeriesIdsStream;
 import com.spotify.heroic.metadata.FindSeriesStream;
 import com.spotify.heroic.metadata.MetadataBackend;
@@ -29,7 +28,7 @@ public class SemanticMetadataBackendReporterTest {
 
         {
             final AsyncObservable<FindSeriesIdsStream> response = mock(AsyncObservable.class);
-            final FindSeriesIds.Request request = mock(FindSeriesIds.Request.class);
+            final FindSeries.Request request = mock(FindSeries.Request.class);
             doReturn(response).when(backend).findSeriesIdsStream(request);
             assertEquals(response, decorated.findSeriesIdsStream(request));
             verify(backend).findSeriesIdsStream(request);

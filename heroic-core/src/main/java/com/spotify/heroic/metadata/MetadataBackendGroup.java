@@ -63,7 +63,7 @@ public class MetadataBackendGroup implements MetadataBackend {
     }
 
     @Override
-    public AsyncFuture<FindSeriesIds> findSeriesIds(final FindSeriesIds.Request request) {
+    public AsyncFuture<FindSeriesIds> findSeriesIds(final FindSeries.Request request) {
         return async.collect(run(v -> v.findSeriesIds(request)),
             FindSeriesIds.reduce(request.getLimit()));
     }
@@ -75,7 +75,7 @@ public class MetadataBackendGroup implements MetadataBackend {
 
     @Override
     public AsyncObservable<FindSeriesIdsStream> findSeriesIdsStream(
-        final FindSeriesIds.Request request
+        final FindSeries.Request request
     ) {
         return AsyncObservable.chain(run(b -> b.findSeriesIdsStream(request)));
     }

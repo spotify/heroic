@@ -22,10 +22,11 @@
 package com.spotify.heroic.shell.task;
 
 import com.spotify.heroic.async.AsyncObserver;
+import com.spotify.heroic.common.Features;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
-import com.spotify.heroic.metadata.FindSeriesIds;
+import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.FindSeriesIdsStream;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
@@ -73,10 +74,12 @@ public class MetadataFindSeriesIds implements ShellTask {
         final Consumer<String> printer = id -> io.out().println(id);
         final ResolvableFuture<Void> future = async.future();
 
+        FindSeries.Request request =
+            new FindSeries.Request(filter, params.getRange(), params.getLimit(), Features.DEFAULT);
+
         group
-            .findSeriesIdsStream(
-                new FindSeriesIds.Request(filter, params.getRange(), params.getLimit()))
-            .observe(new AsyncObserver<FindSeriesIdsStream>() {
+            .findSeriesIdsStream(request)
+            .observe(new AsyncObserver<>() {
                 @Override
                 public AsyncFuture<Void> observe(final FindSeriesIdsStream value) {
                     value.getIds().forEach(printer);

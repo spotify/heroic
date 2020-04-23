@@ -133,7 +133,7 @@ public class MemoryBackend implements MetadataBackend {
     }
 
     @Override
-    public AsyncFuture<FindSeriesIds> findSeriesIds(final FindSeriesIds.Request request) {
+    public AsyncFuture<FindSeriesIds> findSeriesIds(final FindSeries.Request request) {
         final OptionalLimit limit = request.getLimit();
 
         final Set<String> s =
@@ -144,7 +144,7 @@ public class MemoryBackend implements MetadataBackend {
 
     @Override
     public AsyncObservable<FindSeriesIdsStream> findSeriesIdsStream(
-        final FindSeriesIds.Request request
+        final FindSeries.Request request
     ) {
         return observer -> {
             final OptionalLimit limit = request.getLimit();
