@@ -49,6 +49,10 @@ data class FeatureSet(
         return features
     }
 
+    fun isEmpty(): Boolean {
+        return enabled.isEmpty() && disabled.isEmpty()
+    }
+
     /**
      * Combine this feature set with another.
      *

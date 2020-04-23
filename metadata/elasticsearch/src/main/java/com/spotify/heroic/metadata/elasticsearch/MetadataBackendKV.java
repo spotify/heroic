@@ -30,6 +30,7 @@ import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 import com.google.common.hash.HashCode;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Feature;
 import com.spotify.heroic.common.Features;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.OptionalLimit;
@@ -115,6 +116,7 @@ import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.elasticsearch.search.sort.FieldSortBuilder;
 
 @ElasticsearchScope
 public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
@@ -431,8 +433,11 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     protected Series toSeries(SearchHit hit) {
         final Map<String, Object> source = hit.getSourceAsMap();
         final String key = (String) source.get(KEY);
+
+        @SuppressWarnings("unchecked")
         final Iterator<Map.Entry<String, String>> tags =
             ((List<String>) source.get(TAGS)).stream().map(this::buildTag).iterator();
+
         return Series.of(key, tags);
     }
 
@@ -447,20 +452,23 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
         return doto(c -> {
             SearchRequest request = c.getIndex().search(METADATA_TYPE);
-            request.scroll(SCROLL_TIME);
             request.source()
                 .size(limit.asMaxInteger(scrollSize))
-                .query(new BoolQueryBuilder().must(f));
+                .query(new BoolQueryBuilder().must(f))
+                .sort(new FieldSortBuilder("_doc"));
 
             modifier.accept(request);
 
-            AsyncFuture<SearchTransformResult<T>> scroll = scrollEntries(
-                c, request, limit, converter);
-
-            return scroll
-                .onResolved(r -> ofNullable(r.getLastScrollId())
-                    .ifPresent(c::clearSearchScroll))
-                .directTransform(collector);
+            if (seriesRequest.getFeatures().hasFeature(Feature.METADATA_LIVE_CURSOR)) {
+                request.scroll(SCROLL_TIME);
+                return scrollEntries(c, request, limit, converter)
+                    .onResolved(r ->
+                        ofNullable(r.getLastScrollId()).ifPresent(c::clearSearchScroll))
+                    .directTransform(collector);
+            } else {
+                return pageEntries(c, request, limit, converter)
+                    .directTransform(collector);
+            }
         });
     }
 
@@ -540,7 +548,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         return connection.doto(action);
     }
 
-    AsyncFuture<Void> start() {
+    private AsyncFuture<Void> start() {
         final AsyncFuture<Void> future = connection.start();
 
         if (!configure) {
@@ -550,11 +558,11 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         return future.lazyTransform(v -> configure());
     }
 
-    AsyncFuture<Void> stop() {
+    private AsyncFuture<Void> stop() {
         return connection.stop();
     }
 
-    Map.Entry<String, String> buildTag(String kv) {
+    private Map.Entry<String, String> buildTag(String kv) {
         final int index = kv.indexOf(TAG_DELIMITER);
 
         if (index == -1) {
@@ -566,7 +574,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         return Pair.of(tk, tv);
     }
 
-    static void buildContext(final XContentBuilder b, Series series) throws IOException {
+    private static void buildContext(final XContentBuilder b, Series series) throws IOException {
         b.field(KEY, series.getKey());
 
         b.startArray(TAGS);

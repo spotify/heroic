@@ -41,6 +41,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import org.elasticsearch.action.search.SearchRequest;
@@ -79,17 +80,44 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
                 async,
                 limit,
                 converter,
-                scrollId -> {
+                (scrollId, ignored) -> {
                     // Function<> that returns a Supplier
                     return () -> {
                         final ResolvableFuture<SearchResponse> future = async.future();
                         connection.searchScroll(scrollId, SCROLL_TIME, bind(future));
                         return future;
                     };
-                });
+                },
+                true
+            );
         final ResolvableFuture<SearchResponse> future = async.future();
         connection.execute(request, bind(future));
 
+        return future.lazyTransform(searchTransform);
+    }
+
+    protected <T> AsyncFuture<SearchTransformResult<T>> pageEntries(
+        final Connection connection,
+        final SearchRequest request,
+        final OptionalLimit limit,
+        final Function<SearchHit, T> converter
+    ) {
+        SearchTransform<T> searchTransform = new SearchTransform<>(
+            async,
+            limit,
+            converter,
+            (ignored, lastHit) -> () -> {
+                final ResolvableFuture<SearchResponse> future = async.future();
+                request.source().searchAfter(lastHit.getSortValues());
+
+                connection.execute(request, bind(future));
+                return future;
+            },
+            false
+        );
+
+        ResolvableFuture<SearchResponse> future = async.future();
+        connection.execute(request, bind(future));
         return future.lazyTransform(searchTransform);
     }
 
@@ -103,18 +131,22 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
         int duplicates = 0;
         final Set<T> results = new HashSet<>();
         final Function<SearchHit, T> converter;
-        final Function<String, Supplier<AsyncFuture<SearchResponse>>> searchFactory;
+        final BiFunction<String, SearchHit, Supplier<AsyncFuture<SearchResponse>>> searchFactory;
+        final Boolean scrolling;
 
         public SearchTransform(
             final AsyncFramework async,
             final OptionalLimit limit,
             final Function<SearchHit, T> converter,
-            final Function<String, Supplier<AsyncFuture<SearchResponse>>> searchFactory
+            final BiFunction<String, SearchHit, Supplier<AsyncFuture<SearchResponse>>>
+                searchFactory,
+            final Boolean scrolling
         ) {
             this.async = async;
             this.limit = limit;
             this.converter = converter;
             this.searchFactory = searchFactory;
+            this.scrolling = scrolling;
         }
 
         @Override
@@ -122,7 +154,9 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
             final SearchHit[] hits = response.getHits().getHits();
             final String scrollId = response.getScrollId();
 
+            SearchHit lastHit = null;
             for (final SearchHit hit : hits) {
+
                 final T convertedHit = converter.apply(hit);
 
                 if (!results.add(convertedHit)) {
@@ -136,19 +170,22 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
                     return async.resolved(
                         new SearchTransformResult<>(limit.limitSet(results), true, scrollId));
                 }
+
+                lastHit = hit;
             }
 
             if (hits.length == 0) {
                 return async.resolved(new SearchTransformResult<>(results, false, scrollId));
             }
 
-            if (scrollId == null) {
+            if (scrolling && scrollId == null) {
                 return async.resolved(SearchTransformResult.of());
             }
 
             // Fetch the next page in the scrolling search. The result will be handled by a new call
             // to this method.
-            final Supplier<AsyncFuture<SearchResponse>> scroller = searchFactory.apply(scrollId);
+            final Supplier<AsyncFuture<SearchResponse>> scroller =
+                searchFactory.apply(scrollId, lastHit);
             return scroller.get().lazyTransform(this);
         }
     }

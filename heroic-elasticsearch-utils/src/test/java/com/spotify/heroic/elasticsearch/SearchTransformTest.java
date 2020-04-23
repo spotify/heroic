@@ -1,3 +1,24 @@
+/*
+ * Copyright (c) 2015 Spotify AB.
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package com.spotify.heroic.elasticsearch;
 
 import static org.mockito.Mockito.any;
@@ -16,6 +37,7 @@ import eu.toolchain.async.LazyTransform;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -26,7 +48,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mockito.stubbing.OngoingStubbing;
 
@@ -44,7 +65,7 @@ public class SearchTransformTest {
     Supplier<AsyncFuture<SearchResponse>> scroller;
 
     @Mock
-    Function<String, Supplier<AsyncFuture<SearchResponse>>> scrollerFactory;
+    BiFunction<String, SearchHit, Supplier<AsyncFuture<SearchResponse>>> scrollerFactory;
 
     @Mock
     AsyncFuture<SearchResponse> response;
@@ -65,23 +86,20 @@ public class SearchTransformTest {
 
     private final SearchHit[] emptySearchHits = {};
 
+    @SuppressWarnings("unchecked")
     @Before
     public void setup() {
         doReturn(resolved).when(async).resolved(any(SearchTransformResult.class));
         doReturn(searchHits).when(searchResponse).getHits();
         doReturn(scrollID).when(searchResponse).getScrollId();
 
-        doReturn(scroller).when(scrollerFactory).apply(any(String.class));
+        doReturn(scroller).when(scrollerFactory).apply(any(String.class), any(SearchHit.class));
         doReturn(response).when(scroller).get();
-        doAnswer(new Answer<AsyncFuture<SearchTransformResult<Integer>>>() {
-            public AsyncFuture<SearchTransformResult<Integer>> answer(
-                InvocationOnMock invocation
-            ) throws Exception {
-                final LazyTransform<SearchResponse, SearchTransformResult<Integer>> transform =
-                    (LazyTransform<SearchResponse, SearchTransformResult<Integer>>) invocation.getArguments
-                        ()[0];
-                return transform.transform(searchResponse);
-            }
+        doAnswer((Answer<AsyncFuture<SearchTransformResult<Integer>>>) invocation -> {
+            final LazyTransform<SearchResponse, SearchTransformResult<Integer>> transform =
+                (LazyTransform<SearchResponse, SearchTransformResult<Integer>>)
+                    invocation.getArguments()[0];
+            return transform.transform(searchResponse);
         }).when(response).lazyTransform(any(LazyTransform.class));
     }
 
@@ -93,11 +111,10 @@ public class SearchTransformTest {
         }
     }
 
-    public SearchTransform<SearchHit> createScrollTransform(
-        Integer limit
-    ) {
+    public SearchTransform<SearchHit> createScrollTransform(Integer limit) {
         final OptionalLimit optionalLimit = OptionalLimit.of(limit);
-        return new SearchTransform<>(async, optionalLimit, Function.identity(), scrollerFactory);
+        return new SearchTransform<>(
+            async, optionalLimit, Function.identity(), scrollerFactory, true);
     }
 
     public SearchTransformResult<SearchHit> createLimitSet(Integer limit, SearchHit[]... pages) {
@@ -110,13 +127,13 @@ public class SearchTransformTest {
             stream = stream.limit(limit);
         }
 
-        stream.map(Function.identity()).forEach(set::add);
+        stream.forEach(set::add);
 
         return new SearchTransformResult<>(set, limit != null, scrollID);
     }
 
     @Test
-    public void aboveLimit() throws Exception {
+    public void aboveLimit() {
         setSearchHitPages(searchHits1, emptySearchHits);
         final Integer limit = searchHits1.length - 1;
 
@@ -129,7 +146,7 @@ public class SearchTransformTest {
     }
 
     @Test
-    public void aboveLimitWithDuplicates() throws Exception {
+    public void aboveLimitWithDuplicates() {
         setSearchHitPages(searchHits1, searchHits1, searchHits2, emptySearchHits);
         final Integer limit = searchHits1.length + searchHits2.length - 1;
 
@@ -142,7 +159,7 @@ public class SearchTransformTest {
     }
 
     @Test
-    public void belowLimit() throws Exception {
+    public void belowLimit() {
         setSearchHitPages(searchHits1, emptySearchHits);
         final Integer limit = searchHits1.length;
 
@@ -155,7 +172,7 @@ public class SearchTransformTest {
     }
 
     @Test
-    public void belowLimitWithDuplicates() throws Exception {
+    public void belowLimitWithDuplicates() {
         setSearchHitPages(searchHits1, searchHits1, searchHits2, emptySearchHits);
         final Integer limit = searchHits1.length + searchHits2.length;
 

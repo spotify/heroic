@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.metadata.elasticsearch;
 
+import com.spotify.heroic.common.Feature;
+import com.spotify.heroic.common.FeatureSet;
 import com.spotify.heroic.elasticsearch.ClientWrapper;
 import com.spotify.heroic.elasticsearch.ConnectionModule;
 import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
@@ -39,10 +41,10 @@ public abstract class AbstractMetadataBackendKVIT extends AbstractMetadataBacken
 
     @Override
     protected void setupConditions() {
-        super.setupConditions();
-
         // TODO: support findTags?
         findTagsSupport = false;
+
+        additionalFeatures = FeatureSet.of(Feature.METADATA_LIVE_CURSOR);
     }
 
     @Override

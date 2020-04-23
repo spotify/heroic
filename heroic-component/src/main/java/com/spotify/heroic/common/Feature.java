@@ -77,7 +77,7 @@ public enum Feature {
     /**
      * When paginating metadata results, use a live cursor instead of a snapshot scroll.
      */
-    METADATA_LIVE_CURSOR("com.spotify.heroic.metadata.live_CURSOR");
+    METADATA_LIVE_CURSOR("com.spotify.heroic.metadata.live_cursor");
 
     private final String id;
 
