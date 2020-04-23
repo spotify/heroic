@@ -319,7 +319,7 @@ public class PubSubConsumerModule implements ConsumerModule {
             @JsonProperty("maxOutstandingRequestBytes") Optional<Long> maxOutstandingRequestBytes,
             @JsonProperty("maxInboundMessageSize") Optional<Integer> maxInboundMessageSize,
             @JsonProperty("keepAlive") Optional<Long> keepAlive,
-            @JsonProperty("host") Optional<String> endpoint
+            @JsonProperty("endpoint") Optional<String> endpoint
         ) {
             this.id = id;
             this.threads = threads;
