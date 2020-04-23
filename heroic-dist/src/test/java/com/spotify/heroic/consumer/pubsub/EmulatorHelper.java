@@ -38,28 +38,28 @@ import java.io.IOException;
 public class EmulatorHelper {
     private static CredentialsProvider credentialsProvider = NoCredentialsProvider.create();
 
-    public static String hostPort() {
-        return System.getenv("PUBSUB_EMULATOR_HOST");
-    }
-
-    private static TransportChannelProvider channelProvider() {
-        ManagedChannel channel = ManagedChannelBuilder.forTarget(hostPort()).usePlaintext().build();
+    private static TransportChannelProvider channelProvider(String endpoint) {
+        ManagedChannel channel = ManagedChannelBuilder.forTarget(endpoint).usePlaintext().build();
         return FixedTransportChannelProvider.create(GrpcTransportChannel.create(channel));
     }
 
-    public static Publisher publisher(String projectId, String topicId) throws IOException {
+    public static Publisher publisher(
+        String projectId, String topicId, String endpoint
+    ) throws IOException {
         ProjectTopicName topicName = ProjectTopicName.of(projectId, topicId);
 
         return Publisher.newBuilder(topicName)
-            .setChannelProvider(channelProvider())
+            .setChannelProvider(channelProvider(endpoint))
             .setCredentialsProvider(credentialsProvider)
             .build();
     }
 
-    public static void deleteSubscription(String projectId, String subscriptionId) throws IOException {
+    public static void deleteSubscription(
+        String projectId, String subscriptionId, String endpoint
+    ) throws IOException {
         SubscriptionAdminClient subscriptionAdminClient = SubscriptionAdminClient.create(
             SubscriptionAdminSettings.newBuilder()
-                .setTransportChannelProvider(channelProvider())
+                .setTransportChannelProvider(channelProvider(endpoint))
                 .setCredentialsProvider(credentialsProvider)
                 .build()
         );
