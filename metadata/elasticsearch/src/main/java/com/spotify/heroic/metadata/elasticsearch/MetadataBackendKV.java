@@ -154,7 +154,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         @Named("deleteParallelism") int deleteParallelism,
         @Named("scrollSize") int scrollSize
     ) {
-        super(async, METADATA_TYPE);
+        super(async, METADATA_TYPE, reporter);
         this.groups = groups;
         this.reporter = reporter;
         this.async = async;

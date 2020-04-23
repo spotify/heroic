@@ -57,6 +57,7 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
     private final Counter entries;
     private final Counter writesDroppedByCacheHit;
     private final Counter writesDroppedByDuplicate;
+    private final Counter failedShards;
 
 
     public SemanticMetadataBackendReporter(SemanticMetricRegistry registry) {
@@ -74,10 +75,11 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
             base.tagged("what", "delete-series", "unit", Units.QUERY));
         findKeys = new SemanticFutureReporter(registry,
             base.tagged("what", "find-keys", "unit", Units.QUERY));
-        write =
-            new SemanticFutureReporter(registry, base.tagged("what", "write", "unit", Units.WRITE));
+        write = new SemanticFutureReporter(registry,
+            base.tagged("what", "write", "unit", Units.WRITE));
         backendWrite = new SemanticFutureReporter(registry,
             base.tagged("what", "backend-write", "unit", Units.WRITE));
+
         entries = registry.counter(base.tagged("what", "entries", "unit", Units.COUNT));
 
         writesDroppedByCacheHit = registry.counter(
@@ -85,6 +87,9 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
         writesDroppedByDuplicate = registry.counter(
             base.tagged("what", "writes-dropped-by-duplicate", "unit", Units.COUNT));
 
+        // only relevant to es backend.
+        failedShards = registry.counter(
+            base.tagged("what", "failed-es-shards", "unit", Units.COUNT));
     }
 
     @Override
@@ -103,6 +108,12 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
     public void reportWriteDroppedByCacheHit() {
         writesDroppedByCacheHit.inc();
     }
+
+    @Override
+    public void failedShards(final long errors) {
+        failedShards.inc(errors);
+    }
+
 
     @Override
     public void reportWriteDroppedByDuplicate() {

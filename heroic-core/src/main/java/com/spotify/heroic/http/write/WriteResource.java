@@ -57,7 +57,8 @@ public class WriteResource {
 
     @POST
     public void metrics(
-        @Suspended final AsyncResponse response, @QueryParam("group") String group,
+        @Suspended final AsyncResponse response,
+        @QueryParam("group") String group,
         WriteMetricRequest write
     ) {
         final IngestionGroup ingestionGroup = ingestion.useGroup(group);

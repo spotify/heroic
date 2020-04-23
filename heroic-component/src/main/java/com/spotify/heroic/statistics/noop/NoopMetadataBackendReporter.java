@@ -45,6 +45,9 @@ public class NoopMetadataBackendReporter implements MetadataBackendReporter {
     }
 
     @Override
+    public void failedShards(final long errors) { }
+
+    @Override
     public FutureReporter.Context setupBackendWriteReporter() {
         return NoopFutureReporterContext.get();
     }
