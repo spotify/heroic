@@ -460,13 +460,13 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
             modifier.accept(request);
 
             if (seriesRequest.getFeatures().hasFeature(Feature.METADATA_LIVE_CURSOR)) {
+                return pageEntries(c, request, limit, converter)
+                    .directTransform(collector);
+            } else {
                 request.scroll(SCROLL_TIME);
                 return scrollEntries(c, request, limit, converter)
                     .onResolved(r ->
                         ofNullable(r.getLastScrollId()).ifPresent(c::clearSearchScroll))
-                    .directTransform(collector);
-            } else {
-                return pageEntries(c, request, limit, converter)
                     .directTransform(collector);
             }
         });

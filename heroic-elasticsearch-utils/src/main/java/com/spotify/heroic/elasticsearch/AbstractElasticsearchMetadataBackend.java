@@ -51,8 +51,9 @@ import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.search.SearchHit;
 
-public abstract class AbstractElasticsearchMetadataBackend extends AbstractElasticsearchBackend
-    implements MetadataBackend {
+public abstract class AbstractElasticsearchMetadataBackend
+    extends AbstractElasticsearchBackend implements MetadataBackend {
+
     private static final TimeValue SCROLL_TIME = TimeValue.timeValueSeconds(5);
 
     private final String type;
@@ -131,7 +132,8 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
         int duplicates = 0;
         final Set<T> results = new HashSet<>();
         final Function<SearchHit, T> converter;
-        final BiFunction<String, SearchHit, Supplier<AsyncFuture<SearchResponse>>> searchFactory;
+        final BiFunction<String, SearchHit,
+            Supplier<AsyncFuture<SearchResponse>>> searchFactory;
         final Boolean scrolling;
 
         public SearchTransform(
