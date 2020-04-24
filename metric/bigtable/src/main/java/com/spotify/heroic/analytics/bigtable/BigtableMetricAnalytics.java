@@ -90,12 +90,12 @@ public class BigtableMetricAnalytics implements MetricAnalytics, LifeCycles {
     @Override
     public AsyncFuture<Void> configure() {
         return connection.doto(c -> async.call(() -> {
-            final Table table = c.tableAdminClient().getTable(hitsTableName).orElseGet(() -> {
-                return c.tableAdminClient().createTable(hitsTableName);
+            final Table table = c.getTableAdminClient().getTable(hitsTableName).orElseGet(() -> {
+                return c.getTableAdminClient().createTable(hitsTableName);
             });
 
             table.getColumnFamily(hitsColumnFamily).orElseGet(() -> {
-                return c.tableAdminClient().createColumnFamily(table, hitsColumnFamily);
+                return c.getTableAdminClient().createColumnFamily(table, hitsColumnFamily);
             });
 
             return null;
@@ -123,7 +123,7 @@ public class BigtableMetricAnalytics implements MetricAnalytics, LifeCycles {
         final RowRange range = new RowRange(Optional.of(start), Optional.of(end));
 
         return c
-            .dataClient()
+            .getDataClient()
             .readRowsObserved(hitsTableName, ReadRowsRequest.builder().range(range).build())
             .transform(row -> {
                 final ByteString rowKey = row.getKey();
@@ -162,7 +162,7 @@ public class BigtableMetricAnalytics implements MetricAnalytics, LifeCycles {
                 mapper::writeValueAsString);
 
             final AsyncFuture<Row> request = c
-                .dataClient()
+                .getDataClient()
                 .readModifyWriteRow(hitsTableName, key, ReadModifyWriteRules
                     .builder()
                     .increment(hitsColumnFamily, ByteString.EMPTY, 1L)

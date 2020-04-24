@@ -26,7 +26,6 @@ import com.google.cloud.bigtable.config.BulkOptions;
 import com.google.cloud.bigtable.config.CredentialOptions;
 import com.google.cloud.bigtable.config.RetryOptions;
 import com.google.cloud.bigtable.grpc.BigtableSession;
-import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.metric.bigtable.api.BigtableDataClient;
 import com.spotify.heroic.metric.bigtable.api.BigtableDataClientImpl;
 import com.spotify.heroic.metric.bigtable.api.BigtableMutator;
@@ -34,10 +33,10 @@ import com.spotify.heroic.metric.bigtable.api.BigtableMutatorImpl;
 import com.spotify.heroic.metric.bigtable.api.BigtableTableAdminClient;
 import com.spotify.heroic.metric.bigtable.api.BigtableTableTableAdminClientImpl;
 import eu.toolchain.async.AsyncFramework;
-import eu.toolchain.async.AsyncFuture;
 import io.grpc.Status;
 import java.util.Optional;
 import java.util.concurrent.Callable;
+import javax.annotation.Nullable;
 
 public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
     private static final String USER_AGENT = "heroic";
@@ -52,18 +51,22 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
     private final boolean disableBulkMutations;
     private final int flushIntervalSeconds;
     private final Optional<Integer> batchSize;
+    private final String emulatorEndpoint;
 
-    @java.beans.ConstructorProperties({ "project", "instance", "credentials", "async",
-                                        "disableBulkMutations", "flushIntervalSeconds",
-                                        "batchSize" })
-    public BigtableConnectionBuilder(final String project, final String instance,
-                                     final CredentialsBuilder credentials,
-                                     final AsyncFramework async, final boolean disableBulkMutations,
-                                     final int flushIntervalSeconds,
-                                     final Optional<Integer> batchSize) {
+    public BigtableConnectionBuilder(
+        final String project,
+        final String instance,
+        final CredentialsBuilder credentials,
+        @Nullable final String emulatorEndpoint,
+        final AsyncFramework async,
+        final boolean disableBulkMutations,
+        final int flushIntervalSeconds,
+        final Optional<Integer> batchSize
+    ) {
         this.project = project;
         this.instance = instance;
         this.credentials = credentials;
+        this.emulatorEndpoint = emulatorEndpoint;
         this.async = async;
         this.disableBulkMutations = disableBulkMutations;
         this.flushIntervalSeconds = flushIntervalSeconds;
@@ -74,31 +77,33 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
     public BigtableConnection call() throws Exception {
         final CredentialOptions credentials = this.credentials.build();
 
-        final RetryOptions retryOptions = new RetryOptions.Builder()
+        final RetryOptions retryOptions = RetryOptions.builder()
             .addStatusToRetryOn(Status.Code.UNKNOWN)
             .addStatusToRetryOn(Status.Code.UNAVAILABLE)
             .setAllowRetriesWithoutTimestamp(true)
             .build();
 
         final BulkOptions bulkOptions = batchSize
-            .map(integer -> new BulkOptions.Builder().setBulkMaxRowKeyCount(integer).build())
-            .orElseGet(() -> new BulkOptions.Builder().build());
+            .map(integer ->  BulkOptions.builder().setBulkMaxRowKeyCount(integer).build())
+            .orElseGet(() -> BulkOptions.builder().build());
 
-        final BigtableOptions options = new BigtableOptions.Builder()
+        BigtableOptions.Builder builder = BigtableOptions.builder()
             .setProjectId(project)
             .setInstanceId(instance)
             .setUserAgent(USER_AGENT)
             .setDataChannelCount(64)
             .setCredentialOptions(credentials)
             .setRetryOptions(retryOptions)
-            .setBulkOptions(bulkOptions)
-            .build();
+            .setBulkOptions(bulkOptions);
 
-        final BigtableSession session = new BigtableSession(options);
+        if (emulatorEndpoint != null) {
+            builder.enableEmulator(emulatorEndpoint);
+        }
+
+        final BigtableSession session = new BigtableSession(builder.build());
 
         final BigtableTableAdminClient adminClient =
-            new BigtableTableTableAdminClientImpl(async, session.getTableAdminClient(), project,
-                instance);
+            new BigtableTableTableAdminClientImpl(session.getTableAdminClient(), project, instance);
 
         final BigtableMutator mutator =
             new BigtableMutatorImpl(async, session, disableBulkMutations, flushIntervalSeconds);
@@ -106,64 +111,12 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
         final BigtableDataClient client =
             new BigtableDataClientImpl(async, session, mutator, project, instance);
 
-        return new GrpcBigtableConnection(async, project, instance, session, mutator, adminClient,
+        return new BigtableConnection(async, project, instance, session, mutator, adminClient,
             client);
     }
 
     public String toString() {
         return "BigtableConnectionBuilder(project=" + this.project + ", instance=" + this.instance
                + ", credentials=" + this.credentials + ")";
-    }
-
-    public static class GrpcBigtableConnection implements BigtableConnection {
-        private final AsyncFramework async;
-        private final String project;
-        private final String instance;
-
-        final BigtableSession session;
-        final BigtableMutator mutator;
-        final BigtableTableAdminClient tableAdminClient;
-        final BigtableDataClient dataClient;
-
-        @java.beans.ConstructorProperties({ "async", "project", "instance", "session", "mutator",
-                                            "tableAdminClient", "dataClient" })
-        public GrpcBigtableConnection(final AsyncFramework async, final String project,
-                                      final String instance, final BigtableSession session,
-                                      final BigtableMutator mutator,
-                                      final BigtableTableAdminClient tableAdminClient,
-                                      final BigtableDataClient dataClient) {
-            this.async = async;
-            this.project = project;
-            this.instance = instance;
-            this.session = session;
-            this.mutator = mutator;
-            this.tableAdminClient = tableAdminClient;
-            this.dataClient = dataClient;
-        }
-
-        @Override
-        public BigtableTableAdminClient tableAdminClient() {
-            return tableAdminClient;
-        }
-
-        @Override
-        public BigtableDataClient dataClient() {
-            return dataClient;
-        }
-
-        @Override
-        public AsyncFuture<Void> close() {
-            final AsyncFuture<Void> closeSession = async.call(() -> {
-                session.close();
-                return null;
-            });
-
-            return async.collectAndDiscard(ImmutableList.of(mutator.close(), closeSession));
-        }
-
-        public String toString() {
-            return "BigtableConnectionBuilder.GrpcBigtableConnection(project=" + this.project
-                   + ", instance=" + this.instance + ")";
-        }
     }
 }

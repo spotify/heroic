@@ -160,7 +160,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
     @Override
     public AsyncFuture<Void> configure() {
-        return connection.doto(c -> configureMetricsTable(c.tableAdminClient()));
+        return connection.doto(c -> configureMetricsTable(c.getTableAdminClient()));
     }
 
     private AsyncFuture<Void> configureMetricsTable(final BigtableTableAdminClient admin) {
@@ -244,7 +244,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             final Series series = request.getSeries();
             final List<AsyncFuture<WriteMetric>> results = new ArrayList<>();
 
-            final BigtableDataClient client = c.dataClient();
+            final BigtableDataClient client = c.getDataClient();
 
             final MetricCollection g = request.getData();
             results.add(writeTyped(series, client, g, parentSpan));
@@ -432,7 +432,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         final Consumer<MetricReadResult> metricsConsumer,
         final Span parentSpan
     ) {
-        final BigtableDataClient client = c.dataClient();
+        final BigtableDataClient client = c.getDataClient();
 
         final Span fetchBatchSpan =
             tracer.spanBuilderWithExplicitParent("bigtable.fetchBatch", parentSpan).startSpan();

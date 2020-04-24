@@ -21,14 +21,61 @@
 
 package com.spotify.heroic.metric.bigtable;
 
+import com.google.cloud.bigtable.grpc.BigtableSession;
+import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.metric.bigtable.api.BigtableDataClient;
+import com.spotify.heroic.metric.bigtable.api.BigtableMutator;
 import com.spotify.heroic.metric.bigtable.api.BigtableTableAdminClient;
+import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 
-public interface BigtableConnection {
-    BigtableTableAdminClient tableAdminClient();
+public class BigtableConnection {
+    private final AsyncFramework async;
+    private final String project;
+    private final String instance;
 
-    BigtableDataClient dataClient();
+    private final BigtableSession session;
+    private final BigtableMutator mutator;
+    private final BigtableTableAdminClient tableAdminClient;
+    private final BigtableDataClient dataClient;
 
-    AsyncFuture<Void> close();
+    BigtableConnection(
+        final AsyncFramework async,
+        final String project,
+        final String instance,
+        final BigtableSession session,
+        final BigtableMutator mutator,
+        final BigtableTableAdminClient tableAdminClient,
+        final BigtableDataClient dataClient
+    ) {
+        this.async = async;
+        this.project = project;
+        this.instance = instance;
+        this.session = session;
+        this.mutator = mutator;
+        this.tableAdminClient = tableAdminClient;
+        this.dataClient = dataClient;
+    }
+
+    public BigtableTableAdminClient getTableAdminClient() {
+        return tableAdminClient;
+    }
+
+    public BigtableDataClient getDataClient() {
+        return dataClient;
+    }
+
+    public AsyncFuture<Void> close() {
+        final AsyncFuture<Void> closeSession = async.call(() -> {
+            session.close();
+            return null;
+        });
+
+        return async.collectAndDiscard(ImmutableList.of(mutator.close(), closeSession));
+    }
+
+    public String toString() {
+        return "BigtableConnectionBuilder.GrpcBigtableConnection(project=" + this.project
+               + ", instance=" + this.instance + ")";
+    }
 }

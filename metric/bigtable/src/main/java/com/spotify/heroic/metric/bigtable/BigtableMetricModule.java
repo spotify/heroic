@@ -34,10 +34,8 @@ import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
 import com.spotify.heroic.metric.MetricModule;
-import com.spotify.heroic.metric.bigtable.api.FakeBigtableConnection;
 import com.spotify.heroic.metric.bigtable.credentials.DefaultCredentialsBuilder;
 import dagger.Component;
-import dagger.Lazy;
 import dagger.Module;
 import dagger.Provides;
 import eu.toolchain.async.AsyncFramework;
@@ -58,7 +56,6 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
     private static final boolean DEFAULT_CONFIGURE = false;
     private static final boolean DEFAULT_DISABLE_BULK_MUTATIONS = false;
     private static final int DEFAULT_FLUSH_INTERVAL_SECONDS = 2;
-    private static final boolean DEFAULT_FAKE = false;
 
     private final Optional<String> id;
     private final Groups groups;
@@ -70,7 +67,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
     private final boolean disableBulkMutations;
     private final int flushIntervalSeconds;
     private final Optional<Integer> batchSize;
-    private final boolean fake;
+    private final String emulatorEndpoint;
 
     @JsonCreator
     public BigtableMetricModule(
@@ -84,7 +81,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         @JsonProperty("disableBulkMutations") Optional<Boolean> disableBulkMutations,
         @JsonProperty("flushIntervalSeconds") Optional<Integer> flushIntervalSeconds,
         @JsonProperty("batchSize") Optional<Integer> batchSize,
-        @JsonProperty("fake") Optional<Boolean> fake
+        @JsonProperty("emulatorEndpoint") Optional<String> emulatorEndpoint
     ) {
         this.id = id;
         this.groups = groups.orElseGet(Groups::empty).or(DEFAULT_GROUP);
@@ -96,7 +93,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         this.disableBulkMutations = disableBulkMutations.orElse(DEFAULT_DISABLE_BULK_MUTATIONS);
         this.flushIntervalSeconds = flushIntervalSeconds.orElse(DEFAULT_FLUSH_INTERVAL_SECONDS);
         this.batchSize = batchSize;
-        this.fake = fake.orElse(DEFAULT_FAKE);
+        this.emulatorEndpoint = emulatorEndpoint.orElse(null);
     }
 
     @Override
@@ -123,34 +120,18 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
     class M {
         @Provides
         @BigtableScope
-        public Managed<BigtableConnection> connection(
-            final AsyncFramework async, final Lazy<FakeBigtableConnection> fakeBigtableConnection
-        ) {
-            if (fake) {
-                return async.managed(new ManagedSetup<BigtableConnection>() {
-                    @Override
-                    public AsyncFuture<BigtableConnection> construct() throws Exception {
-                        return async.resolved(fakeBigtableConnection.get());
-                    }
-
-                    @Override
-                    public AsyncFuture<Void> destruct(final BigtableConnection value)
-                        throws Exception {
-                        return value.close();
-                    }
-                });
-            }
-
-            return async.managed(new ManagedSetup<BigtableConnection>() {
+        public Managed<BigtableConnection> connection(final AsyncFramework async) {
+            return async.managed(new ManagedSetup<>() {
                 @Override
-                public AsyncFuture<BigtableConnection> construct() throws Exception {
+                public AsyncFuture<BigtableConnection> construct() {
                     return async.call(
-                        new BigtableConnectionBuilder(project, instance, credentials, async,
-                            disableBulkMutations, flushIntervalSeconds, batchSize));
+                        new BigtableConnectionBuilder(
+                            project, instance, credentials, emulatorEndpoint,
+                            async, disableBulkMutations, flushIntervalSeconds, batchSize));
                 }
 
                 @Override
-                public AsyncFuture<Void> destruct(final BigtableConnection value) throws Exception {
+                public AsyncFuture<Void> destruct(final BigtableConnection value) {
                     return async.call(() -> {
                         value.close();
                         return null;
@@ -213,7 +194,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         private Optional<Boolean> disableBulkMutations = empty();
         private Optional<Integer> flushIntervalSeconds = empty();
         private Optional<Integer> batchSize = empty();
-        private Optional<Boolean> fake = empty();
+        private Optional<String> emulatorEndpoint = empty();
 
         public Builder id(String id) {
             this.id = of(id);
@@ -265,14 +246,14 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
             return this;
         }
 
-        public Builder fake(final boolean fake) {
-            this.fake = of(fake);
+        public Builder emulatorEndpoint(final String emulatorEndpoint) {
+            this.emulatorEndpoint = of(emulatorEndpoint);
             return this;
         }
 
         public BigtableMetricModule build() {
             return new BigtableMetricModule(id, groups, project, instance, table, credentials,
-                configure, disableBulkMutations, flushIntervalSeconds, batchSize, fake);
+                configure, disableBulkMutations, flushIntervalSeconds, batchSize, emulatorEndpoint);
         }
     }
 }

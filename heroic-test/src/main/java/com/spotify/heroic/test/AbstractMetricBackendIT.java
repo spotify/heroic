@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.test;
 
-import static com.spotify.heroic.test.Data.points;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeTrue;
 
@@ -137,12 +136,11 @@ public abstract class AbstractMetricBackendIT {
 
     @Test
     public void testInterval() throws Exception {
-        newCase()
+        new TestCase()
             .input(99L, 100L, 101L, 199L, 200L, 201L)
             .expect(101L, 199L, 200L)
-            .forEach((input, expected) -> {
-                verifyReadWrite(input, expected, new DateRange(100L, 200L));
-            });
+            .forEach((input, expected) ->
+                verifyReadWrite(input, expected, new DateRange(100L, 200L)));
     }
 
     /**
@@ -150,9 +148,11 @@ public abstract class AbstractMetricBackendIT {
      */
     @Test
     public void testOne() throws Exception {
-        newCase().input(100L).expect(100L).forEach((input, expected) -> {
-            verifyReadWrite(input, expected, new DateRange(99L, 100L));
-        });
+        new TestCase()
+            .input(100L)
+            .expect(100L)
+            .forEach((input, expected) ->
+                verifyReadWrite(input, expected, new DateRange(99L, 100L)));
     }
 
     /**
@@ -165,10 +165,12 @@ public abstract class AbstractMetricBackendIT {
     public void testMaxBatchSize() throws Exception {
         assumeTrue("max batch size", maxBatchSize.isPresent());
         final int maxBatchSize = this.maxBatchSize.get();
+        DateRange range = new DateRange(99L, 100L + (maxBatchSize * 4));
 
-        newCase().denseStart(100).dense(maxBatchSize * 4).forEach((input, expected) -> {
-            verifyReadWrite(input, expected, new DateRange(99L, 100L + (maxBatchSize * 4)));
-        });
+        new TestCase()
+            .denseStart(100)
+            .dense(maxBatchSize * 4)
+            .forEach((input, expected) -> verifyReadWrite(input, expected, range));
     }
 
     /**
@@ -186,7 +188,7 @@ public abstract class AbstractMetricBackendIT {
         final long count = 5;
         final long period = maybePeriod.get();
 
-        final Points points = points();
+        final Points points = new Points();
 
         // seed data just at the edges of the period
         for (int i = 1; i < count; i++) {
@@ -213,13 +215,10 @@ public abstract class AbstractMetricBackendIT {
 
         final List<MetricReadResult> data = Collections.synchronizedList(new ArrayList<>());
 
-        backend
-            .fetch(new FetchData.
-                    Request(expected.getType(), s1, range, QueryOptions.builder().build()),
-                FetchQuotaWatcher.NO_QUOTA,
-                data::add,
-                BlankSpan.INSTANCE)
-            .get();
+        FetchData.Request request =
+            new FetchData.Request(expected.getType(), s1, range, QueryOptions.builder().build());
+
+        backend.fetch(request, FetchQuotaWatcher.NO_QUOTA, data::add, BlankSpan.INSTANCE).get();
 
         final Set<MetricCollection> found =
             data.stream().map(MetricReadResult::getMetrics).collect(Collectors.toSet());
@@ -242,10 +241,6 @@ public abstract class AbstractMetricBackendIT {
             actual.stream().flatMap(mc -> mc.data().stream()).collect(Collectors.toList()));
 
         assertEquals(metricsExpected, metricsActual);
-    }
-
-    private TestCase newCase() {
-        return new TestCase();
     }
 
     private class TestCase {
@@ -284,8 +279,8 @@ public abstract class AbstractMetricBackendIT {
             throws Exception {
             // test for points
             {
-                final Points input = points();
-                final Points expected = points();
+                final Points input = new Points();
+                final Points expected = new Points();
 
                 inputStream().forEach(t -> input.p(t, 42D));
                 expectedStream().forEach(t -> expected.p(t, 42D));
@@ -324,7 +319,7 @@ public abstract class AbstractMetricBackendIT {
 
     @Test
     public void testWriteAndFetchOne() throws Exception {
-        final MetricCollection points = Data.points().p(100000L, 42D).build();
+        final MetricCollection points = new Points().p(100000L, 42D).build();
         backend.write(new WriteMetric.Request(s1, points)).get();
 
         FetchData.Request request =
@@ -338,7 +333,7 @@ public abstract class AbstractMetricBackendIT {
     public void testWriteAndFetchMultipleFetches() throws Exception {
         int fetchSize = 20;
 
-        Points points = Data.points();
+        Points points = new Points();
         for (int i = 0; i < 10 * fetchSize; i++) {
             points.p(100000L + i, 42D);
         }
@@ -357,7 +352,7 @@ public abstract class AbstractMetricBackendIT {
     public void testWriteAndFetchLongSeries() throws Exception {
         Random random = new Random(1);
 
-        Points points = Data.points();
+        Points points = new Points();
 
         long timestamp = 1;
         long maxTimestamp = 1000000000000L;
