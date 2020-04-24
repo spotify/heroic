@@ -136,45 +136,14 @@ pull request, otherwise it will be rejected by Travis.
 
 #### Remote Integration Tests
 
-Integration tests are configured to run remotely depending on a set of system
+Integration tests are configured to run remotely for Datastax depending on a set of system
 properties.
-
-##### Elasticsearch
-
-| Property | Description |
-|----------|-------------|
-| `-D elasticsearch.version=<version>` | Use the given client version when building the project |
-| `-D it.elasticsearch.remote=true` | Run Elasticsearch tests against a remote database |
-| `-D it.elasticsearch.seed=<seed>` | Use the given seed (default: `localhost`) |
-| `-D it.elasticsearch.clusterName=<clusterName>` | Use the given cluster name (default: `elasticsearch`) |
-
-##### Datastax
 
 | Property | Description |
 |----------|-------------|
 | `-D datastax.version=<version>` | Use the given client version when building the project |
 | `-D it.datastax.remote=true` | Run Datastax tests against a remote database |
 | `-D it.datastax.seed=<seed>` | Use the given seed (default: `localhost`) |
-
-##### Bigtable
-
-| Property | Description |
-|----------|-------------|
-| `-D bigtable.version=<version>` | Use the given client version when building the project |
-| `-D it.bigtable.remote=true` | Run Bigtable tests against a remote database  |
-| `-D it.bigtable.project=<project>` | Use the given project |
-| `-D it.bigtable.zone=<zone>` | Use the given zone |
-| `-D it.bigtable.instance=<instance>` | Use the given instance |
-| `-D it.bigtable.credentials=<credentials>` | Use the given credentials file |
-
-The following is an example Elasticsearch remote integration test:
-
-```
-$> mvn -P integration-tests \
-    -D elasticsearch.version=5.6.0 \
-    -D it.elasticsearch.remote=true \
-    clean verify
-```
 
 #### Full Cluster Tests
 
