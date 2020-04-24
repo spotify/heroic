@@ -48,9 +48,16 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import net.jcip.annotations.NotThreadSafe;
 import org.junit.After;
+import org.junit.Rule;
+import org.testcontainers.containers.GenericContainer;
 
 @NotThreadSafe
 public class PubSubConsumerIT extends AbstractConsumerIT {
+    @Rule
+    public GenericContainer container = new GenericContainer("bigtruedata/gcloud-pubsub-emulator")
+        .withExposedPorts(8085)
+        .withCommand("start", "--host-port", "0.0.0.0:8085");
+
     private final String topic = "topic1";
     private final String subscription = "sub1";
     private final String project = "heroic-it-1";
@@ -59,15 +66,17 @@ public class PubSubConsumerIT extends AbstractConsumerIT {
     private OperationsLogImpl opLog;
     private Publisher publisher;
 
+    private String emulatorEndpoint() {
+        return container.getContainerIpAddress() + ":" + container.getFirstMappedPort();
+    }
+
     @Override
     protected HeroicConfig.Builder setupConfig() {
-        assumeNotNull(EmulatorHelper.hostPort());
-
         opLog = new OperationsLogImpl();
         final MetricModule backingStore = MemoryMetricModule.builder().build();
 
         try {
-            publisher = EmulatorHelper.publisher(project, topic);
+            publisher = EmulatorHelper.publisher(project, topic, emulatorEndpoint());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -82,6 +91,7 @@ public class PubSubConsumerIT extends AbstractConsumerIT {
                 .schema(Spotify100.class)
                 .subscriptionId(subscription)
                 .projectId(project)
+                .endpoint(emulatorEndpoint())
             ))
             .ingestion(IngestionModule.builder().updateMetrics(true))
             .metrics(MetricManagerModule.builder().backends(ImmutableList.of(metricModule)));
@@ -120,7 +130,7 @@ public class PubSubConsumerIT extends AbstractConsumerIT {
     @Override
     public void abstractTeardown() throws Exception {
         super.abstractTeardown();
-        EmulatorHelper.deleteSubscription(project, subscription);
+        EmulatorHelper.deleteSubscription(project, subscription, emulatorEndpoint());
     }
 
     @After

@@ -64,6 +64,7 @@ dependencies {
     testImplementation 'com.addthis:stream-lib'
     testImplementation 'net.jcip:jcip-annotations:1.0'
     testAnnotationProcessor 'net.jcip:jcip-annotations:1.0'
+    testImplementation 'org.testcontainers:testcontainers'
 }
 
 description = 'Heroic: Self-Contained Distribution Project'

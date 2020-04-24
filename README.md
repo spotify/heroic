@@ -111,9 +111,6 @@ parameter. You can use [docs/log4j2-file.xml](/docs/log4j2-file.xml) as a base.
 We run tests with Gradle:
 
 ```
-# Start pubsub emulator
-gcloud beta emulators pubsub start
-
 # run unit tests
 ./gradlew test
 
@@ -178,10 +175,6 @@ $> mvn -P integration-tests \
     -D it.elasticsearch.remote=true \
     clean verify
 ```
-
-##### PubSub
-
-PubSub relies on having the `PUBSUB_EMULATOR_HOST` environment variable set instead of a system property. Detailed instructions are available in the [Google PubSub emulator docs](https://cloud.google.com/pubsub/docs/emulator).
 
 #### Full Cluster Tests
 

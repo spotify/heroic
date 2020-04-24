@@ -32,30 +32,10 @@ jobs:
             - '*/out'
             - '*/*/out'
 
-  install_gcloud:
-    docker:
-      - image: circleci/openjdk:11
-    steps:
-      - restore_cache:
-          keys:
-            - gcloud-243
-      - run: curl https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-243.0.0-linux-x86_64.tar.gz | tar xzf -
-      - run: ./google-cloud-sdk/install.sh --quiet --usage-reporting false --additional-components pubsub-emulator beta
-      - save_cache:
-          paths:
-            - ./google-cloud-sdk
-          key: gcloud-243
-      - persist_to_workspace:
-          root: .
-          paths:
-            - google-cloud-sdk
-
   test:
     machine:
       # Required for running testcontainer docker images
       image: ubuntu-1604:201903-01
-    environment:
-      PUBSUB_EMULATOR_HOST: localhost:8085
     steps:
       - run:
           name: Install Java 11
@@ -72,10 +52,6 @@ jobs:
       - attach_workspace:
           at: /tmp/workspace
       - run: cp -r /tmp/workspace/* ~/project/
-      - run:
-          name: Run PubSub emulator
-          command: ./google-cloud-sdk/bin/gcloud beta emulators pubsub start
-          background: true
       - run: ./gradlew --info check jacocoRootReport
       - run: 'bash <(curl -s https://codecov.io/bash)'
 
@@ -85,7 +61,6 @@ workflows:
   build_and_test:
     jobs:
       - validate_branch
-      - install_gcloud
       - build:
           requires:
             - validate_branch
@@ -93,4 +68,3 @@ workflows:
           requires:
             - build
             - validate_branch
-            - install_gcloud
