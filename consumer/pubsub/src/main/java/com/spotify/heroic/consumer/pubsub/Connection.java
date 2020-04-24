@@ -44,6 +44,7 @@ import com.spotify.heroic.statistics.ConsumerReporter;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.io.IOException;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import org.slf4j.Logger;
@@ -162,14 +163,14 @@ public class Connection {
     Determine if a PubSub emulator should be used instead of a live connection. Sets the appropriate
     options on the builder when using the emulator.
      */
-    void setEmulatorOptions() {
-        String host = System.getenv("PUBSUB_EMULATOR_HOST");
-        if (host == null) {
+    void setEmulatorOptions(Optional<String> configuredEndpoint) {
+        String endpoint = configuredEndpoint.orElse(System.getenv("PUBSUB_EMULATOR_HOST"));
+        if (endpoint == null) {
             return;
         }
 
-        log.info("PubSub emulator detected at {}", host);
-        ManagedChannel channel = ManagedChannelBuilder.forTarget(host).usePlaintext().build();
+        log.info("PubSub emulator detected at {}", endpoint);
+        ManagedChannel channel = ManagedChannelBuilder.forTarget(endpoint).usePlaintext().build();
         channelProvider = FixedTransportChannelProvider.create(
             GrpcTransportChannel.create(channel));
         credentialsProvider = NoCredentialsProvider.create();

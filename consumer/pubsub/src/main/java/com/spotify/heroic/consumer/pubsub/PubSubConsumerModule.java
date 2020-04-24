@@ -67,6 +67,7 @@ public class PubSubConsumerModule implements ConsumerModule {
     private final Long maxOutstandingRequestBytes;
     private final int maxInboundMessageSize;
     private final Long keepAlive;
+    private final Optional<String> endpoint;
 
     private PubSubConsumerModule(
         Optional<String> id,
@@ -78,7 +79,8 @@ public class PubSubConsumerModule implements ConsumerModule {
         Long maxOutstandingElementCount,
         Long maxOutstandingRequestBytes,
         int maxInboundMessageSize,
-        Long keepAlive
+        Long keepAlive,
+        Optional<String> endpoint
     ) {
         this.id = id;
         this.threads = threads;
@@ -90,6 +92,7 @@ public class PubSubConsumerModule implements ConsumerModule {
         this.maxOutstandingRequestBytes = maxOutstandingRequestBytes;
         this.maxInboundMessageSize = maxInboundMessageSize;
         this.keepAlive = keepAlive;
+        this.endpoint = endpoint;
     }
 
     @Override
@@ -239,18 +242,18 @@ public class PubSubConsumerModule implements ConsumerModule {
             @Named("errors") AtomicLong errors,
             @Named("consumed") LongAdder consumed
         ) {
-            return async.managed(new ManagedSetup<Connection>() {
+            return async.managed(new ManagedSetup<>() {
                 @Override
                 public AsyncFuture<Connection> construct() {
                     return async.call(() -> {
                         log.info("project:{}, topic:{}, subscription:{}",
-                                 projectId, topicId, subscriptionId);
+                            projectId, topicId, subscriptionId);
                         final Connection connection = new Connection(
                             consumer, reporter, errors, consumed,
                             projectId, topicId, subscriptionId, threads,
                             maxOutstandingElementCount, maxOutstandingRequestBytes,
                             maxInboundMessageSize, keepAlive);
-                        connection.setEmulatorOptions();
+                        connection.setEmulatorOptions(endpoint);
 
                         // Create topics/subscriptions if they don't exist
                         connection.createTopic();
@@ -302,6 +305,7 @@ public class PubSubConsumerModule implements ConsumerModule {
         private Optional<Long> maxOutstandingRequestBytes = Optional.empty();
         private Optional<Integer> maxInboundMessageSize = Optional.empty();
         private Optional<Long> keepAlive = Optional.empty();
+        private Optional<String> endpoint = Optional.empty();
 
         @JsonCreator
         public Builder(
@@ -314,7 +318,8 @@ public class PubSubConsumerModule implements ConsumerModule {
             @JsonProperty("maxOutstandingElementCount") Optional<Long> maxOutstandingElementCount,
             @JsonProperty("maxOutstandingRequestBytes") Optional<Long> maxOutstandingRequestBytes,
             @JsonProperty("maxInboundMessageSize") Optional<Integer> maxInboundMessageSize,
-            @JsonProperty("keepAlive") Optional<Long> keepAlive
+            @JsonProperty("keepAlive") Optional<Long> keepAlive,
+            @JsonProperty("endpoint") Optional<String> endpoint
         ) {
             this.id = id;
             this.threads = threads;
@@ -326,6 +331,7 @@ public class PubSubConsumerModule implements ConsumerModule {
             this.maxOutstandingRequestBytes = maxOutstandingRequestBytes;
             this.maxInboundMessageSize = maxInboundMessageSize;
             this.keepAlive = keepAlive;
+            this.endpoint = endpoint;
         }
 
         private Builder() {
@@ -387,6 +393,11 @@ public class PubSubConsumerModule implements ConsumerModule {
             return this;
         }
 
+        public Builder endpoint(String endpoint) {
+            this.endpoint = Optional.of(endpoint);
+            return this;
+        }
+
         @Override
         public ConsumerModule build() {
             if (!schema.isPresent()) {
@@ -403,7 +414,8 @@ public class PubSubConsumerModule implements ConsumerModule {
                 maxOutstandingElementCount.orElse(DEFAULT_MAX_OUTSTANDING_ELEMENT_COUNT),
                 maxOutstandingRequestBytes.orElse(DEFAULT_MAX_OUTSTANDING_REQUEST_BYTES),
                 maxInboundMessageSize.orElse(DEFAULT_MAX_INBOUND_MESSAGE_SIZE),
-                keepAlive.orElse(DEFAULT_KEEP_ALIVE)
+                keepAlive.orElse(DEFAULT_KEEP_ALIVE),
+                endpoint
             );
         }
     }
