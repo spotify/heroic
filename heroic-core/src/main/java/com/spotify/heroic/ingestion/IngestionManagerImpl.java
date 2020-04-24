@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.ingestion;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.MetadataBackend;
@@ -32,16 +34,13 @@ import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestManager;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.util.Optional;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Function;
 import java.util.function.Supplier;
-
-import static com.google.common.base.Preconditions.checkNotNull;
+import javax.inject.Inject;
+import javax.inject.Named;
 
 public class IngestionManagerImpl implements IngestionManager {
     final AsyncFramework async;
@@ -68,12 +67,16 @@ public class IngestionManagerImpl implements IngestionManager {
      */
     @Inject
     public IngestionManagerImpl(
-        final AsyncFramework async, final MetadataManager metadata, final MetricManager metric,
-        final SuggestManager suggest, final IngestionManagerReporter reporter,
+        final AsyncFramework async,
+        final MetadataManager metadata,
+        final MetricManager metric,
+        final SuggestManager suggest,
+        final IngestionManagerReporter reporter,
         @Named("updateMetrics") final boolean updateMetrics,
         @Named("updateMetadata") final boolean updateMetadata,
         @Named("updateSuggestions") final boolean updateSuggestions,
-        @Named("maxConcurrentWrites") final int maxConcurrentWrites, final Filter filter
+        @Named("maxConcurrentWrites") final int maxConcurrentWrites,
+        final Filter filter
     ) {
         this.async = async;
         this.metadata = metadata;
@@ -113,7 +116,9 @@ public class IngestionManagerImpl implements IngestionManager {
     }
 
     private <I> IngestionGroup buildGroup(
-        final I input, Function<I, MetricBackend> metric, Function<I, MetadataBackend> metadata,
+        final I input,
+        Function<I, MetricBackend> metric,
+        Function<I, MetadataBackend> metadata,
         Function<I, SuggestBackend> suggest
     ) {
         // @formatter:off

@@ -28,6 +28,8 @@ public interface MetadataBackendReporter {
 
     void reportWriteDroppedByDuplicate();
 
+    void failedShards(final long errors);
+
     FutureReporter.Context setupBackendWriteReporter();
 
     MetadataBackend decorate(MetadataBackend backend);

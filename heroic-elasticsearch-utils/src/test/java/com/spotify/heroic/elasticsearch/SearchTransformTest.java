@@ -31,6 +31,7 @@ import static org.mockito.Mockito.when;
 
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.elasticsearch.AbstractElasticsearchMetadataBackend.SearchTransform;
+import com.spotify.heroic.statistics.MetadataBackendReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.LazyTransform;
@@ -76,6 +77,9 @@ public class SearchTransformTest {
     @Mock
     SearchHits searchHits;
 
+    @Mock
+    MetadataBackendReporter reporter;
+
     private final SearchHit[] searchHits1 = {
         mock(SearchHit.class), mock(SearchHit.class), mock(SearchHit.class),
     };
@@ -114,7 +118,7 @@ public class SearchTransformTest {
     public SearchTransform<SearchHit> createScrollTransform(Integer limit) {
         final OptionalLimit optionalLimit = OptionalLimit.of(limit);
         return new SearchTransform<>(
-            async, optionalLimit, Function.identity(), scrollerFactory, true);
+            async, optionalLimit, Function.identity(), scrollerFactory, true, reporter);
     }
 
     public SearchTransformResult<SearchHit> createLimitSet(Integer limit, SearchHit[]... pages) {
@@ -133,7 +137,20 @@ public class SearchTransformTest {
     }
 
     @Test
-    public void aboveLimit() {
+    public void shardErrorReported() {
+        doReturn(1).when(searchResponse).getFailedShards();
+        setSearchHitPages(searchHits1, emptySearchHits);
+        final Integer limit = searchHits1.length;
+
+        final SearchTransform<SearchHit> scrollTransform = createScrollTransform(limit);
+
+        scroller.get().lazyTransform(scrollTransform);
+
+        verify(reporter, times(2)).failedShards(1L);
+    }
+
+    @Test
+    public void aboveLimit() throws Exception {
         setSearchHitPages(searchHits1, emptySearchHits);
         final Integer limit = searchHits1.length - 1;
 

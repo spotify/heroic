@@ -29,6 +29,7 @@ import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.Entries;
 import com.spotify.heroic.metadata.MetadataBackend;
+import com.spotify.heroic.statistics.MetadataBackendReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Borrowed;
@@ -57,10 +58,16 @@ public abstract class AbstractElasticsearchMetadataBackend
     private static final TimeValue SCROLL_TIME = TimeValue.timeValueSeconds(5);
 
     private final String type;
+    private final MetadataBackendReporter reporter;
 
-    public AbstractElasticsearchMetadataBackend(final AsyncFramework async, final String type) {
+    public AbstractElasticsearchMetadataBackend(
+        final AsyncFramework async,
+        final String type,
+        final MetadataBackendReporter reporter
+    ) {
         super(async);
         this.type = type;
+        this.reporter = reporter;
     }
 
     protected abstract Managed<Connection> connection();
@@ -89,8 +96,8 @@ public abstract class AbstractElasticsearchMetadataBackend
                         return future;
                     };
                 },
-                true
-            );
+                true,
+                reporter);
         final ResolvableFuture<SearchResponse> future = async.future();
         connection.execute(request, bind(future));
 
@@ -114,7 +121,8 @@ public abstract class AbstractElasticsearchMetadataBackend
                 connection.execute(request, bind(future));
                 return future;
             },
-            false
+            false,
+            reporter
         );
 
         ResolvableFuture<SearchResponse> future = async.future();
@@ -127,6 +135,7 @@ public abstract class AbstractElasticsearchMetadataBackend
 
         private final AsyncFramework async;
         private final OptionalLimit limit;
+        private final MetadataBackendReporter reporter;
 
         int size = 0;
         int duplicates = 0;
@@ -142,13 +151,15 @@ public abstract class AbstractElasticsearchMetadataBackend
             final Function<SearchHit, T> converter,
             final BiFunction<String, SearchHit, Supplier<AsyncFuture<SearchResponse>>>
                 searchFactory,
-            final Boolean scrolling
+            final Boolean scrolling,
+            final MetadataBackendReporter reporter
         ) {
             this.async = async;
             this.limit = limit;
             this.converter = converter;
             this.searchFactory = searchFactory;
             this.scrolling = scrolling;
+            this.reporter = reporter;
         }
 
         @Override
@@ -157,6 +168,8 @@ public abstract class AbstractElasticsearchMetadataBackend
             final String scrollId = response.getScrollId();
 
             SearchHit lastHit = null;
+            reporter.failedShards(response.getFailedShards());
+
             for (final SearchHit hit : hits) {
 
                 final T convertedHit = converter.apply(hit);
@@ -249,6 +262,7 @@ public abstract class AbstractElasticsearchMetadataBackend
     private static final int ENTRIES_SCAN_SIZE = 1000;
     private static final TimeValue ENTRIES_TIMEOUT = TimeValue.timeValueSeconds(5);
 
+    // Used in the Heroic shell
     @Override
     public AsyncObservable<Entries> entries(final Entries.Request request) {
         final QueryBuilder f = filter(request.getFilter());
