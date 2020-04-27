@@ -451,7 +451,9 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         OptionalLimit limit = seriesRequest.getLimit();
 
         return doto(c -> {
-            SearchRequest request = c.getIndex().search(METADATA_TYPE);
+            SearchRequest request =
+                c.getIndex().search(METADATA_TYPE).allowPartialSearchResults(false);
+
             request.source()
                 .size(limit.asMaxInteger(scrollSize))
                 .query(new BoolQueryBuilder().must(f))
