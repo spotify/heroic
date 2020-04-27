@@ -60,11 +60,10 @@ public class SemanticConsumerReporter implements ConsumerReporter {
         consumerThreadsLiveRatio = new SemanticRatioGauge();
         registry.register(base.tagged("what", "consumer-threads-live-ratio", "unit", Units.RATIO),
             consumerThreadsLiveRatio);
-        messageSize = registry.getOrAdd(base.tagged("what", "message-size", "unit", Units.BYTE),
-            HistogramBuilder.HISTOGRAM);
+
+        messageSize = registry.histogram(base.tagged("what", "message-size", "unit", Units.BYTE));
         messageDrift =
-            registry.getOrAdd(base.tagged("what", "message-drift", "unit", Units.MILLISECOND),
-                HistogramBuilder.HISTOGRAM);
+            registry.histogram(base.tagged("what", "message-drift", "unit", Units.MILLISECOND));
 
         consumer = new SemanticFutureReporter(registry,
             base.tagged("what", "consumer", "unit", Units.WRITE));

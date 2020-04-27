@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.statistics.semantic;
 
+import com.codahale.metrics.SlidingTimeWindowArrayReservoir;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.spotify.heroic.common.ServiceInfo;
 import com.spotify.heroic.dagger.EarlyComponent;
@@ -60,7 +61,8 @@ public class SemanticStatisticsModule implements StatisticsModule {
     @Provides
     @SemanticStatisticsScope
     public SemanticMetricRegistry registry() {
-        return new SemanticMetricRegistry();
+        return new SemanticMetricRegistry(
+            () -> new SlidingTimeWindowArrayReservoir(60, TimeUnit.SECONDS));
     }
 
     @Provides
