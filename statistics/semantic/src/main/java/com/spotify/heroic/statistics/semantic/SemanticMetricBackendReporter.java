@@ -101,29 +101,23 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
         this.queryMetrics = new SemanticFutureReporter(registry,
             base.tagged("what", "query-metrics", "unit", Units.QUERY));
 
-        sampleSizeLive =
-            registry.counter(base.tagged("what", "sample-size-live", "unit", Units.SAMPLE));
-        sampleSizeAccumulated =
-            registry.counter(base.tagged("what", "sample-size-accumulated", "unit", Units.SAMPLE));
+        sampleSizeLive = registry.counter(
+            base.tagged("what", "sample-size-live", "unit", Units.SAMPLE));
+        sampleSizeAccumulated = registry.counter(
+            base.tagged("what", "sample-size-accumulated", "unit", Units.SAMPLE));
 
-        querySamplesRead = registry.getOrAdd(
-            base.tagged("what", "query-metrics-samples-read", "unit", Units.COUNT),
-            HistogramBuilder.HISTOGRAM);
-        queryRowsAccessed = registry.getOrAdd(
-            base.tagged("what", "query-metrics-rows-accessed", "unit", Units.COUNT),
-            HistogramBuilder.HISTOGRAM);
-        queryMaxLiveSamples = registry.getOrAdd(
-            base.tagged("what", "query-metrics-max-live-samples", "unit", Units.COUNT),
-            HistogramBuilder.HISTOGRAM);
-        queryReadRate =
-            registry.getOrAdd(base.tagged("what", "query-metrics-read-rate", "unit", Units.COUNT),
-                HistogramBuilder.HISTOGRAM);
-        queryRowMsBetweenSamples = registry.getOrAdd(
-            base.tagged("what", "query-metrics-row-metric-distance", "unit", Units.MILLISECOND),
-            HistogramBuilder.HISTOGRAM);
-        queryRowDensity =
-            registry.getOrAdd(base.tagged("what", "query-metrics-row-density", "unit", Units.COUNT),
-                HistogramBuilder.HISTOGRAM);
+        querySamplesRead = registry.histogram(
+            base.tagged("what", "query-metrics-samples-read", "unit", Units.COUNT));
+        queryRowsAccessed = registry.histogram(
+            base.tagged("what", "query-metrics-rows-accessed", "unit", Units.COUNT));
+        queryMaxLiveSamples = registry.histogram(
+            base.tagged("what", "query-metrics-max-live-samples", "unit", Units.COUNT));
+        queryReadRate = registry.histogram(
+            base.tagged("what", "query-metrics-read-rate", "unit", Units.COUNT));
+        queryRowMsBetweenSamples = registry.histogram(
+            base.tagged("what", "query-metrics-row-metric-distance", "unit", Units.MILLISECOND));
+        queryRowDensity = registry.histogram(
+            base.tagged("what", "query-metrics-row-density", "unit", Units.COUNT));
     }
 
     @Override
