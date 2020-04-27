@@ -134,17 +134,6 @@ This will run:
 It is strongly recommended that you run the full test suite before setting up a
 pull request, otherwise it will be rejected by Travis.
 
-#### Remote Integration Tests
-
-Integration tests are configured to run remotely for Datastax depending on a set of system
-properties.
-
-| Property | Description |
-|----------|-------------|
-| `-D datastax.version=<version>` | Use the given client version when building the project |
-| `-D it.datastax.remote=true` | Run Datastax tests against a remote database |
-| `-D it.datastax.seed=<seed>` | Use the given seed (default: `localhost`) |
-
 #### Full Cluster Tests
 
 Full cluster tests are defined in [heroic-dist/src/test/java](/heroic-dist/src/test/java).
