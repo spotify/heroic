@@ -486,8 +486,9 @@ flushIntervalSeconds: <int> default = 2
 # When bulk mutations are enabled, this is the maximum size of a single batch.
 batchSize: <int>
 
-# If set, no actual connections will be made to Bigtable.
-fake: <bool> default = false
+# If set, the Bigtable client will be configured to use this address as a Bigtable emulator.
+# Default CBT emulator runs at: "localhost:8086"
+emulatorEndpoint: <string>
 ```
 
 ##### `<bigtable_credentials>`

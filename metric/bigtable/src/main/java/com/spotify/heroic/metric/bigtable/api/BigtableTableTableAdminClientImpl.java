@@ -23,25 +23,20 @@ package com.spotify.heroic.metric.bigtable.api;
 
 import com.google.bigtable.admin.v2.ModifyColumnFamiliesRequest;
 import com.google.cloud.bigtable.grpc.BigtableInstanceName;
-import eu.toolchain.async.AsyncFramework;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import java.util.Optional;
 
 public class BigtableTableTableAdminClientImpl implements BigtableTableAdminClient {
-    final com.google.cloud.bigtable.grpc.BigtableTableAdminClient client;
+    private final com.google.cloud.bigtable.grpc.BigtableTableAdminClient client;
 
     private final String project;
     private final String instance;
-
     private final String clusterUri;
-
     private final BigtableInstanceName bigtableInstanceName;
 
     public BigtableTableTableAdminClientImpl(
-        final AsyncFramework async,
-        final com.google.cloud.bigtable.grpc.BigtableTableAdminClient
-            client,
+        final com.google.cloud.bigtable.grpc.BigtableTableAdminClient client,
         final String project,
         final String instance
     ) {

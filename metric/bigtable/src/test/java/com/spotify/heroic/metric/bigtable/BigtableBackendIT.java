@@ -1,17 +1,18 @@
 package com.spotify.heroic.metric.bigtable;
 
 import com.spotify.heroic.metric.MetricModule;
-import com.spotify.heroic.metric.bigtable.credentials.DefaultCredentialsBuilder;
-import com.spotify.heroic.metric.bigtable.credentials.JsonCredentialsBuilder;
 import com.spotify.heroic.test.AbstractMetricBackendIT;
-import com.spotify.heroic.test.TestProperties;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.ClassRule;
+import org.testcontainers.containers.GenericContainer;
 
 public class BigtableBackendIT extends AbstractMetricBackendIT {
-    private final TestProperties properties = TestProperties.ofPrefix("it.bigtable");
+    @ClassRule
+    public static GenericContainer container =
+        new GenericContainer("bigtruedata/gcloud-bigtable-emulator")
+            .withExposedPorts(8086)
+            .withCommand("start", "--host-port", "0.0.0.0:8086");
 
     @Override
     protected Optional<Long> period() {
@@ -29,40 +30,16 @@ public class BigtableBackendIT extends AbstractMetricBackendIT {
 
     @Override
     public MetricModule setupModule() {
-        final String table = "heroic_it_" + UUID.randomUUID();
+        String table = "heroic_it_" + UUID.randomUUID();
+        String endpoint = container.getContainerIpAddress() + ":" + container.getFirstMappedPort();
 
-        final Optional<MetricModule> remote = properties.getOptionalString("remote").map(v -> {
-            final String project = properties.getRequiredString("project");
-            final String instance = properties.getRequiredString("instance");
-            final Optional<String> credentialsFile = properties.getOptionalString("credentials");
-            final CredentialsBuilder credentials;
-
-            if (credentialsFile.isPresent()) {
-                final Path credentailsPath = Paths.get(credentialsFile.get());
-                credentials = JsonCredentialsBuilder.builder().path(credentailsPath).build();
-            } else {
-                credentials = new DefaultCredentialsBuilder();
-            }
-
-            return BigtableMetricModule
-                .builder()
-                .configure(true)
-                .project(project)
-                .instance(instance)
-                .table(table)
-                .credentials(credentials)
-                .build();
-        });
-
-        return remote.orElseGet(() ->
-            BigtableMetricModule
-                .builder()
-                .configure(true)
-                .project("fake")
-                .table(table)
-                .fake(true)
-                .build()
-        );
-
+        return BigtableMetricModule
+            .builder()
+            .configure(true)
+            .project("fake")
+            .instance("fake")
+            .table(table)
+            .emulatorEndpoint(endpoint)
+            .build();
     }
 }

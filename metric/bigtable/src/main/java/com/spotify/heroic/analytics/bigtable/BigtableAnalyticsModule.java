@@ -41,31 +41,37 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
 import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.inject.Named;
 
 @Module
 public class BigtableAnalyticsModule implements AnalyticsModule {
-    public static final String DEFAULT_CLUSTER = "heroic";
-    public static final CredentialsBuilder DEFAULT_CREDENTIALS =
+    private static final String DEFAULT_CLUSTER = "heroic";
+    private static final CredentialsBuilder DEFAULT_CREDENTIALS =
         new ComputeEngineCredentialsBuilder();
-    public static final String HITS_TABLE = "hits";
-    public static final String HITS_COLUMN_FAMILY = "hits";
-    public static final int DEFAULT_MAX_PENDING_REPORTS = 1000;
-    public static final boolean DEFAULT_DISABLE_BULK_MUTATIONS = false;
-    public static final int DEFAULT_FLUSH_INTERVAL_SECONDS = 2;
+    private static final String HITS_TABLE = "hits";
+    private static final String HITS_COLUMN_FAMILY = "hits";
+    private static final int DEFAULT_MAX_PENDING_REPORTS = 1000;
+    private static final boolean DEFAULT_DISABLE_BULK_MUTATIONS = false;
+    private static final int DEFAULT_FLUSH_INTERVAL_SECONDS = 2;
 
     private final String project;
     private final String cluster;
     private final CredentialsBuilder credentials;
+    private final String emulatorEndpoint;
     private final int maxPendingReports;
 
-    @java.beans.ConstructorProperties({ "project", "cluster", "credentials", "maxPendingReports" })
-    public BigtableAnalyticsModule(final String project, final String cluster,
-                                   final CredentialsBuilder credentials,
-                                   final int maxPendingReports) {
+    public BigtableAnalyticsModule(
+        final String project,
+        final String cluster,
+        final CredentialsBuilder credentials,
+        @Nullable final String emulatorEndpoint,
+        final int maxPendingReports
+    ) {
         this.project = project;
         this.cluster = cluster;
         this.credentials = credentials;
+        this.emulatorEndpoint = emulatorEndpoint;
         this.maxPendingReports = maxPendingReports;
     }
 
@@ -87,12 +93,12 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
     @Provides
     @BigtableScope
     public Managed<BigtableConnection> connection(final AsyncFramework async) {
-        return async.managed(new ManagedSetup<BigtableConnection>() {
+        return async.managed(new ManagedSetup<>() {
             @Override
             public AsyncFuture<BigtableConnection> construct() {
                 return async.call(
-                    new BigtableConnectionBuilder(project, cluster, credentials, async,
-                        DEFAULT_DISABLE_BULK_MUTATIONS, DEFAULT_FLUSH_INTERVAL_SECONDS,
+                    new BigtableConnectionBuilder(project, cluster, credentials, emulatorEndpoint,
+                        async, DEFAULT_DISABLE_BULK_MUTATIONS, DEFAULT_FLUSH_INTERVAL_SECONDS,
                         Optional.empty()));
             }
 
@@ -148,6 +154,7 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
         private Optional<String> project = Optional.empty();
         private Optional<String> instance = Optional.empty();
         private Optional<CredentialsBuilder> credentials = Optional.empty();
+        private Optional<String> emulatorEndpoint = Optional.empty();
         private Optional<Integer> maxPendingReports = Optional.empty();
 
         @JsonCreator
@@ -155,11 +162,13 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
             @JsonProperty("project") Optional<String> project,
             @JsonProperty("instance") Optional<String> instance,
             @JsonProperty("credentials") Optional<CredentialsBuilder> credentials,
+            @JsonProperty("emulatorEndpoint") Optional<String> emulatorEndpoint,
             @JsonProperty("maxPendingReports") Optional<Integer> maxPendingReports
         ) {
             this.project = project;
             this.instance = instance;
             this.credentials = credentials;
+            this.emulatorEndpoint = emulatorEndpoint;
             this.maxPendingReports = maxPendingReports;
         }
 
@@ -181,6 +190,11 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
             return this;
         }
 
+        public Builder emulatorEndpoint(String emulatorEndpoint) {
+            this.emulatorEndpoint = Optional.of(emulatorEndpoint);
+            return this;
+        }
+
         public Builder maxPendingReports(int maxPendingReports) {
             this.maxPendingReports = Optional.of(maxPendingReports);
             return this;
@@ -190,9 +204,13 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
             final String project = this.project.orElseThrow(
                 () -> new IllegalStateException("'project' configuration is required"));
 
-            return new BigtableAnalyticsModule(project, instance.orElse(DEFAULT_CLUSTER),
+            return new BigtableAnalyticsModule(
+                project,
+                instance.orElse(DEFAULT_CLUSTER),
                 credentials.orElse(DEFAULT_CREDENTIALS),
-                maxPendingReports.orElse(DEFAULT_MAX_PENDING_REPORTS));
+                emulatorEndpoint.orElse(null),
+                maxPendingReports.orElse(DEFAULT_MAX_PENDING_REPORTS)
+            );
         }
     }
 }
