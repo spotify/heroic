@@ -27,3 +27,5 @@ build/
 out/
 gradle-app.setting
 .gradle
+
+venv/
