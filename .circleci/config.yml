@@ -90,16 +90,11 @@ workflows:
             - build
             - validate_branch
 
-  daily:
-    jobs:
-      - docker_build
+      - docker_build:
+          requires:
+            - validate_branch
+
       - system_test:
           requires:
             - docker_build
-    triggers:
-      - schedule:
-          cron: '0 9 * * *'
-          filters:
-            branches:
-              only:
-                - master
+            - validate_branch
