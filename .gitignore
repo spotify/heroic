@@ -3,7 +3,10 @@ dependency-reduced-pom.xml
 target
 *.log
 *~
+
 *.pyc
+venv/
+
 bin
 /*.json
 /*.png
@@ -27,5 +30,3 @@ build/
 out/
 gradle-app.setting
 .gradle
-
-venv/
