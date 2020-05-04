@@ -1,16 +1,24 @@
 version: 2.1
 
-jobs:
-  validate_branch:
+executors:
+  java:
     docker:
       - image: circleci/openjdk:11
+  ubuntu:
+    # Due to remote docker limitations, some jobs require a machine image
+    # https://circleci.com/docs/2.0/building-docker-images/#accessing-services
+    machine:
+      image: ubuntu-1604:202004-01
+
+jobs:
+  validate_branch:
+    executor: java
     steps:
       # CircleCI has terrible support for filtering PRs/branches, this is a hacky workaround
       - run: ([[ $CIRCLE_PULL_REQUESTS == "" ]]) && echo $CIRCLE_BRANCH | grep -Evq "^(master)|([0-9]+\.[0-9]+\.[0-9]+)$" && echo "not a PR / branch to build" && circleci step halt || echo "will build"
 
   build:
-    docker:
-      - image: circleci/openjdk:11
+    executor: java
     steps:
       - checkout
       # Restore gradle deps
@@ -33,9 +41,7 @@ jobs:
             - '*/*/out'
 
   test:
-    machine:
-      # Required for running testcontainer docker images
-      image: ubuntu-1604:201903-01
+    executor: ubuntu
     steps:
       - run:
           name: Install Java 11
@@ -55,6 +61,21 @@ jobs:
       - run: ./gradlew --info check jacocoRootReport
       - run: 'bash <(curl -s https://codecov.io/bash)'
 
+  docker_build:
+    docker:
+      - image: cimg/base:2020.01
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run: docker build -t spotify/heroic .
+
+  system_test:
+    executor: ubuntu
+    steps:
+      - run: pyenv global 3.8.2
+      - checkout
+      - run: pip install -r system-tests/requirements.txt
+      - run: cd system-tests && pytest
 
 workflows:
   version: 2
@@ -67,4 +88,13 @@ workflows:
       - test:
           requires:
             - build
+            - validate_branch
+
+      - docker_build:
+          requires:
+            - validate_branch
+
+      - system_test:
+          requires:
+            - docker_build
             - validate_branch

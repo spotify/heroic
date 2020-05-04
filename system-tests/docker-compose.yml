@@ -1,0 +1,62 @@
+version: '3.7'
+services:
+  cassandra:
+    image: cassandra:3
+    ports:
+      - '7000:7000'
+      - '9160:9160'
+      - '9042:9042'
+
+  elasticsearch:
+    image: elasticsearch:7.6.0
+    environment:
+      discovery.type: single-node
+      cluster.name: heroic
+    ports:
+      - '9200:9200'
+      - '9300:9300'
+
+  zookeeper:
+    image: wurstmeister/zookeeper
+    ports:
+      - '2181:2181'
+  kafka:
+    image: wurstmeister/kafka
+    ports:
+      - '9092:9092'
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_CREATE_TOPICS: 'metrics:1:1'
+      KAFKA_ADVERTISED_HOST_NAME: kafka
+    restart: on-failure
+
+  pubsub:
+    image: bigtruedata/gcloud-pubsub-emulator
+    ports:
+      - '8085:8085'
+    command:
+      - start
+      - --host-port
+      - 0.0.0.0:8085
+
+  bigtable:
+    image: bigtruedata/gcloud-bigtable-emulator
+    ports:
+      - '8086:8086'
+    command:
+      - start
+      - --host-port
+      - 0.0.0.0:8086
+
+  heroic:
+    image: spotify/heroic:latest
+    environment:
+      PUBSUB_EMULATOR_HOST: pubsub:8085
+      BIGTABLE_EMULATOR_HOST: bigtable:8086
+    ports:
+      - '8080:8080'
+    volumes:
+      - ./heroic.yaml:/heroic.yaml
+    command:
+      - /heroic.yaml
+    restart: on-failure

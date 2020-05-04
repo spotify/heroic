@@ -3,7 +3,10 @@ dependency-reduced-pom.xml
 target
 *.log
 *~
+
 *.pyc
+venv/
+
 bin
 /*.json
 /*.png
