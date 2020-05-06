@@ -111,6 +111,10 @@ tracing: <tracing_config>
 
 # Usage analytics provided to the developers
 usageTracking: <usage_tracking_config>
+
+# Configuration to send errors to Sentry. For information, see
+# https://docs.sentry.io/clients/java/config/#configuration
+sentryDsn: <string>
 ```
 
 ### [`<feature>`](#feature)

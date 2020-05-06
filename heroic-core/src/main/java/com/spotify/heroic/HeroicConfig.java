@@ -69,6 +69,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import javax.annotation.Nullable;
 import org.slf4j.LoggerFactory;
 
 @AutoValue
@@ -98,6 +99,7 @@ public abstract class HeroicConfig {
         Optional<ConditionalFeatures> conditionalFeatures,
         TracingConfig tracing,
         UsageTrackingModule usageTracking,
+        @Nullable String sentryDsn,
         String version,
         String service,
         String commit
@@ -105,13 +107,14 @@ public abstract class HeroicConfig {
         return new AutoValue_HeroicConfig(id, startTimeout, stopTimeout, host, port, connectors,
             enableCors, corsAllowOrigin, features, cluster, metric, metadata,
             suggest, cache, ingestion, consumers, shellServer, analytics, generator, statistics,
-            queryLogging, conditionalFeatures, tracing, usageTracking, version, service, commit);
+            queryLogging, conditionalFeatures, tracing, usageTracking, sentryDsn, version, service,
+            commit);
     }
 
     private static final org.slf4j.Logger log = LoggerFactory.getLogger(HeroicConfig.class);
-    public static final boolean DEFAULT_ENABLE_CORS = true;
-    public static final Duration DEFAULT_START_TIMEOUT = Duration.of(5, TimeUnit.MINUTES);
-    public static final Duration DEFAULT_STOP_TIMEOUT = Duration.of(1, TimeUnit.MINUTES);
+    private static final boolean DEFAULT_ENABLE_CORS = true;
+    private static final Duration DEFAULT_START_TIMEOUT = Duration.of(5, TimeUnit.MINUTES);
+    private static final Duration DEFAULT_STOP_TIMEOUT = Duration.of(1, TimeUnit.MINUTES);
 
     private static final String DEFAULT_VERSION = "HEAD";
     private static final String DEFAULT_COMMIT = "HEAD";
@@ -153,6 +156,7 @@ public abstract class HeroicConfig {
     public abstract Optional<ConditionalFeatures> conditionalFeature();
     public abstract TracingConfig tracing();
     public abstract UsageTrackingModule usageTracking();
+    @Nullable public abstract String sentryDsn();
 
     public abstract String version();
     public abstract String service();
@@ -234,6 +238,7 @@ public abstract class HeroicConfig {
         private Optional<ConditionalFeatures> conditionalFeatures = empty();
         private Optional<TracingConfig> tracing = empty();
         private Optional<UsageTrackingModule.Builder> usageTracking = empty();
+        private Optional<String> sentryDsn = empty();
 
         private Optional<String> version = empty();
         private Optional<String> service = empty();
@@ -267,6 +272,7 @@ public abstract class HeroicConfig {
             @JsonProperty("conditionalFeatures") Optional<ConditionalFeatures> conditionalFeatures,
             @JsonProperty("tracing") Optional<TracingConfig> tracing,
             @JsonProperty("usageTracking") Optional<UsageTrackingModule.Builder> usageTracking,
+            @JsonProperty("sentryDsn") Optional<String> sentryDsn,
             @JsonProperty("version") Optional<String> version,
             @JsonProperty("service") Optional<String> service
         ) {
@@ -294,6 +300,7 @@ public abstract class HeroicConfig {
             this.conditionalFeatures = conditionalFeatures;
             this.tracing = tracing;
             this.usageTracking = usageTracking;
+            this.sentryDsn = sentryDsn;
             this.version = version;
             this.service = service;
         }
@@ -399,6 +406,11 @@ public abstract class HeroicConfig {
             return this;
         }
 
+        public Builder sentryDsn(String sentryDsn) {
+            this.sentryDsn = of(sentryDsn);
+            return this;
+        }
+
         public Builder merge(Builder o) {
             // @formatter:off
             return new Builder(
@@ -426,6 +438,7 @@ public abstract class HeroicConfig {
                 pickOptional(conditionalFeatures, o.conditionalFeatures),
                 pickOptional(tracing, o.tracing),
                 pickOptional(usageTracking, o.usageTracking),
+                pickOptional(sentryDsn, o.sentryDsn),
                 pickOptional(version, o.version),
                 pickOptional(service, o.service)
             );
@@ -471,6 +484,7 @@ public abstract class HeroicConfig {
                 usageTracking.orElseGet(GoogleAnalyticsModule.Builder::new)
                     .version(version, commit)
                     .build(),
+                sentryDsn.orElse(null),
                 version,
                 service.orElse(DEFAULT_SERVICE),
                 commit
