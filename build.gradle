@@ -221,6 +221,10 @@ allprojects {
                 entry 'jcl-over-slf4j'
                 entry 'slf4j-api'
             }
+            dependencySet(group: 'io.sentry', version: '1.7.30') {
+                entry 'sentry-log4j2'
+                entry 'sentry'
+            }
 
             dependencySet(group: 'org.eclipse.jetty', version: '9.4.22.v20191022') {
                 entry 'jetty-webapp'

@@ -4,6 +4,8 @@
     <Console name="primary" target="SYSTEM_OUT">
       <PatternLayout alwaysWriteExceptions="false" pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n%throwable{full}"/>
     </Console>
+
+    <Sentry name="Sentry" />
   </Appenders>
   <Loggers>
     <Logger name="org.eclipse.jetty" level="INFO"/>
@@ -11,6 +13,7 @@
 
     <Root level="INFO">
       <AppenderRef ref="primary" />
+      <AppenderRef ref="Sentry" level="ERROR" />
     </Root>
   </Loggers>
 </Configuration>
