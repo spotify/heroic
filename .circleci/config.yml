@@ -61,20 +61,13 @@ jobs:
       - run: ./gradlew --info check jacocoRootReport
       - run: 'bash <(curl -s https://codecov.io/bash)'
 
-  docker_build:
-    docker:
-      - image: cimg/base:2020.01
-    steps:
-      - checkout
-      - setup_remote_docker
-      - run: docker build -t spotify/heroic .
-
   system_test:
     executor: ubuntu
     steps:
       - run: pyenv global 3.8.2
       - checkout
       - run: pip install -r system-tests/requirements.txt
+      - run: docker build -t spotify/heroic .
       - run: cd system-tests && pytest
 
 workflows:
@@ -90,11 +83,6 @@ workflows:
             - build
             - validate_branch
 
-      - docker_build:
-          requires:
-            - validate_branch
-
       - system_test:
           requires:
-            - docker_build
             - validate_branch
