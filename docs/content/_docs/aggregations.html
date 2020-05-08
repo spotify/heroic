@@ -25,9 +25,10 @@ title: Aggregations
   <li><a href="#min">Minimum Aggregation</a></li>
   <li><a href="#notneg">Not Negative Aggregation</a></li>
   <li><a href="#stddev">Standard Deviation Aggregation</a></li>
-  <li><a href="#sum">Sum Aggregation</a></li>  
+  <li><a href="#sum">Sum Aggregation</a></li>
   <li><a href="#sum2">Sum Squared Aggregation</a></li>
   <li><a href="#filtering">TopK/BottomK/AboveK/BelowK Aggregation</a></li>
+  <li><a href="#points">Points Above/Below Aggregation</a></li>
 </ul>
 
 <h3>Size and Extent</h3>
@@ -63,7 +64,7 @@ The following graphics represents what data will be sampled to generate the samp
 <h3>Aggregating on Resource Identifiers</h3>
 
 <p>
-Resource Identifiers are not currently included in the Suggest index, and thus do not appear in suggestions. 
+Resource Identifiers are not currently included in the Suggest index, and thus do not appear in suggestions.
 Resource Identifiers can still be used in aggregations by adding them free-form.
 </p>
 
@@ -400,4 +401,32 @@ belowk(&lt;number&gt;)
   <li>BottomK - Picks the smallest time series</li>
   <li>AboveK - Picks the time series that has values above the given threshold</li>
   <li>BelowK - Picks the time series that has values below the given threshold</li>
+</ul>
+
+
+<h3 id="points">
+  Points Above/Below Aggregation
+  <a class="link-to" href="#points"><span class="glyphicon glyphicon-link"></span></a>
+</h3>
+
+<h5>JSON</h5>
+
+<pre><code class="language-json">
+{"type": "pointsabove", "threshold": &lt;number&gt;}
+{"type": "pointsbelow", "threshold": &lt;number&gt;}
+</code></pre>
+
+<pre><code class="language-hql">
+pointsabove(&lt;number&gt;)
+pointsbelow(&lt;number&gt;)
+</code></pre>
+
+<p>
+  These aggregations reduce the number of datapoints returned per series. Only datapoints
+  matching the criteria will be returned, all others will be dropped.
+</p>
+
+<ul>
+  <li>PointsAbove - Return only datapoints above the given threshold</li>
+  <li>PointsBelow - Return only datapoints below the given threshold</li>
 </ul>
