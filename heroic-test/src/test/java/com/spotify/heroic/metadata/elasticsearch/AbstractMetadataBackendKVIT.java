@@ -21,14 +21,24 @@
 
 package com.spotify.heroic.metadata.elasticsearch;
 
+import static org.junit.Assert.assertEquals;
+
+import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.Feature;
 import com.spotify.heroic.common.FeatureSet;
+import com.spotify.heroic.common.Features;
+import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.elasticsearch.ClientWrapper;
 import com.spotify.heroic.elasticsearch.ConnectionModule;
+import com.spotify.heroic.elasticsearch.SearchTransformResult;
 import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
+import com.spotify.heroic.filter.TrueFilter;
+import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.MetadataModule;
 import com.spotify.heroic.test.AbstractMetadataBackendIT;
 import com.spotify.heroic.test.ElasticSearchTestContainer;
+import java.util.Set;
+import org.junit.Test;
 
 public abstract class AbstractMetadataBackendKVIT extends AbstractMetadataBackendIT {
     final static ElasticSearchTestContainer esContainer;
@@ -64,5 +74,20 @@ public abstract class AbstractMetadataBackendKVIT extends AbstractMetadataBacken
                 .build())
             .scrollSize(numSeries / 2)
             .build();
+    }
+
+    @Test
+    public void testHashField() throws Exception {
+        FindSeries.Request f = new FindSeries.Request(
+            TrueFilter.get(), range, OptionalLimit.empty(), Features.DEFAULT);
+
+        Set<String> hashes = ((MetadataBackendKV) backend).entries(
+            f,
+            hit -> (String) hit.getSourceAsMap().get("hash"),
+            SearchTransformResult::getSet,
+            request -> { }
+        ).get();
+
+        assertEquals(ImmutableSet.of(s1.hash(), s2.hash(), s3.hash()), hashes);
     }
 }

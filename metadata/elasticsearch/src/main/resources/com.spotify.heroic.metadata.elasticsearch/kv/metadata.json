@@ -11,6 +11,9 @@
     "tag_keys": {
       "type": "keyword",
       "doc_values": true
+    },
+    "hash": {
+      "type": "keyword"
     }
   }
 }

@@ -128,6 +128,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     private static final String KEY = "key";
     private static final String TAGS = "tags";
     private static final String TAG_KEYS = "tag_keys";
+    private static final String HASH_FIELD = "hash";
     private static final Character TAG_DELIMITER = '\0';
 
     private static final String METADATA_TYPE = "metadata";
@@ -441,7 +442,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         return Series.of(key, tags);
     }
 
-    private <T, O> AsyncFuture<O> entries(
+    protected <T, O> AsyncFuture<O> entries(
         final FindSeries.Request seriesRequest,
         final Function<SearchHit, T> converter,
         final Transform<SearchTransformResult<T>, O> collector,
@@ -457,7 +458,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
             request.source()
                 .size(limit.asMaxInteger(scrollSize))
                 .query(new BoolQueryBuilder().must(f))
-                .sort(new FieldSortBuilder("_doc"));
+                .sort(new FieldSortBuilder("hash"));
 
             modifier.accept(request);
 
@@ -580,20 +581,18 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         b.field(KEY, series.getKey());
 
         b.startArray(TAGS);
-
         for (final Map.Entry<String, String> entry : series.getTags().entrySet()) {
             b.value(entry.getKey() + TAG_DELIMITER + entry.getValue());
         }
-
         b.endArray();
 
         b.startArray(TAG_KEYS);
-
         for (final Map.Entry<String, String> entry : series.getTags().entrySet()) {
             b.value(entry.getKey());
         }
-
         b.endArray();
+
+        b.field(HASH_FIELD, series.hash());
     }
 
     private static final Filter.Visitor<QueryBuilder> FILTER_CONVERTER =
