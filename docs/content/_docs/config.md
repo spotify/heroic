@@ -516,6 +516,44 @@ type: json
 path: <string>
 ```
 
+#### Limits(#limits)
+
+The metrics config supports the setting of query limits to control the number of results/size of results returned for a given query. These may be provided here as defaults, and may also be overridden at query time via `options`, ie:
+
+```json
+'options': {   'aggregationLimit': 4000000,
+                   'dataLimit': 80000000,
+                   'failOnLimits': True,
+                   'groupLimit': 8000,
+                   'seriesLimit': 40},
+```
+
+##### aggregationLimit
+
+Maximum number of data points a single aggregation is allowed to output.
+
+##### dataLimit
+
+Maximum number of data points a single request may fetch from the backends.
+
+##### groupLimit
+
+Maximum number of distinct groups a single result group may contains.
+
+##### seriesLimit
+
+Maximum amount of time series a single request is allowed to fetch, per cluster (if federated). 
+
+A note, when using resource identifiers, this limit only applies to the number of series found in the metadata backend, *not* the total series returned.
+
+It is there for possible to have a low limit *not* be exceeded with the number of series found in metadata, however, return far more series from the metrics backend when resource identifiers are taken into account (which may trigger additional limits)
+
+##### failOnLimits 
+
+When true, any limits applied will be reported as a failure.
+
+
+
 ### [`<metadata_backend>`](#metadata_backend)
 
 Metadata acts as the index to time series data, it is the driving force behind our [Query Language](docs/query_language).
