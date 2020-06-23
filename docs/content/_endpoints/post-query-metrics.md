@@ -17,7 +17,7 @@ fields:
   type_json: '[&lt;string&gt;, ...]'
   purpose: |
     Enable or disable a feature on a per-query basis.
-    See <a href="docs/config/features">Features Configuration</a> for more details.
+    See <a href="docs/config.md#features">Features Configuration</a> for more details.
 response_fields:
 - name: 'range'
   type_json: '{start: &lt;number&gt;, end: &lt;number&gt;}'
