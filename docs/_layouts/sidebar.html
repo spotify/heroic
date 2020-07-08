@@ -55,7 +55,9 @@ layout: default
       <li {% if page.title == 'Aggregations' %}class="active"{% endif %}>
         <a href="{{ 'docs/aggregations' | relative_url }}">Aggregations</a>
       </li>
-
+      <li {% if page.title == 'BigTable' %}class="active"{% endif %}>
+        <a href="{{ 'docs/bigtable' | relative_url }}">BigTable</a>
+      </li>
       <li {% if page.title == 'Heroic Shell' %}class="active"{% endif %}>
         <a href="{{ 'docs/shell' | relative_url }}">Shell</a>
       </li>
