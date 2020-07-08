@@ -516,7 +516,7 @@ type: json
 path: <string>
 ```
 
-#### Limits(#limits)
+#### [Limits](#limits)
 
 The metrics config supports the setting of query limits to control the number of results/size of results returned for a given query. These may be provided here as defaults, and may also be overridden at query time via `options`, ie:
 
@@ -538,15 +538,15 @@ Maximum number of data points a single request may fetch from the backends.
 
 ##### groupLimit
 
-Maximum number of distinct groups a single result group may contains.
+Maximum number of distinct groups a single result group may contain.
 
 ##### seriesLimit
 
 Maximum amount of time series a single request is allowed to fetch, per cluster (if federated). 
 
-A note, when using resource identifiers, this limit only applies to the number of series found in the metadata backend, *not* the total series returned.
+A note: when using resource identifiers this limit only applies to the number of series found in the metadata backend, *not* the total series returned.
 
-It is there for possible to have a low limit *not* be exceeded with the number of series found in metadata, however, return far more series from the metrics backend when resource identifiers are taken into account (which may trigger additional limits)
+It is therefore possible to have a low limit *not* be exceeded with the number of series found in metadata, however, return far more series from the metrics backend when resource identifiers are taken into account (which may trigger additional limits).
 
 ##### failOnLimits 
 
