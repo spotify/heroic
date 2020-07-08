@@ -70,26 +70,26 @@ In order to retain the exact timestamp, Heroic splits the original timestamp int
 To illustrate this, using the two metrics in the example above, Heroic calculates the base-timestamp and the delta timestamp as follows:
 
 
-```shell
-Base-timestamp first metric: 1300000000000 - (1300000000000  % 4294967296 ) = 1297080123392
-Timestamp delta first metric: 1300000000000 - 1297080123392 = 2919876608
+
+Base-timestamp first metric: <span style="background-color:powderblue; color:black">1300000000000</span> - (<span style="background-color:powderblue; color:black">1300000000000</span>  % <span style="background-color:lightcyan; color:black">4294967296</span> ) = <span style="background-color:blue; color:black">1297080123392</span>
+Timestamp delta first metric: <span style="background-color:powderblue; color:black">1300000000000</span> - <span style="background-color:blue; color:black">1297080123392</span> = <span style="background-color:grey; color:black">2919876608</span>
  
-Base-timestamp second metric: 1300001000000 - ( 1300001000000 % 4294967296 ) = 1297080123392
-Timestamp delta second metric: 1300001000000 - 1297080123392 = 2920876608
-```
+Base-timestamp second metric: <span style="background-color:powderblue; color:black">1300001000000</span> - ( <span style="background-color:powderblue; color:black">1300001000000</span> % <span style="background-color:lightcyan; color:black">4294967296</span> ) = <span style="background-color:blue; color:black">1297080123392</span>
+Timestamp delta second metric: <span style="background-color:powderblue; color:black">1300001000000</span> - <span style="background-color:blue; color:black">1297080123392</span> = <span style="background-color:grey; color:black">2920876608</span>
+
 
 
 Together with all tags and resources, sorted lexicographically, this ends up creating this row-key: 
 
-`system,cpu-type=idle,site=gew,system-component=cpu,unit=%,what=cpu-idle-percentage,1297080123392,database.example.com,pod-example-123-abc`
+<span style="background-color:red; color:black">system</span>,<span style="background-color:yellow; color:black">cpu-type=idle,site=gew,system-component=cpu,unit=%,what=cpu-idle-percentage</span>,<span style="background-color:blue; color:black">1297080123392</span>,<span style="background-color:green; color:black">database.example.com,pod-example-123-abc</span>
 
 
 And the two metrics sent 16 minutes apart are stored in the BigTable table like so:
 
 
-| Row key                                                                                                                                   	| 2919876608 	| 2920876608 	|
+| Row key                                                                                                                                   	| <span style="background-color:grey; color:black">2919876608</span> 	| <span style="background-color:grey; color:black">2920876608</span> 	|
 |-------------------------------------------------------------------------------------------------------------------------------------------	|------------	|------------	|
-| system,cpu-type=idle,site=gew,system-component=cpu,unit=%,what=cpu-idle-percentage,1297080123392,database.example.com,pod-example-123-abc 	| 42.0       	| 84.0       	|
+| <span style="background-color:red; color:black">system</span>,<span style="background-color:yellow; color:black">cpu-type=idle,site=gew,system-component=cpu,unit=%,what=cpu-idle-percentage</span>,<span style="background-color:blue; color:black">1297080123392</span>,<span style="background-color:green; color:black">database.example.com,pod-example-123-abc</span> 	| <span style="background-color:pink; color:black">42.0</span>       	| <span style="background-color:pink; color:black">84.0</span>       	|
 
 
 ***
