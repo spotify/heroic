@@ -209,7 +209,7 @@ allprojects {
             dependency 'org.jfree:jfreechart:1.0.19'
             dependency 'joda-time:joda-time:2.8.2'
 
-            dependencySet(group: 'org.apache.logging.log4j', version: '2.11.2') {
+            dependencySet(group: 'org.apache.logging.log4j', version: '2.13.3') {
                 entry 'log4j-core'
                 entry 'log4j-slf4j-impl'
                 entry 'log4j-1.2-api'
