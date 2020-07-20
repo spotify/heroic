@@ -679,7 +679,8 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                                     errors.add(NodeError.internalError(r.getFailureMessage()));
 
                                     if (r.getFailure().getCause()
-                                        instanceof VersionConflictEngineException) {
+                                        instanceof VersionConflictEngineException ||
+                                        r.getFailure().getStatus().toString().equals("CONFLICT")) {
                                         reporter.reportWriteDroppedByDuplicate();
                                     } else if (addFailureAnnotation) {
                                         rootSpan.addAnnotation(r.getFailureMessage());
