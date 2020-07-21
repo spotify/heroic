@@ -12,6 +12,10 @@ shadowJar {
     classifier 'shaded'
     zip64 true
 
+    // Log4j2 plugins get lost/overwritten when creating a shaded jar. This transformer merges
+    // them.
+    transform(com.github.jengelman.gradle.plugins.shadow.transformers.Log4j2PluginsCacheFileTransformer)
+
     append 'META-INF/services/org.eclipse.jetty.http.HttpFieldPreEncoder'
     // required for lucene
     append 'META-INF/services/org.apache.lucene.codecs.Codec'
@@ -49,6 +53,7 @@ dependencies {
     implementation 'org.apache.logging.log4j:log4j-core'
     implementation 'org.apache.logging.log4j:log4j-1.2-api'
     implementation 'org.apache.logging.log4j:log4j-slf4j-impl'
+    implementation 'io.sentry:sentry-log4j2'
     implementation 'org.slf4j:jcl-over-slf4j'
     implementation 'org.slf4j:jul-to-slf4j'
     implementation 'args4j:args4j'

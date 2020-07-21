@@ -1,6 +1,9 @@
 Dockerfile
 .dockerignore
 .gitignore
+.github/
+.circleci/
+
 /docs/
 /.idea/
 *.png
@@ -8,3 +11,6 @@ Dockerfile
 build/
 out/
 .gradle
+
+/system-tests/
+venv/

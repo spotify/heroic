@@ -1,0 +1,80 @@
+host: 0.0.0.0
+port: 8080
+
+cluster:
+  # TODO: test srv discovery
+  discovery:
+    type: static
+    nodes:
+      - grpc://127.0.0.1:9698
+  protocols:
+    - type: grpc
+    - type: jvm
+  tags:
+    site: nyc
+
+metrics:
+  backends:
+    - type: datastax
+      seeds:
+        - cassandra:9042
+      configure: true
+    - type: memory
+    - type: bigtable
+      project: test
+      emulatorEndpoint: 0.0.0.0:8086
+
+metadata:
+  backends:
+    - type: memory
+    - type: elasticsearch
+      configure: true
+      connection:
+        client:
+          type: transport
+          seeds:
+            - elasticsearch:9300
+
+suggest:
+  backends:
+    - type: memory
+    - type: elasticsearch
+      configure: true
+      connection:
+        client:
+          type: transport
+          seeds:
+            - elasticsearch:9300
+
+consumers:
+  - type: kafka
+    schema: com.spotify.heroic.consumer.schemas.Spotify100Proto
+    topics:
+      - metrics
+    config:
+      zookeeper.connect: zookeeper:2181
+      group.id: heroic
+  - type: pubsub
+    schema: com.spotify.heroic.consumer.schemas.Spotify100Proto
+    project: heroic
+    topic: metrics
+    subscription: metrics
+
+cache:
+  # TODO: test memcached
+  type: memory
+
+shellServer:
+  host: 127.0.0.1
+  port: 9190
+
+analytics:
+  type: bigtable
+  project: test-analytics
+  emulatorEndpoint: 0.0.0.0:8086
+
+statistics:
+  type: semantic
+
+queryLogging:
+  type: slf4j

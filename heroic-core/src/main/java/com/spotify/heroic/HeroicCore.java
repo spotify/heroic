@@ -90,6 +90,7 @@ import io.opencensus.contrib.zpages.ZPageHandlers;
 import io.opencensus.trace.Tracing;
 import io.opencensus.trace.config.TraceConfig;
 import io.opencensus.trace.samplers.Samplers;
+import io.sentry.Sentry;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.Thread.UncaughtExceptionHandler;
@@ -271,6 +272,11 @@ public class HeroicCore implements HeroicConfiguration {
         loadModules(loading);
 
         final HeroicConfig config = config(loading);
+
+        String sentryDsn = config.sentryDsn();
+        if (sentryDsn != null) {
+            Sentry.init(sentryDsn);
+        }
 
         enableTracing(config.tracing());
 
