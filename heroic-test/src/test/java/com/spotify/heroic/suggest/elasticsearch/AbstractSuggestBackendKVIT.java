@@ -26,6 +26,7 @@ import static org.junit.Assert.assertEquals;
 import com.spotify.heroic.elasticsearch.ClientWrapper;
 import com.spotify.heroic.elasticsearch.ConnectionModule;
 import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
+import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.suggest.SuggestModule;
 import com.spotify.heroic.suggest.WriteSuggest;
 import com.spotify.heroic.test.AbstractSuggestBackendIT;
@@ -69,5 +70,10 @@ public abstract class AbstractSuggestBackendKVIT extends AbstractSuggestBackendI
 
         assertEquals(0, firstWrite.getErrors().size());
         assertEquals(2, secondWrite.getErrors().size());
+
+        for (final RequestError e : secondWrite.getErrors()) {
+            assert (e.toString().contains("VersionConflictEngineException") ||
+                    e.toString().contains("version_conflict_engine_exception"));
+        }
     }
 }

@@ -56,7 +56,8 @@ public class AbstractElasticsearchBackend {
         Provider<T> emptyProvider, Runnable reportWriteDroppedByDuplicate
     ) {
         return throwable -> {
-            if (ExceptionUtils.getRootCause(throwable) instanceof VersionConflictEngineException) {
+            if (ExceptionUtils.getRootCause(throwable) instanceof VersionConflictEngineException ||
+                throwable.getMessage().contains("version_conflict_engine_exception")) {
                 // Index request rejected, document already exists. That's ok, return success.
                 reportWriteDroppedByDuplicate.run();
                 return emptyProvider.get();
