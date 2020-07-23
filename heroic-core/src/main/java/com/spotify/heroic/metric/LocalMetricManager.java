@@ -79,7 +79,6 @@ import java.util.function.Function;
 import javax.inject.Inject;
 import javax.inject.Named;
 import org.apache.commons.lang3.NotImplementedException;
-import org.slf4j.Logger;
 
 @MetricScope
 public class LocalMetricManager implements MetricManager {
@@ -88,7 +87,6 @@ public class LocalMetricManager implements MetricManager {
         QueryTrace.identifier(LocalMetricManager.class, "query");
     private static final QueryTrace.Identifier FETCH =
         QueryTrace.identifier(LocalMetricManager.class, "fetch");
-    private static final Logger log = org.slf4j.LoggerFactory.getLogger(LocalMetricManager.class);
 
     private final OptionalLimit groupLimit;
     private final OptionalLimit seriesLimit;
@@ -231,7 +229,7 @@ public class LocalMetricManager implements MetricManager {
             }
 
             @Override
-            public AsyncFuture<FullQuery> transform(final FindSeries result) throws Exception {
+            public AsyncFuture<FullQuery> transform(final FindSeries result) {
                 final Span fetchSpan = tracer.spanBuilderWithExplicitParent(
                     "localMetricsManager.fetch", parentSpan).startSpan();
                 final ResultLimits limits;
@@ -255,8 +253,13 @@ public class LocalMetricManager implements MetricManager {
                     limits = ResultLimits.of();
                 }
 
-                /* if empty, there are not time series on this shard */
+                /* if empty, there are no time series on this shard */
                 if (result.isEmpty()) {
+
+                    fetchSpan.addAnnotation("There are no time series on this shard");
+                    fetchSpan.putAttribute("resultEmpty", booleanAttributeValue(true));
+                    fetchSpan.end();
+
                     return async.resolved(FullQuery.empty(namedWatch.end(), limits));
                 }
 
