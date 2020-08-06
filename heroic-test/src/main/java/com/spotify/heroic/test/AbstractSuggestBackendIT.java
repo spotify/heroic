@@ -38,12 +38,15 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.LoadingComponent;
 import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.suggest.KeySuggest;
+import com.spotify.heroic.suggest.KeySuggest.Suggestion;
 import com.spotify.heroic.suggest.MatchOptions;
+import com.spotify.heroic.suggest.NumSuggestionsLimit;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestManagerModule;
 import com.spotify.heroic.suggest.SuggestModule;
 import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
+import com.spotify.heroic.suggest.TagSuggest.Request;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
 import com.spotify.heroic.suggest.WriteSuggest;
@@ -60,23 +63,30 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
 public abstract class AbstractSuggestBackendIT {
+
+    public static final int REQUEST_NUM_SUGGESTIONS_LIMIT = 15;
+    public static final OptionalLimit OPTIONAL_LIMIT = OptionalLimit
+        .of(REQUEST_NUM_SUGGESTIONS_LIMIT);
+    public static final String STARTS_WITH_FO = "fo";
     protected final String testName = "heroic-it-" + UUID.randomUUID().toString();
 
-    private final Series s1 = Series.of("aa1", ImmutableMap.of("role", "foo"));
-    private final Series s2 = Series.of("aa2", ImmutableMap.of("role", "bar"));
-    private final Series s3 = Series.of("bb3", ImmutableMap.of("role", "baz"));
+    private static final Series s1 = Series.of("aa1", ImmutableMap.of("role", "foo"));
+    private static final Series s2 = Series.of("aa2", ImmutableMap.of("role", "bar"));
+    private static final Series s3 = Series.of("bb3", ImmutableMap.of("role", "baz"));
 
-    protected final DateRange range = new DateRange(0L, 0L);
+    protected static final DateRange range = new DateRange(0L, 0L);
 
-    protected final List<Pair<Series, DateRange>> testSeries =
+    protected static final List<Pair<Series, DateRange>> testSeries =
         new ArrayList<>() {
             {
                 add(new ImmutablePair<>(s1, range));
@@ -84,33 +94,70 @@ public abstract class AbstractSuggestBackendIT {
                 add(new ImmutablePair<>(s3, range));
             }
         };
+    private static int bigTestSeriesSize = 20;
+    protected static final List<Pair<Series, DateRange>> bigTestSeries = new ArrayList<>(
+        bigTestSeriesSize);
 
-    private final TagValuesSuggest.Request tagValuesSuggestReq =
-        new TagValuesSuggest.Request(TrueFilter.get(), range, OptionalLimit.empty(),
-            OptionalLimit.empty(), ImmutableList.of());
+    private static void createTestSeriesData() {
+        for (int i = 0; i < bigTestSeriesSize; i++) {
+            final var key = String.format("aa-%d", i + 1);
+            final var tags = ImmutableMap.of("role", String.format("foo-%d", i + 1));
 
-    private final TagValueSuggest.Request tagValueSuggestReq =
-        new TagValueSuggest.Request(TrueFilter.get(), range, OptionalLimit.empty(),
-            Optional.of("role"));
+            bigTestSeries.add(
+                new ImmutablePair<>(Series.of(key, tags), range));
+        }
+    }
+
+    private @NotNull TagValuesSuggest.Request buildTagValuesRequest(
+        OptionalLimit numSuggestionsLimit) {
+        return new TagValuesSuggest.Request(TrueFilter.get(), range,
+            numSuggestionsLimit, OptionalLimit.empty(), ImmutableList.of());
+    }
+
+    private TagValueSuggest.Request buildTagValueSuggestReq(String tagValue,
+        OptionalLimit numSuggestionsLimit) {
+        return new TagValueSuggest.Request(TrueFilter.get(), range, numSuggestionsLimit,
+            Optional.of(tagValue));
+    }
 
     private final TagKeyCount.Request tagKeyCountReq =
         new TagKeyCount.Request(TrueFilter.get(), range, OptionalLimit.empty(),
             OptionalLimit.empty());
 
-    private final TagSuggest.Request tagSuggestReq =
-        new TagSuggest.Request(TrueFilter.get(), range, OptionalLimit.empty(),
-            MatchOptions.builder().build(), Optional.empty(), Optional.of("ba"));
+    private @NotNull Request buildTagSuggestRequest(String tagValue) {
+        return new Request(TrueFilter.get(), range, OptionalLimit.empty(),
+            MatchOptions.builder().build(), Optional.empty(), Optional.of(tagValue));
+    }
 
-    private final KeySuggest.Request keySuggestReq =
-        new KeySuggest.Request(TrueFilter.get(), range, OptionalLimit.empty(),
-            MatchOptions.builder().build(), Optional.of("aa"));
+    private @NotNull Request buildTagSuggestRequest(String tagValue, int numSuggestionsLimit) {
+        return new Request(TrueFilter.get(), range, OptionalLimit.of(numSuggestionsLimit),
+            MatchOptions.builder().build(), Optional.empty(), Optional.of(tagValue));
+    }
+
+    private KeySuggest.Request keySuggestStartsWithReq(String startsWith) {
+        return keySuggestStartsWithReq(startsWith, OptionalLimit.empty());
+    }
+
+    private KeySuggest.Request keySuggestStartsWithReq(String startsWith,
+        OptionalLimit numSuggestionsLimit) {
+        return new KeySuggest.Request(
+            TrueFilter.get(),
+            range,
+            numSuggestionsLimit,
+            MatchOptions.builder().build(),
+            Optional.of(startsWith));
+    }
 
     private HeroicCoreInstance core;
-
     protected AsyncFramework async;
     protected SuggestBackend backend;
 
     protected abstract SuggestModule setupModule() throws Exception;
+
+    @BeforeClass
+    public static final void abstractSetupClass() {
+        createTestSeriesData();
+    }
 
     @Before
     public final void abstractSetup() throws Exception {
@@ -140,7 +187,6 @@ public abstract class AbstractSuggestBackendIT {
                 .map(GroupMember::getMember)
                 .findFirst())
             .orElseThrow(() -> new IllegalStateException("Failed to find backend"));
-
     }
 
     @After
@@ -154,21 +200,26 @@ public abstract class AbstractSuggestBackendIT {
     public void tagValuesSuggest() throws Exception {
         writeSeries(backend, testSeries);
 
-        final TagValuesSuggest result = getTagValuesSuggest(tagValuesSuggestReq);
-        final TagValuesSuggest.Suggestion s = result.getSuggestions().get(0);
+        TagValuesSuggest result = getTagValuesSuggest(
+            buildTagValuesRequest(OptionalLimit.empty()));
+        TagValuesSuggest.Suggestion s = result.getSuggestions().get(0);
 
         assertEquals(
             new TagValuesSuggest.Suggestion("role", ImmutableSortedSet.of("bar", "baz", "foo"),
                 false), s);
-    }
 
-    @Test
-    public void tagValueSuggest() throws Exception {
-        writeSeries(backend, testSeries);
+        writeSeries(backend, bigTestSeries);
 
-        final TagValueSuggest result = getTagValueSuggest(tagValueSuggestReq);
+        result = getTagValuesSuggest(buildTagValuesRequest(OPTIONAL_LIMIT));
 
-        assertEquals(ImmutableSet.of("bar", "baz", "foo"), ImmutableSet.copyOf(result.getValues()));
+        final var suggestions = result.getSuggestions();
+        assertEquals(REQUEST_NUM_SUGGESTIONS_LIMIT, suggestions.size());
+
+        s = suggestions.get(0);
+        assertEquals(
+            new TagValuesSuggest.Suggestion("role", ImmutableSortedSet.of("bar", "baz", "foo"),
+                false), s);
+
     }
 
     @Test
@@ -184,32 +235,64 @@ public abstract class AbstractSuggestBackendIT {
 
     @Test
     public void tagSuggest() throws Exception {
+        writeSeries(backend, bigTestSeries);
+
+        var result = getTagSuggest(buildTagSuggestRequest(STARTS_WITH_FO));
+        assertEquals(NumSuggestionsLimit.DEFAULT_NUM_SUGGESTIONS_LIMIT, result.size());
+
+        var result2 = getTagSuggest(
+            buildTagSuggestRequest(STARTS_WITH_FO, REQUEST_NUM_SUGGESTIONS_LIMIT));
+        assertEquals(REQUEST_NUM_SUGGESTIONS_LIMIT, result2.size());
+
+        // PSK TODO replace existing logic/content test
+    }
+
+    @Test
+    public void tagValueSuggest() throws Exception {
         writeSeries(backend, testSeries);
 
-        final Set<Pair<String, String>> result = getTagSuggest(tagSuggestReq);
+        TagValueSuggest result = getTagValueSuggest(
+            buildTagValueSuggestReq("role", OptionalLimit.empty()));
 
-        assertEquals(ImmutableSet.of(Pair.of("role", "bar"), Pair.of("role", "baz")), result);
+        assertEquals(ImmutableSet.of("bar", "baz", "foo"), ImmutableSet.copyOf(result.getValues()));
+
+        writeSeries(backend, bigTestSeries);
+
+        result = getTagValueSuggest(
+            buildTagValueSuggestReq("role", OptionalLimit.of(REQUEST_NUM_SUGGESTIONS_LIMIT)));
+
+        assertEquals(ImmutableSet.of("bar", "baz", "foo"), ImmutableSet.copyOf(result.getValues()));
+        assertEquals(REQUEST_NUM_SUGGESTIONS_LIMIT, result.getValues().size());
     }
+
 
     @Test
     public void keySuggest() throws Exception {
         writeSeries(backend, testSeries);
 
-        final Set<String> result = getKeySuggest(keySuggestReq);
-
+        var result = getKeySuggest(keySuggestStartsWithReq("aa"));
         assertEquals(ImmutableSet.of(s1.getKey(), s2.getKey()), result);
+
+        writeSeries(backend, bigTestSeries);
+
+        var result2 = getKeySuggest(
+            keySuggestStartsWithReq("aa", OptionalLimit.of(REQUEST_NUM_SUGGESTIONS_LIMIT)));
+        assertEquals(REQUEST_NUM_SUGGESTIONS_LIMIT, result2.size());
     }
+
 
     @Test
     public void tagValueSuggestNoIdx() throws Exception {
-        final TagValueSuggest result = getTagValueSuggest(tagValueSuggestReq);
+        final TagValueSuggest result = getTagValueSuggest(
+            buildTagValueSuggestReq("role", OptionalLimit.empty()));
 
         assertEquals(Collections.emptyList(), result.getValues());
     }
 
     @Test
     public void tagValuesSuggestNoIdx() throws Exception {
-        final TagValuesSuggest result = getTagValuesSuggest(tagValuesSuggestReq);
+        final TagValuesSuggest result = getTagValuesSuggest(
+            buildTagValuesRequest(OptionalLimit.empty()));
 
         assertEquals(Collections.emptyList(), result.getSuggestions());
     }
@@ -223,21 +306,21 @@ public abstract class AbstractSuggestBackendIT {
 
     @Test
     public void tagSuggestNoIdx() throws Exception {
-        final Set<Pair<String, String>> result = getTagSuggest(tagSuggestReq);
+        final Set<Pair<String, String>> result = getTagSuggest(buildTagSuggestRequest("ba"));
 
         assertEquals(Collections.emptySet(), result);
     }
 
     @Test
     public void keySuggestNoIdx() throws Exception {
-        final Set<String> result = getKeySuggest(keySuggestReq);
+        final Set<String> result = getKeySuggest(keySuggestStartsWithReq("aa"));
 
         assertEquals(Collections.emptySet(), result);
     }
 
     private AsyncFuture<Void> writeSeries(
         final SuggestBackend suggest, final Series s, final DateRange range
-    ) throws Exception {
+    ) {
         return suggest
             .write(new WriteSuggest.Request(s, range))
             .lazyTransform(r -> async.retryUntilResolved(() -> checks(s),
@@ -316,7 +399,7 @@ public abstract class AbstractSuggestBackendIT {
             .get()
             .getSuggestions()
             .stream()
-            .map(s -> s.getKey())
+            .map(Suggestion::getKey)
             .collect(Collectors.toSet());
     }
 }

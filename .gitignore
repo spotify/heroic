@@ -30,3 +30,9 @@ build/
 out/
 gradle-app.setting
 .gradle
+
+# VS Code auto-created files
+.classpath
+.project
+.settings
+.java-version

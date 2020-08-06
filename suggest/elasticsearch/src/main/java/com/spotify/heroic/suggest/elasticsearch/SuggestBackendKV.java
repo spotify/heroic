@@ -58,8 +58,10 @@ import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.SuggestBackendReporter;
 import com.spotify.heroic.suggest.KeySuggest;
+import com.spotify.heroic.suggest.NumSuggestionsLimit;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.TagKeyCount;
+import com.spotify.heroic.suggest.TagKeyCount.Suggestion;
 import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
@@ -112,15 +114,18 @@ import org.elasticsearch.search.aggregations.Aggregations;
 import org.elasticsearch.search.aggregations.BucketOrder;
 import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms.Bucket;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.elasticsearch.search.aggregations.metrics.Cardinality;
 import org.elasticsearch.search.aggregations.metrics.CardinalityAggregationBuilder;
 import org.elasticsearch.search.aggregations.metrics.TopHitsAggregationBuilder;
+import org.jetbrains.annotations.NotNull;
 
 @ElasticsearchScope
 public class SuggestBackendKV extends AbstractElasticsearchBackend
     implements SuggestBackend, Grouped, LifeCycles {
 
+    protected NumSuggestionsLimit numSuggestionsLimit = new NumSuggestionsLimit();
     private final Tracer tracer = Tracing.getTracer();
     private static final String WRITE_CACHE_SIZE = "write-cache-size";
 
@@ -168,13 +173,15 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
         final SuggestBackendReporter reporter,
         final RateLimitedCache<Pair<String, HashCode>> writeCache,
         final Groups groups,
-        @Named("configure") boolean configure) {
+        @Named("configure") boolean configure,
+        @Named("numSuggestionsLimit") Integer numSuggestionsLimit) {
         super(async);
         this.connection = connection;
         this.reporter = reporter;
         this.writeCache = writeCache;
         this.groups = groups;
         this.configure = configure;
+        this.numSuggestionsLimit = new NumSuggestionsLimit(numSuggestionsLimit);
     }
 
     @Override
@@ -215,25 +222,16 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 final QueryBuilder query = bool.hasClauses() ? bool : matchAllQuery();
 
                 SearchRequest searchRequest = c.getIndex().search(TAG_TYPE);
-                searchRequest.source().size(0).query(query).timeout(TIMEOUT);
 
-                final OptionalLimit limit = request.getLimit();
                 final OptionalLimit groupLimit = request.getGroupLimit();
-                {
-                    final TermsAggregationBuilder terms =
-                        AggregationBuilders.terms("keys").field(TAG_SKEY_RAW);
 
-                    limit.asInteger().ifPresent(l -> terms.size(l + 1));
+                // use this.numSuggestionsLimit unless request.limit has been set.
+                final int numSuggestionsLimit =
+                    this.numSuggestionsLimit.updateAndGetLimit(request.getLimit());
 
-                    searchRequest.source().aggregation(terms);
-                    // make value bucket one entry larger than necessary to figure out when limiting
-                    // is applied.
-                    final TermsAggregationBuilder cardinality =
-                        AggregationBuilders.terms("values").field(TAG_SVAL_RAW);
+                searchRequest.source().query(query).timeout(TIMEOUT);
 
-                    groupLimit.asInteger().ifPresent(l -> cardinality.size(l + 1));
-                    terms.subAggregation(cardinality);
-                }
+                addCardinality(searchRequest, groupLimit, numSuggestionsLimit);
 
                 final ResolvableFuture<SearchResponse> future = async.future();
 
@@ -241,48 +239,19 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
                 return future.directTransform(
                     (SearchResponse response) -> {
-                        final List<TagValuesSuggest.Suggestion> suggestions = new ArrayList<>();
-
-                        if (response.getAggregations() == null) {
-                            return new TagValuesSuggest(Collections.emptyList(), Boolean.FALSE);
-                        }
-
-                        final Terms terms = response.getAggregations().get("keys");
-
-                        // TODO: check type
-                        final List<? extends Terms.Bucket> buckets = terms.getBuckets();
-
-                        for (final Terms.Bucket bucket : limit.limitList(buckets)) {
-                            final Terms valueTerms = bucket.getAggregations().get("values");
-
-                            // TODO: check type
-                            List<? extends Terms.Bucket> valueBuckets = valueTerms.getBuckets();
-
-                            final SortedSet<String> result = new TreeSet<>();
-
-                            for (final Terms.Bucket valueBucket : valueBuckets) {
-                                result.add(valueBucket.getKeyAsString());
-                            }
-
-                            final SortedSet<String> values = groupLimit.limitSortedSet(result);
-                            final boolean limited = groupLimit.isGreater(valueBuckets.size());
-
-                            suggestions.add(new TagValuesSuggest.Suggestion(
-                                bucket.getKeyAsString(), values, limited));
-                        }
-
-                        return new TagValuesSuggest(
-                            ImmutableList.copyOf(suggestions), limit.isGreater(buckets.size()));
+                        return createTagValuesSuggest(this.numSuggestionsLimit.asOptionalLimit(),
+                            groupLimit, response);
                     });
             });
     }
+
 
     @Override
     public AsyncFuture<TagValueSuggest> tagValueSuggest(final TagValueSuggest.Request request) {
         return connection.doto(
             (final Connection c) -> {
-                final BoolQueryBuilder bool = boolQuery();
 
+                final BoolQueryBuilder bool = boolQuery();
                 final Optional<String> key = request.getKey();
 
                 key.ifPresent(
@@ -299,42 +268,21 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 }
 
                 SearchRequest searchRequest = c.getIndex().search(TAG_TYPE);
-                searchRequest.source().size(0).query(query);
 
-                final OptionalLimit limit = request.getLimit();
+                final int numSuggestionsLimit = this.numSuggestionsLimit
+                    .updateAndGetLimit(request.getLimit());
+                searchRequest.source().size(numSuggestionsLimit).query(query);
 
-                {
-                    final TermsAggregationBuilder terms =
-                        AggregationBuilders.terms("values")
-                            .field(TAG_SVAL_RAW)
-                            .order(BucketOrder.key(true));
-
-                    limit.asInteger().ifPresent(l -> terms.size(l + 1));
-                    searchRequest.source().aggregation(terms);
-                }
+                aggregateRequestByTerms(searchRequest, numSuggestionsLimit);
 
                 final ResolvableFuture<SearchResponse> future = async.future();
                 c.execute(searchRequest, bind(future));
 
+                final var optionalNumSuggestionsLimit = this.numSuggestionsLimit.asOptionalLimit();
+
                 return future.directTransform(
                     (SearchResponse response) -> {
-                        final ImmutableList.Builder<String> suggestions = ImmutableList.builder();
-
-                        if (response.getAggregations() == null) {
-                            return new TagValueSuggest(Collections.emptyList(), Boolean.FALSE);
-                        }
-
-                        final Terms terms = response.getAggregations().get("values");
-
-                        // TODO: Check type
-                        final List<? extends Terms.Bucket> buckets = terms.getBuckets();
-
-                        for (final Terms.Bucket bucket : limit.limitList(buckets)) {
-                            suggestions.add(bucket.getKeyAsString());
-                        }
-
-                        return new TagValueSuggest(suggestions.build(),
-                            limit.isGreater(buckets.size()));
+                        return createTagValueSuggest(optionalNumSuggestionsLimit, response);
                     });
             });
     }
@@ -346,34 +294,13 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 final QueryBuilder root = new BoolQueryBuilder().must(filter(request.getFilter()));
 
                 SearchRequest searchRequest = c.getIndex().search(TAG_TYPE);
+
                 searchRequest.source().size(0).query(root);
 
                 final OptionalLimit limit = request.getLimit();
                 final OptionalLimit exactLimit = request.getExactLimit();
 
-                {
-                    final TermsAggregationBuilder keys =
-                        AggregationBuilders.terms("keys").field(TAG_SKEY_RAW);
-                    limit.asInteger().ifPresent(l -> keys.size(l + 1));
-                    searchRequest.source().aggregation(keys);
-
-                    final CardinalityAggregationBuilder cardinality =
-                        AggregationBuilders.cardinality("cardinality").field(TAG_SVAL_RAW);
-
-                    keys.subAggregation(cardinality);
-
-                    exactLimit
-                        .asInteger()
-                        .ifPresent(
-                            size -> {
-                                final TermsAggregationBuilder values = AggregationBuilders
-                                    .terms("values")
-                                    .field(TAG_SVAL_RAW)
-                                    .size(size + 1);
-
-                                keys.subAggregation(values);
-                            });
-                }
+                aggregateRequestByKeys(searchRequest, limit, exactLimit);
 
                 final ResolvableFuture<SearchResponse> future = async.future();
                 c.execute(searchRequest, bind(future));
@@ -391,26 +318,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                         final List<? extends Terms.Bucket> buckets = keys.getBuckets();
 
                         for (final Terms.Bucket bucket : limit.limitList(buckets)) {
-                            final Cardinality cardinality =
-                                bucket.getAggregations().get("cardinality");
-                            final Terms values = bucket.getAggregations().get("values");
-
-                            final Optional<Set<String>> exactValues;
-
-                            if (values != null) {
-                                exactValues =
-                                    Optional.of(
-                                        values.getBuckets().stream()
-                                            .map(MultiBucketsAggregation.Bucket::getKeyAsString)
-                                            .collect(Collectors.toSet()))
-                                        .filter(sets -> !exactLimit.isGreater(sets.size()));
-                            } else {
-                                exactValues = Optional.empty();
-                            }
-
-                            suggestions.add(
-                                new TagKeyCount.Suggestion(
-                                    bucket.getKeyAsString(), cardinality.getValue(), exactValues));
+                            suggestions.add(createSuggestion(exactLimit, bucket));
                         }
 
                         return new TagKeyCount(
@@ -420,113 +328,13 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     }
 
     @Override
-    public AsyncFuture<TagSuggest> tagSuggest(TagSuggest.Request request) {
-        return connection.doto(
-            (final Connection c) -> {
-                final BoolQueryBuilder bool = boolQuery();
-
-                final Optional<String> key = request.getKey();
-                final Optional<String> value = request.getValue();
-
-                // special case: key and value are equal, which indicates that _any_ match should be
-                // in effect.
-                // XXX: Enhance API to allow for this to be intentional instead of this by
-                // introducing an 'any' field.
-                if (key.isPresent() && value.isPresent() && key.equals(value)) {
-                    bool.should(matchTermKey(key.get()));
-                    bool.should(matchTermValue(value.get()));
-                } else {
-                    key.ifPresent(
-                        k -> {
-                            if (!k.isEmpty()) {
-                                bool.must(matchTermKey(k).boost(2.0f));
-                            }
-                        });
-
-                    value.ifPresent(
-                        v -> {
-                            if (!v.isEmpty()) {
-                                bool.must(matchTermValue(v));
-                            }
-                        });
-                }
-
-                QueryBuilder query = bool.hasClauses() ? bool : matchAllQuery();
-
-                if (!(request.getFilter() instanceof TrueFilter)) {
-                    query = new BoolQueryBuilder().must(query).filter(filter(request.getFilter()));
-                }
-
-                SearchRequest searchRequest = c.getIndex().search(TAG_TYPE);
-                searchRequest.source().size(0).query(query).timeout(TIMEOUT);
-
-                // aggregation
-                {
-                    final TopHitsAggregationBuilder hits =
-                        AggregationBuilders.topHits("hits")
-                            .size(1)
-                            .fetchSource(TAG_SUGGEST_SOURCES, new String[0]);
-
-                    final TermsAggregationBuilder terms =
-                        AggregationBuilders.terms("terms").field(TAG_KV).subAggregation(hits);
-
-                    request.getLimit().asInteger().ifPresent(terms::size);
-
-                    searchRequest.source().aggregation(terms);
-                }
-
-                final ResolvableFuture<SearchResponse> future = async.future();
-                c.execute(searchRequest, bind(future));
-
-                return future.directTransform(
-                    (SearchResponse response) -> {
-                        final ImmutableList.Builder<TagSuggest.Suggestion> suggestions =
-                            ImmutableList.builder();
-
-                        final Aggregations aggregations = response.getAggregations();
-
-                        if (aggregations == null) {
-                            return new TagSuggest();
-                        }
-
-                        Stream<kotlin.Pair<String, SearchHits>> buckets =
-                            c.parseHits(aggregations.get("terms"));
-
-                        buckets.forEach(bucket -> {
-                            SearchHits hits = bucket.getSecond();
-                            final SearchHit hit = hits.getAt(0);
-                            final Map<String, Object> doc = hit.getSourceAsMap();
-
-                            final String k = (String) doc.get(TAG_SKEY);
-                            final String v = (String) doc.get(TAG_SVAL);
-
-                            suggestions.add(new TagSuggest.Suggestion(hits.getMaxScore(), k, v));
-                        });
-
-                        return new TagSuggest(suggestions.build());
-                    });
-            });
-    }
-
-    @Override
     public AsyncFuture<KeySuggest> keySuggest(final KeySuggest.Request request) {
+        // Consider connection.doto to be an async version of using-with-resources
         return connection.doto(
             (final Connection c) -> {
                 BoolQueryBuilder bool = boolQuery();
 
-                request
-                    .getKey()
-                    .ifPresent(
-                        k -> {
-                            if (!k.isEmpty()) {
-                                final String l = k.toLowerCase();
-                                final BoolQueryBuilder b = boolQuery();
-                                b.should(termQuery(SERIES_KEY_ANALYZED, l));
-                                b.should(termQuery(SERIES_KEY_PREFIX, l).boost(1.5f));
-                                b.should(termQuery(SERIES_KEY, l).boost(2.0f));
-                                bool.must(b);
-                            }
-                        });
+                addKeyToBuilder(request, bool);
 
                 QueryBuilder query = bool.hasClauses() ? bool : matchAllQuery();
                 if (!(request.getFilter() instanceof TrueFilter)) {
@@ -534,46 +342,37 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 }
 
                 SearchRequest searchRequest = c.getIndex().search(SERIES_TYPE);
-                searchRequest.source().size(0).query(query);
+
+                searchRequest.source().size(numSuggestionsLimit
+                    .updateAndGetLimit(request.getLimit())).query(query);
 
                 // aggregation
-                {
-                    final TopHitsAggregationBuilder hits =
-                        AggregationBuilders.topHits("hits")
-                            .size(1)
-                            .fetchSource(KEY_SUGGEST_SOURCES, new String[0]);
-
-                    final TermsAggregationBuilder keys =
-                        AggregationBuilders.terms("keys").field(KEY).subAggregation(hits);
-
-                    request.getLimit().asInteger().ifPresent(keys::size);
-                    searchRequest.source().aggregation(keys);
-                }
+                addTermsToRequest(searchRequest, KEY_SUGGEST_SOURCES, "keys", KEY,
+                    request.getLimit());
 
                 final ResolvableFuture<SearchResponse> future = async.future();
                 c.execute(searchRequest, bind(future));
 
-                return future.directTransform(
-                    (SearchResponse response) -> {
-                        final Set<KeySuggest.Suggestion> suggestions = new LinkedHashSet<>();
-
-                        if (response.getAggregations() == null) {
-                            return new KeySuggest(Collections.emptyList());
-                        }
-
-                        Stream<kotlin.Pair<String, SearchHits>> buckets =
-                            c.parseHits(response.getAggregations().get("keys"));
-
-                        buckets.forEach(bucket -> {
-                            SearchHits hits = bucket.getSecond();
-                            suggestions.add(new KeySuggest.Suggestion(
-                                hits.getMaxScore(), bucket.getFirst()));
-                        });
-
-                        return new KeySuggest(ImmutableList.copyOf(suggestions));
-                    });
+                return createKeySuggestAsync(c, future);
             });
     }
+
+    private static void addKeyToBuilder(KeySuggest.Request request, BoolQueryBuilder bool) {
+        request
+            .getKey()
+            .ifPresent(
+                k -> {
+                    if (!k.isEmpty()) {
+                        final String l = k.toLowerCase();
+                        final BoolQueryBuilder b = boolQuery();
+                        b.should(termQuery(SERIES_KEY_ANALYZED, l));
+                        b.should(termQuery(SERIES_KEY_PREFIX, l).boost(1.5f));
+                        b.should(termQuery(SERIES_KEY, l).boost(2.0f));
+                        bool.must(b);
+                    }
+                });
+    }
+
 
     @Override
     public AsyncFuture<WriteSuggest> write(final WriteSuggest.Request request) {
@@ -861,5 +660,278 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
     public String toString() {
         return "SuggestBackendKV(connection=" + this.connection + ")";
+    }
+
+    @NotNull
+    private static TagValuesSuggest createTagValuesSuggest(OptionalLimit requestLimit,
+        OptionalLimit groupLimit,
+        SearchResponse response) {
+        final List<TagValuesSuggest.Suggestion> suggestions = new ArrayList<>();
+
+        if (response.getAggregations() == null) {
+            return new TagValuesSuggest(Collections.emptyList(), Boolean.FALSE);
+        }
+
+        final Terms terms = response.getAggregations().get("keys");
+
+        // TODO: check type
+        final List<? extends Terms.Bucket> buckets = terms.getBuckets();
+
+        for (final Terms.Bucket bucket : requestLimit.limitList(buckets)) {
+            suggestions.add(
+                createTagValuesSuggestWithBucketKeys(groupLimit, suggestions, bucket));
+        }
+
+        return new TagValuesSuggest(
+            ImmutableList.copyOf(suggestions), requestLimit.isGreater(buckets.size()));
+    }
+
+    private static void addCardinality(SearchRequest searchRequest, OptionalLimit groupLimit,
+        int numSuggestionsLimit) {
+        final TermsAggregationBuilder terms =
+            AggregationBuilders.terms("keys").size(numSuggestionsLimit).field(TAG_SKEY_RAW);
+
+        searchRequest.source().aggregation(terms);
+
+        // make value bucket one entry larger than necessary to figure out when limiting
+        // is applied.
+        final TermsAggregationBuilder cardinality =
+            AggregationBuilders.terms("values").field(TAG_SVAL_RAW);
+
+        groupLimit.asInteger().ifPresent(l -> cardinality.size(l + 1));
+        terms.subAggregation(cardinality);
+    }
+
+    private static TagValuesSuggest.Suggestion createTagValuesSuggestWithBucketKeys(
+        OptionalLimit groupLimit,
+        List<TagValuesSuggest.Suggestion> suggestions,
+        Bucket bucket) {
+        final Terms valueTerms = bucket.getAggregations().get("values");
+
+        // TODO: check type
+        List<? extends Terms.Bucket> valueBuckets = valueTerms.getBuckets();
+
+        SortedSet<String> bucketKeys = new TreeSet<>();
+
+        for (final Terms.Bucket valueBucket : valueBuckets) {
+            bucketKeys.add(valueBucket.getKeyAsString());
+        }
+
+        bucketKeys = groupLimit.limitSortedSet(bucketKeys);
+        final boolean limited = groupLimit.isGreater(valueBuckets.size());
+
+        return new TagValuesSuggest.Suggestion(
+            bucket.getKeyAsString(), bucketKeys, limited);
+    }
+
+    private static AsyncFuture<KeySuggest> createKeySuggestAsync(Connection c,
+        ResolvableFuture<SearchResponse> future) {
+        return future.directTransform(
+            (SearchResponse response) -> {
+                final Set<KeySuggest.Suggestion> suggestions = new LinkedHashSet<>();
+
+                if (response.getAggregations() == null) {
+                    return new KeySuggest(Collections.emptyList());
+                }
+
+                Stream<kotlin.Pair<String, SearchHits>> buckets =
+                    c.parseHits(response.getAggregations().get("keys"));
+
+                buckets.forEach(bucket -> {
+                    SearchHits hits = bucket.getSecond();
+                    suggestions.add(new KeySuggest.Suggestion(
+                        hits.getMaxScore(), bucket.getFirst()));
+                });
+
+                return new KeySuggest(ImmutableList.copyOf(suggestions));
+            });
+    }
+
+    @NotNull
+    private static TagValueSuggest createTagValueSuggest(OptionalLimit optionalNumSuggestionsLimit,
+        SearchResponse response) {
+        final ImmutableList.Builder<String> suggestions = ImmutableList.builder();
+
+        if (response.getAggregations() == null) {
+            return new TagValueSuggest(Collections.emptyList(), Boolean.FALSE);
+        }
+
+        final Terms terms = response.getAggregations().get("values");
+
+        // TODO: Check type
+        final List<? extends Terms.Bucket> buckets = terms.getBuckets();
+
+        for (final var bucket : optionalNumSuggestionsLimit.limitList(buckets)) {
+            suggestions.add(bucket.getKeyAsString());
+        }
+
+        return new TagValueSuggest(suggestions.build(),
+            optionalNumSuggestionsLimit.isGreater(buckets.size()));
+    }
+
+    private static void aggregateRequestByTerms(SearchRequest searchRequest,
+        int numSuggestionsLimit) {
+        final TermsAggregationBuilder terms =
+            AggregationBuilders.terms("values")
+                .size(numSuggestionsLimit)
+                .field(TAG_SVAL_RAW)
+                .order(BucketOrder.key(true));
+
+        searchRequest.source().aggregation(terms);
+    }
+
+    private Suggestion createSuggestion(OptionalLimit exactLimit, Bucket bucket) {
+        final Cardinality cardinality =
+            bucket.getAggregations().get("cardinality");
+        final Terms values = bucket.getAggregations().get("values");
+
+        final Optional<Set<String>> exactValues;
+
+        if (values != null) {
+            exactValues =
+                Optional.of(
+                    values.getBuckets().stream()
+                        .map(MultiBucketsAggregation.Bucket::getKeyAsString)
+                        .collect(Collectors.toSet()))
+                    .filter(sets -> !exactLimit.isGreater(sets.size()));
+        } else {
+            exactValues = Optional.empty();
+        }
+
+        return new TagKeyCount.Suggestion(bucket.getKeyAsString(),
+            cardinality.getValue(), exactValues);
+    }
+
+    private void aggregateRequestByKeys(
+        SearchRequest searchRequest, OptionalLimit limit, OptionalLimit exactLimit) {
+
+        final TermsAggregationBuilder keysAggBuilder = AggregationBuilders.terms("keys")
+            .field(TAG_SKEY_RAW);
+        limit.asInteger().ifPresent(l -> keysAggBuilder.size(l + 1));
+
+        // Assign keys aggregation to request
+        searchRequest.source().aggregation(keysAggBuilder);
+
+        final CardinalityAggregationBuilder cardinality =
+            AggregationBuilders.cardinality("cardinality").field(TAG_SVAL_RAW);
+
+        // Then add cardinality aggregation to the keys builder
+        keysAggBuilder.subAggregation(cardinality);
+
+        // Finally, if an exact limit is present, sub-aggregate by the supplied terms
+        exactLimit
+            .asInteger()
+            .ifPresent(
+                size -> {
+                    final TermsAggregationBuilder values =
+                        AggregationBuilders.terms("values").field(TAG_SVAL_RAW).size(size + 1);
+
+                    keysAggBuilder.subAggregation(values);
+                });
+    }
+
+    @Override
+    public AsyncFuture<TagSuggest> tagSuggest(TagSuggest.Request request) {
+        return connection.doto(
+            (final Connection c) -> {
+                final BoolQueryBuilder boolQueryBuilder = boolQuery();
+
+                final Optional<String> key = request.getKey();
+                final Optional<String> value = request.getValue();
+
+                // special case: key and value are equal, which indicates that _any_ match should be
+                // in effect.
+                // XXX: Enhance API to allow for this to be intentional instead of this by
+                // introducing an 'any' field.
+                addKeyAndValueToBuilder(boolQueryBuilder, key, value);
+
+                QueryBuilder query =
+                    boolQueryBuilder.hasClauses() ? boolQueryBuilder : matchAllQuery();
+
+                if (!(request.getFilter() instanceof TrueFilter)) {
+                    query = new BoolQueryBuilder().must(query).filter(filter(request.getFilter()));
+                }
+
+                SearchRequest searchRequest = c.getIndex().search(TAG_TYPE);
+
+                searchRequest.source().query(query).timeout(TIMEOUT);
+
+                // aggregation
+                addTermsToRequest(searchRequest, TAG_SUGGEST_SOURCES, "terms", TAG_KV,
+                    request.getLimit());
+
+                final ResolvableFuture<SearchResponse> future = async.future();
+                c.execute(searchRequest, bind(future));
+
+                return getTagSuggestAsync(c, future);
+            });
+    }
+
+    private static AsyncFuture<TagSuggest> getTagSuggestAsync(Connection c,
+        ResolvableFuture<SearchResponse> future) {
+        return future.directTransform(
+            (SearchResponse response) -> {
+                final ImmutableList.Builder<TagSuggest.Suggestion> suggestions =
+                    ImmutableList.builder();
+
+                final Aggregations aggregations = response.getAggregations();
+
+                if (aggregations == null) {
+                    return new TagSuggest();
+                }
+
+                Stream<kotlin.Pair<String, SearchHits>> buckets =
+                    c.parseHits(aggregations.get("terms"));
+
+                buckets.forEach(bucket -> {
+                    SearchHits hits = bucket.getSecond();
+                    final SearchHit hit = hits.getAt(0);
+                    final Map<String, Object> doc = hit.getSourceAsMap();
+
+                    final String k = (String) doc.get(TAG_SKEY);
+                    final String v = (String) doc.get(TAG_SVAL);
+
+                    suggestions.add(new TagSuggest.Suggestion(hits.getMaxScore(), k, v));
+                });
+
+                return new TagSuggest(suggestions.build());
+            });
+    }
+
+    private void addTermsToRequest(SearchRequest searchRequest, String[] tagSuggestSources,
+        String term, String tagKv, OptionalLimit limit) {
+        final TopHitsAggregationBuilder hits =
+            AggregationBuilders.topHits("hits")
+                .size(1)
+                .fetchSource(tagSuggestSources, new String[0]);
+
+        final TermsAggregationBuilder terms =
+            AggregationBuilders.terms(term).field(tagKv)
+                .size(numSuggestionsLimit.updateAndGetLimit(limit))
+                .subAggregation(hits);
+
+        searchRequest.source().aggregation(terms);
+    }
+
+    private static void addKeyAndValueToBuilder(BoolQueryBuilder bool, Optional<String> key,
+        Optional<String> value) {
+        if (key.isPresent() && value.isPresent() && key.equals(value)) {
+            bool.should(matchTermKey(key.get()));
+            bool.should(matchTermValue(value.get()));
+        } else {
+            key.ifPresent(
+                k -> {
+                    if (!k.isEmpty()) {
+                        bool.must(matchTermKey(k).boost(2.0f));
+                    }
+                });
+
+            value.ifPresent(
+                v -> {
+                    if (!v.isEmpty()) {
+                        bool.must(matchTermValue(v));
+                    }
+                });
+        }
     }
 }

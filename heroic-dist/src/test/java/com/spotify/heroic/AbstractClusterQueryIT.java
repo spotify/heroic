@@ -427,6 +427,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         assertEquals(ResultLimits.of(ResultLimit.SERIES), result.getLimits());
     }
 
+
     @Test
     public void groupLimitFailure() throws Exception {
         final QueryResult result = query("*", builder -> {

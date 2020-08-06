@@ -82,6 +82,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
     private static final String DEFAULT_GROUP = "elasticsearch";
     private static final String DEFAULT_TEMPLATE_NAME = "heroic-suggest";
     private static final boolean DEFAULT_CONFIGURE = false;
+    private static final int DEFAULT_NUM_SUGGESTIONS = 10;
 
     private final Optional<String> id;
     private final Groups groups;
@@ -94,6 +95,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
     private final String distributedCacheSrvRecord;
     private final String templateName;
     private final boolean configure;
+    private final Integer numSuggestionsLimit;
 
     private static Supplier<BackendType> defaultSetup = SuggestBackendKV.factory();
 
@@ -123,7 +125,8 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
         @JsonProperty("distributedCacheSrvRecord") Optional<String> distributedCacheSrvRecord,
         @JsonProperty("templateName") Optional<String> templateName,
         @JsonProperty("backendType") Optional<String> backendType,
-        @JsonProperty("configure") Optional<Boolean> configure
+        @JsonProperty("configure") Optional<Boolean> configure,
+        @JsonProperty("numSuggestionsLimit") Optional<Integer> numSuggestionsLimit
     ) {
         this.id = id;
         this.groups = groups.orElseGet(Groups::empty).or(DEFAULT_GROUP);
@@ -142,6 +145,8 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
         this.templateName = templateName.orElse(DEFAULT_TEMPLATE_NAME);
         this.type = backendType.map(this::lookupBackendType).orElse(defaultSetup);
         this.configure = configure.orElse(DEFAULT_CONFIGURE);
+
+        this.numSuggestionsLimit = numSuggestionsLimit.orElse(DEFAULT_NUM_SUGGESTIONS);
     }
 
     private Supplier<BackendType> lookupBackendType(final String bt) {
@@ -205,6 +210,13 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
         public boolean configure(ExtraParameters params) {
             return configure || params.contains(ExtraParameters.CONFIGURE) ||
                 params.contains(ELASTICSEARCH_CONFIGURE_PARAM);
+        }
+
+        @Provides
+        @ElasticsearchScope
+        @Named("numSuggestionsLimit")
+        public int numSuggestionsLimit(ExtraParameters params) {
+            return numSuggestionsLimit;
         }
 
         @Provides
@@ -275,6 +287,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
         private Optional<String> templateName = empty();
         private Optional<String> backendType = empty();
         private Optional<Boolean> configure = empty();
+        private Optional<Integer> numSuggestionsLimit = empty();
 
         public Builder id(final String id) {
             checkNotNull(id, "id");
@@ -345,21 +358,26 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
             return this;
         }
 
+        public Builder numSuggestionsLimit(final Integer numSuggestionsLimit) {
+            this.numSuggestionsLimit = of(numSuggestionsLimit);
+            return this;
+        }
+
         public ElasticsearchSuggestModule build() {
             return new ElasticsearchSuggestModule(
-              id,
-              groups,
-              connection,
-              writesPerSecond,
-              rateLimitSlowStartSeconds,
-              writeCacheDurationMinutes,
-              writeCacheConcurrency,
-              writeCacheMaxSize,
-              distributedCacheSrvRecord,
-              templateName,
-              backendType,
-              configure
-            );
+                id,
+                groups,
+                connection,
+                writesPerSecond,
+                rateLimitSlowStartSeconds,
+                writeCacheDurationMinutes,
+                writeCacheConcurrency,
+                writeCacheMaxSize,
+                distributedCacheSrvRecord,
+                templateName,
+                backendType,
+                configure,
+                numSuggestionsLimit);
         }
     }
 }

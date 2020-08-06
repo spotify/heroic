@@ -31,6 +31,7 @@ import com.spotify.heroic.common.DynamicModuleId;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.ModuleId;
 import com.spotify.heroic.dagger.PrimaryComponent;
+import com.spotify.heroic.suggest.NumSuggestionsLimit;
 import com.spotify.heroic.suggest.SuggestModule;
 import dagger.Component;
 import dagger.Module;
@@ -43,14 +44,19 @@ public final class MemorySuggestModule implements SuggestModule, DynamicModuleId
 
     private final Optional<String> id;
     private final Groups groups;
+    private final NumSuggestionsLimit numSuggestionsLimit;
 
     @JsonCreator
     public MemorySuggestModule(
         @JsonProperty("id") Optional<String> id,
-        @JsonProperty("groups") Optional<Groups> groups
+        @JsonProperty("groups") Optional<Groups> groups,
+        @JsonProperty("numSuggestionsIntLimit") Optional<Integer> numSuggestionsIntLimit
     ) {
         this.id = id;
         this.groups = groups.orElseGet(Groups::empty).or(DEFAULT_GROUP);
+        this.numSuggestionsLimit = new NumSuggestionsLimit(
+            numSuggestionsIntLimit.orElse(NumSuggestionsLimit.DEFAULT_NUM_SUGGESTIONS_LIMIT));
+
     }
 
     @Override
@@ -60,11 +66,12 @@ public final class MemorySuggestModule implements SuggestModule, DynamicModuleId
             .primaryComponent(primary)
             .depends(depends)
             .m(new M())
+            .o(new O())
             .build();
     }
 
     @MemoryScope
-    @Component(modules = M.class,
+    @Component(modules = {M.class, O.class},
         dependencies = {PrimaryComponent.class, Depends.class})
     interface C extends Exposed {
         @Override
@@ -85,17 +92,36 @@ public final class MemorySuggestModule implements SuggestModule, DynamicModuleId
         return id;
     }
 
+    @Module
+    class O {
+
+        @Provides
+        @MemoryScope
+        public Integer numSuggestionsIntLimit() {
+            return numSuggestionsLimit.getLimit();
+        }
+    }
+
     public static Builder builder() {
         return new Builder();
     }
 
     public static class Builder {
+
         private Optional<String> id = empty();
         private Optional<Groups> groups = empty();
+        private Optional<NumSuggestionsLimit> numSuggestionsLimit =
+            Optional.of(new NumSuggestionsLimit(NumSuggestionsLimit.DEFAULT_NUM_SUGGESTIONS_LIMIT));
 
         public Builder id(final String id) {
             checkNotNull(id, "id");
             this.id = of(id);
+            return this;
+        }
+
+        public Builder numSuggestions(final NumSuggestionsLimit numSuggestionsLimit) {
+            checkNotNull(numSuggestionsLimit, "numSuggestionsLimit");
+            this.numSuggestionsLimit = of(numSuggestionsLimit);
             return this;
         }
 
@@ -106,7 +132,8 @@ public final class MemorySuggestModule implements SuggestModule, DynamicModuleId
         }
 
         public MemorySuggestModule build() {
-            return new MemorySuggestModule(id, groups);
+            return new MemorySuggestModule(id, groups,
+                Optional.of(numSuggestionsLimit.get().getLimit()));
         }
     }
 }

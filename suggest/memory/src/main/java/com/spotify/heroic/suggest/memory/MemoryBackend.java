@@ -30,6 +30,7 @@ import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.suggest.KeySuggest;
+import com.spotify.heroic.suggest.NumSuggestionsLimit;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
@@ -75,10 +76,15 @@ public class MemoryBackend implements SuggestBackend, Grouped {
     private final Groups groups;
     private final AsyncFramework async;
 
+    private Optional<NumSuggestionsLimit> numSuggestionsLimit =
+        Optional.of(new NumSuggestionsLimit());
+
     @Inject
-    public MemoryBackend(final Groups groups, final AsyncFramework async) {
+    public MemoryBackend(final Groups groups, final AsyncFramework async,
+        Integer numSuggestionsIntLimit) {
         this.groups = groups;
         this.async = async;
+        this.numSuggestionsLimit = Optional.of(new NumSuggestionsLimit(numSuggestionsIntLimit));
     }
 
     @Override
@@ -164,9 +170,12 @@ public class MemoryBackend implements SuggestBackend, Grouped {
             values.ifPresent(parts -> parts.forEach(
                 k -> ids.retainAll(tagValues.getOrDefault(k, ImmutableSet.of()))));
 
+            // use numSuggestions unless request.limit has been set.
+            numSuggestionsLimit.ifPresent(x -> x.updateLimit(request.getLimit()));
+            var limit = numSuggestionsLimit.get().asOptionalLimit();
+
             final List<TagSuggest.Suggestion> suggestions = ImmutableList.copyOf(
-                ImmutableSortedSet.copyOf(request
-                    .getLimit()
+                ImmutableSortedSet.copyOf(limit
                     .limitStream(ids.stream())
                     .map(tagIndex::get)
                     .filter(Objects::nonNull)
