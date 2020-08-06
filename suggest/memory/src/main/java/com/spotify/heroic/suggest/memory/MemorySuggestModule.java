@@ -94,10 +94,9 @@ public final class MemorySuggestModule implements SuggestModule, DynamicModuleId
 
     @Module
     class O {
-
         @Provides
         @MemoryScope
-        public Integer numSuggestionsIntLimit() {
+        public Integer numSuggestionsLimit() {
             return numSuggestionsLimit.getLimit();
         }
     }
@@ -119,7 +118,7 @@ public final class MemorySuggestModule implements SuggestModule, DynamicModuleId
             return this;
         }
 
-        public Builder numSuggestions(final NumSuggestionsLimit numSuggestionsLimit) {
+        public Builder numSuggestionsLimit(final NumSuggestionsLimit numSuggestionsLimit) {
             checkNotNull(numSuggestionsLimit, "numSuggestionsLimit");
             this.numSuggestionsLimit = of(numSuggestionsLimit);
             return this;
