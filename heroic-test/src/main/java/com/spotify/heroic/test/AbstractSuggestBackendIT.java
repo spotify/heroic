@@ -194,19 +194,15 @@ public abstract class AbstractSuggestBackendIT {
         core.shutdown().get();
     }
 
-
-
     @Test
     public void tagValuesSuggest() throws Exception {
         writeSeries(backend, testSeries);
 
-        TagValuesSuggest result = getTagValuesSuggest(
+        var result = getTagValuesSuggest(
             buildTagValuesRequest(OptionalLimit.empty()));
-        TagValuesSuggest.Suggestion s = result.getSuggestions().get(0);
+        var suggestion = result.getSuggestions().get(0);
 
-        assertEquals(
-            new TagValuesSuggest.Suggestion("role", ImmutableSortedSet.of("bar", "baz", "foo"),
-                false), s);
+        assertTagAndValues(suggestion);
 
         writeSeries(backend, bigTestSeries);
 
@@ -215,11 +211,8 @@ public abstract class AbstractSuggestBackendIT {
         final var suggestions = result.getSuggestions();
         assertEquals(REQUEST_NUM_SUGGESTIONS_LIMIT, suggestions.size());
 
-        s = suggestions.get(0);
-        assertEquals(
-            new TagValuesSuggest.Suggestion("role", ImmutableSortedSet.of("bar", "baz", "foo"),
-                false), s);
-
+        suggestion = suggestions.get(0);
+        assertTagAndValues(suggestion);
     }
 
     @Test
@@ -240,9 +233,9 @@ public abstract class AbstractSuggestBackendIT {
         var result = getTagSuggest(buildTagSuggestRequest(STARTS_WITH_FO));
         assertEquals(NumSuggestionsLimit.DEFAULT_NUM_SUGGESTIONS_LIMIT, result.size());
 
-        var result2 = getTagSuggest(
+        result = getTagSuggest(
             buildTagSuggestRequest(STARTS_WITH_FO, REQUEST_NUM_SUGGESTIONS_LIMIT));
-        assertEquals(REQUEST_NUM_SUGGESTIONS_LIMIT, result2.size());
+        assertEquals(REQUEST_NUM_SUGGESTIONS_LIMIT, result.size());
 
         // PSK TODO replace existing logic/content test
     }
@@ -261,7 +254,6 @@ public abstract class AbstractSuggestBackendIT {
         result = getTagValueSuggest(
             buildTagValueSuggestReq("role", OptionalLimit.of(REQUEST_NUM_SUGGESTIONS_LIMIT)));
 
-        assertEquals(ImmutableSet.of("bar", "baz", "foo"), ImmutableSet.copyOf(result.getValues()));
         assertEquals(REQUEST_NUM_SUGGESTIONS_LIMIT, result.getValues().size());
     }
 
@@ -401,5 +393,11 @@ public abstract class AbstractSuggestBackendIT {
             .stream()
             .map(Suggestion::getKey)
             .collect(Collectors.toSet());
+    }
+
+    private void assertTagAndValues(TagValuesSuggest.Suggestion suggestion) {
+        assertEquals(
+            new TagValuesSuggest.Suggestion("role", ImmutableSortedSet.of("bar", "baz", "foo"),
+                false), suggestion);
     }
 }
