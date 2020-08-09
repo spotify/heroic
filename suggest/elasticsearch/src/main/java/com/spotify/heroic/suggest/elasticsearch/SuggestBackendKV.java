@@ -125,7 +125,7 @@ import org.jetbrains.annotations.NotNull;
 public class SuggestBackendKV extends AbstractElasticsearchBackend
     implements SuggestBackend, Grouped, LifeCycles {
 
-    protected NumSuggestionsLimit numSuggestionsLimit = new NumSuggestionsLimit();
+    private NumSuggestionsLimit numSuggestionsLimit = new NumSuggestionsLimit();
     private final Tracer tracer = Tracing.getTracer();
     private static final String WRITE_CACHE_SIZE = "write-cache-size";
 
@@ -355,6 +355,10 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
                 return createKeySuggestAsync(c, future);
             });
+    }
+
+    public NumSuggestionsLimit getNumSuggestionsLimit() {
+        return numSuggestionsLimit;
     }
 
     private static void addKeyToBuilder(KeySuggest.Request request, BoolQueryBuilder bool) {
