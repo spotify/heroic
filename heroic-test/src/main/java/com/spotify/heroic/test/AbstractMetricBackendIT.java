@@ -49,6 +49,7 @@ import io.opencensus.trace.BlankSpan;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -66,6 +67,7 @@ import org.junit.rules.TestRule;
 import org.junit.runners.model.Statement;
 
 public abstract class AbstractMetricBackendIT {
+
     protected final Series s1 =
         new Series("s1", ImmutableSortedMap.of("id", "s1"), ImmutableSortedMap.of("resource", "a"));
     protected final Series s2 =
@@ -354,12 +356,17 @@ public abstract class AbstractMetricBackendIT {
 
         Points points = new Points();
 
+        final int MAX_STEP_SIZE = 100_000_000;  // 10^8
+
         long timestamp = 1;
-        long maxTimestamp = 1000000000000L;
-        // timestamps [1, maxTimestamp] since we can't fetch 0 (range start is exclusive)
+        long maxTimestamp = (long) Math.pow(10, 12); // 10^12 i.e. 1 million million
+
+        // timestamps [1, maxTimestamp] since we can't fetch 0 (range start is exclusive).
+        // So `points` will end up containing a minimum of 10^12 / 10^8 = 10^4 = 10,000
+        // Point objects.
         while (timestamp < maxTimestamp) {
             points.p(timestamp, random.nextDouble());
-            timestamp += Math.abs(random.nextInt(100000000));
+            timestamp += Math.abs(random.nextInt(MAX_STEP_SIZE));
         }
         points.p(maxTimestamp, random.nextDouble());
 
@@ -371,6 +378,8 @@ public abstract class AbstractMetricBackendIT {
                 QueryOptions.builder().build());
 
         assertEqualMetrics(mc, fetchMetrics(request, true));
+
+        assertEquals(1, 1L);    // just for debugging
     }
 
     private List<MetricCollection> fetchMetrics(FetchData.Request request, boolean slicedFetch)
@@ -380,14 +389,40 @@ public abstract class AbstractMetricBackendIT {
             backend
                 .fetch(request,
                     FetchQuotaWatcher.NO_QUOTA,
+                    // PSK. Wow. The Google list makes it all the way up here...
                     mcr -> fetchedMetrics.add(mcr.getMetrics()),
                     BlankSpan.INSTANCE)
                 .get();
+
+            logMemoryUsage();
+
             return fetchedMetrics;
         } else {
             throw new IllegalArgumentException(
                 "Tried to read data with non-supported non-sliced code path");
         }
+    }
+
+    private Map<String, Long> logMemoryUsage() {
+        int mb = 1024 * 1024;
+
+        Runtime runTime = Runtime.getRuntime();
+
+        final var totalMemory = runTime.totalMemory();
+        final var max = runTime.maxMemory() / mb;
+
+        long usedMemory = totalMemory - runTime.freeMemory();
+        long freeMemory = runTime.maxMemory() - usedMemory;
+
+        System.out.println(String.format("Max/Total/Used/Free Memory == %d/%d/%d/%d MB", max, totalMemory, usedMemory / mb, freeMemory / mb));
+
+        var result = new HashMap<String, Long>();
+        result.put("max", max);
+        result.put("total", totalMemory);
+        result.put("used", usedMemory);
+        result.put("free", freeMemory);
+
+        return result;
     }
 
     private static void assertEqualMetrics(

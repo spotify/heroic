@@ -324,6 +324,9 @@ public class LocalMetricManager implements MetricManager {
                         ).onDone(new EndSpanFutureReporter(fetchSeries)));
                     }
                 });
+
+                // This creates 100 threads, each of which will make an
+                // async sub-request to fulfil the main request.
                 return async
                     .eventuallyCollect(fetches, collector, fetchParallelism)
                     .onDone(new EndSpanFutureReporter(fetchSpan));

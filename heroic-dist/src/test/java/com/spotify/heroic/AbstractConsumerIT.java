@@ -8,6 +8,8 @@ import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.FetchData;
+import com.spotify.heroic.metric.FetchData.Request;
+import com.spotify.heroic.metric.FetchData.Result;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
@@ -15,6 +17,7 @@ import com.spotify.heroic.metric.MetricReadResult;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
+import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ClockSource;
 import eu.toolchain.async.RetryPolicy;
 import io.opencensus.trace.BlankSpan;
@@ -54,11 +57,12 @@ public abstract class AbstractConsumerIT extends AbstractSingleNodeIT {
         tryUntil(() -> {
             final List<MetricReadResult> data = Collections.synchronizedList(new ArrayList<>());
 
-            instance.inject(coreComponent -> {
-                FetchData.Request fetchDataRequest =
-                    new FetchData.Request(MetricType.POINT, s1, new DateRange(0, 100),
+            final var resultAsync = instance.inject(coreComponent -> {
+                Request fetchDataRequest =
+                    new Request(MetricType.POINT, s1, new DateRange(0, 100),
                         QueryOptions.defaults());
-                return coreComponent
+
+                final AsyncFuture<Result> fetchAsync = coreComponent
                     .metricManager()
                     .useDefaultGroup()
                     .fetch(fetchDataRequest,
@@ -66,7 +70,11 @@ public abstract class AbstractConsumerIT extends AbstractSingleNodeIT {
                         data::add,
                         BlankSpan.INSTANCE
                     );
-            }).get();
+                return fetchAsync;
+            });
+
+            // OK, let's actually make/wait-for the calls.
+            resultAsync.get();
 
             assertFalse(data.isEmpty());
             final MetricCollection collection = data.iterator().next().getMetrics();

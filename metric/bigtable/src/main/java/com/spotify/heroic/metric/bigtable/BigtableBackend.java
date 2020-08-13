@@ -441,61 +441,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         final List<AsyncFuture<FetchData.Result>> fetches = new ArrayList<>(prepared.size());
 
         for (final PreparedQuery p : prepared) {
-            Span readRowsSpan = tracer.spanBuilderWithExplicitParent(
-                "bigtable.readRows", fetchBatchSpan).startSpan();
-            readRowsSpan.putAttribute("rowKeyBaseTimestamp", longAttributeValue(p.base));
-
-            final Function<FlatRow.Cell, Metric> transform =
-                cell -> p.deserialize(cell.getQualifier(), cell.getValue());
-
-            QueryTrace.NamedWatch fs = QueryTrace.watch(FETCH_SEGMENT);
-
-            final AsyncFuture<List<FlatRow>> readRows;
-            try (Scope ignored = tracer.withSpan(fetchBatchSpan)) {
-                readRows =
-                    client
-                        .readRows(
-                            table,
-                            ReadRowsRequest.builder()
-                                .range(new RowRange(
-                                    Optional.of(p.rowKeyStart), Optional.of(p.rowKeyEnd)))
-                                .filter(
-                                    RowFilter.chain(
-                                        Arrays.asList(
-                                            RowFilter.newColumnRangeBuilder(p.columnFamily)
-                                                .startQualifierOpen(p.startQualifierOpen)
-                                                .endQualifierClosed(p.endQualifierClosed)
-                                                .build(),
-                                            RowFilter.onlyLatestCell())))
-                                .build())
-                        .onDone(new EndSpanFutureReporter(readRowsSpan));
-            }
-
-            final AtomicBoolean foundResourceIdentifier = new AtomicBoolean(false);
-            fetches.add(readRows.directTransform(result -> {
-                readRowsSpan.putAttribute("rowsReturned", longAttributeValue(result.size()));
-                for (final FlatRow row : result) {
-                    SortedMap<String, String> resource = parseResourceFromRowKey(row.getRowKey());
-
-                    if (!foundResourceIdentifier.get() && resource.size() > 0) {
-                        foundResourceIdentifier.set(true);
-                    }
-
-                    watcher.readData(row.getCells().size());
-
-                    final List<Metric> metrics = Lists.transform(row.getCells(), transform);
-                    final MetricCollection mc = MetricCollection.build(type, metrics);
-                    final MetricReadResult readResult = new MetricReadResult(mc, resource);
-
-                    metricsConsumer.accept(readResult);
-                }
-
-                readRowsSpan.putAttribute(
-                    "containsResourceIdentifier", booleanAttributeValue(
-                        foundResourceIdentifier.get()));
-
-                return new FetchData.Result(fs.end());
-            }));
+            fetches.add(processPreparedQuery(client, type, watcher, fetchBatchSpan, metricsConsumer, p));
         }
 
         return async.collect(fetches, FetchData
@@ -507,6 +453,84 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                 watcher.accessedRows(prepared.size());
                 return result;
             });
+    }
+
+    private AsyncFuture<FetchData.Result> processPreparedQuery(BigtableDataClient client, MetricType type, FetchQuotaWatcher watcher, Span fetchBatchSpan,
+        Consumer<MetricReadResult> metricsConsumer, PreparedQuery p) {
+        Span readRowsSpan = tracer.spanBuilderWithExplicitParent(
+            "bigtable.readRows", fetchBatchSpan).startSpan();
+        readRowsSpan.putAttribute("rowKeyBaseTimestamp", longAttributeValue(p.base));
+
+        final Function<FlatRow.Cell, Metric> transform =
+            cell -> p.deserialize(cell.getQualifier(), cell.getValue());
+
+        QueryTrace.NamedWatch fs = QueryTrace.watch(FETCH_SEGMENT);
+
+        final AsyncFuture<List<FlatRow>> readRows;
+        try (Scope ignored = tracer.withSpan(fetchBatchSpan)) {
+            readRows =
+                client
+                    .readRows(
+                        table,
+                        ReadRowsRequest.builder()
+                            .range(new RowRange(
+                                Optional.of(p.rowKeyStart), Optional.of(p.rowKeyEnd)))
+                            .filter(
+                                RowFilter.chain(
+                                    Arrays.asList(
+                                        RowFilter.newColumnRangeBuilder(p.columnFamily)
+                                            .startQualifierOpen(p.startQualifierOpen)
+                                            .endQualifierClosed(p.endQualifierClosed)
+                                            .build(),
+                                        RowFilter.onlyLatestCell())))
+                            .build())
+                    .onDone(new EndSpanFutureReporter(readRowsSpan));
+        }
+
+        final AtomicBoolean foundResourceIdentifier = new AtomicBoolean(false);
+        var asyncResult = readRows.directTransform(rows -> {
+            readRowsSpan.putAttribute("rowsReturned", longAttributeValue(rows.size()));
+            for (final FlatRow row : rows) {
+                SortedMap<String, String> resource = parseResourceFromRowKey(row.getRowKey());
+
+                if (!foundResourceIdentifier.get() && resource.size() > 0) {
+                    foundResourceIdentifier.set(true);
+                }
+
+                watcher.readData(row.getCells().size());
+
+                // This is where we transform Google data type (List<Cell> where
+                // Cell has ByteString) into Heroic data type - Metric. What happens
+                // to the memory?
+                // Well, Lists.transform's docco implies that a view onto the original
+                // data is returned and lazily evaluated. I.e. it keeps the original
+                // list as-is and just stores the transformation function with it.
+                // The classes are TransformingSequentialList and TransformingRandomAccessList.
+                // They basically just apply this function when it's iterated or indexed,
+                // for example.
+                // So, to answer the question, the original "Google" memory is passed
+                // potentially really far into Heroic, until some code accesses
+                // this list! And let's say they're Points, which is typical,
+                // When we create a PointCollection, we just copy the list reference!
+                // Google's data thus makes it into the readResult MetricReadResult below!
+                //
+                // So, what does the consumer do...
+                final List<Metric> metrics = Lists.transform(row.getCells(), transform);
+                final MetricCollection mc = MetricCollection.build(type, metrics);
+
+                final MetricReadResult readResult = new MetricReadResult(mc, resource);
+
+                metricsConsumer.accept(readResult);
+            }
+
+            readRowsSpan.putAttribute(
+                "containsResourceIdentifier", booleanAttributeValue(
+                    foundResourceIdentifier.get()));
+
+            return new FetchData.Result(fs.end());
+        });
+
+        return asyncResult;
     }
 
     private SortedMap<String, String> parseResourceFromRowKey(final ByteString rowKey)
