@@ -125,7 +125,7 @@ import org.jetbrains.annotations.NotNull;
 public class SuggestBackendKV extends AbstractElasticsearchBackend
     implements SuggestBackend, Grouped, LifeCycles {
 
-    private NumSuggestionsLimit numSuggestionsLimit = new NumSuggestionsLimit();
+    private NumSuggestionsLimit numSuggestionsLimit = NumSuggestionsLimit.of();
     private final Tracer tracer = Tracing.getTracer();
     private static final String WRITE_CACHE_SIZE = "write-cache-size";
 
@@ -181,7 +181,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
         this.writeCache = writeCache;
         this.groups = groups;
         this.configure = configure;
-        this.numSuggestionsLimit = new NumSuggestionsLimit(numSuggestionsLimit);
+        this.numSuggestionsLimit = NumSuggestionsLimit.of(numSuggestionsLimit);
     }
 
     @Override
@@ -227,11 +227,11 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
                 // use this.numSuggestionsLimit unless request.limit has been set.
                 final int numSuggestionsLimit =
-                    this.numSuggestionsLimit.updateAndGetLimit(request.getLimit());
+                        this.numSuggestionsLimit.calculateNewLimit(request.getLimit());
 
-                searchRequest.source().query(query).timeout(TIMEOUT);
+                searchRequest.source().size(numSuggestionsLimit).query(query).timeout(TIMEOUT);
 
-                addCardinality(searchRequest, groupLimit, numSuggestionsLimit);
+                addCardinality(searchRequest, groupLimit);
 
                 final ResolvableFuture<SearchResponse> future = async.future();
 
@@ -239,8 +239,8 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
                 return future.directTransform(
                     (SearchResponse response) -> {
-                        return createTagValuesSuggest(this.numSuggestionsLimit.asOptionalLimit(),
-                            groupLimit, response);
+                        return createTagValuesSuggest(this.numSuggestionsLimit.getLimit(),
+                                groupLimit, response);
                     });
             });
     }
@@ -270,7 +270,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 SearchRequest searchRequest = c.getIndex().search(TAG_TYPE);
 
                 final int numSuggestionsLimit = this.numSuggestionsLimit
-                    .updateAndGetLimit(request.getLimit());
+                        .calculateNewLimit(request.getLimit());
                 searchRequest.source().size(numSuggestionsLimit).query(query);
 
                 aggregateRequestByTerms(searchRequest, numSuggestionsLimit);
@@ -344,7 +344,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 SearchRequest searchRequest = c.getIndex().search(SERIES_TYPE);
 
                 searchRequest.source().size(numSuggestionsLimit
-                    .updateAndGetLimit(request.getLimit())).query(query);
+                        .calculateNewLimit(request.getLimit())).query(query);
 
                 // aggregation
                 addTermsToRequest(searchRequest, KEY_SUGGEST_SOURCES, "keys", KEY,
@@ -667,12 +667,14 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     }
 
     @NotNull
-    private static TagValuesSuggest createTagValuesSuggest(OptionalLimit requestLimit,
-        OptionalLimit groupLimit,
-        SearchResponse response) {
+    private static TagValuesSuggest createTagValuesSuggest(
+            int suggestValueLimit,
+            OptionalLimit groupLimit,
+            SearchResponse response) {
+
         final List<TagValuesSuggest.Suggestion> suggestions = new ArrayList<>();
 
-        if (response.getAggregations() == null) {
+        if (response.getAggregations()==null) {
             return new TagValuesSuggest(Collections.emptyList(), Boolean.FALSE);
         }
 
@@ -681,51 +683,72 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
         // TODO: check type
         final List<? extends Terms.Bucket> buckets = terms.getBuckets();
 
-        for (final Terms.Bucket bucket : requestLimit.limitList(buckets)) {
+        // WE need valueCount to be an object since
+        var suggestValueCount = new int[1];
+        for (final Terms.Bucket bucket : buckets) {
             suggestions.add(
-                createTagValuesSuggestWithBucketKeys(groupLimit, suggestions, bucket));
+                    createTagValuesSuggestFromBuckets(bucket, suggestValueCount, groupLimit,
+                            suggestValueLimit));
         }
 
         return new TagValuesSuggest(
-            ImmutableList.copyOf(suggestions), requestLimit.isGreater(buckets.size()));
+                ImmutableList.copyOf(suggestions), suggestValueLimit > buckets.size());
     }
 
-    private static void addCardinality(SearchRequest searchRequest, OptionalLimit groupLimit,
-        int numSuggestionsLimit) {
+    private static void addCardinality(SearchRequest searchRequest, OptionalLimit groupLimit) {
         final TermsAggregationBuilder terms =
-            AggregationBuilders.terms("keys").size(numSuggestionsLimit).field(TAG_SKEY_RAW);
+                AggregationBuilders.terms("keys").field(TAG_SKEY_RAW);
 
         searchRequest.source().aggregation(terms);
 
         // make value bucket one entry larger than necessary to figure out when limiting
         // is applied.
         final TermsAggregationBuilder cardinality =
-            AggregationBuilders.terms("values").field(TAG_SVAL_RAW);
+                AggregationBuilders.terms("values").field(TAG_SVAL_RAW);
 
         groupLimit.asInteger().ifPresent(l -> cardinality.size(l + 1));
         terms.subAggregation(cardinality);
     }
 
-    private static TagValuesSuggest.Suggestion createTagValuesSuggestWithBucketKeys(
-        OptionalLimit groupLimit,
-        List<TagValuesSuggest.Suggestion> suggestions,
-        Bucket bucket) {
+    /**
+     * Creates a tagValuesSuggestion object.
+     * <p>
+     * It respects both the groupLimit and the suggestValueCount limit.
+     *
+     * @param suggestions
+     * @param bucket
+     * @param suggestValueCount why on earth are we using an array of length 1 to
+     *                          track a count? because it must survive between calls
+     *                          and Integer objects aren't mutable. Also AtomicInt
+     *                          is very, very slow in a highly-multithreaded context.
+     * @param groupLimit
+     * @param suggestValueLimit
+     * @return
+     */
+    private static TagValuesSuggest.Suggestion createTagValuesSuggestFromBuckets(
+            Bucket bucket, int[] suggestValueCount, OptionalLimit groupLimit,
+            int suggestValueLimit) {
+
         final Terms valueTerms = bucket.getAggregations().get("values");
 
-        // TODO: check type
         List<? extends Terms.Bucket> valueBuckets = valueTerms.getBuckets();
 
-        SortedSet<String> bucketKeys = new TreeSet<>();
+        SortedSet<String> values = new TreeSet<>();
 
         for (final Terms.Bucket valueBucket : valueBuckets) {
-            bucketKeys.add(valueBucket.getKeyAsString());
+            values.add(valueBucket.getKeyAsString());
+            suggestValueCount[0] = suggestValueCount[0] + 1;
+            if (suggestValueCount[0]==suggestValueLimit) {
+                break;
+            }
         }
 
-        bucketKeys = groupLimit.limitSortedSet(bucketKeys);
-        final boolean limited = groupLimit.isGreater(valueBuckets.size());
+        values = groupLimit.limitSortedSet(values);
+        final boolean limited = groupLimit.isGreater(valueBuckets.size()) ||
+                suggestValueCount[0]==suggestValueLimit;
 
         return new TagValuesSuggest.Suggestion(
-            bucket.getKeyAsString(), bucketKeys, limited);
+                bucket.getKeyAsString(), values, limited);
     }
 
     private static AsyncFuture<KeySuggest> createKeySuggestAsync(Connection c,
@@ -910,8 +933,8 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 .fetchSource(tagSuggestSources, new String[0]);
 
         final TermsAggregationBuilder terms =
-            AggregationBuilders.terms(term).field(tagKv)
-                .size(numSuggestionsLimit.updateAndGetLimit(limit))
+                AggregationBuilders.terms(term).field(tagKv)
+                        .size(numSuggestionsLimit.calculateNewLimit(limit))
                 .subAggregation(hits);
 
         searchRequest.source().aggregation(terms);

@@ -54,9 +54,7 @@ public final class MemorySuggestModule implements SuggestModule, DynamicModuleId
     ) {
         this.id = id;
         this.groups = groups.orElseGet(Groups::empty).or(DEFAULT_GROUP);
-        this.numSuggestionsLimit = new NumSuggestionsLimit(
-            numSuggestionsIntLimit.orElse(NumSuggestionsLimit.DEFAULT_NUM_SUGGESTIONS_LIMIT));
-
+        this.numSuggestionsLimit = NumSuggestionsLimit.of(numSuggestionsIntLimit);
     }
 
     @Override
@@ -110,7 +108,7 @@ public final class MemorySuggestModule implements SuggestModule, DynamicModuleId
         private Optional<String> id = empty();
         private Optional<Groups> groups = empty();
         private Optional<NumSuggestionsLimit> numSuggestionsLimit =
-            Optional.of(new NumSuggestionsLimit(NumSuggestionsLimit.DEFAULT_NUM_SUGGESTIONS_LIMIT));
+                Optional.of(NumSuggestionsLimit.of());
 
         public Builder id(final String id) {
             checkNotNull(id, "id");
@@ -132,7 +130,7 @@ public final class MemorySuggestModule implements SuggestModule, DynamicModuleId
 
         public MemorySuggestModule build() {
             return new MemorySuggestModule(id, groups,
-                Optional.of(numSuggestionsLimit.get().getLimit()));
+                    numSuggestionsLimit.get().asOptionalInt());
         }
     }
 }

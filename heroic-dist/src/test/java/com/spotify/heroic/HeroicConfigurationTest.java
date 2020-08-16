@@ -60,7 +60,7 @@ public class HeroicConfigurationTest {
     }
 
     @Test
-    public void testHeroicAll() throws Exception {
+    public void testHeroicAllYaml() throws Exception {
 
         final var instance = testConfiguration("heroic-all.yml");
 

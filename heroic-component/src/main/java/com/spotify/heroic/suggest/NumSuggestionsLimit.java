@@ -23,28 +23,39 @@ package com.spotify.heroic.suggest;
 
 
 import com.spotify.heroic.common.OptionalLimit;
+import java.util.Optional;
 
 /**
- * A simple class to centralize logic around limiting the number of suggestions requested from ES,
- * from Heroic. It defaults to 10 but any request to the backend (e.g. MemoryBackend) can override
- * that number.
+ * A simple class to centralize logic around limiting the number of suggestions
+ * requested from ES by Heroic. It defaults to 50 but any request to the
+ * backend (e.g. MemoryBackend) can override that number.
  */
 public class NumSuggestionsLimit {
 
     /**
-     * How many suggestions we should request from ES.
-     *
-     * <p>This applies to the requests made for keys, tag and tag values. This defaults to 10,
-     * otherwise * 10,000 is used as the default which is wasteful and could lag the grafana UI.
+     * No request is allowed to request more than this many tags, keys or tag
+     * values.
      */
-    public static final int DEFAULT_NUM_SUGGESTIONS_LIMIT = 10;
-    private int limit = DEFAULT_NUM_SUGGESTIONS_LIMIT;
+    public static final int LIMIT_CEILING = 250;
 
-    public NumSuggestionsLimit() {
+    /**
+     * How many suggestions we should request from ES, unless the suggest API
+     * request specifies otherwise.
+     *
+     * <p>This applies to the requests made for keys, tag and tag values.
+     * This defaults to 50, otherwise * 10,000 is used as the default which is
+     * wasteful and could lag the grafana UI.
+     */
+    public static final int DEFAULT_LIMIT = 50;
+    private final int limit;
+
+    private NumSuggestionsLimit() {
+        limit = DEFAULT_LIMIT;
     }
 
-    public NumSuggestionsLimit(int limit) {
-        this.limit = limit;
+    private NumSuggestionsLimit(int limit) {
+        int okLimit = Math.min(LIMIT_CEILING, limit);
+        this.limit = okLimit;
     }
 
     public int getLimit() {
@@ -54,26 +65,45 @@ public class NumSuggestionsLimit {
     /**
      * use this.limit unless limit is not empty, then return the numeric result.
      *
-     * @param limit the limit to respect if non-empty, usually from a request object
+     * @param limit the limit to respect if non-empty, usually from a request
+     *              object
      * @return `this` - for fluent coding support
      */
-    public NumSuggestionsLimit updateLimit(OptionalLimit limit) {
-        var num = limit.orElse(OptionalLimit.of(this.limit));
-        this.limit = num.asInteger().get();
-        return this;
+    public NumSuggestionsLimit create(OptionalLimit limit) {
+        int num = limit.orElse(OptionalLimit.of(this.limit)).asInteger().get();
+        return new NumSuggestionsLimit(num);
+    }
+
+    public static NumSuggestionsLimit of(Optional<Integer> limit) {
+        return limit.isEmpty()
+                ? new NumSuggestionsLimit()
+                :new NumSuggestionsLimit(limit.get());
+    }
+
+    public static NumSuggestionsLimit of() {
+        return new NumSuggestionsLimit();
+    }
+
+    public static NumSuggestionsLimit of(int limit) {
+        return new NumSuggestionsLimit(limit);
     }
 
     /**
      * use this.limit unless limit is not empty, then return the numeric result.
      *
-     * @param limit the limit to respect if non-empty, usually from a request object
+     * @param limit the limit to respect if non-empty, usually from a request
+     *              object
      * @return the resulting, updated numeric limit
      */
-    public int updateAndGetLimit(OptionalLimit limit) {
-        return updateLimit(limit).getLimit();
+    public int calculateNewLimit(OptionalLimit limit) {
+        return create(limit).getLimit();
     }
 
     public OptionalLimit asOptionalLimit() {
         return OptionalLimit.of(limit);
+    }
+
+    public Optional<Integer> asOptionalInt() {
+        return Optional.of(getLimit());
     }
 }

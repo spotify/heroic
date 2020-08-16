@@ -16,6 +16,7 @@ bin
 *.p12
 .idea
 .idea-run-configurations/
+/reports/
 /assets/out/
 .meghanada
 

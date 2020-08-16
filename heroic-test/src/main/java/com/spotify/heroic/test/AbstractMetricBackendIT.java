@@ -356,12 +356,18 @@ public abstract class AbstractMetricBackendIT {
 
         Points points = new Points();
 
+        final int MAX_STEP_SIZE = 100_000_000;  // 10^8
+
         long timestamp = 1;
-        long maxTimestamp = 1000000000000L;
-        // timestamps [1, maxTimestamp] since we can't fetch 0 (range start is exclusive)
+        long maxTimestamp = (long) Math.pow(10, 12); // 10^12 i.e. 1 million million
+
+        // timestamps [1, maxTimestamp] since we can't fetch 0 (range start is
+        // exclusive).
+        // So `points` will end up containing a minimum of
+        // 10^12 / 10^8 = 10^4 = 10,000 Point objects.
         while (timestamp < maxTimestamp) {
             points.p(timestamp, random.nextDouble());
-            timestamp += Math.abs(random.nextInt(100000000));
+            timestamp += Math.abs(random.nextInt(MAX_STEP_SIZE));
         }
         points.p(maxTimestamp, random.nextDouble());
 

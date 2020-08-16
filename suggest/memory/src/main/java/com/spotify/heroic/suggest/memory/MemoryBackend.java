@@ -51,6 +51,7 @@ import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -58,6 +59,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
+import org.jetbrains.annotations.NotNull;
 
 @MemoryScope
 public class MemoryBackend implements SuggestBackend, Grouped {
@@ -76,15 +78,14 @@ public class MemoryBackend implements SuggestBackend, Grouped {
     private final Groups groups;
     private final AsyncFramework async;
 
-    private Optional<NumSuggestionsLimit> numSuggestionsLimit =
-        Optional.of(new NumSuggestionsLimit());
+    private NumSuggestionsLimit numSuggestionsLimit = NumSuggestionsLimit.of();
 
     @Inject
     public MemoryBackend(final Groups groups, final AsyncFramework async,
         Integer numSuggestionsIntLimit) {
         this.groups = groups;
         this.async = async;
-        this.numSuggestionsLimit = Optional.of(new NumSuggestionsLimit(numSuggestionsIntLimit));
+        this.numSuggestionsLimit = NumSuggestionsLimit.of(numSuggestionsIntLimit);
     }
 
     @Override
@@ -94,35 +95,14 @@ public class MemoryBackend implements SuggestBackend, Grouped {
 
     @Override
     public AsyncFuture<TagValuesSuggest> tagValuesSuggest(TagValuesSuggest.Request request) {
-        final Map<String, Set<String>> counts = new HashMap<>();
 
-        final OptionalLimit groupLimit = request.getGroupLimit();
+        final var tagsToValues = getTagsToValuesLimited(request.getGroupLimit(), request.getLimit(), request.getFilter());
 
-        try (final Stream<Series> series = lookupSeries(request.getFilter())) {
-            series.forEach(s -> {
-                for (final Map.Entry<String, String> e : s.getTags().entrySet()) {
-                    Set<String> c = counts.get(e.getKey());
-
-                    if (c == null) {
-                        c = new HashSet<>();
-                        counts.put(e.getKey(), c);
-                    }
-
-                    if (groupLimit.isGreaterOrEqual(c.size())) {
-                        continue;
-                    }
-
-                    c.add(e.getValue());
-                }
-            });
-        }
-
-        final List<TagValuesSuggest.Suggestion> suggestions = ImmutableList.copyOf(request
-            .getLimit()
-            .limitStream(counts.entrySet().stream())
-            .map(e -> new TagValuesSuggest.Suggestion(e.getKey(),
-                ImmutableSortedSet.copyOf(e.getValue()), false))
-            .iterator());
+        final var suggestions = ImmutableList.copyOf(
+                tagsToValues.entrySet().stream()
+                        .map(e -> new TagValuesSuggest.Suggestion(e.getKey(),
+                                ImmutableSortedSet.copyOf(e.getValue()), false))
+                        .iterator());
 
         return async.resolved(new TagValuesSuggest(suggestions, false));
     }
@@ -170,18 +150,16 @@ public class MemoryBackend implements SuggestBackend, Grouped {
             values.ifPresent(parts -> parts.forEach(
                 k -> ids.retainAll(tagValues.getOrDefault(k, ImmutableSet.of()))));
 
-            // use numSuggestions unless request.limit has been set.
-            numSuggestionsLimit.ifPresent(x -> x.updateLimit(request.getLimit()));
-            var limit = numSuggestionsLimit.get().asOptionalLimit();
+            int limit = numSuggestionsLimit.calculateNewLimit(request.getLimit());
 
             final List<TagSuggest.Suggestion> suggestions = ImmutableList.copyOf(
-                ImmutableSortedSet.copyOf(limit
-                    .limitStream(ids.stream())
-                    .map(tagIndex::get)
-                    .filter(Objects::nonNull)
-                    .map(d -> new TagSuggest.Suggestion(
-                        SCORE, d.getId().getKey(), d.getId().getValue()))
-                    .iterator()));
+                    ImmutableSortedSet.copyOf(ids.stream()
+                            .limit(limit)
+                            .map(tagIndex::get)
+                            .filter(Objects::nonNull)
+                            .map(d -> new TagSuggest.Suggestion(
+                                    SCORE, d.getId().getKey(), d.getId().getValue()))
+                            .iterator()));
 
             return async.resolved(new TagSuggest(suggestions));
         }
@@ -209,17 +187,23 @@ public class MemoryBackend implements SuggestBackend, Grouped {
         return async.resolved(new KeySuggest(suggestions));
     }
 
+
     @Override
     public AsyncFuture<TagValueSuggest> tagValueSuggest(final TagValueSuggest.Request request) {
         try (final Stream<TagDocument> docs = lookupTags(request.getFilter())) {
             final Stream<TagId> ids = docs.map(TagDocument::getId);
 
-            final List<String> values = request
-                .getLimit()
-                .limitStream(
-                    request.getKey().map(k -> ids.filter(id -> id.getKey().equals(k))).orElse(ids))
-                .map(TagId::getValue)
-                .collect(Collectors.toList());
+            int limit = numSuggestionsLimit.calculateNewLimit(request.getLimit());
+
+            final var tagIdStream = request
+                    .getKey()
+                    .map(k -> ids.filter(id -> id.getKey().equals(k)))
+                    .orElse(ids);
+
+            final List<String> values = tagIdStream
+                    .limit(limit)
+                    .map(TagId::getValue)
+                    .collect(Collectors.toList());
 
             return async.resolved(new TagValueSuggest(values, false));
         }
@@ -331,14 +315,69 @@ public class MemoryBackend implements SuggestBackend, Grouped {
         final Lock l = lock.readLock();
         l.lock();
         return tagIndex.values().stream()
-            .filter(e -> filter.apply(e.getSeries()))
-            .onClose(l::unlock);
+                .filter(e -> filter.apply(e.getSeries()))
+                .onClose(l::unlock);
     }
 
     private Stream<Series> lookupSeries(final Filter filter) {
         final Lock l = lock.readLock();
         l.lock();
         return series.stream().filter(filter::apply).onClose(l::unlock);
+    }
+
+    /**
+     * @param groupLimit    maximum number of groups allowed
+     * @param limit
+     * @param requestFilter defines which series will be returned
+     * @return { tag → { val1, val2 }, tag2 → { val2, val9 }, ...}
+     */
+    @NotNull
+    private Map<String, Set<String>> getTagsToValuesLimited(OptionalLimit groupLimit, OptionalLimit requestLimit, Filter requestFilter) {
+
+        final Map<String, Set<String>> allTagsToValuesMap = new HashMap<>();
+
+        final int limit = numSuggestionsLimit.calculateNewLimit(requestLimit);
+
+        try (final Stream<Series> seriesStream = lookupSeries(requestFilter)) {
+            return populateLimitedTagsToValuesMap(groupLimit, limit, seriesStream);
+        }
+
+    }
+
+    private Map<String, Set<String>> populateLimitedTagsToValuesMap(OptionalLimit groupLimit, int requestLimit, Stream<Series> seriesStream) {
+
+        // PSK TODO find alternative as this is slow since it flushes processor core caches
+        // and synchronizes them :/
+        AtomicLong totalNumValues = new AtomicLong();
+        var allTagsToValuesMap = new HashMap<String, Set<String>>();
+
+        seriesStream.forEach(series -> {
+            for (final Map.Entry<String, String> tagValuePair : series.getTags().entrySet()) {
+                Set<String> values = allTagsToValuesMap.get(tagValuePair.getKey());
+
+                // If you've not seen this tag before, create a holder for its
+                // values
+                if (values==null) {
+                    values = new HashSet<>();
+                    allTagsToValuesMap.put(tagValuePair.getKey(), values);
+                }
+
+                final int numValues = values.size();
+
+                if (groupLimit.isGreaterOrEqual(numValues)) {
+                    continue;
+                }
+
+                if (totalNumValues.incrementAndGet() > requestLimit) {
+                    continue;
+                }
+
+                // Add the value to the collection of values for this tag
+                values.add(tagValuePair.getValue());
+            }
+        });
+
+        return allTagsToValuesMap;
     }
 
     public String toString() {
