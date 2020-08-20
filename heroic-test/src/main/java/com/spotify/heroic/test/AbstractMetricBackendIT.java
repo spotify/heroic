@@ -380,8 +380,8 @@ public abstract class AbstractMetricBackendIT {
         assumeTrue("Test huge row key write", hugeRowKey);
         final MetricCollection points = new Points().p(100000L, 42D).build();
         Map<String, String> tags = new HashMap<>();
-        for(int i=0; i<110; i++){
-            tags.put("VeryLongTagName"+i, "VeryLongValueName"+i);
+        for (int i = 0; i < 110; i++) {
+            tags.put("VeryLongTagName" + i, "VeryLongValueName" + i);
         }
         final Series hugeSeries = new Series("s1",
             ImmutableSortedMap.copyOf(tags),
