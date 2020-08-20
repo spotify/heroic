@@ -75,10 +75,11 @@ import org.mockito.junit.MockitoJUnitRunner;
 public abstract class AbstractSuggestBackendIT {
 
     // The requests will either not specify a limit or specify one of fifteen.
-    public static final int REQ_SUGGESTION_LIMIT = 15;
+    public static final int REQ_SUGGESTION_ENTITY_LIMIT = 15;
 
     public static final String STARTS_WITH_FO = "fo";   // e.g. foo
     public static final String STARTS_WITH_RO = "ro";   // e.g. role
+    public static final int EFFECTIVELY_NO_LIMIT = 100_000;
 
     protected final String testName = "heroic-it-" + UUID.randomUUID().toString();
 
@@ -98,21 +99,31 @@ public abstract class AbstractSuggestBackendIT {
                 }
             };
 
-    private static int BIG_SERIES_SIZE = 20;
-    private static int VERY_BIG_SERIES_SIZE = 500;
-    protected static final List<Pair<Series, DateRange>> bigTestSeries = new ArrayList<>(
-            BIG_SERIES_SIZE);
-    protected static final List<Pair<Series, DateRange>> veryBigTestSeries = new ArrayList<>(
-            VERY_BIG_SERIES_SIZE);
+    private static int LARGE_NUM_ENTITIES = 20;
+    private static int VERY_LARGE_NUM_ENTITIES = 500;
 
-    private static void createTestSeriesData(int testSeriesSize,
+    // has lots of keys
+    protected static final List<Pair<Series, DateRange>> largeNumKeysSeries = new ArrayList<>(
+            LARGE_NUM_ENTITIES);
+    // has loads of keys
+    protected static final List<Pair<Series, DateRange>> veryLargeNumKeysSeries = new ArrayList<>(
+            VERY_LARGE_NUM_ENTITIES);
+    // has lots of tag-value pairs
+    protected static final List<Pair<Series, DateRange>> largeNumTagsSeries = new ArrayList<>(
+            LARGE_NUM_ENTITIES);
+    // has loads of tag-value pairs
+    protected static final List<Pair<Series, DateRange>> veryLargeNumTagsSeries = new ArrayList<>(
+            VERY_LARGE_NUM_ENTITIES);
+
+    private static void createTestSeriesData(int testSeriesSize, int tagsValuesPerTag,
                                              List<Pair<Series, DateRange>> testSeries) {
         for (int i = 0; i < testSeriesSize; i++) {
             final var key = String.format("aa-%d", i + 1);
-            final var tags = ImmutableMap.of("role", String.format("foo-%d", i + 1));
-
-            testSeries.add(
-                    new ImmutablePair<>(Series.of(key, tags), range));
+            for (int j = 0; j < tagsValuesPerTag; j++) {
+                final var tags = ImmutableMap.of("role", String.format("foo-%d", j + 1));
+                testSeries.add(
+                        new ImmutablePair<>(Series.of(key, tags), range));
+            }
         }
     }
 
@@ -124,8 +135,10 @@ public abstract class AbstractSuggestBackendIT {
 
     @BeforeClass
     public static final void abstractSetupClass() {
-        createTestSeriesData(BIG_SERIES_SIZE, bigTestSeries);
-        createTestSeriesData(VERY_BIG_SERIES_SIZE, veryBigTestSeries);
+        createTestSeriesData(LARGE_NUM_ENTITIES, 1, largeNumKeysSeries);
+        createTestSeriesData(VERY_LARGE_NUM_ENTITIES, 1, veryLargeNumKeysSeries);
+        createTestSeriesData(1, LARGE_NUM_ENTITIES, largeNumTagsSeries);
+        createTestSeriesData(1, VERY_LARGE_NUM_ENTITIES, veryLargeNumTagsSeries);
     }
 
     @Before
@@ -176,14 +189,14 @@ public abstract class AbstractSuggestBackendIT {
 
         // Check that a number of values larger than the supplied limit is
         // correctly truncated.
-        writeSeries(backend, bigTestSeries);
+        writeSeries(backend, largeNumTagsSeries);
 
         result = getTagValuesSuggest(buildTagValuesRequest(OptionalLimit
-                .of(REQ_SUGGESTION_LIMIT)));
+                .of(REQ_SUGGESTION_ENTITY_LIMIT)));
 
         final var suggestions = result.getSuggestions();
         assertEquals(1, suggestions.size());
-        assertEquals(REQ_SUGGESTION_LIMIT, suggestions.get(0).getValues().size());
+        assertEquals(REQ_SUGGESTION_ENTITY_LIMIT, suggestions.get(0).getValues().size());
     }
 
     @Test
@@ -199,7 +212,7 @@ public abstract class AbstractSuggestBackendIT {
 
     @Test
     public void tagSuggest() throws Exception {
-        writeSeries(backend, testSeries);
+        writeSeries(backend, testSeries);   // adds 3 tags
 
         // Check we get the expected tag
         var reqStartsWithRo = buildTagSuggestRequest(STARTS_WITH_RO);
@@ -207,19 +220,21 @@ public abstract class AbstractSuggestBackendIT {
         assertEquals(SMALL_SERIES_SIZE, result.size());
         assertEquals("role", result.stream().findFirst().get().getKey());
 
-        writeSeries(backend, bigTestSeries);
+        writeSeries(backend, largeNumTagsSeries);
 
         // Check that a request limit is respected
         result = getTagSuggest(
-                buildTagSuggestRequest(STARTS_WITH_RO, REQ_SUGGESTION_LIMIT));
-        assertEquals(REQ_SUGGESTION_LIMIT, result.size());
+                buildTagSuggestRequest(STARTS_WITH_RO, REQ_SUGGESTION_ENTITY_LIMIT));
+        assertEquals(REQ_SUGGESTION_ENTITY_LIMIT, result.size());
 
-        // Check that the request without a limit returns the whole lot
+        // Check that the request without a limit returns the whole lot. Note that
+        // the maximum number of tags for a key is LARGE_NUM_ENTITIES - see
+        // createTestSeriesData.
         result = getTagSuggest(reqStartsWithRo);
-        assertEquals(SMALL_SERIES_SIZE + BIG_SERIES_SIZE, result.size());
+        assertEquals(LARGE_NUM_ENTITIES + SMALL_SERIES_SIZE, result.size());
 
         // Check that a hard ceiling of 250 is respected
-        writeSeries(backend, veryBigTestSeries);
+        writeSeries(backend, veryLargeNumTagsSeries);
 
         reqStartsWithRo = buildTagSuggestRequest(STARTS_WITH_RO, 10_000);
         result = getTagSuggest(reqStartsWithRo);
@@ -235,12 +250,12 @@ public abstract class AbstractSuggestBackendIT {
 
         assertEquals(ImmutableSet.of("bar", "baz", "foo"), ImmutableSet.copyOf(result.getValues()));
 
-        writeSeries(backend, bigTestSeries);
+        writeSeries(backend, largeNumTagsSeries);
 
         result = getTagValueSuggest(
-                buildTagValueSuggestReq("role", OptionalLimit.of(REQ_SUGGESTION_LIMIT)));
+                buildTagValueSuggestReq("role", OptionalLimit.of(REQ_SUGGESTION_ENTITY_LIMIT)));
 
-        assertEquals(REQ_SUGGESTION_LIMIT, result.getValues().size());
+        assertEquals(REQ_SUGGESTION_ENTITY_LIMIT, result.getValues().size());
     }
 
 
@@ -251,11 +266,11 @@ public abstract class AbstractSuggestBackendIT {
         var result = getKeySuggest(keySuggestStartsWithReq("aa"));
         assertEquals(ImmutableSet.of(s1.getKey(), s2.getKey()), result);
 
-        writeSeries(backend, bigTestSeries);
+        writeSeries(backend, largeNumKeysSeries);
 
         var result2 = getKeySuggest(
-                keySuggestStartsWithReq("aa", OptionalLimit.of(REQ_SUGGESTION_LIMIT)));
-        assertEquals(REQ_SUGGESTION_LIMIT, result2.size());
+                keySuggestStartsWithReq("aa", OptionalLimit.of(REQ_SUGGESTION_ENTITY_LIMIT)));
+        assertEquals(REQ_SUGGESTION_ENTITY_LIMIT, result2.size());
     }
 
 
@@ -390,7 +405,7 @@ public abstract class AbstractSuggestBackendIT {
     private @NotNull TagValuesSuggest.Request buildTagValuesRequest(
             OptionalLimit numSuggestionsLimit) {
         return new TagValuesSuggest.Request(TrueFilter.get(), range,
-                numSuggestionsLimit, OptionalLimit.empty(), ImmutableList.of());
+                numSuggestionsLimit, OptionalLimit.of(EFFECTIVELY_NO_LIMIT), ImmutableList.of());
     }
 
     private TagValueSuggest.Request buildTagValueSuggestReq(String tagValue,
