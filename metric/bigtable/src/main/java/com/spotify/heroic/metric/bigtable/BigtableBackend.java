@@ -97,8 +97,9 @@ import org.slf4j.LoggerFactory;
 public class BigtableBackend extends AbstractMetricBackend implements LifeCycles {
     private static final Logger log = LoggerFactory.getLogger(BigtableBackend.class);
 
+    /* maximum number of bytes of BigTable row key size allowed*/
     public static final int MAX_KEY_ROW_SIZE = 4000;
-    /* maxmimum number of cells supported for each batch mutation */
+    /* maximum number of cells supported for each batch mutation */
     public static final int MAX_BATCH_SIZE = 10000;
 
     public static final QueryTrace.Identifier FETCH_SEGMENT =
