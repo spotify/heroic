@@ -24,11 +24,9 @@ package com.spotify.heroic.suggest;
 import com.spotify.heroic.common.Collected;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Initializing;
-import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import eu.toolchain.async.AsyncFuture;
 import io.opencensus.trace.Span;
-import java.util.SortedSet;
 
 public interface SuggestBackend extends Grouped, Initializing, Collected {
 
