@@ -83,6 +83,7 @@ public abstract class AbstractMetricBackendIT {
     protected boolean brokenSegmentsPr208 = false;
     protected boolean eventSupport = false;
     protected Optional<Integer> maxBatchSize = Optional.empty();
+    protected boolean hugeRowKey = true;
 
     @Rule
     public TestRule setupBackend = (base, description) -> new Statement() {
@@ -376,6 +377,7 @@ public abstract class AbstractMetricBackendIT {
 
     @Test
     public void testWriteHugeMetric() throws Exception {
+        assumeTrue("Test huge row key write", hugeRowKey);
         final MetricCollection points = new Points().p(100000L, 42D).build();
         Map<String, String> tags = new HashMap<>();
         for(int i=0; i<110; i++){

@@ -21,5 +21,6 @@ public class NextGenDatastaxBackendIT extends AbstractDatastaxBackendIT {
         super.setupSupport();
 
         this.brokenSegmentsPr208 = true;
+        this.hugeRowKey = false;
     }
 }

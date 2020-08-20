@@ -11,6 +11,7 @@ public class MemoryBackendIT extends AbstractMetricBackendIT {
         super.setupSupport();
 
         this.eventSupport = true;
+        this.hugeRowKey = false;
     }
 
     @Override
