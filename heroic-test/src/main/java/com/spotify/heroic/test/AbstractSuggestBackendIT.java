@@ -115,11 +115,11 @@ public abstract class AbstractSuggestBackendIT {
     protected static final List<Pair<Series, DateRange>> veryLargeNumTagsSeries = new ArrayList<>(
             VERY_LARGE_NUM_ENTITIES);
 
-    private static void createTestSeriesData(int testSeriesSize, int tagsValuesPerTag,
+    private static void createTestSeriesData(int numKeys, int tagsAndTagValuesPerKey,
                                              List<Pair<Series, DateRange>> testSeries) {
-        for (int i = 0; i < testSeriesSize; i++) {
+        for (int i = 0; i < numKeys; i++) {
             final var key = String.format("aa-%d", i + 1);
-            for (int j = 0; j < tagsValuesPerTag; j++) {
+            for (int j = 0; j < tagsAndTagValuesPerKey; j++) {
                 final var tags = ImmutableMap.of("role", String.format("foo-%d", j + 1));
                 testSeries.add(
                         new ImmutablePair<>(Series.of(key, tags), range));
@@ -233,7 +233,7 @@ public abstract class AbstractSuggestBackendIT {
         result = getTagSuggest(reqStartsWithRo);
         assertEquals(LARGE_NUM_ENTITIES + SMALL_SERIES_SIZE, result.size());
 
-        // Check that a hard ceiling of 250 is respected
+        // Check that a hard ceiling of NumSuggestionsLimit.LIMIT_CEILING is respected
         writeSeries(backend, veryLargeNumTagsSeries);
 
         reqStartsWithRo = buildTagSuggestRequest(STARTS_WITH_RO, 10_000);

@@ -96,7 +96,8 @@ public class MemoryBackend implements SuggestBackend, Grouped {
     @Override
     public AsyncFuture<TagValuesSuggest> tagValuesSuggest(TagValuesSuggest.Request request) {
 
-        final var tagsToValues = getTagsToValuesLimited(request.getGroupLimit(), request.getLimit(), request.getFilter());
+        final var tagsToValues = getTagsToValuesLimited(
+                request.getGroupLimit(), request.getLimit(), request.getFilter());
 
         final var suggestions = ImmutableList.copyOf(
                 tagsToValues.entrySet().stream()
@@ -166,8 +167,10 @@ public class MemoryBackend implements SuggestBackend, Grouped {
     }
 
     @Override
-    public AsyncFuture<KeySuggest> keySuggest(final KeySuggest.Request request) {
-        final Optional<Set<String>> analyzedKeys = request.getKey().map(MemoryBackend::analyze);
+    public AsyncFuture<KeySuggest> keySuggest(
+            final KeySuggest.Request request) {
+        final Optional<Set<String>> analyzedKeys =
+                request.getKey().map(MemoryBackend::analyze);
 
         final Set<String> ids;
 
@@ -175,7 +178,7 @@ public class MemoryBackend implements SuggestBackend, Grouped {
             ids = docs.map(KeyDocument::getId).collect(Collectors.toSet());
 
             analyzedKeys.ifPresent(parts -> parts.forEach(
-                k -> ids.retainAll(keys.getOrDefault(k, ImmutableSet.of()))));
+                    k -> ids.retainAll(keys.getOrDefault(k, ImmutableSet.of()))));
         }
 
         final List<KeySuggest.Suggestion> suggestions = ImmutableList.copyOf(request
@@ -189,7 +192,8 @@ public class MemoryBackend implements SuggestBackend, Grouped {
 
 
     @Override
-    public AsyncFuture<TagValueSuggest> tagValueSuggest(final TagValueSuggest.Request request) {
+    public AsyncFuture<TagValueSuggest> tagValueSuggest(
+            final TagValueSuggest.Request request) {
         try (final Stream<TagDocument> docs = lookupTags(request.getFilter())) {
             final Stream<TagId> ids = docs.map(TagDocument::getId);
 
@@ -327,12 +331,13 @@ public class MemoryBackend implements SuggestBackend, Grouped {
 
     /**
      * @param groupLimit    maximum number of groups allowed
-     * @param limit
+     * @param requestLimit  total values limit, supplied by the request
      * @param requestFilter defines which series will be returned
      * @return { tag → { val1, val2 }, tag2 → { val2, val9 }, ...}
      */
     @NotNull
-    private Map<String, Set<String>> getTagsToValuesLimited(OptionalLimit groupLimit, OptionalLimit requestLimit, Filter requestFilter) {
+    private Map<String, Set<String>> getTagsToValuesLimited(
+            OptionalLimit groupLimit, OptionalLimit requestLimit, Filter requestFilter) {
 
         final Map<String, Set<String>> allTagsToValuesMap = new HashMap<>();
 
@@ -344,10 +349,11 @@ public class MemoryBackend implements SuggestBackend, Grouped {
 
     }
 
-    private Map<String, Set<String>> populateLimitedTagsToValuesMap(OptionalLimit groupLimit, int requestLimit, Stream<Series> seriesStream) {
+    private Map<String, Set<String>> populateLimitedTagsToValuesMap(
+            OptionalLimit groupLimit, int requestLimit, Stream<Series> seriesStream) {
 
-        // PSK TODO find alternative as this is slow since it flushes processor core caches
-        // and synchronizes them :/
+        // TODO find alternative as this is slow since it flushes processor core caches
+        // and synchronizes them
         AtomicLong totalNumValues = new AtomicLong();
         var allTagsToValuesMap = new HashMap<String, Set<String>>();
 
@@ -357,7 +363,7 @@ public class MemoryBackend implements SuggestBackend, Grouped {
 
                 // If you've not seen this tag before, create a holder for its
                 // values
-                if (values==null) {
+                if (values == null) {
                     values = new HashSet<>();
                     allTagsToValuesMap.put(tagValuePair.getKey(), values);
                 }

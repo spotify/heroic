@@ -245,7 +245,6 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
             });
     }
 
-
     @Override
     public AsyncFuture<TagValueSuggest> tagValueSuggest(final TagValueSuggest.Request request) {
         return connection.doto(
@@ -360,23 +359,6 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     public NumSuggestionsLimit getNumSuggestionsLimit() {
         return numSuggestionsLimit;
     }
-
-    private static void addKeyToBuilder(KeySuggest.Request request, BoolQueryBuilder bool) {
-        request
-            .getKey()
-            .ifPresent(
-                k -> {
-                    if (!k.isEmpty()) {
-                        final String l = k.toLowerCase();
-                        final BoolQueryBuilder b = boolQuery();
-                        b.should(termQuery(SERIES_KEY_ANALYZED, l));
-                        b.should(termQuery(SERIES_KEY_PREFIX, l).boost(1.5f));
-                        b.should(termQuery(SERIES_KEY, l).boost(2.0f));
-                        bool.must(b);
-                    }
-                });
-    }
-
 
     @Override
     public AsyncFuture<WriteSuggest> write(final WriteSuggest.Request request) {
@@ -498,14 +480,30 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                                 ImmutableList.of(response.getTook().getMillis()),
                                 ImmutableList.of());
                         })
-                    .onDone(writeContext)
-                    .onFinished(rootSpan::end);
+                        .onDone(writeContext)
+                        .onFinished(rootSpan::end);
             });
     }
 
     @Override
     public Statistics getStatistics() {
         return new Statistics(WRITE_CACHE_SIZE, writeCache.size());
+    }
+
+    private static void addKeyToBuilder(KeySuggest.Request request, BoolQueryBuilder bool) {
+        request
+                .getKey()
+                .ifPresent(
+                        k -> {
+                            if (!k.isEmpty()) {
+                                final String l = k.toLowerCase();
+                                final BoolQueryBuilder b = boolQuery();
+                                b.should(termQuery(SERIES_KEY_ANALYZED, l));
+                                b.should(termQuery(SERIES_KEY_PREFIX, l).boost(1.5f));
+                                b.should(termQuery(SERIES_KEY, l).boost(2.0f));
+                                bool.must(b);
+                            }
+                        });
     }
 
     private AsyncFuture<Void> start() {
@@ -713,17 +711,19 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     /**
      * Creates a tagValuesSuggestion object.
      * <p>
-     * It respects both the groupLimit and the suggestValueCount limit.
+     * It respects both the groupLimit and the suggestValueCount limit. The latter
+     * increases/persists between calls to this method whereas the former just
+     * applies to this bucket.
      *
-     * @param suggestions
-     * @param bucket
+     * @param bucket            used to get the Terms, from which we get value buckets
      * @param suggestValueCount why on earth are we using an array of length 1 to
      *                          track a count? because it must survive between calls
      *                          and Integer objects aren't mutable. Also AtomicInt
      *                          is very, very slow in a highly-multithreaded context.
-     * @param groupLimit
-     * @param suggestValueLimit
-     * @return
+     * @param groupLimit        only permit this many tag values for this bucket
+     * @param suggestValueLimit only permit this many tag values total, across
+     *                          all buckets.
+     * @return a suitably-constrained tag values suggestion object
      */
     private static TagValuesSuggest.Suggestion createTagValuesSuggestFromBuckets(
             Bucket bucket, int[] suggestValueCount, OptionalLimit groupLimit,
@@ -737,12 +737,14 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
         for (final Terms.Bucket valueBucket : valueBuckets) {
             values.add(valueBucket.getKeyAsString());
+
             suggestValueCount[0] = suggestValueCount[0] + 1;
             if (suggestValueCount[0] == suggestValueLimit) {
                 break;
             }
         }
 
+        // any group of tag values may not exceed this limit
         values = groupLimit.limitSortedSet(values);
         final boolean limited = groupLimit.isGreater(valueBuckets.size()) ||
                 suggestValueCount[0] == suggestValueLimit;

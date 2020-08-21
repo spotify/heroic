@@ -166,7 +166,8 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
                           final String id) {
         final BackendType backendType = type.get();
 
-        return DaggerElasticsearchSuggestModule_C.builder()
+        return DaggerElasticsearchSuggestModule_C
+                .builder()
                 .primaryComponent(primary)
                 .depends(depends)
                 .connectionModule(connection)
