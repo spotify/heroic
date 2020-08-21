@@ -674,7 +674,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
         final List<TagValuesSuggest.Suggestion> suggestions = new ArrayList<>();
 
-        if (response.getAggregations()==null) {
+        if (response.getAggregations() == null) {
             return new TagValuesSuggest(Collections.emptyList(), Boolean.FALSE);
         }
 
@@ -738,14 +738,14 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
         for (final Terms.Bucket valueBucket : valueBuckets) {
             values.add(valueBucket.getKeyAsString());
             suggestValueCount[0] = suggestValueCount[0] + 1;
-            if (suggestValueCount[0]==suggestValueLimit) {
+            if (suggestValueCount[0] == suggestValueLimit) {
                 break;
             }
         }
 
         values = groupLimit.limitSortedSet(values);
         final boolean limited = groupLimit.isGreater(valueBuckets.size()) ||
-                suggestValueCount[0]==suggestValueLimit;
+                suggestValueCount[0] == suggestValueLimit;
 
         return new TagValuesSuggest.Suggestion(
                 bucket.getKeyAsString(), values, limited);

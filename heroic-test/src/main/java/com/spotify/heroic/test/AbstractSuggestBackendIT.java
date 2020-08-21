@@ -268,11 +268,10 @@ public abstract class AbstractSuggestBackendIT {
 
         writeSeries(backend, largeNumKeysSeries);
 
-        var result2 = getKeySuggest(
-                keySuggestStartsWithReq("aa", OptionalLimit.of(REQ_SUGGESTION_ENTITY_LIMIT)));
-        assertEquals(REQ_SUGGESTION_ENTITY_LIMIT, result2.size());
+        result = getKeySuggest(keySuggestStartsWithReq(
+                "aa", OptionalLimit.of(REQ_SUGGESTION_ENTITY_LIMIT)));
+        assertEquals(REQ_SUGGESTION_ENTITY_LIMIT, result.size());
     }
-
 
     @Test
     public void tagValueSuggestNoIdx() throws Exception {
