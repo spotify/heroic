@@ -394,7 +394,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             final ByteString rowKeyBytes = rowKeySerializer.serializeFull(e.getKey());
 
             if (rowKeyBytes.size() >= MAX_KEY_ROW_SIZE) {
-                reporter.reportWriteDroppedBySize();
+                reporter.reportWritesDroppedBySize();
                 log.error("Row key length greater than 4096 bytes (2): " + rowKeyBytes.size()
                     + " " + rowKeyBytes);
                 continue;
@@ -431,7 +431,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         final ByteString rowKeyBytes = rowKeySerializer.serializeFull(rowKey);
 
         if (rowKeyBytes.size() >= MAX_KEY_ROW_SIZE) {
-            reporter.reportWriteDroppedBySize();
+            reporter.reportWritesDroppedBySize();
             log.error("Row key length greater than 4096 bytes (1): " +
                 rowKeyBytes.size() + " " + rowKey);
             return async.resolved().directTransform(result -> timer.end());

@@ -192,7 +192,7 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
     }
 
     @Override
-    public void reportWriteDroppedBySize() {
+    public void reportWritesDroppedBySize() {
         writesDroppedBySize.inc();
     }
 

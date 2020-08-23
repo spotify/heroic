@@ -78,7 +78,7 @@ public class NoopMetricBackendReporter implements MetricBackendReporter {
     }
 
     @Override
-    public void reportWriteDroppedBySize() {
+    public void reportWritesDroppedBySize() {
 
     }
 
