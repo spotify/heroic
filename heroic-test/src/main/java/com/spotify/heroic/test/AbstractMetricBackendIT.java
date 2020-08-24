@@ -426,7 +426,7 @@ public abstract class AbstractMetricBackendIT {
     }
 
     private static void assertEqualMetrics(
-        MetricCollection expected, List<MetricCollection> actual
+            MetricCollection expected, List<MetricCollection> actual
     ) {
         Stream<MetricType> types = actual.stream().map(MetricCollection::getType);
         assertEquals(ImmutableSet.of(expected.getType()), types.collect(Collectors.toSet()));
