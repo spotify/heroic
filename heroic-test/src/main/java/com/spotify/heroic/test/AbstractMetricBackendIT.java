@@ -49,6 +49,7 @@ import io.opencensus.trace.BlankSpan;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -82,6 +83,7 @@ public abstract class AbstractMetricBackendIT {
     protected boolean brokenSegmentsPr208 = false;
     protected boolean eventSupport = false;
     protected Optional<Integer> maxBatchSize = Optional.empty();
+    protected boolean hugeRowKey = true;
 
     @Rule
     public TestRule setupBackend = (base, description) -> new Statement() {
@@ -371,6 +373,26 @@ public abstract class AbstractMetricBackendIT {
                 QueryOptions.builder().build());
 
         assertEqualMetrics(mc, fetchMetrics(request, true));
+    }
+
+    @Test
+    public void testWriteHugeMetric() throws Exception {
+        assumeTrue("Test huge row key write", hugeRowKey);
+        final MetricCollection points = new Points().p(100000L, 42D).build();
+        Map<String, String> tags = new HashMap<>();
+        for (int i = 0; i < 110; i++) {
+            tags.put("VeryLongTagName" + i, "VeryLongValueName" + i);
+        }
+        final Series hugeSeries = new Series("s1",
+            ImmutableSortedMap.copyOf(tags),
+            ImmutableSortedMap.of("resource", "a"));
+        backend.write(new WriteMetric.Request(hugeSeries, points)).get();
+
+        FetchData.Request request =
+            new FetchData.Request(MetricType.POINT, hugeSeries, new DateRange(10000L, 200000L),
+                QueryOptions.builder().build());
+
+        assertEquals(Collections.emptyList(), fetchMetrics(request, true));
     }
 
     private List<MetricCollection> fetchMetrics(FetchData.Request request, boolean slicedFetch)

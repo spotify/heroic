@@ -81,6 +81,8 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
     private final Histogram queryRowMsBetweenSamples;
     // Average samples per mega-seconds :)
     private final Histogram queryRowDensity;
+    // Counter of dropped writes due to row key size
+    private final Counter writesDroppedBySize;
 
     public SemanticMetricBackendReporter(SemanticMetricRegistry registry) {
         final MetricId base = MetricId.build().tagged("component", COMPONENT);
@@ -118,6 +120,9 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
             base.tagged("what", "query-metrics-row-metric-distance", "unit", Units.MILLISECOND));
         queryRowDensity = registry.histogram(
             base.tagged("what", "query-metrics-row-density", "unit", Units.COUNT));
+
+        writesDroppedBySize = registry.counter(
+            base.tagged("what", "writes-dropped-by-size", "unit", Units.COUNT));
     }
 
     @Override
@@ -184,6 +189,11 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
                 }
             }
         };
+    }
+
+    @Override
+    public void reportWritesDroppedBySize() {
+        writesDroppedBySize.inc();
     }
 
     @Override

@@ -31,4 +31,6 @@ public interface MetricBackendReporter {
     FutureReporter.Context reportFindSeries();
 
     FutureReporter.Context reportQueryMetrics();
+
+    void reportWritesDroppedBySize();
 }
