@@ -23,7 +23,7 @@
     </module>
 
     <module name="SuppressionFilter">
-        <property name="file" value="${basedir}/suppressions.xml"/>
+        <property name="file" value="suppressions.xml"/>
     </module>
 
     <module name="TreeWalker">
@@ -69,7 +69,7 @@
     </module>
 
     <module name="Header">
-        <property name="headerFile" value="${basedir}/tools/java.header" />
+        <property name="headerFile" value="tools/java.header"/>
         <property name="ignoreLines" value="2" />
         <property name="fileExtensions" value="java" />
     </module>

@@ -356,7 +356,7 @@ public abstract class AbstractMetricBackendIT {
 
         Points points = new Points();
 
-        final int MAX_STEP_SIZE = 100_000_000;  // 10^8
+        final int maxStepSize = 100_000_000;  // 10^8
 
         long timestamp = 1;
         long maxTimestamp = (long) Math.pow(10, 12); // 10^12 i.e. 1 million million
@@ -367,7 +367,7 @@ public abstract class AbstractMetricBackendIT {
         // 10^12 / 10^8 = 10^4 = 10,000 Point objects.
         while (timestamp < maxTimestamp) {
             points.p(timestamp, random.nextDouble());
-            timestamp += Math.abs(random.nextInt(MAX_STEP_SIZE));
+            timestamp += Math.abs(random.nextInt(maxStepSize));
         }
         points.p(maxTimestamp, random.nextDouble());
 

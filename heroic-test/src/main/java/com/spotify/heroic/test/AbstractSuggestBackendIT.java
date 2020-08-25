@@ -76,8 +76,6 @@ public abstract class AbstractSuggestBackendIT {
 
     // The requests will either not specify a limit or specify one of fifteen.
     public static final int REQ_SUGGESTION_ENTITY_LIMIT = 15;
-
-    public static final String STARTS_WITH_FO = "fo";   // e.g. foo
     public static final String STARTS_WITH_RO = "ro";   // e.g. role
     public static final int EFFECTIVELY_NO_LIMIT = 100_000;
 
@@ -89,7 +87,7 @@ public abstract class AbstractSuggestBackendIT {
 
     protected static final DateRange range = new DateRange(0L, 0L);
 
-    private static int SMALL_SERIES_SIZE = 3;
+    private static final int SMALL_SERIES_SIZE = 3;
     protected static final List<Pair<Series, DateRange>> testSeries =
             new ArrayList<>() {
                 {
@@ -99,8 +97,8 @@ public abstract class AbstractSuggestBackendIT {
                 }
             };
 
-    private static int LARGE_NUM_ENTITIES = 20;
-    private static int VERY_LARGE_NUM_ENTITIES = 500;
+    private static final int LARGE_NUM_ENTITIES = 20;
+    private static final int VERY_LARGE_NUM_ENTITIES = 500;
 
     // has lots of keys
     protected static final List<Pair<Series, DateRange>> largeNumKeysSeries = new ArrayList<>(

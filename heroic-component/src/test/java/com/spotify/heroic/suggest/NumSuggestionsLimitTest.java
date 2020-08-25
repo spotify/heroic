@@ -2,10 +2,7 @@ package com.spotify.heroic.suggest;
 
 import static org.junit.Assert.assertEquals;
 
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.OptionalLimit;
-import com.spotify.heroic.filter.FalseFilter;
-import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
