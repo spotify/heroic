@@ -399,7 +399,8 @@ public abstract class AbstractSuggestBackendIT {
                         false), suggestion);
     }
 
-    private @NotNull TagValuesSuggest.Request buildTagValuesRequest(
+    @NotNull
+    private TagValuesSuggest.Request buildTagValuesRequest(
             OptionalLimit numSuggestionsLimit) {
         return new TagValuesSuggest.Request(TrueFilter.get(), range,
                 numSuggestionsLimit, OptionalLimit.of(EFFECTIVELY_NO_LIMIT), ImmutableList.of());
@@ -415,12 +416,14 @@ public abstract class AbstractSuggestBackendIT {
             new TagKeyCount.Request(TrueFilter.get(), range, OptionalLimit.empty(),
                     OptionalLimit.empty());
 
-    private @NotNull Request buildTagSuggestRequest(String tagValue) {
+    @NotNull
+    private Request buildTagSuggestRequest(String tagValue) {
         return new Request(TrueFilter.get(), range, OptionalLimit.empty(),
                 MatchOptions.builder().build(), Optional.of(tagValue), Optional.empty());
     }
 
-    private @NotNull Request buildTagSuggestRequest(String tagValue, int numSuggestionsLimit) {
+    @NotNull
+    private Request buildTagSuggestRequest(String tagValue, int numSuggestionsLimit) {
         return new Request(TrueFilter.get(), range, OptionalLimit.of(numSuggestionsLimit),
                 MatchOptions.builder().build(), Optional.of(tagValue), Optional.empty());
     }
