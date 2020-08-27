@@ -724,7 +724,10 @@ public class LocalMetricManager implements MetricManager {
 
         @Override
         public void readData(long n) {
-            read.addAndGet(n);
+            long curDataPoints = read.addAndGet(n);
+            if (curDataPoints > 1_000_000) {
+                log.info("Current data points num: {}", curDataPoints);
+            }
             throwIfViolated();
             // Must be called after checkViolation above, since that one might throw an exception.
             dataInMemoryReporter.reportDataHasBeenRead(n);
@@ -732,7 +735,10 @@ public class LocalMetricManager implements MetricManager {
 
         @Override
         public void retainData(final long n) {
-            retained.addAndGet(n);
+            long curRetainedDataPoints = retained.addAndGet(n);
+            if (curRetainedDataPoints > 500_000) {
+                log.info("Current retained data points num: {}", curRetainedDataPoints);
+            }
             throwIfViolated();
         }
 
