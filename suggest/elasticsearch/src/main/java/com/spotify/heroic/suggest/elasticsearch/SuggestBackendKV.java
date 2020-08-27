@@ -239,7 +239,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
                 return future.directTransform(
                     (SearchResponse response) -> {
-                        return createTagValuesSuggest(this.numSuggestionsLimit.getLimit(),
+                        return createTagValuesSuggest(numSuggestionsLimit,
                                 groupLimit, response);
                     });
             });
@@ -342,12 +342,13 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
                 SearchRequest searchRequest = c.getIndex().search(SERIES_TYPE);
 
-                searchRequest.source().size(numSuggestionsLimit
-                        .calculateNewLimit(request.getLimit())).query(query);
+                final int suggestLimit = numSuggestionsLimit
+                        .calculateNewLimit(request.getLimit());
+                searchRequest.source().size(suggestLimit).query(query);
 
                 // aggregation
                 addTermsToRequest(searchRequest, KEY_SUGGEST_SOURCES, "keys", KEY,
-                    request.getLimit());
+                        suggestLimit);
 
                 final ResolvableFuture<SearchResponse> future = async.future();
                 c.execute(searchRequest, bind(future));
@@ -875,7 +876,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 addKeyAndValueToBuilder(boolQueryBuilder, key, value);
 
                 QueryBuilder query =
-                    boolQueryBuilder.hasClauses() ? boolQueryBuilder : matchAllQuery();
+                        boolQueryBuilder.hasClauses() ? boolQueryBuilder : matchAllQuery();
 
                 if (!(request.getFilter() instanceof TrueFilter)) {
                     query = new BoolQueryBuilder().must(query).filter(filter(request.getFilter()));
@@ -883,11 +884,17 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
                 SearchRequest searchRequest = c.getIndex().search(TAG_TYPE);
 
-                searchRequest.source().query(query).timeout(TIMEOUT);
+                searchRequest
+                        .source()
+                        .query(query)
+                        .timeout(TIMEOUT);
+
+                final int suggestionsLimit = this.numSuggestionsLimit.calculateNewLimit(
+                        request.getLimit());
 
                 // aggregation
                 addTermsToRequest(searchRequest, TAG_SUGGEST_SOURCES, "terms", TAG_KV,
-                    request.getLimit());
+                        suggestionsLimit);
 
                 final ResolvableFuture<SearchResponse> future = async.future();
                 c.execute(searchRequest, bind(future));
@@ -928,16 +935,18 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     }
 
     private void addTermsToRequest(SearchRequest searchRequest, String[] tagSuggestSources,
-        String term, String tagKv, OptionalLimit limit) {
+                                   String term, String tagKv, int limit) {
         final TopHitsAggregationBuilder hits =
-            AggregationBuilders.topHits("hits")
-                .size(1)
-                .fetchSource(tagSuggestSources, new String[0]);
+                AggregationBuilders.topHits("hits")
+                        .size(1)
+                        .fetchSource(tagSuggestSources, new String[0]);
 
         final TermsAggregationBuilder terms =
-                AggregationBuilders.terms(term).field(tagKv)
-                        .size(numSuggestionsLimit.calculateNewLimit(limit))
-                .subAggregation(hits);
+                AggregationBuilders
+                        .terms(term)
+                        .field(tagKv)
+                        .size(limit)
+                        .subAggregation(hits);
 
         searchRequest.source().aggregation(terms);
     }
