@@ -37,3 +37,6 @@ gradle-app.setting
 .project
 .settings
 .java-version
+
+# direnv config file
+/.envrc

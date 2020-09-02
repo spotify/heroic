@@ -178,14 +178,14 @@ public class MemoryBackend implements SuggestBackend, Grouped {
             ids = docs.map(KeyDocument::getId).collect(Collectors.toSet());
 
             analyzedKeys.ifPresent(parts -> parts.forEach(
-                    k -> ids.retainAll(keys.getOrDefault(k, ImmutableSet.of()))));
+                k -> ids.retainAll(keys.getOrDefault(k, ImmutableSet.of()))));
         }
 
-        final List<KeySuggest.Suggestion> suggestions = ImmutableList.copyOf(request
-            .getLimit()
-            .limitStream(ids.stream())
-            .map(d -> new KeySuggest.Suggestion(SCORE, d))
-            .iterator());
+        int limit = numSuggestionsLimit.calculateNewLimit(request.getLimit());
+
+        final List<KeySuggest.Suggestion> suggestions =
+            ImmutableList.copyOf(ids.stream().limit(limit).map(
+                d -> new KeySuggest.Suggestion(SCORE, d)).iterator());
 
         return async.resolved(new KeySuggest(suggestions));
     }

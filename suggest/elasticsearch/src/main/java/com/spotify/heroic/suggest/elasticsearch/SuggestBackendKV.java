@@ -250,29 +250,25 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
         return connection.doto(
             (final Connection c) -> {
 
-                final BoolQueryBuilder bool = boolQuery();
+                final BoolQueryBuilder boolQueryBuilder = boolQuery();
                 final Optional<String> key = request.getKey();
 
                 key.ifPresent(
                     k -> {
                         if (!k.isEmpty()) {
-                            bool.must(termQuery(TAG_SKEY_RAW, k));
+                            boolQueryBuilder.must(termQuery(TAG_SKEY_RAW, k));
                         }
                     });
 
-                QueryBuilder query = bool.hasClauses() ? bool : matchAllQuery();
-
-                if (!(request.getFilter() instanceof TrueFilter)) {
-                    query = new BoolQueryBuilder().must(query).filter(filter(request.getFilter()));
-                }
+                QueryBuilder query = augmentTagQueryBuilder(boolQueryBuilder, request.getFilter());
 
                 SearchRequest searchRequest = c.getIndex().search(TAG_TYPE);
 
-                final int numSuggestionsLimit = this.numSuggestionsLimit
-                        .calculateNewLimit(request.getLimit());
-                searchRequest.source().size(numSuggestionsLimit).query(query);
+                final int suggestionsLimit = this.numSuggestionsLimit.calculateNewLimit(
+                    request.getLimit());
+                searchRequest.source().size(suggestionsLimit).query(query);
 
-                aggregateRequestByTerms(searchRequest, numSuggestionsLimit);
+                aggregateRequestByTerms(searchRequest, suggestionsLimit);
 
                 final ResolvableFuture<SearchResponse> future = async.future();
                 c.execute(searchRequest, bind(future));
@@ -335,10 +331,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
                 addKeyToBuilder(request, bool);
 
-                QueryBuilder query = bool.hasClauses() ? bool : matchAllQuery();
-                if (!(request.getFilter() instanceof TrueFilter)) {
-                    query = new BoolQueryBuilder().must(query).filter(filter(request.getFilter()));
-                }
+                QueryBuilder query = augmentTagQueryBuilder(bool, request.getFilter());
 
                 SearchRequest searchRequest = c.getIndex().search(SERIES_TYPE);
 
@@ -347,8 +340,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 searchRequest.source().size(suggestLimit).query(query);
 
                 // aggregation
-                addTermsToRequest(searchRequest, KEY_SUGGEST_SOURCES, "keys", KEY,
-                        suggestLimit);
+                addTermsToRequest(searchRequest, KEY_SUGGEST_SOURCES, "keys", KEY, suggestLimit);
 
                 final ResolvableFuture<SearchResponse> future = async.future();
                 c.execute(searchRequest, bind(future));
@@ -810,7 +802,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
         searchRequest.source().aggregation(terms);
     }
 
-    private Suggestion createSuggestion(OptionalLimit exactLimit, Bucket bucket) {
+    private static Suggestion createSuggestion(OptionalLimit exactLimit, Bucket bucket) {
         final Cardinality cardinality =
             bucket.getAggregations().get("cardinality");
         final Terms values = bucket.getAggregations().get("values");
@@ -832,7 +824,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
             cardinality.getValue(), exactValues);
     }
 
-    private void aggregateRequestByKeys(
+    private static void aggregateRequestByKeys(
         SearchRequest searchRequest, OptionalLimit limit, OptionalLimit exactLimit) {
 
         final TermsAggregationBuilder keysAggBuilder = AggregationBuilders.terms("keys")
@@ -875,26 +867,22 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 // introducing an 'any' field.
                 addKeyAndValueToBuilder(boolQueryBuilder, key, value);
 
-                QueryBuilder query =
-                        boolQueryBuilder.hasClauses() ? boolQueryBuilder : matchAllQuery();
-
-                if (!(request.getFilter() instanceof TrueFilter)) {
-                    query = new BoolQueryBuilder().must(query).filter(filter(request.getFilter()));
-                }
+                var query = augmentTagQueryBuilder(boolQueryBuilder, request.getFilter());
 
                 SearchRequest searchRequest = c.getIndex().search(TAG_TYPE);
 
-                searchRequest
-                        .source()
-                        .query(query)
-                        .timeout(TIMEOUT);
+                final int suggestionsLimit =
+                    this.numSuggestionsLimit.calculateNewLimit(request.getLimit());
 
-                final int suggestionsLimit = this.numSuggestionsLimit.calculateNewLimit(
-                        request.getLimit());
+                searchRequest
+                    .source()
+                    .size(suggestionsLimit)
+                    .query(query)
+                    .timeout(TIMEOUT);
 
                 // aggregation
                 addTermsToRequest(searchRequest, TAG_SUGGEST_SOURCES, "terms", TAG_KV,
-                        suggestionsLimit);
+                    suggestionsLimit);
 
                 final ResolvableFuture<SearchResponse> future = async.future();
                 c.execute(searchRequest, bind(future));
@@ -934,19 +922,20 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
             });
     }
 
-    private void addTermsToRequest(SearchRequest searchRequest, String[] tagSuggestSources,
-                                   String term, String tagKv, int limit) {
+    private static void addTermsToRequest(SearchRequest searchRequest,
+        String[] tagSuggestSources, String term, String tagKv,
+        int suggestionsLimit) {
         final TopHitsAggregationBuilder hits =
-                AggregationBuilders.topHits("hits")
-                        .size(1)
-                        .fetchSource(tagSuggestSources, new String[0]);
+            AggregationBuilders.topHits("hits")
+                .size(1)
+                .fetchSource(tagSuggestSources, new String[0]);
 
         final TermsAggregationBuilder terms =
-                AggregationBuilders
-                        .terms(term)
-                        .field(tagKv)
-                        .size(limit)
-                        .subAggregation(hits);
+            AggregationBuilders
+                .terms(term)
+                .size(suggestionsLimit)
+                .field(tagKv)
+                .subAggregation(hits);
 
         searchRequest.source().aggregation(terms);
     }
@@ -972,4 +961,16 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 });
         }
     }
+
+    private static QueryBuilder augmentTagQueryBuilder(BoolQueryBuilder boolQueryBuilder,
+        Filter filter) {
+        QueryBuilder query = boolQueryBuilder.hasClauses() ? boolQueryBuilder : matchAllQuery();
+
+        if (!(filter instanceof TrueFilter)) {
+            query = new BoolQueryBuilder().must(query).filter(filter(filter));
+        }
+
+        return query;
+    }
+
 }
