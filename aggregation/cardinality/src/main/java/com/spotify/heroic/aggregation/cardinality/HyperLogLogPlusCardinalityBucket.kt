@@ -48,7 +48,7 @@ data class HyperLogLogPlusCardinalityBucket(
 
         if (includeKey) {
             for (k in KEY_ORDER.sortedCopy(key.keys)) {
-                hasher.putString(k, Charsets.UTF_8).putString(key[k], Charsets.UTF_8)
+                hasher.putString(k, Charsets.UTF_8).putString(key[k].orEmpty(), Charsets.UTF_8)
             }
         }
 
