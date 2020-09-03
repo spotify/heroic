@@ -35,29 +35,29 @@ import com.spotify.heroic.metric.Spread
 data class MinBucket(override val timestamp: Long) : AbstractBucket(), DoubleBucket {
     private val value = AtomicDouble(java.lang.Double.POSITIVE_INFINITY)
 
-    override fun updatePoint(key: Map<String, String>, d: Point) {
+    override fun updatePoint(key: Map<String, String>, sample: Point) {
         while (true) {
             val current = value.get()
 
-            if (current < d.value) {
+            if (current < sample.value) {
                 break
             }
 
-            if (value.compareAndSet(current, d.value)) {
+            if (value.compareAndSet(current, sample.value)) {
                 break
             }
         }
     }
 
-    override fun updateSpread(key: Map<String, String>, d: Spread) {
+    override fun updateSpread(key: Map<String, String>, sample: Spread) {
         while (true) {
             val current = value.get()
 
-            if (current < d.min) {
+            if (current < sample.min) {
                 break
             }
 
-            if (value.compareAndSet(current, d.min)) {
+            if (value.compareAndSet(current, sample.min)) {
                 break
             }
         }

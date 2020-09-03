@@ -39,7 +39,7 @@ data class GroupUniqueInstance(
         val groups = bucket.groups()
 
         return if (groups.isEmpty()) {
-            Metric.invalid()
+            Metric.invalid
         } else MetricGroup(bucket.timestamp, groups)
 
     }

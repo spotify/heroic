@@ -39,7 +39,7 @@ data class AverageInstance(
         val value = bucket.value()
 
         return if (!java.lang.Double.isFinite(value)) {
-            Metric.invalid()
+            Metric.invalid
         } else Point(bucket.timestamp, bucket.value())
 
     }
