@@ -66,6 +66,7 @@ import io.opencensus.trace.Span;
 import io.opencensus.trace.Tracer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -104,6 +105,7 @@ public class LocalMetricManager implements MetricManager {
     private final MetricBackendReporter reporter;
     private final QueryLogger queryLogger;
     private final Semaphore concurrentQueries;
+    private static final HashSet<QuotaWatcher> quotaWatchers = new HashSet<>();
 
     /**
      * @param groupLimit The maximum amount of groups this manager will allow to be generated.
@@ -371,6 +373,9 @@ public class LocalMetricManager implements MetricManager {
                 options.aggregationLimit().orElse(aggregationLimit).asLong().orElse(Long.MAX_VALUE),
                 dataInMemoryReporter
             );
+
+            // Add watcher to set to compute stats across all queries
+            quotaWatchers.add(quotaWatcher);
 
             final OptionalLimit seriesLimit =
                 options.seriesLimit().orElse(LocalMetricManager.this.seriesLimit);
@@ -678,6 +683,9 @@ public class LocalMetricManager implements MetricManager {
                     aggregation.cadence()));
             }
 
+            // Remove the watcher from the set at the end of query
+            quotaWatchers.remove(watcher);
+
             return FullQuery.create(trace, errorsBuilder.build(), groups,
                 baseStatistics.merge(result.getStatistics()),
                 new ResultLimits(limitsBuilder.build()), dataDensity);
@@ -726,7 +734,9 @@ public class LocalMetricManager implements MetricManager {
         public void readData(long n) {
             long curDataPoints = read.addAndGet(n);
             if (curDataPoints > 1_000_000) {
-                log.info("Current data points num: {}", curDataPoints);
+                long total = quotaWatchers.stream().map(QuotaWatcher::getReadData).reduce(0L, Long::sum);
+                log.info("Total: {}; watchers: {}; Data points: {}; added: {}", total,
+                    quotaWatchers.size(), curDataPoints, n);
             }
             throwIfViolated();
             // Must be called after checkViolation above, since that one might throw an exception.
@@ -737,7 +747,9 @@ public class LocalMetricManager implements MetricManager {
         public void retainData(final long n) {
             long curRetainedDataPoints = retained.addAndGet(n);
             if (curRetainedDataPoints > 500_000) {
-                log.info("Current retained data points num: {}", curRetainedDataPoints);
+                long total = quotaWatchers.stream().map(QuotaWatcher::getRetainData).reduce(0L, Long::sum);
+                log.info("Total: {}; watchers: {}; Data points retained: {}; added: {}", total,
+                    quotaWatchers.size(), curRetainedDataPoints, n);
             }
             throwIfViolated();
         }
@@ -761,6 +773,14 @@ public class LocalMetricManager implements MetricManager {
         public void accessedRows(final long n) {
             dataInMemoryReporter.reportRowsAccessed(n);
             rowsAccessed.add(n);
+        }
+
+        public long getReadData(){
+            return read.get();
+        }
+
+        public long getRetainData(){
+            return retained.get();
         }
 
         public long getRowsAccessed() {
