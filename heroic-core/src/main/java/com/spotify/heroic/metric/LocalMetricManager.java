@@ -717,6 +717,7 @@ public class LocalMetricManager implements MetricManager {
         private final long dataLimit;
         private final long retainLimit;
         private final DataInMemoryReporter dataInMemoryReporter;
+        private final long LOG_LIMIT = 1_000_000;
 
         private final AtomicLong read = new AtomicLong();
         private final AtomicLong retained = new AtomicLong();
@@ -733,11 +734,12 @@ public class LocalMetricManager implements MetricManager {
         @Override
         public void readData(long n) {
             long curDataPoints = read.addAndGet(n);
-            if (curDataPoints > 1_000_000) {
+            if (curDataPoints > LOG_LIMIT) {
                 long total = quotaWatchers.stream().map(QuotaWatcher::getReadData)
                     .reduce(0L, Long::sum);
-                log.info("Total: {}; watchers: {}; Data points: {}; added: {}", total,
-                    quotaWatchers.size(), curDataPoints, n);
+                log.info("Data Points READ: Instance {}; This Query: {}; Delta: {}" +
+                    " (# Wathcers: {})", total, curDataPoints,
+                    n, quotaWatchers.size());
             }
             throwIfViolated();
             // Must be called after checkViolation above, since that one might throw an exception.
@@ -747,11 +749,12 @@ public class LocalMetricManager implements MetricManager {
         @Override
         public void retainData(final long n) {
             long curRetainedDataPoints = retained.addAndGet(n);
-            if (curRetainedDataPoints > 500_000) {
+            if (curRetainedDataPoints > LOG_LIMIT) {
                 long total = quotaWatchers.stream().map(QuotaWatcher::getRetainData)
                     .reduce(0L, Long::sum);
-                log.info("Total: {}; watchers: {}; Data points retained: {}; added: {}", total,
-                    quotaWatchers.size(), curRetainedDataPoints, n);
+                log.info("Data Points RETAINED: Instance {}; This Query: {}; Delta: {} " +
+                    "(# Wathcers: {})", total, curRetainedDataPoints,
+                    n, quotaWatchers.size());
             }
             throwIfViolated();
         }
