@@ -56,7 +56,7 @@ data class Table(
             val cluster: String = matcher.group(1)
             val tableId: String = matcher.group(2)
 
-            val columnFamilies = table.columnFamilies
+            val columnFamilies = table.columnFamiliesMap
                 .map {
                     val columnFamily = ColumnFamily(cluster, tableId, it.key)
                     columnFamily.name to columnFamily
