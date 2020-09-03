@@ -717,7 +717,7 @@ public class LocalMetricManager implements MetricManager {
         private final long dataLimit;
         private final long retainLimit;
         private final DataInMemoryReporter dataInMemoryReporter;
-        private final long LOGLIMIT = 1_000_000;
+        private static final long LOGLIMIT = 1_000_000;
 
         private final AtomicLong read = new AtomicLong();
         private final AtomicLong retained = new AtomicLong();
