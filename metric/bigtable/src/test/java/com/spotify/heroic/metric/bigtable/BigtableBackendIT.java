@@ -8,9 +8,10 @@ import org.junit.ClassRule;
 import org.testcontainers.containers.GenericContainer;
 
 public class BigtableBackendIT extends AbstractMetricBackendIT {
+    // TODO reverse emulator image to bigtruedata/gcloud-bigtable-emulator when they fix it
     @ClassRule
     public static GenericContainer container =
-        new GenericContainer("bigtruedata/gcloud-bigtable-emulator")
+        new GenericContainer("malish8632/bigtable-emulator:latest")
             .withExposedPorts(8086)
             .withCommand("start", "--host-port", "0.0.0.0:8086");
 
