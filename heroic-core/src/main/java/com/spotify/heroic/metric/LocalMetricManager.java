@@ -717,7 +717,7 @@ public class LocalMetricManager implements MetricManager {
         private final long dataLimit;
         private final long retainLimit;
         private final DataInMemoryReporter dataInMemoryReporter;
-        private final long LOG_LIMIT = 1_000_000;
+        private final long LOGLIMIT = 1_000_000;
 
         private final AtomicLong read = new AtomicLong();
         private final AtomicLong retained = new AtomicLong();
@@ -734,7 +734,7 @@ public class LocalMetricManager implements MetricManager {
         @Override
         public void readData(long n) {
             long curDataPoints = read.addAndGet(n);
-            if (curDataPoints > LOG_LIMIT) {
+            if (curDataPoints > LOGLIMIT) {
                 long total = quotaWatchers.stream().map(QuotaWatcher::getReadData)
                     .reduce(0L, Long::sum);
                 log.info("Data Points READ: Instance {}; This Query: {}; Delta: {}" +
@@ -749,7 +749,7 @@ public class LocalMetricManager implements MetricManager {
         @Override
         public void retainData(final long n) {
             long curRetainedDataPoints = retained.addAndGet(n);
-            if (curRetainedDataPoints > LOG_LIMIT) {
+            if (curRetainedDataPoints > LOGLIMIT) {
                 long total = quotaWatchers.stream().map(QuotaWatcher::getRetainData)
                     .reduce(0L, Long::sum);
                 log.info("Data Points RETAINED: Instance {}; This Query: {}; Delta: {} " +
