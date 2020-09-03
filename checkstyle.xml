@@ -24,7 +24,8 @@
 
     <module name="SuppressionFilter">
         <!-- note that $basedir must be set to TLD of heroic in your local dev
-        environment for checkstyle to function. -->
+        environment for checkstyle to function. You may wish to emply the direnv
+        utility to set this for you. -->
         <property name="file" value="${basedir}/suppressions.xml"/>
     </module>
 

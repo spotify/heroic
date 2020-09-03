@@ -91,6 +91,7 @@ public abstract class AbstractSuggestBackendIT {
     public static final String AA = "aa";
     public static final String ROLE = "role";
     public static final String AA_1 = "aa1";
+    public static final String BB_3 = "bb3";
     protected final String testName = "heroic-it-" + UUID.randomUUID().toString();
 
     // MetaData and Suggest have no concept of datetime ranges so just set
@@ -181,8 +182,6 @@ public abstract class AbstractSuggestBackendIT {
 
     /**
      * Check we get the expected tag and 3 results
-     *
-     * @throws Exception
      */
     @Test
     public void tagSuggestSmall() throws Exception {
@@ -203,8 +202,6 @@ public abstract class AbstractSuggestBackendIT {
 
     /**
      * Check that a request limit is respected and one without gets the whole lot.
-     *
-     * @throws Exception
      */
     @Test
     public void tagSuggestLimit() throws Exception {
@@ -436,7 +433,7 @@ public abstract class AbstractSuggestBackendIT {
             {
                 add(createSeriesPair(AA_1, FOO, p));
                 add(createSeriesPair(AA_2, BAR, p));
-                add(createSeriesPair("bb3", BAZ, p));
+                add(createSeriesPair(BB_3, BAZ, p));
             }
 
             @NotNull

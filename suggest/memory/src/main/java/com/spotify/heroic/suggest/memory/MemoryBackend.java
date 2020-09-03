@@ -190,7 +190,6 @@ public class MemoryBackend implements SuggestBackend, Grouped {
         return async.resolved(new KeySuggest(suggestions));
     }
 
-
     @Override
     public AsyncFuture<TagValueSuggest> tagValueSuggest(
             final TagValueSuggest.Request request) {
