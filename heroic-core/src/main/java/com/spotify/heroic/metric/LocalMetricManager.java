@@ -734,7 +734,8 @@ public class LocalMetricManager implements MetricManager {
         public void readData(long n) {
             long curDataPoints = read.addAndGet(n);
             if (curDataPoints > 1_000_000) {
-                long total = quotaWatchers.stream().map(QuotaWatcher::getReadData).reduce(0L, Long::sum);
+                long total = quotaWatchers.stream().map(QuotaWatcher::getReadData)
+                    .reduce(0L, Long::sum);
                 log.info("Total: {}; watchers: {}; Data points: {}; added: {}", total,
                     quotaWatchers.size(), curDataPoints, n);
             }
@@ -747,7 +748,8 @@ public class LocalMetricManager implements MetricManager {
         public void retainData(final long n) {
             long curRetainedDataPoints = retained.addAndGet(n);
             if (curRetainedDataPoints > 500_000) {
-                long total = quotaWatchers.stream().map(QuotaWatcher::getRetainData).reduce(0L, Long::sum);
+                long total = quotaWatchers.stream().map(QuotaWatcher::getRetainData)
+                    .reduce(0L, Long::sum);
                 log.info("Total: {}; watchers: {}; Data points retained: {}; added: {}", total,
                     quotaWatchers.size(), curRetainedDataPoints, n);
             }
@@ -775,11 +777,11 @@ public class LocalMetricManager implements MetricManager {
             rowsAccessed.add(n);
         }
 
-        public long getReadData(){
+        public long getReadData() {
             return read.get();
         }
 
-        public long getRetainData(){
+        public long getRetainData() {
             return retained.get();
         }
 
