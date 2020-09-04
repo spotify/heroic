@@ -47,16 +47,16 @@ data class SpreadBucket(override val timestamp: Long) : AbstractBucket() {
     internal val max = DoubleAccumulator(maxFn, java.lang.Double.NEGATIVE_INFINITY)
     internal val min = DoubleAccumulator(minFn, java.lang.Double.POSITIVE_INFINITY)
 
-    override fun updateSpread(key: Map<String, String>, d: Spread) {
-        count.add(d.count)
-        sum.add(d.sum)
-        sum2.add(d.sum2)
-        max.accumulate(d.max)
-        min.accumulate(d.min)
+    override fun updateSpread(key: Map<String, String>, sample: Spread) {
+        count.add(sample.count)
+        sum.add(sample.sum)
+        sum2.add(sample.sum2)
+        max.accumulate(sample.max)
+        min.accumulate(sample.min)
     }
 
-    override fun updatePoint(key: Map<String, String>, d: Point) {
-        val value = d.value
+    override fun updatePoint(key: Map<String, String>, sample: Point) {
+        val value = sample.value
 
         if (!java.lang.Double.isFinite(value)) {
             return
@@ -73,7 +73,7 @@ data class SpreadBucket(override val timestamp: Long) : AbstractBucket() {
         val count = this.count.sum()
 
         return if (count == 0L) {
-            Metric.invalid()
+            Metric.invalid
         } else Spread(timestamp, count, sum.sum(), sum2.sum(), min.get(), max.get())
 
     }

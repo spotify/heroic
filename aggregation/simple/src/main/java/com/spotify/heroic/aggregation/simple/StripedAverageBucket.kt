@@ -38,8 +38,8 @@ data class StripedAverageBucket(override val timestamp: Long) : AbstractBucket()
     private val value = DoubleAdder()
     private val count = LongAdder()
 
-    override fun updatePoint(key: Map<String, String>, d: Point) {
-        value.add(d.value)
+    override fun updatePoint(key: Map<String, String>, sample: Point) {
+        value.add(sample.value)
         count.increment()
     }
 

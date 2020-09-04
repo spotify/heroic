@@ -85,11 +85,13 @@ class RestConnection(
             val future = async.future<AcknowledgedResponse>()
             val listener = object: ActionListener<AcknowledgedResponse> {
                 override fun onFailure(e: Exception) {
+                    @Suppress("DEPRECATION")
                     future.fail(e)
                 }
 
                 override fun onResponse(response: AcknowledgedResponse) {
                     if (!response.isAcknowledged) {
+                        @Suppress("DEPRECATION")
                         future.fail(Exception("request not acknowledged"))
                     }
                     future.resolve(null)

@@ -46,14 +46,14 @@ data class SumBucket(override val timestamp: Long) : AbstractBucket(), DoubleBuc
     @Volatile
     private var valid = false
 
-    override fun updatePoint(key: Map<String, String>, d: Point) {
+    override fun updatePoint(key: Map<String, String>, sample: Point) {
         valid = true
-        sum.addAndGet(d.value)
+        sum.addAndGet(sample.value)
     }
 
-    override fun updateSpread(key: Map<String, String>, d: Spread) {
+    override fun updateSpread(key: Map<String, String>, sample: Spread) {
         valid = true
-        sum.addAndGet(d.sum)
+        sum.addAndGet(sample.sum)
     }
 
     override fun value(): Double {

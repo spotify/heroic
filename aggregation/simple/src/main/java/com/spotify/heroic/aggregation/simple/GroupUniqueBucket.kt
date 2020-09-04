@@ -30,9 +30,9 @@ import java.util.*
 import java.util.concurrent.ConcurrentSkipListSet
 
 data class GroupUniqueBucket(override val timestamp: Long) : AbstractBucket(), Bucket {
-    internal val points: SortedSet<Point> = ConcurrentSkipListSet(Metric.comparator())
-    internal val spreads: SortedSet<Spread> = ConcurrentSkipListSet(Metric.comparator())
-    internal val groups: SortedSet<MetricGroup> = ConcurrentSkipListSet(Metric.comparator())
+    internal val points: SortedSet<Point> = ConcurrentSkipListSet(Metric.comparator)
+    internal val spreads: SortedSet<Spread> = ConcurrentSkipListSet(Metric.comparator)
+    internal val groups: SortedSet<MetricGroup> = ConcurrentSkipListSet(Metric.comparator)
 
     fun groups(): List<MetricCollection> {
         val result = ImmutableList.builder<MetricCollection>()

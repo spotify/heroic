@@ -41,14 +41,14 @@ data class StripedStdDevBucket(override val timestamp: Long) : AbstractBucket(),
     private val sum2 = DoubleAdder()
     private val count = LongAdder()
 
-    override fun updateSpread(key: Map<String, String>, d: Spread) {
-        sum.add(d.sum)
-        sum2.add(d.sum2)
-        count.add(d.count)
+    override fun updateSpread(key: Map<String, String>, sample: Spread) {
+        sum.add(sample.sum)
+        sum2.add(sample.sum2)
+        count.add(sample.count)
     }
 
-    override fun updatePoint(key: Map<String, String>, d: Point) {
-        val v = d.value
+    override fun updatePoint(key: Map<String, String>, sample: Point) {
+        val v = sample.value
 
         sum.add(v)
         sum2.add(v * v)

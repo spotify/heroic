@@ -48,14 +48,14 @@ data class StripedSum2Bucket(override val timestamp: Long) : AbstractBucket(), D
         return timestamp
     }
 
-    override fun updatePoint(key: Map<String, String>, d: Point) {
+    override fun updatePoint(key: Map<String, String>, sample: Point) {
         valid = true
-        sum2.add(d.value * d.value)
+        sum2.add(sample.value * sample.value)
     }
 
-    override fun updateSpread(key: Map<String, String>, d: Spread) {
+    override fun updateSpread(key: Map<String, String>, sample: Spread) {
         valid = true
-        sum2.add(d.sum2)
+        sum2.add(sample.sum2)
     }
 
     override fun value(): Double {
