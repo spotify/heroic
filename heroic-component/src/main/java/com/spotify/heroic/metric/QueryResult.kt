@@ -86,7 +86,7 @@ data class QueryResult(
             combiner: AggregationCombiner,
             groupLimit: OptionalLimit
         ): Collector<QueryResultPart, QueryResult> {
-            val w = QueryTrace.watch(what)
+            val w = Tracing.DEFAULT.watch(what)
             return Collector { parts: Collection<QueryResultPart> ->
                 val all = mutableListOf<List<ShardedResultGroup>>()
                 val errors = mutableListOf<RequestError>()

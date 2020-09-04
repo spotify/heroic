@@ -33,7 +33,7 @@ data class FetchData(
 ) {
     companion object {
         @JvmStatic fun collectResult(what: QueryTrace.Identifier): Collector<Result, Result> {
-            val w = QueryTrace.watch(what)
+            val w = Tracing.DEFAULT.watch(what)
             return Collector { result: Collection<Result> ->
                 val traces = mutableListOf<QueryTrace>()
                 val errors = mutableListOf<RequestError>()
