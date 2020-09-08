@@ -637,6 +637,9 @@ public class LocalMetricManager implements MetricManager {
                 limitsBuilder.add(ResultLimit.QUOTA);
             }
 
+            // Remove the watcher from the set at the end of query
+            quotaWatchers.remove(watcher);
+
             if (watcher.isReadQuotaViolated() || watcher.isRetainQuotaViolated()) {
                 final Optional<Histogram> dataDensity = Optional.of(getRowDensityHistogram());
                 errorsBuilder.add(new QueryError(
@@ -682,9 +685,6 @@ public class LocalMetricManager implements MetricManager {
                 groups.add(new ResultGroup(group.getKey(), group.getSeries(), group.getMetrics(),
                     aggregation.cadence()));
             }
-
-            // Remove the watcher from the set at the end of query
-            quotaWatchers.remove(watcher);
 
             return FullQuery.create(trace, errorsBuilder.build(), groups,
                 baseStatistics.merge(result.getStatistics()),
