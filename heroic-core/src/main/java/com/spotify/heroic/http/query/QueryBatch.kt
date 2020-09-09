@@ -22,10 +22,15 @@
 package com.spotify.heroic.http.query
 
 import com.spotify.heroic.QueryDateRange
+import com.spotify.heroic.metric.Arithmetic
 import com.spotify.heroic.metric.QueryMetrics
 import java.util.*
 
 data class QueryBatch(
-    val queries: Optional<Map<String, QueryMetrics>>,
-    val range: Optional<QueryDateRange>
-)
+        val queries: Optional<Map<String, QueryMetrics>>,
+        val range: Optional<QueryDateRange>,
+        val arithmeticQueries: Optional<Map<String, Arithmetic>>
+) {
+    constructor(queries: Optional<Map<String, QueryMetrics>>,
+                range: Optional<QueryDateRange>) : this(queries, range, Optional.empty())
+}

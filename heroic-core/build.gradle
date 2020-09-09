@@ -3,7 +3,7 @@ apply plugin: 'antlr'
 
 dependencies {
     implementation project(':heroic-component')
-    
+
     implementation 'com.google.auto.value:auto-value-annotations'
     implementation 'org.xerial.snappy:snappy-java'
     implementation 'eu.toolchain.async:tiny-async-core'
@@ -11,11 +11,12 @@ dependencies {
     implementation 'eu.toolchain.serializer:tiny-serializer-core'
     implementation 'com.google.guava:guava'
     implementation 'com.google.cloud:google-cloud-core'
-    
+    compile group: 'net.objecthunter', name: 'exp4j', version: '0.4.8'
+
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
     implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
     implementation 'com.fasterxml.jackson.module:jackson-module-kotlin'
-    
+
     implementation 'org.eclipse.jetty:jetty-webapp'
     implementation 'org.eclipse.jetty:jetty-server'
     implementation 'org.eclipse.jetty.http2:http2-server'
@@ -55,7 +56,7 @@ dependencies {
     // Default usage tracking module. Normally different module dependencies are handled in
     // heroic-dist, but defaults need to be accessible in heroic-core.
     implementation project(':heroic-usage-tracking-google-analytics')
-    
+
     testImplementation project(':heroic-test')
     testImplementation project(path: ':heroic-component', configuration: 'testRuntime')
 

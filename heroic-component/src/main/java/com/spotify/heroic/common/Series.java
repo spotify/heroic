@@ -37,13 +37,19 @@ import com.spotify.heroic.grammar.DSL;
 import eu.toolchain.serializer.AutoSerialize;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+/**
+ * This class uniquely identifies a given series and contains all said Series' tags, resources and
+ * its key. It *does not* contain the data/payload.
+ */
 @AutoSerialize
 public class Series implements Comparable<Series> {
+
     static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
 
     static final SortedMap<String, String> EMPTY_TAGS = ImmutableSortedMap.<String, String>of();
@@ -109,33 +115,10 @@ public class Series implements Comparable<Series> {
             hasher.putString(key, Charsets.UTF_8);
         }
 
-        for (final Map.Entry<String, String> kv : tags.entrySet()) {
-            final String k = kv.getKey();
-            final String v = kv.getValue();
+        addKeysAndValuesToHasher(hasher, tags.entrySet());
+        addKeysAndValuesToHasher(hasher, resource.entrySet());
 
-            if (k != null) {
-                hasher.putString(k, Charsets.UTF_8);
-            }
-
-            if (v != null) {
-                hasher.putString(v, Charsets.UTF_8);
-            }
-        }
-
-        for (final Map.Entry<String, String> kv : resource.entrySet()) {
-          final String k = kv.getKey();
-          final String v = kv.getValue();
-
-          if (k != null) {
-            hasher.putString(k, Charsets.UTF_8);
-          }
-
-          if (v != null) {
-            hasher.putString(v, Charsets.UTF_8);
-          }
-        }
-
-      return hasher.hash();
+        return hasher.hash();
     }
 
     public String hash() {
@@ -149,30 +132,20 @@ public class Series implements Comparable<Series> {
 
     @JsonIgnore
     public HashCode getHashCodeTagOnly() {
-      return hashCodeTagOnly;
+        return hashCodeTagOnly;
     }
 
     private HashCode generateHashTagOnly() {
-      final Hasher hasher = HASH_FUNCTION.newHasher();
+        final Hasher hasher = HASH_FUNCTION.newHasher();
 
-      if (key != null) {
-        hasher.putString(key, Charsets.UTF_8);
-      }
-
-      for (final Map.Entry<String, String> kv : tags.entrySet()) {
-        final String k = kv.getKey();
-        final String v = kv.getValue();
-
-        if (k != null) {
-          hasher.putString(k, Charsets.UTF_8);
+        if (key != null) {
+            hasher.putString(key, Charsets.UTF_8);
         }
 
-        if (v != null) {
-          hasher.putString(v, Charsets.UTF_8);
-        }
-      }
+        final var entries = tags.entrySet();
+        addKeysAndValuesToHasher(hasher, entries);
 
-      return hasher.hash();
+        return hasher.hash();
     }
 
     @Override
@@ -285,7 +258,7 @@ public class Series implements Comparable<Series> {
 
     @Override
     public int compareTo(Series o) {
-        final int k = key.compareTo(o.getKey());
+        final int k = key.compareTo(o.key);
 
         if (k != 0) {
             return k;
@@ -304,7 +277,7 @@ public class Series implements Comparable<Series> {
         return 0;
     }
 
-    private int compareSortedMaps(
+    private static int compareSortedMaps(
         final SortedMap<String, String> a, final SortedMap<String, String> b
     ) {
         final Iterator<Map.Entry<String, String>> aTags = a.entrySet().iterator();
@@ -337,6 +310,22 @@ public class Series implements Comparable<Series> {
         return 0;
     }
 
+    private static void addKeysAndValuesToHasher(Hasher hasher,
+        Set<Entry<String, String>> tagEntriess) {
+        for (final Entry<String, String> kv : tagEntriess) {
+            final String k = kv.getKey();
+            final String v = kv.getValue();
+
+            if (k != null) {
+                hasher.putString(k, Charsets.UTF_8);
+            }
+
+            if (v != null) {
+                hasher.putString(v, Charsets.UTF_8);
+            }
+        }
+    }
+
     public static final Joiner TAGS_JOINER = Joiner.on(", ");
 
     public String toDSL() {
@@ -357,7 +346,7 @@ public class Series implements Comparable<Series> {
     }
 
     public String toString() {
-        return "Series(key=" + this.getKey() + ", tags=" + this.getTags() + ", resource=" + this
-          .getResource() + ")";
+        return "Series(key=" + this.key + ", tags=" + this.tags + ", resource=" + this.resource
+            + ")";
     }
 }

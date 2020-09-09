@@ -30,3 +30,7 @@ build/
 out/
 gradle-app.setting
 .gradle
+.settings/
+.classpath
+.project
+.java-version
