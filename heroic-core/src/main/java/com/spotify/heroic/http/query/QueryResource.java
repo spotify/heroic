@@ -26,7 +26,7 @@ import com.spotify.heroic.Query;
 import com.spotify.heroic.QueryManager;
 import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.http.CoreHttpContextFactory;
-import com.spotify.heroic.metric.Arithmetic;
+import com.spotify.heroic.http.arithmetic.ArithmeticEngine;
 import com.spotify.heroic.metric.QueryMetrics;
 import com.spotify.heroic.metric.QueryMetricsResponse;
 import com.spotify.heroic.metric.QueryResult;
@@ -63,7 +63,6 @@ import org.jetbrains.annotations.NotNull;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class QueryResource {
-
     private final JavaxRestFramework httpAsync;
     private final QueryManager manager;
     private final AsyncFramework async;
@@ -124,7 +123,70 @@ public class QueryResource {
         bindMetricsResponse(response, callback, queryContext);
     }
 
-    private AsyncFuture<QueryBatchResponse> createQueryBatchResponseFuture(
+    @POST
+    @Path("batch")
+    public void metrics(
+        @Suspended final AsyncResponse response,
+        @QueryParam("backend") String group,
+        @Context final HttpServletRequest servletReq,
+        final QueryBatch query
+    ) {
+        final var batch = new QueryBatch(query.getQueries(), query.getRange());
+
+        // Create the future work of querying for the metrics
+        final var queryBatchResponseFuture =
+            createQueryBatchResponseCompositeFuture(response, group, servletReq, batch);
+
+        // Add to that work, the work of transforming the resulting metrics with the arithmetic
+        // operation(s).
+        final var arithmeticFuture =
+            augmentFuturesWithArithmeticFutures(query, queryBatchResponseFuture);
+
+        response.setTimeout(300, TimeUnit.SECONDS);
+
+        // wire-up the response to the arithmetic future, which will make this call wait for the
+        // future (and the futures from which it is composed) to resolve completely.
+        httpAsync.bind(response, arithmeticFuture);
+    }
+
+    private static AsyncFuture<QueryBatchResponse> augmentFuturesWithArithmeticFutures(
+        QueryBatch query,
+        AsyncFuture<QueryBatchResponse> queryBatchResponseFuture) {
+
+        var future = queryBatchResponseFuture;
+
+        final var arithmeticQueries = query.getArithmeticQueries();
+
+        if (arithmeticQueries.isEmpty()) {
+            return future;
+        }
+
+        final ImmutableMap.Builder<String, QueryMetricsResponse> arithmeticResults =
+            ImmutableMap.builder();
+
+        future = queryBatchResponseFuture.directTransform(results -> {
+
+            final Map<String, QueryMetricsResponse> resultsMap = results.getResults();
+
+            // Apply each arithmetic operation to each result.
+            arithmeticQueries.get().entrySet().stream().forEach(queryResponsePair -> {
+
+                // Here's where we actually perform the arithmetic operation
+                final var result =
+                    ArithmeticEngine.run(queryResponsePair.getValue(), resultsMap);
+
+                arithmeticResults.put(queryResponsePair.getKey(), result);
+            });
+
+            arithmeticResults.putAll(results.getResults());
+
+            return new QueryBatchResponse(arithmeticResults.build());
+        });
+
+        return future;
+    }
+
+    private AsyncFuture<QueryBatchResponse> createQueryBatchResponseCompositeFuture(
         @Suspended final AsyncResponse response,
         @QueryParam("backend") String group,
         @Context final HttpServletRequest servletReq,
@@ -134,8 +196,7 @@ public class QueryResource {
         final QueryManager.Group queryManagerGroup =
             this.manager.useOptionalGroup(Optional.ofNullable(group));
 
-        final List<AsyncFuture<Triple<String, QueryContext, QueryResult>>>
-            futures = createQueryFutures(query, httpContext, queryManagerGroup);
+        final var futures = createQueryFutures(query, httpContext, queryManagerGroup);
 
         // turn the result of each AsyncFuture<Triple<String, QueryContext, QueryResult>>
         // entry into a single AsyncFuture<QueryBatchResponse>.
@@ -162,12 +223,27 @@ public class QueryResource {
         });
     }
 
+    /**
+     * Create a list of in-flight {@link QueryManager.Group#query(Query, QueryContext)} calls,
+     * wrapped in futures. Then transform the QueryResult into a triple, which connects the result
+     * to the query that produced it.
+     *
+     * @param batchQuery        a batch of query definitions to execute
+     * @param httpContext       used for query logging
+     * @param queryManagerGroup the vehicle for performing the query
+     * @return triple which connects the result to the query that produced it
+     */
     @NotNull
     private List<AsyncFuture<Triple<String, QueryContext, QueryResult>>> createQueryFutures(
-        QueryBatch query, HttpContext httpContext, QueryManager.Group queryManagerGroup) {
+        QueryBatch batchQuery, HttpContext httpContext, QueryManager.Group queryManagerGroup) {
 
+        /*
+         A map of Query names to query definitions e.g.
+         { 'A' → {query:x,aggregation:y,source:z,range:p},
+           'B' → {query:a,aggregation:b,source:c,range:d} }
+         */
         final Map<String, QueryMetrics> queries =
-            query.getQueries().orElse(new HashMap<String, QueryMetrics>());
+            batchQuery.getQueries().orElse(new HashMap<String, QueryMetrics>());
 
         final List<AsyncFuture<Triple<String, QueryContext, QueryResult>>> futures =
             new ArrayList<>(queries.size());
@@ -175,24 +251,25 @@ public class QueryResource {
         final Span currentSpan = tracer.getCurrentSpan();
 
         for (final var e : queries.entrySet()) {
-            final String queryKey = e.getKey();
-            final QueryMetrics queryMetrics = e.getValue();
-            final Query q = queryMetrics
+
+            final String queryName = e.getKey();
+            final QueryMetrics query = e.getValue();
+
+            final Query q = query
                 .toQueryBuilder(this.manager::newQueryFromString)
-                .rangeIfAbsent(query.getRange())
+                .rangeIfAbsent(batchQuery.getRange())
                 .build();
 
             final var queryContext =
-                QueryContext.create(queryMetrics.clientContext(), httpContext);
-
-            queryLogger.logHttpQueryJson(queryContext, queryMetrics);
+                QueryContext.create(query.clientContext(), httpContext);
+            queryLogger.logHttpQueryJson(queryContext, query);
 
             // Here is the call to query which sprays out queries to shards and collects
             // the results i.e. doesn't wait for them but presents their suspended processing
             // (or the already-received result) as a single future.
             futures.add(queryManagerGroup
                 .query(q, queryContext, currentSpan)
-                .directTransform(r -> Triple.of(queryKey, queryContext, r)));
+                .directTransform(r -> Triple.of(queryName, queryContext, r)));
         }
 
         return futures;
@@ -214,65 +291,5 @@ public class QueryResource {
 
             return qmr;
         });
-    }
-
-    @POST
-    @Path("batch")
-    public void metrics(
-        @Suspended final AsyncResponse response,
-        @QueryParam("backend") String group,
-        @Context final HttpServletRequest servletReq,
-        final QueryBatch query
-    ) {
-        final var batch = new QueryBatch(query.getQueries(), query.getRange());
-
-        // Create the future work of querying for the metrics
-        final var queryBatchResponseFuture =
-            createQueryBatchResponseFuture(response, group, servletReq, batch);
-
-        // Add to that work, the work of transforming the resulting metrics with the arithmetic
-        // operation(s).
-        final var arithmeticFuture =
-            augmentFutureWithArithmeticFutures(query, queryBatchResponseFuture);
-
-        response.setTimeout(300, TimeUnit.SECONDS);
-
-        // wire-up the response to the arithmetic future, which will make this call wait for the
-        // future (and the futures from which it is composed) to resolve completely.
-        httpAsync.bind(response, arithmeticFuture);
-    }
-
-    private AsyncFuture<QueryBatchResponse> augmentFutureWithArithmeticFutures(QueryBatch query,
-        AsyncFuture<QueryBatchResponse> queryBatchResponseFuture) {
-
-        var future = queryBatchResponseFuture;
-
-        final var arithmeticQueries = query.getArithmeticQueries();
-
-        if (arithmeticQueries.isEmpty()) {
-            return future;
-        }
-
-        final ImmutableMap.Builder<String, QueryMetricsResponse> arithmeticResults =
-            ImmutableMap.builder();
-
-        future = queryBatchResponseFuture.directTransform(results -> {
-
-            final Map<String, QueryMetricsResponse> resultsMap = results.getResults();
-
-            // Apply each arithmetic operation to each result.
-            arithmeticQueries.get().entrySet().stream().forEach(
-                arithmeticQueryResponsePair -> {
-                    final var result =
-                        ArithmeticEngine.run(arithmeticQueryResponsePair.getValue(), resultsMap);
-                    arithmeticResults.put(arithmeticQueryResponsePair.getKey(), result);
-                });
-
-            arithmeticResults.putAll(results.getResults());
-
-            return new QueryBatchResponse(arithmeticResults.build());
-        });
-
-        return future;
     }
 }

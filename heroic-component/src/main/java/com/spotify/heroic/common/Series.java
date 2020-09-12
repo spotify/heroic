@@ -49,7 +49,6 @@ import java.util.TreeMap;
  */
 @AutoSerialize
 public class Series implements Comparable<Series> {
-
     static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
 
     static final SortedMap<String, String> EMPTY_TAGS = ImmutableSortedMap.<String, String>of();

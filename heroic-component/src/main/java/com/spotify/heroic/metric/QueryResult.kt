@@ -27,40 +27,45 @@ import com.spotify.heroic.common.OptionalLimit
 import eu.toolchain.async.Collector
 import java.util.*
 
+/**
+ * Cornerstone class that encapsulates the data coming back from storage e.g.
+ * BigTable in response to a metrics query. Primarily it contains the Time Series'
+ * data itself as well as any errors that occurred.
+ */
 data class QueryResult(
-    /**
-     * The range in which all result groups metric's should be contained in.
-     */
-    val range: DateRange,
+        /**
+         * The range in which all result groups metric's should be contained in.
+         */
+        val range: DateRange,
 
-    /**
-     * Groups of results.
-     * <p>
-     * Failed groups are omitted from here, {@link #errors} for these.
-     */
-    val groups: List<ShardedResultGroup>,
+        /**
+         * Groups of results.
+         * <p>
+         * Failed groups are omitted from here, {@link #errors} for these.
+         */
+        val groups: List<ShardedResultGroup>,
 
-    /**
-     * Errors that happened during the query.
-     */
-    val errors: List<RequestError>,
+        /**
+         * Errors that happened during the query.
+         */
+        val errors: List<RequestError>,
 
-    /**
-     * Query trace, if available.
-     */
-    val trace: QueryTrace,
+        /**
+         * Query trace, if available.
+         */
+        val trace: QueryTrace,
 
-    val limits: ResultLimits,
+        val limits: ResultLimits,
 
-    /**
-     * Number of raw data points before any aggregations are applied.
-     */
-    val preAggregationSampleSize: Long,
+        /**
+         * Number of raw data points before any aggregations are applied.
+         */
+        val preAggregationSampleSize: Long,
 
-    /**
-     * Extra information about caching.
-     */
-    val cache: Optional<CacheInfo>
+        /**
+         * Extra information about caching.
+         */
+        val cache: Optional<CacheInfo>
 ) {
     /**
      * Add cache info to the result.
@@ -69,7 +74,7 @@ data class QueryResult(
      */
     fun withCache(cache: CacheInfo): QueryResult {
         return QueryResult(range, groups, errors, trace, limits, preAggregationSampleSize,
-            Optional.of(cache))
+                Optional.of(cache))
     }
 
     companion object {
@@ -81,10 +86,10 @@ data class QueryResult(
          */
         @JvmStatic
         fun collectParts(
-            what: QueryTrace.Identifier,
-            range: DateRange,
-            combiner: AggregationCombiner,
-            groupLimit: OptionalLimit
+                what: QueryTrace.Identifier,
+                range: DateRange,
+                combiner: AggregationCombiner,
+                groupLimit: OptionalLimit
         ): Collector<QueryResultPart, QueryResult> {
             val w = Tracing.DEFAULT.watch(what)
             return Collector { parts: Collection<QueryResultPart> ->
@@ -109,20 +114,20 @@ data class QueryResult(
                 }
 
                 QueryResult(
-                    range,
-                    groupLimit.limitList(groups),
-                    errors,
-                    trace,
-                    ResultLimits(limits.toSet()),
-                    preAggregationSampleSize,
-                    Optional.empty()
+                        range,
+                        groupLimit.limitList(groups),
+                        errors,
+                        trace,
+                        ResultLimits(limits.toSet()),
+                        preAggregationSampleSize,
+                        Optional.empty()
                 )
             }
         }
 
         @JvmStatic
         fun error(range: DateRange, errorMessage: String, trace: QueryTrace): QueryResult =
-            QueryResult(range, emptyList(), listOf(QueryError(errorMessage)), trace,
-                ResultLimits.of(), 0, Optional.empty())
+                QueryResult(range, emptyList(), listOf(QueryError(errorMessage)), trace,
+                        ResultLimits.of(), 0, Optional.empty())
     }
 }

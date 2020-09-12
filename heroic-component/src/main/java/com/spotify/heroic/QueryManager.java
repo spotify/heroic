@@ -45,6 +45,15 @@ public interface QueryManager extends UsableGroupManager<QueryManager.Group> {
     QueryBuilder newQueryFromString(String query);
 
     interface Group {
+
+        /**
+         * Query Heroic using the supplied query and context. Return the result wrapped in a
+         * Future.
+         *
+         * @param query        specifies the source, filter, features etc.
+         * @param queryContext the ID, HTTP and JSON contexts.
+         * @return the data from storage wrapped in a Future QueryResult.
+         */
         AsyncFuture<QueryResult> query(Query query, QueryContext queryContext);
 
         AsyncFuture<QueryResult> query(Query query, QueryContext queryContext, Span parentSpan);

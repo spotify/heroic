@@ -221,27 +221,36 @@ public class CoreQueryManager implements QueryManager {
             return query(query, queryContext, tracer.getCurrentSpan());
         }
 
+        /**
+         * Enormous, like ENORMOUS keystone query execution method. Sprays the query out to shards,
+         * munges the results, everything. Seriously needs decomposition.
+         *
+         * @param queryDef     Query Definition: range, filter, aggregation style
+         * @param queryContext httpContext, queryId, clientContext
+         * @param parentSpan   the span of the calling function that we should update
+         * @return
+         */
         @Override
         public AsyncFuture<QueryResult> query(
-            final Query q, final QueryContext queryContext, @Nullable Span parentSpan) {
+            final Query queryDef, final QueryContext queryContext, @Nullable Span parentSpan) {
 
-            final QueryOptions options = q.getOptions().orElseGet(QueryOptions::defaults);
+            final QueryOptions options = queryDef.getOptions().orElseGet(QueryOptions::defaults);
             final Tracing tracing = options.tracing();
 
             final QueryTrace.NamedWatch shardWatch = tracing.watch(QUERY_SHARD);
             final Stopwatch fullQueryWatch = Stopwatch.createStarted();
             final long now = clock.currentTimeMillis();
 
-            queryLogger.logQuery(queryContext, q);
+            queryLogger.logQuery(queryContext, queryDef);
 
             final List<AsyncFuture<QueryResultPart>> futures = new ArrayList<>();
 
-            final MetricType source = q.getSource().orElse(MetricType.POINT);
+            final MetricType source = queryDef.getSource().orElse(MetricType.POINT);
 
-            final Aggregation aggregation = q.getAggregation().orElse(Empty.INSTANCE);
-            final DateRange rawRange = buildRange(q);
+            final Aggregation aggregation = queryDef.getAggregation().orElse(Empty.INSTANCE);
+            final DateRange rawRange = buildRange(queryDef);
 
-            final Filter filter = q.getFilter().orElseGet(TrueFilter::get);
+            final Filter filter = queryDef.getFilter().orElseGet(TrueFilter::get);
 
             final AggregationContext context =
                 AggregationContext.defaultInstance(cadenceFromRange(rawRange));
@@ -249,7 +258,7 @@ public class CoreQueryManager implements QueryManager {
 
             final AggregationInstance aggregationInstance;
 
-            final Features features = requestFeatures(q, queryContext);
+            final Features features = requestFeatures(queryDef, queryContext);
 
             boolean isDistributed = features.hasFeature(Feature.DISTRIBUTED_AGGREGATIONS);
 
@@ -327,21 +336,20 @@ public class CoreQueryManager implements QueryManager {
                     QueryResult.collectParts(QUERY, range, combiner, limit));
             });
 
+            return query
+                .directTransform(result -> {
+                    reportCompletedQuery(result, fullQueryWatch);
+                    if (result.getErrors().size() > 0) {
+                        queryManagerSpan.addAnnotation(result.getErrors().toString());
+                        queryManagerSpan.putAttribute("error", booleanAttributeValue(true));
+                    }
+                    queryManagerSpan.putAttribute("preAggregationSampleSize",
+                        longAttributeValue(result.getPreAggregationSampleSize()));
 
-          return query
-              .directTransform(result -> {
-                  reportCompletedQuery(result, fullQueryWatch);
-                  if (result.getErrors().size() > 0) {
-                      queryManagerSpan.addAnnotation(result.getErrors().toString());
-                      queryManagerSpan.putAttribute("error", booleanAttributeValue(true));
-                  }
-                  queryManagerSpan.putAttribute("preAggregationSampleSize",
-                      longAttributeValue(result.getPreAggregationSampleSize()));
-
-                  return result;
-              })
-              .onDone(reporter.reportQuery())
-              .onDone(new EndSpanFutureReporter(queryManagerSpan));
+                    return result;
+                })
+                .onDone(reporter.reportQuery())
+                .onDone(new EndSpanFutureReporter(queryManagerSpan));
         }
 
         private void reportCompletedQuery(

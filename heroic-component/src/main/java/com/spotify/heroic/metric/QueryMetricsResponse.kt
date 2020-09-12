@@ -26,31 +26,36 @@ import com.spotify.heroic.common.DateRange
 import com.spotify.heroic.common.Statistics
 import java.util.*
 
+/**
+ * Super important class that represents a response coming from e.g. BigTable.
+ * The payload is in the `result` property and the other properties are metadata
+ * pretty much.
+ */
 @JsonSerialize(using = QueryMetricsResponseSerializer::class)
 data class QueryMetricsResponse @JvmOverloads constructor(
-    val queryId: UUID,
-    val range: DateRange,
-    val result: List<ShardedResultGroup>,
-    val statistics: Statistics = Statistics.empty(),
-    val errors: List<RequestError>,
-    val trace: QueryTrace,
-    val limits: ResultLimits,
-    val preAggregationSampleSize: Optional<Long>,
-    val cache: Optional<CacheInfo>
-) {
-    fun summarize(): Summary =
-        Summary(range, ShardedResultGroup.summarize(result), statistics, errors, trace, limits,
-            preAggregationSampleSize, cache)
-
-    // Only include data suitable to log to query log
-    data class Summary(
+        val queryId: UUID,  // event tracing uses this
         val range: DateRange,
-        val result: ShardedResultGroup.MultiSummary,
-        val statistics: Statistics,
+        val result: List<ShardedResultGroup>,
+        val statistics: Statistics = Statistics.empty(),
         val errors: List<RequestError>,
         val trace: QueryTrace,
         val limits: ResultLimits,
         val preAggregationSampleSize: Optional<Long>,
         val cache: Optional<CacheInfo>
+) {
+    fun summarize(): Summary =
+            Summary(range, ShardedResultGroup.summarize(result), statistics, errors, trace, limits,
+                    preAggregationSampleSize, cache)
+
+    // Only include data suitable to log to query log
+    data class Summary(
+            val range: DateRange,
+            val result: ShardedResultGroup.MultiSummary,
+            val statistics: Statistics,
+            val errors: List<RequestError>,
+            val trace: QueryTrace,
+            val limits: ResultLimits,
+            val preAggregationSampleSize: Optional<Long>,
+            val cache: Optional<CacheInfo>
     )
 }

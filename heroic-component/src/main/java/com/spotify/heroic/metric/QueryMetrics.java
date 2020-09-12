@@ -40,8 +40,12 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+/**
+ * Class that encapsulates a metrics query; the query string, the date range, the filter and so on.
+ */
 @AutoValue
 public abstract class QueryMetrics {
+
     public static QueryMetrics create(
         Optional<String> query,
         Optional<Aggregation> aggregation,
@@ -52,7 +56,7 @@ public abstract class QueryMetrics {
         Optional<JsonNode> clientContext
     ) {
         return legacyCreate(query, aggregation, source, range, filter, options, clientContext,
-             Optional.empty(), Optional.empty(), Optional.empty(),
+            Optional.empty(), Optional.empty(), Optional.empty(),
             Optional.empty(), false);
     }
 
@@ -83,24 +87,32 @@ public abstract class QueryMetrics {
 
     @JsonProperty("query")
     public abstract Optional<String> query();
+
     @JsonProperty("aggregation")
     public abstract Optional<Aggregation> aggregation();
+
     @JsonProperty("source")
     public abstract Optional<MetricType> source();
+
     @JsonProperty("range")
     public abstract Optional<QueryDateRange> range();
+
     @JsonProperty("filter")
     public abstract Optional<Filter> filter();
+
     @JsonProperty("options")
     public abstract Optional<QueryOptions> options();
+
     @JsonProperty("clientContext")
     public abstract Optional<JsonNode> clientContext();
 
     /* legacy state */
     @JsonProperty("key")
     public abstract Optional<String> key();
+
     @JsonProperty("tags")
     public abstract Optional<Map<String, String>> tags();
+
     @JsonProperty("features")
     public abstract Optional<FeatureSet> features();
 
