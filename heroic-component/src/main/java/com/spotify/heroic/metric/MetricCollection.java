@@ -131,6 +131,13 @@ public interface MetricCollection {
     }
 
     @JsonIgnore
+    default double getIthPointValue(int i) {
+        // cast the whole series to List<Point>, get the ith Point
+        // and return its double value.
+        return getDataAs(Point.class).get(i).getValue();
+    }
+
+    @JsonIgnore
     default Optional<Long> getAverageDistanceBetweenMetrics() {
         final List<? extends Metric> data = data();
 
