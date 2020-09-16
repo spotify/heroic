@@ -71,9 +71,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Semaphore;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Consumer;
@@ -106,7 +104,7 @@ public class LocalMetricManager implements MetricManager {
     private final MetricBackendReporter reporter;
     private final QueryLogger queryLogger;
     private final Semaphore concurrentQueries;
-    private static final HashSet<QuotaWatcher> quotaWatchers = new HashSet<>();
+    private static final ConcurrentMap<Integer, QuotaWatcher> quotaWatchers = new ConcurrentHashMap<>();
 
     /**
      * @param groupLimit The maximum amount of groups this manager will allow to be generated.
@@ -376,7 +374,7 @@ public class LocalMetricManager implements MetricManager {
             );
 
             // Add watcher to set to compute stats across all queries
-            quotaWatchers.add(quotaWatcher);
+            quotaWatchers.put(quotaWatcher.hashCode(), quotaWatcher);
 
             final OptionalLimit seriesLimit =
                 options.seriesLimit().orElse(LocalMetricManager.this.seriesLimit);
@@ -415,21 +413,21 @@ public class LocalMetricManager implements MetricManager {
                 .onDone(new FutureDone<>() {
                     @Override
                     public void failed(final Throwable cause) throws Exception {
-                        quotaWatchers.remove(quotaWatcher);
+                        quotaWatchers.remove(quotaWatcher.hashCode());
                         cleanQuotaWatchers(quotaWatcher);
                         log.info("onDone.failed {}", quotaWatchers.size());
                     }
 
                     @Override
                     public void resolved(final FullQuery result) throws Exception {
-                        quotaWatchers.remove(quotaWatcher);
+                        quotaWatchers.remove(quotaWatcher.hashCode());
                         cleanQuotaWatchers(quotaWatcher);
                         log.info("onDone.resolved {}", quotaWatchers.size());
                     }
 
                     @Override
                     public void cancelled() throws Exception {
-                        quotaWatchers.remove(quotaWatcher);
+                        quotaWatchers.remove(quotaWatcher.hashCode());
                         cleanQuotaWatchers(quotaWatcher);
                         log.info("onDone.cancelled {}", quotaWatchers.size());
                     }
@@ -441,10 +439,10 @@ public class LocalMetricManager implements MetricManager {
             log.info("Millis QuotaWatcher was alive: {}",
                 (System.currentTimeMillis() - quotaWatcher.startMS));
 
-            quotaWatchers.removeIf(qw -> {
-                if (System.currentTimeMillis() - qw.startMS > 120_000) {
+            quotaWatchers.entrySet().removeIf(qw -> {
+                if (System.currentTimeMillis() - qw.getValue().startMS > 120_000) {
                     log.info("Removing QuotaWatcher with MS alive: {}",
-                        (System.currentTimeMillis() - qw.startMS));
+                        (System.currentTimeMillis() - qw.getValue().startMS));
                     return true;
                 }
                 return false;
@@ -684,6 +682,7 @@ public class LocalMetricManager implements MetricManager {
             }
 
             checkIssues(failed, cancelled).map(RuntimeException::new).ifPresent(e -> {
+                log.info("in top check {}", watcher);
                 for (final Throwable t : errors) {
                     e.addSuppressed(t);
                 }
@@ -751,7 +750,7 @@ public class LocalMetricManager implements MetricManager {
         private final long dataLimit;
         private final long retainLimit;
         private final DataInMemoryReporter dataInMemoryReporter;
-        private static final long LOGLIMIT = 1_000_000;
+        private static final long LOGLIMIT = 5_000_000;
 
         private final AtomicLong read = new AtomicLong();
         private final AtomicLong retained = new AtomicLong();
@@ -769,7 +768,7 @@ public class LocalMetricManager implements MetricManager {
         @Override
         public void readData(long n) {
             long curDataPoints = read.addAndGet(n);
-            long total = quotaWatchers.stream().map(QuotaWatcher::getReadData)
+            long total = quotaWatchers.values().stream().map(QuotaWatcher::getReadData)
                 .reduce(0L, Long::sum);
             reporter.reportTotalReadDataPoints(total);
             if (curDataPoints > LOGLIMIT) {
@@ -785,7 +784,7 @@ public class LocalMetricManager implements MetricManager {
         @Override
         public void retainData(final long n) {
             long curRetainedDataPoints = retained.addAndGet(n);
-            long total = quotaWatchers.stream().map(QuotaWatcher::getRetainData)
+            long total = quotaWatchers.values().stream().map(QuotaWatcher::getRetainData)
                 .reduce(0L, Long::sum);
             reporter.reportTotalRetainedDataPoints(total);
             if (curRetainedDataPoints > LOGLIMIT) {
