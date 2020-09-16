@@ -33,4 +33,8 @@ public interface MetricBackendReporter {
     FutureReporter.Context reportQueryMetrics();
 
     void reportWritesDroppedBySize();
+
+    void reportGlobalReadDataPoints(long points);
+
+    void reportGlobalRetainedDataPoints(long points);
 }

@@ -22,6 +22,7 @@
 package com.spotify.heroic.statistics.semantic;
 
 import com.codahale.metrics.Counter;
+import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Histogram;
 import com.google.common.base.Stopwatch;
 import com.spotify.heroic.QueryOptions;
@@ -83,6 +84,13 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
     private final Histogram queryRowDensity;
     // Counter of dropped writes due to row key size
     private final Counter writesDroppedBySize;
+    // Gauge of all read data points currently in memory across all queries
+    private final Gauge<Long> globalDataPointsGauge;
+    final AtomicLong globalReadDataPoints = new AtomicLong();
+    // Gauge of all retained data points currently in memory across all queries
+    private final Gauge<Long> globalRetainedDataPointsGauge;
+    final AtomicLong globalRetainedDataPoints = new AtomicLong();
+
 
     public SemanticMetricBackendReporter(SemanticMetricRegistry registry) {
         final MetricId base = MetricId.build().tagged("component", COMPONENT);
@@ -123,6 +131,12 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
 
         writesDroppedBySize = registry.counter(
             base.tagged("what", "writes-dropped-by-size", "unit", Units.COUNT));
+
+        globalDataPointsGauge = registry.register(base.tagged("what", "read-data-points"),
+            (Gauge<Long>) () -> (long) globalReadDataPoints.get());
+
+        globalRetainedDataPointsGauge = registry.register(base.tagged("what", "retained-data-points"),
+            (Gauge<Long>) () -> (long) globalRetainedDataPoints.get());
     }
 
     @Override
@@ -194,6 +208,16 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
     @Override
     public void reportWritesDroppedBySize() {
         writesDroppedBySize.inc();
+    }
+
+    @Override
+    public void reportGlobalReadDataPoints(long points) {
+        globalReadDataPoints.set(points);
+    }
+
+    @Override
+    public void reportGlobalRetainedDataPoints(long points) {
+        globalRetainedDataPoints.set(points);
     }
 
     @Override
