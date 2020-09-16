@@ -67,13 +67,16 @@ import io.opencensus.trace.Span;
 import io.opencensus.trace.Tracer;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.inject.Inject;
@@ -104,7 +107,8 @@ public class LocalMetricManager implements MetricManager {
     private final MetricBackendReporter reporter;
     private final QueryLogger queryLogger;
     private final Semaphore concurrentQueries;
-    private static final ConcurrentMap<Integer, QuotaWatcher> quotaWatchers = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<Integer, QuotaWatcher> quotaWatchers =
+        new ConcurrentHashMap<>();
 
     /**
      * @param groupLimit The maximum amount of groups this manager will allow to be generated.
