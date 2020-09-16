@@ -88,7 +88,7 @@ allprojects {
     protobuf {
         protoc {
             // Download from repositories
-            artifact = 'com.google.protobuf:protoc:3.5.1'
+            artifact = 'com.google.protobuf:protoc:3.13.0'
         }
     }
 
@@ -105,6 +105,11 @@ allprojects {
             }
         }
     }
+    configurations.all {
+        resolutionStrategy {
+            force 'com.spotify:dns:3.2.2'
+        }
+    }
 
     // Dependency management defines shared versions across all submodules to ensure consistency
     dependencyManagement {
@@ -117,14 +122,14 @@ allprojects {
             }
             
             dependency 'com.datastax.cassandra:cassandra-driver-core:3.8.0'
-            dependency 'com.spotify:folsom:1.6.2'
+            dependency 'com.spotify:folsom:1.7.4'
 
             dependencySet(group: 'com.spotify.metrics', version: '1.0.2') {
                 entry 'semantic-metrics-core'
                 entry 'semantic-metrics-ffwd-reporter'
             }
 
-            dependency 'com.google.protobuf:protobuf-java:3.5.1'
+            dependency 'com.google.protobuf:protobuf-java:3.13.0'
 
             dependency 'com.squareup.okhttp3:okhttp:3.10.0'
 
