@@ -415,18 +415,21 @@ public class LocalMetricManager implements MetricManager {
                 .onDone(new FutureDone<>() {
                     @Override
                     public void failed(final Throwable cause) throws Exception {
+                        quotaWatchers.remove(quotaWatcher);
                         cleanQuotaWatchers(quotaWatcher);
                         log.info("onDone.failed {}", quotaWatchers.size());
                     }
 
                     @Override
                     public void resolved(final FullQuery result) throws Exception {
+                        quotaWatchers.remove(quotaWatcher);
                         cleanQuotaWatchers(quotaWatcher);
                         log.info("onDone.resolved {}", quotaWatchers.size());
                     }
 
                     @Override
                     public void cancelled() throws Exception {
+                        quotaWatchers.remove(quotaWatcher);
                         cleanQuotaWatchers(quotaWatcher);
                         log.info("onDone.cancelled {}", quotaWatchers.size());
                     }
@@ -435,7 +438,6 @@ public class LocalMetricManager implements MetricManager {
 
         private void cleanQuotaWatchers(QuotaWatcher quotaWatcher) {
             // Let's find any old watchers based on start timestamp
-            quotaWatchers.remove(quotaWatcher);
             log.info("Millis QuotaWatcher was alive: {}",
                 (System.currentTimeMillis() - quotaWatcher.startMS));
 
@@ -769,7 +771,7 @@ public class LocalMetricManager implements MetricManager {
             long curDataPoints = read.addAndGet(n);
             long total = quotaWatchers.stream().map(QuotaWatcher::getReadData)
                 .reduce(0L, Long::sum);
-            reporter.reportGlobalReadDataPoints(total);
+            reporter.reportTotalReadDataPoints(total);
             if (curDataPoints > LOGLIMIT) {
                 log.info("Data Points READ: Instance {}; This Query: {}; Delta: {}" +
                     " (# Watchers: {})", total, curDataPoints,
@@ -785,7 +787,7 @@ public class LocalMetricManager implements MetricManager {
             long curRetainedDataPoints = retained.addAndGet(n);
             long total = quotaWatchers.stream().map(QuotaWatcher::getRetainData)
                 .reduce(0L, Long::sum);
-            reporter.reportGlobalRetainedDataPoints(total);
+            reporter.reportTotalRetainedDataPoints(total);
             if (curRetainedDataPoints > LOGLIMIT) {
                 log.info("Data Points RETAINED: Instance {}; This Query: {}; Delta: {} " +
                     "(# Watchers: {})", total, curRetainedDataPoints,

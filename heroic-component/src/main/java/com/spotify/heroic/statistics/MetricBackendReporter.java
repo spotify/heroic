@@ -34,7 +34,7 @@ public interface MetricBackendReporter {
 
     void reportWritesDroppedBySize();
 
-    void reportGlobalReadDataPoints(long points);
+    void reportTotalReadDataPoints(long points);
 
-    void reportGlobalRetainedDataPoints(long points);
+    void reportTotalRetainedDataPoints(long points);
 }

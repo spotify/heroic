@@ -212,12 +212,12 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
     }
 
     @Override
-    public void reportGlobalReadDataPoints(long points) {
+    public void reportTotalReadDataPoints(long points) {
         globalReadDataPoints.set(points);
     }
 
     @Override
-    public void reportGlobalRetainedDataPoints(long points) {
+    public void reportTotalRetainedDataPoints(long points) {
         globalRetainedDataPoints.set(points);
     }
 
