@@ -436,11 +436,13 @@ public class LocalMetricManager implements MetricManager {
         private void cleanQuotaWatchers(QuotaWatcher quotaWatcher) {
             // Let's find any old watchers based on start timestamp
             quotaWatchers.remove(quotaWatcher);
-            log.info("Millis QuotaWatcher was alive: {}", (System.currentTimeMillis() - quotaWatcher.startMS));
+            log.info("Millis QuotaWatcher was alive: {}",
+                (System.currentTimeMillis() - quotaWatcher.startMS));
 
             quotaWatchers.removeIf(qw -> {
                 if (System.currentTimeMillis() - qw.startMS > 120_000) {
-                    log.info("Removing QuotaWatcher with MS alive: {}", (System.currentTimeMillis() - qw.startMS));
+                    log.info("Removing QuotaWatcher with MS alive: {}",
+                        (System.currentTimeMillis() - qw.startMS));
                     return true;
                 }
                 return false;

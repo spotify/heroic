@@ -135,7 +135,8 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
         globalDataPointsGauge = registry.register(base.tagged("what", "read-data-points"),
             (Gauge<Long>) () -> (long) globalReadDataPoints.get());
 
-        globalRetainedDataPointsGauge = registry.register(base.tagged("what", "retained-data-points"),
+        globalRetainedDataPointsGauge = registry.register(
+            base.tagged("what", "retained-data-points"),
             (Gauge<Long>) () -> (long) globalRetainedDataPoints.get());
     }
 
