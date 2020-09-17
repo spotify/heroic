@@ -22,13 +22,12 @@
 package com.spotify.heroic.http.arithmetic;
 
 import com.spotify.heroic.metric.ShardedResultGroup;
-import java.util.HashMap;
-import java.util.List;
+import java.util.ArrayList;
 import org.apache.commons.lang3.tuple.Pair;
 
 /**
  * Convenience class that represents
  */
-abstract class ResultList implements List<Pair<String, ShardedResultGroup>> {
+class ResultList extends ArrayList<Pair<String, ShardedResultGroup>> {
 
 }

@@ -21,22 +21,14 @@
 
 package com.spotify.heroic.http.arithmetic;
 
+import com.spotify.heroic.metric.Arithmetic;
 import com.spotify.heroic.metric.QueryMetricsResponse;
+import java.util.Map;
 
-public interface ArithmeticEngine {
+public class ArithmeticEngineFactory {
 
-    /**
-     * Apply the supplied operation to the supplied query responses.
-     * <p>
-     * NOTE that: 1. the operation must reference the names (keys) of the responses in
-     * `queryResponses`. So, for example, if `operation` is 'A / B', then `queryResponses`' keys
-     * must be 'A' and 'B'. 2. every series within the supplied responses must be : - the same
-     * length - contain the exact same timestamps - be > 1 in length -
-     *
-     * @param operation      e.g. 'A / B * 100' to get a ratio of A's to B's.
-     * @param queryResponses e.g. { "A" → { ... , [1.4,2.8,...]}, "B" → { ..., [0.8,0.1,...]}} where
-     *                       "A" and "B" are responses to queries named as such in Grafana.
-     * @return the resulting responses once the `operation` has been applied to the queryResponses.
-     */
-    QueryMetricsResponse run();
+    public static ArithmeticEngine create(Arithmetic arithmetic,
+        Map<String, QueryMetricsResponse> queryResponses) {
+        return new ArithmeticEngineExp4J(arithmetic, queryResponses);
+    }
 }

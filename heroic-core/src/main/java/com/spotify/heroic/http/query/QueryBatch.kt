@@ -26,6 +26,21 @@ import com.spotify.heroic.metric.Arithmetic
 import com.spotify.heroic.metric.QueryMetrics
 import java.util.*
 
+/**
+ * Encapsulates multiple query definitions with accompanying arithmetic query
+ * definitions that pertain to those queries. For example:
+ * <pre>
+ * queries = {  "A" → { query:..., source:..., filter:... },
+ *              "B" → { query:..., source:..., filter:... }, ... }
+ *
+ * arithmeticQueries = { "C" → "A / B * 100" }
+ *</pre>
+ * - you can see illustrated here that "C" pertains to the queries "A" and "B"
+ * in the <code>queries</code> parameter.
+ *
+ * NOTE that any variables referenced in <code>arithmeticQueries</code> (in this example
+ * "A" and "B", must be present as keys of the `queries` parameter.
+ */
 data class QueryBatch(
         val queries: Optional<Map<String, QueryMetrics>>,
         val range: Optional<QueryDateRange>,

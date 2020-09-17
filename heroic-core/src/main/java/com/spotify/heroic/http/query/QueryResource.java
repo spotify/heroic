@@ -26,7 +26,7 @@ import com.spotify.heroic.Query;
 import com.spotify.heroic.QueryManager;
 import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.http.CoreHttpContextFactory;
-import com.spotify.heroic.http.arithmetic.ArithmeticEngine;
+import com.spotify.heroic.http.arithmetic.ArithmeticEngineFactory;
 import com.spotify.heroic.metric.QueryMetrics;
 import com.spotify.heroic.metric.QueryMetricsResponse;
 import com.spotify.heroic.metric.QueryResult;
@@ -63,6 +63,8 @@ import org.jetbrains.annotations.NotNull;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class QueryResource {
+
+    public static final int RESPONSE_TIMEOUT_SECS = 300;
     private final JavaxRestFramework httpAsync;
     private final QueryManager manager;
     private final AsyncFramework async;
@@ -142,7 +144,7 @@ public class QueryResource {
         final var arithmeticFuture =
             augmentFuturesWithArithmeticFutures(query, queryBatchResponseFuture);
 
-        response.setTimeout(300, TimeUnit.SECONDS);
+        response.setTimeout(RESPONSE_TIMEOUT_SECS, TimeUnit.SECONDS);
 
         // wire-up the response to the arithmetic future, which will make this call wait for the
         // future (and the futures from which it is composed) to resolve completely.
@@ -150,8 +152,7 @@ public class QueryResource {
     }
 
     private static AsyncFuture<QueryBatchResponse> augmentFuturesWithArithmeticFutures(
-        QueryBatch query,
-        AsyncFuture<QueryBatchResponse> queryBatchResponseFuture) {
+        QueryBatch query, AsyncFuture<QueryBatchResponse> queryBatchResponseFuture) {
 
         var future = queryBatchResponseFuture;
 
@@ -164,21 +165,22 @@ public class QueryResource {
         final ImmutableMap.Builder<String, QueryMetricsResponse> arithmeticResults =
             ImmutableMap.builder();
 
-        future = queryBatchResponseFuture.directTransform(results -> {
+        // transform the batch response
+        future = queryBatchResponseFuture.directTransform(batchResponse -> {
 
-            final Map<String, QueryMetricsResponse> resultsMap = results.getResults();
+            // 1. get the batch response's results e.g. {"A":{<results>},"B":{<results>},...}
+            final var responses = batchResponse.getResults();
 
-            // Apply each arithmetic operation to each result.
-            arithmeticQueries.get().entrySet().stream().forEach(queryResponsePair -> {
+            // Apply each arithmetic operation to each result
+            arithmeticQueries.get().forEach((queryName, arithmetic) -> {
 
                 // Here's where we actually perform the arithmetic operation
-                final var result =
-                    ArithmeticEngine.run(queryResponsePair.getValue(), resultsMap);
+                final var response = ArithmeticEngineFactory.create(arithmetic, responses).run();
 
-                arithmeticResults.put(queryResponsePair.getKey(), result);
+                arithmeticResults.put(queryName, response);
             });
 
-            arithmeticResults.putAll(results.getResults());
+            arithmeticResults.putAll(batchResponse.getResults());
 
             return new QueryBatchResponse(arithmeticResults.build());
         });
@@ -280,7 +282,7 @@ public class QueryResource {
         final AsyncFuture<QueryResult> callback,
         final QueryContext queryContext
     ) {
-        response.setTimeout(300, TimeUnit.SECONDS);
+        response.setTimeout(RESPONSE_TIMEOUT_SECS, TimeUnit.SECONDS);
 
         httpAsync.bind(response, callback, r -> {
             final QueryMetricsResponse qmr =
