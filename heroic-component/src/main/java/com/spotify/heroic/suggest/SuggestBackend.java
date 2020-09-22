@@ -56,6 +56,7 @@ public interface SuggestBackend extends Grouped, Initializing, Collected {
     AsyncFuture<TagValueSuggest> tagValueSuggest(TagValueSuggest.Request request);
 
     AsyncFuture<WriteSuggest> write(WriteSuggest.Request request);
+
     default AsyncFuture<WriteSuggest> write(WriteSuggest.Request request, Span parentSpan) {
         // Ignore the parent span if the module does not specifically implement it.
         return write(request);

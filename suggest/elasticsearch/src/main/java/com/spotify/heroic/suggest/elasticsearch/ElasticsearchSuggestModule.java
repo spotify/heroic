@@ -53,6 +53,7 @@ import com.spotify.heroic.elasticsearch.RateLimitedCache;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
 import com.spotify.heroic.statistics.HeroicReporter;
+import com.spotify.heroic.suggest.NumSuggestionsLimit;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestModule;
 import dagger.Component;
@@ -94,6 +95,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
     private final String distributedCacheSrvRecord;
     private final String templateName;
     private final boolean configure;
+    private final NumSuggestionsLimit numSuggestionsLimit;
 
     private static Supplier<BackendType> defaultSetup = SuggestBackendKV.factory();
 
@@ -123,7 +125,8 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
         @JsonProperty("distributedCacheSrvRecord") Optional<String> distributedCacheSrvRecord,
         @JsonProperty("templateName") Optional<String> templateName,
         @JsonProperty("backendType") Optional<String> backendType,
-        @JsonProperty("configure") Optional<Boolean> configure
+        @JsonProperty("configure") Optional<Boolean> configure,
+        @JsonProperty("numSuggestionsLimit") Optional<Integer> numSuggestionsLimit
     ) {
         this.id = id;
         this.groups = groups.orElseGet(Groups::empty).or(DEFAULT_GROUP);
@@ -142,6 +145,8 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
         this.templateName = templateName.orElse(DEFAULT_TEMPLATE_NAME);
         this.type = backendType.map(this::lookupBackendType).orElse(defaultSetup);
         this.configure = configure.orElse(DEFAULT_CONFIGURE);
+
+        this.numSuggestionsLimit = NumSuggestionsLimit.of(numSuggestionsLimit);
     }
 
     private Supplier<BackendType> lookupBackendType(final String bt) {
@@ -156,21 +161,24 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
     }
 
     @Override
-    public Exposed module(PrimaryComponent primary, Depends depends, final String id) {
+    public Exposed module(PrimaryComponent primary,
+                          Depends depends,
+                          final String id) {
         final BackendType backendType = type.get();
 
         return DaggerElasticsearchSuggestModule_C
-            .builder()
-            .primaryComponent(primary)
-            .depends(depends)
-            .connectionModule(connection)
-            .m(new M(backendType))
-            .build();
+                .builder()
+                .primaryComponent(primary)
+                .depends(depends)
+                .connectionModule(connection)
+                .m(new M(backendType))
+                .o(new O())
+                .build();
     }
 
     @ElasticsearchScope
-    @Component(modules = {M.class, ConnectionModule.class},
-        dependencies = {PrimaryComponent.class, Depends.class})
+    @Component(modules = {M.class, O.class, ConnectionModule.class},
+            dependencies = {PrimaryComponent.class, Depends.class})
     interface C extends Exposed {
         @Override
         SuggestBackend backend();
@@ -205,6 +213,13 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
         public boolean configure(ExtraParameters params) {
             return configure || params.contains(ExtraParameters.CONFIGURE) ||
                 params.contains(ELASTICSEARCH_CONFIGURE_PARAM);
+        }
+
+        @Provides
+        @ElasticsearchScope
+        @Named("numSuggestionsLimit")
+        public int numSuggestionsLimit(ExtraParameters params) {
+            return numSuggestionsLimit.getLimit();
         }
 
         @Provides
@@ -247,9 +262,18 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
         @Provides
         @ElasticsearchScope
         public LifeCycle life(
-            LifeCycleManager manager, Lazy<SuggestBackendKV> kv
+                LifeCycleManager manager, Lazy<SuggestBackendKV> kv
         ) {
             return manager.build(kv.get());
+        }
+    }
+
+    @Module
+    class O {
+        @Provides
+        @ElasticsearchScope
+        public Integer numSuggestionsLimit() {
+            return numSuggestionsLimit.getLimit();
         }
     }
 
@@ -275,10 +299,18 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
         private Optional<String> templateName = empty();
         private Optional<String> backendType = empty();
         private Optional<Boolean> configure = empty();
+        private Optional<NumSuggestionsLimit> numSuggestionsLimit =
+                Optional.of(NumSuggestionsLimit.of());
 
         public Builder id(final String id) {
             checkNotNull(id, "id");
             this.id = of(id);
+            return this;
+        }
+
+        public Builder numSuggestionsLimit(final NumSuggestionsLimit numSuggestionsLimit) {
+            checkNotNull(numSuggestionsLimit, "numSuggestionsLimit");
+            this.numSuggestionsLimit = of(numSuggestionsLimit);
             return this;
         }
 
@@ -347,19 +379,19 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
 
         public ElasticsearchSuggestModule build() {
             return new ElasticsearchSuggestModule(
-              id,
-              groups,
-              connection,
-              writesPerSecond,
-              rateLimitSlowStartSeconds,
-              writeCacheDurationMinutes,
-              writeCacheConcurrency,
-              writeCacheMaxSize,
-              distributedCacheSrvRecord,
-              templateName,
-              backendType,
-              configure
-            );
+                id,
+                groups,
+                    connection,
+                    writesPerSecond,
+                    rateLimitSlowStartSeconds,
+                    writeCacheDurationMinutes,
+                    writeCacheConcurrency,
+                    writeCacheMaxSize,
+                    distributedCacheSrvRecord,
+                    templateName,
+                    backendType,
+                    configure,
+                    numSuggestionsLimit.get().asOptionalInt());
         }
     }
 }

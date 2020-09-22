@@ -13,6 +13,7 @@ metadata:
 suggest:
   backends:
     - type: elasticsearch
+      numSuggestionsLimit: 100
       backendType: kv
 
 metrics:

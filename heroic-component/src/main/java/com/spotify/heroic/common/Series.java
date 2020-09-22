@@ -37,6 +37,7 @@ import com.spotify.heroic.grammar.DSL;
 import eu.toolchain.serializer.AutoSerialize;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
@@ -250,24 +251,20 @@ public class Series implements Comparable<Series> {
         String key, Iterator<Map.Entry<String, String>> tagPairs,
         Iterator<Map.Entry<String, String>> resourcePairs
     ) {
-        final TreeMap<String, String> tags = new TreeMap<>();
-        final TreeMap<String, String> resource = new TreeMap<>();
+        return new Series(key, mapEntriesToSortedMap(tagPairs),
+            mapEntriesToSortedMap(resourcePairs));
+    }
 
-        while (tagPairs.hasNext()) {
-            final Map.Entry<String, String> pair = tagPairs.next();
-            final String tk = checkNotNull(pair.getKey());
-            final String tv = pair.getValue();
-            tags.put(tk, tv);
+    private static TreeMap<String, String> mapEntriesToSortedMap(
+        Iterator<Entry<String, String>> mapEntries) {
+        final TreeMap<String, String> treeMap = new TreeMap<>();
+
+        while (mapEntries.hasNext()) {
+            var pair = mapEntries.next();
+            treeMap.put(checkNotNull(pair.getKey()), pair.getValue());
         }
 
-        while (resourcePairs.hasNext()) {
-            final Map.Entry<String, String> pair = resourcePairs.next();
-            final String tk = checkNotNull(pair.getKey());
-            final String tv = pair.getValue();
-            resource.put(tk, tv);
-        }
-
-        return new Series(key, tags, resource);
+        return treeMap;
     }
 
     public static Series of(
