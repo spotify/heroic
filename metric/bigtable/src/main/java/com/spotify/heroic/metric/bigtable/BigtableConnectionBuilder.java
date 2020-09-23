@@ -124,7 +124,6 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
 
     public String toString() {
         return "BigtableConnectionBuilder(project=" + this.project + ", instance=" + this.instance
-            + ", profile=" + (this.profile != null ? this.profile : "null")
-            + ", credentials=" + this.credentials + ")";
+            + ", profile=" + this.profile + ", credentials=" + this.credentials + ")";
     }
 }
