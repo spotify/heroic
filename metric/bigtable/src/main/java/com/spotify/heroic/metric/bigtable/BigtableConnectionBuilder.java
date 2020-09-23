@@ -43,6 +43,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
 
     private final String project;
     private final String instance;
+    private final String profile;
 
     private final CredentialsBuilder credentials;
 
@@ -56,6 +57,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
     public BigtableConnectionBuilder(
         final String project,
         final String instance,
+        final String profile,
         final CredentialsBuilder credentials,
         @Nullable final String emulatorEndpoint,
         final AsyncFramework async,
@@ -65,6 +67,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
     ) {
         this.project = project;
         this.instance = instance;
+        this.profile = profile;
         this.credentials = credentials;
         this.emulatorEndpoint = emulatorEndpoint;
         this.async = async;
@@ -96,6 +99,10 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
             .setRetryOptions(retryOptions)
             .setBulkOptions(bulkOptions);
 
+        if (profile != null) {
+            builder.setAppProfileId(profile);
+        }
+
         if (emulatorEndpoint != null) {
             builder.enableEmulator(emulatorEndpoint);
         }
@@ -117,6 +124,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
 
     public String toString() {
         return "BigtableConnectionBuilder(project=" + this.project + ", instance=" + this.instance
-               + ", credentials=" + this.credentials + ")";
+            + ", profile=" + (this.profile != null ? this.profile : "null")
+            + ", credentials=" + this.credentials + ")";
     }
 }

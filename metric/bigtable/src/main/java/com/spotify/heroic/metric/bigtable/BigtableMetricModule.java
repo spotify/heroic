@@ -61,6 +61,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
     private final Groups groups;
     private final String project;
     private final String instance;
+    private final String profile;
     private final String table;
     private final CredentialsBuilder credentials;
     private final boolean configure;
@@ -75,6 +76,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         @JsonProperty("groups") Optional<Groups> groups,
         @JsonProperty("project") Optional<String> project,
         @JsonProperty("instance") Optional<String> instance,
+        @JsonProperty("profile") Optional<String> profile,
         @JsonProperty("table") Optional<String> table,
         @JsonProperty("credentials") Optional<CredentialsBuilder> credentials,
         @JsonProperty("configure") Optional<Boolean> configure,
@@ -87,6 +89,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         this.groups = groups.orElseGet(Groups::empty).or(DEFAULT_GROUP);
         this.project = project.orElseThrow(() -> new NullPointerException("project"));
         this.instance = instance.orElse(DEFAULT_INSTANCE);
+        this.profile = profile.orElse(null);
         this.table = table.orElse(DEFAULT_TABLE);
         this.credentials = credentials.orElse(DEFAULT_CREDENTIALS);
         this.configure = configure.orElse(DEFAULT_CONFIGURE);
@@ -126,7 +129,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
                 public AsyncFuture<BigtableConnection> construct() {
                     return async.call(
                         new BigtableConnectionBuilder(
-                            project, instance, credentials, emulatorEndpoint,
+                            project, instance, profile, credentials, emulatorEndpoint,
                             async, disableBulkMutations, flushIntervalSeconds, batchSize));
                 }
 
@@ -188,6 +191,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         private Optional<Groups> groups = empty();
         private Optional<String> project = empty();
         private Optional<String> instance = empty();
+        private Optional<String> profile = empty();
         private Optional<String> table = empty();
         private Optional<CredentialsBuilder> credentials = empty();
         private Optional<Boolean> configure = empty();
@@ -213,6 +217,11 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
 
         public Builder instance(String instance) {
             this.instance = of(instance);
+            return this;
+        }
+
+        public Builder profile(String profile) {
+            this.profile = of(profile);
             return this;
         }
 
@@ -252,8 +261,9 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         }
 
         public BigtableMetricModule build() {
-            return new BigtableMetricModule(id, groups, project, instance, table, credentials,
-                configure, disableBulkMutations, flushIntervalSeconds, batchSize, emulatorEndpoint);
+            return new BigtableMetricModule(id, groups, project, instance, profile,
+                table, credentials, configure, disableBulkMutations, flushIntervalSeconds,
+                batchSize, emulatorEndpoint);
         }
     }
 }

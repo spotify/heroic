@@ -48,6 +48,7 @@ public class BigtableProfile extends HeroicProfileBase {
 
         params.get("project").map(module::project);
         params.get("instance").map(module::instance);
+        params.get("profile").map(module::profile);
 
         final String credentials = params.get("credential").orElse(DEFAULT_CREDENTIALS);
 
@@ -101,6 +102,7 @@ public class BigtableProfile extends HeroicProfileBase {
                     "configured"),
             parameter("project", "Bigtable project to use", "<project>"),
             parameter("instance", "Bigtable instance to use", "<instance>"),
+            parameter("profile", "Bigtable profile to use", "<profile>"),
             parameter("credentials", "Credentials implementation to use, must be one of:" +
                     " default, compute-engine, json, service-account", "<credentials>"),
             parameter("json", "Json file to use when using json credentials", "<file>"),
