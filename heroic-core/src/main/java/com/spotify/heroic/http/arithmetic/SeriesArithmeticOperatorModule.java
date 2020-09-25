@@ -21,14 +21,15 @@
 
 package com.spotify.heroic.http.arithmetic;
 
-import com.spotify.heroic.metric.Arithmetic;
-import com.spotify.heroic.metric.QueryMetricsResponse;
-import java.util.Map;
+import dagger.Binds;
+import dagger.Module;
+import dagger.Provides;
 
-public class ArithmeticEngineFactory {
+@Module
+public class SeriesArithmeticOperatorModule {
 
-    public static ArithmeticEngine create(Arithmetic arithmetic,
-        Map<String, QueryMetricsResponse> queryResponses) {
-        return new ArithmeticEngineExp4J(arithmetic, queryResponses);
+    @Provides
+    public ArithmeticEngine provideArithmeticEngine() {
+        return new ArithmeticEngineExp4J();
     }
 }

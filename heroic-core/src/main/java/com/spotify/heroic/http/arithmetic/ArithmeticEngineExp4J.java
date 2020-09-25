@@ -56,13 +56,18 @@ public class ArithmeticEngineExp4J implements ArithmeticEngine {
     private static final Logger log =
         org.slf4j.LoggerFactory.getLogger(ArithmeticEngineExp4J.class);
 
-    private final Arithmetic arithmetic;
-    private final Map<String, QueryMetricsResponse> queryResponses;
-    private final UUID uuid;
-    private final Expression expressionEngine;
+    private Arithmetic arithmetic;
+    private Map<String, QueryMetricsResponse> queryResponses;
+    private UUID uuid;
+    private Expression expressionEngine;
 
-    public ArithmeticEngineExp4J(
-        Arithmetic arithmetic, Map<String, QueryMetricsResponse> queryResponses) {
+    // PSK transitioning to no-param constructor
+    public ArithmeticEngineExp4J() {
+
+    }
+
+    private void initialize(Arithmetic arithmetic,
+        Map<String, QueryMetricsResponse> queryResponses) {
         this.arithmetic = arithmetic;
         this.queryResponses = queryResponses;
 
@@ -70,8 +75,10 @@ public class ArithmeticEngineExp4J implements ArithmeticEngine {
         expressionEngine = createExpression();
     }
 
-    public QueryMetricsResponse run() {
+    public QueryMetricsResponse run(Arithmetic arithmetic,
+        Map<String, QueryMetricsResponse> queryResponses) {
         try {
+            initialize(arithmetic, queryResponses);
             return evaluateExpression();
         } catch (IllegalArgumentException e) {
             log.info(String.format("Caller supplied arithmetic expression was invalid: %s",

@@ -21,7 +21,9 @@
 
 package com.spotify.heroic.http.arithmetic;
 
+import com.spotify.heroic.metric.Arithmetic;
 import com.spotify.heroic.metric.QueryMetricsResponse;
+import java.util.Map;
 
 public interface ArithmeticEngine {
 
@@ -38,5 +40,6 @@ public interface ArithmeticEngine {
      *                       "A" and "B" are responses to queries named as such in Grafana.
      * @return the resulting responses once the `operation` has been applied to the queryResponses.
      */
-    QueryMetricsResponse run();
+    QueryMetricsResponse run(Arithmetic arithmetic,
+        Map<String, QueryMetricsResponse> queryResponses);
 }
