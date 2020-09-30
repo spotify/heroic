@@ -27,9 +27,9 @@ import com.spotify.heroic.common.Statistics
 import java.util.*
 
 /**
- * Super important class that represents a response coming from e.g. BigTable.
- * The payload is in the `result` property and the other properties are metadata
- * pretty much.
+ * Super important class that represents a response sent back the the caller of
+ * the Heroic API. The payload is in the result and errors properties and the
+ * other fields supply query & result metadata.
  */
 @JsonSerialize(using = QueryMetricsResponseSerializer::class)
 data class QueryMetricsResponse @JvmOverloads constructor(

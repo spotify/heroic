@@ -52,11 +52,18 @@ public class SeriesArithmeticOperator {
         // TODO PSK I'm pretty sure you shouldn't be calling inject manually but
         // this is what the article has:
         // https://android.jlelse.eu/dagger-2-part-i-basic-principles-graph-dependencies-scopes-3dfd032ccd82
+        // Inject an ArithmeticEngine implementation
         this.component.inject(this);
     }
 
     public QueryMetricsResponse reduce() {
+        validate(arithmetic);
         return engine.run(arithmetic, queryResponses);
+    }
+
+    private void validate(Arithmetic arithmetic) {
+        // TODO do we need to check for hostile/malformed arithmetic string e.g. escaped quotes, ...?
+
     }
 
     @SuppressWarnings("MethodMayBeStatic")

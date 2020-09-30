@@ -60,6 +60,7 @@ public class ArithmeticEngineExp4J implements ArithmeticEngine {
     private Map<String, QueryMetricsResponse> queryResponses;
     private UUID uuid;
     private Expression expressionEngine;
+    private int numSeriesLimit = 10_000;
 
     // PSK transitioning to no-param constructor
     public ArithmeticEngineExp4J() {
@@ -80,7 +81,7 @@ public class ArithmeticEngineExp4J implements ArithmeticEngine {
         try {
             initialize(arithmetic, queryResponses);
             return evaluateExpression();
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | ArithmeticException e) {
             log.info(String.format("Caller supplied arithmetic expression was invalid: %s",
                 e.getMessage()));
             return createErrorResponse(e.getMessage());
@@ -146,6 +147,11 @@ public class ArithmeticEngineExp4J implements ArithmeticEngine {
             });
 
         return resultMap;
+    }
+
+    /** Simply check that we're not dealing with too many series'. */
+    private boolean checkForExcessivelyLargeNumberOfSerieses() {
+        return queryResponses.size() >= numSeriesLimit;
     }
 
     /**
@@ -405,7 +411,7 @@ public class ArithmeticEngineExp4J implements ArithmeticEngine {
 
         final var resultsMap = createResultsMap();
 
-        final List<RequestError> errors = new ArrayList<RequestError>();
+        final var errors = new ArrayList<RequestError>();
 
         final List<ShardedResultGroup> results = resultsMap
             .entrySet()
@@ -426,7 +432,7 @@ public class ArithmeticEngineExp4J implements ArithmeticEngine {
             queryResponses.values().stream().findFirst().get().getRange(),
             "success",
             results,
-            ImmutableList.of()
+            errors
         );
     }
 
@@ -444,7 +450,7 @@ public class ArithmeticEngineExp4J implements ArithmeticEngine {
     @NotNull
     private QueryMetricsResponse createQueryMetricsResponse(
         DateRange range, String message, List<ShardedResultGroup> results,
-        List<QueryError> errors) {
+        List<RequestError> errors) {
         return new QueryMetricsResponse(
             uuid,
             range,

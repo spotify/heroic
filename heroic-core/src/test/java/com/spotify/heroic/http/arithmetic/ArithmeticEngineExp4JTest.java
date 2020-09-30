@@ -20,6 +20,7 @@ import com.spotify.heroic.metric.QueryTrace.Identifier;
 import com.spotify.heroic.metric.ResultLimits;
 import com.spotify.heroic.metric.ShardedResultGroup;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -28,11 +29,11 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import junit.framework.TestCase;
+import org.jetbrains.annotations.NotNull;
 import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
 
@@ -42,42 +43,21 @@ import org.mockito.junit.MockitoJUnitRunner;
 @RunWith(MockitoJUnitRunner.class)
 public class ArithmeticEngineExp4JTest extends TestCase {
 
-    private static final int TEST_THRESHOLD = 38;
-    public static final long CADENCE = 60L;
+    private static int TEST_THRESHOLD = 38;
+    public static long CADENCE = 60L;
     private static QueryMetricsResponse queryMetricsResponse;
 
     @BeforeClass
     public static void beforeClass() {
-        final var metrics = MetricCollection.build(MetricType.POINT, pointsRange(0, 100));
+        var metrics = MetricCollection.build(MetricType.POINT, pointsRange(0, 100));
 
         createSeries(0);
 
-        final var resultGroup = new ShardedResultGroup(
-            createStringMap("shard", 1, 3),
-            createStringMap("key", 4, 3),
-            createSerieses(3),
-            metrics,
-            CADENCE);
+        ShardedResultGroup resultGroup = createDefaultResultGroup(metrics);
 
-        final var resultGroups = List.of(resultGroup);
+        var resultGroups = List.of(resultGroup);
 
-        final var errors = List.of(new QueryError("error1"));
-
-        final QueryTrace trace = ActiveTrace.create(Identifier.create("123"),
-            DateTime.now().getMillis(), List.of());
-
-        final ResultLimits limits = new ResultLimits();
-
-        final long preAggregationSampleSize = 1000L;
-
-        final Optional<CacheInfo> cache = Optional.empty();
-
-        final DateRange range = DateRange.create(0L, 0L);
-
-        final var uuid = UUID.randomUUID();
-
-        queryMetricsResponse = new QueryMetricsResponse(uuid, range, resultGroups, errors, trace,
-            limits, Optional.of(preAggregationSampleSize), cache);
+        queryMetricsResponse = createMetricsResponse(resultGroups);
     }
 
     @Before
@@ -85,9 +65,9 @@ public class ArithmeticEngineExp4JTest extends TestCase {
     }
 
     @Test
-    public void testBadInputInvalidVariable() {
-        final var responses = Map.of("A", this.queryMetricsResponse);
-        final var operator = new SeriesArithmeticOperator(new Arithmetic("fred"), responses);
+    public void testBadInputWrongVariableName() {
+        var responses = Map.of("A", this.queryMetricsResponse);
+        var operator = new SeriesArithmeticOperator(new Arithmetic("fred"), responses);
 
         var response = operator.reduce();
         performBadInputAssertions(response);
@@ -100,9 +80,9 @@ public class ArithmeticEngineExp4JTest extends TestCase {
     }
 
     @Test
-    public void testBadInputExtraVariable() {
-        final var responses = Map.of("A", this.queryMetricsResponse);
-        final var operator = new SeriesArithmeticOperator(new Arithmetic("5 * A * fred"),
+    public void testBadInputExtraVariableName() {
+        var responses = Map.of("A", this.queryMetricsResponse);
+        var operator = new SeriesArithmeticOperator(new Arithmetic("5 * A * fred"),
             responses);
 
         var response = operator.reduce();
@@ -119,8 +99,8 @@ public class ArithmeticEngineExp4JTest extends TestCase {
     @Test(expected = java.lang.ArithmeticException.class)
     public void testBadInputDivideByZero() {
 
-        final var responses = Map.of("A", this.queryMetricsResponse);
-        final var operator = new SeriesArithmeticOperator(new Arithmetic("5 * A / 0"),
+        var responses = Map.of("A", this.queryMetricsResponse);
+        var operator = new SeriesArithmeticOperator(new Arithmetic("5 * A / 0"),
             responses);
 
         var response = operator.reduce();
@@ -128,15 +108,162 @@ public class ArithmeticEngineExp4JTest extends TestCase {
 
         var error = (QueryError) response.getErrors().get(0);
 
-        // "fred" isn't a variable in any of the input responses ∴ it's an illegal argument
         var neverAssignedVariable = new QueryError("Expression 'bananas'");
+    }
+
+    @Test
+    public void testBadArithmeticExpression() {
+
+        var responses = Map.of("A", this.queryMetricsResponse);
+        var operator = new SeriesArithmeticOperator(new Arithmetic("5 + A / A * 5 + 5 * 5 - 30 / "
+            + "5"),
+            responses);
+
+        var response = operator.reduce();
+        performBadInputAssertions(response);
+
+        var finalResponse = operator.reduce();
+        var error = (QueryError) finalResponse.getErrors().get(0);
+        assertEquals("Expression '5 + A / A * 5 + 5 * 5 - 30 / 5' is invalid: Division by zero!", error.getError());
+    }
+
+    @Test
+    public void testEmptyArithmeticExpression() {
+
+        var responses = Map.of("A", this.queryMetricsResponse);
+        var operator = new SeriesArithmeticOperator(new Arithmetic(""),
+            responses);
+
+        var finalResponse = operator.reduce();
+        var error = (QueryError) finalResponse.getErrors().get(0);
+        assertEquals("Expression '' is invalid: Expression can not be empty", error.getError());
     }
 
 
     @Test
+    public void testMissingVariableName() {
+        var responses = new ArrayList<QueryMetricsResponse>();
+        var metrics = MetricCollection.build(MetricType.POINT, pointsRange(0, 100));
+
+        responses.add(createMetricsResponse(new ArrayList<ShardedResultGroup>() {
+            {
+                add(
+                    createDefaultResultGroup(metrics));
+            }
+        }));
+        responses.add(createMetricsResponse(new ArrayList<ShardedResultGroup>() {
+            {
+                add(
+                    createDefaultResultGroup(metrics));
+            }
+        }));
+
+        // Note that "B" Series is missing
+        var queryNameToResponse = Map.of("A", responses.get(0), "C", responses.get(1));
+        var operator = new SeriesArithmeticOperator(new Arithmetic("A / B"), queryNameToResponse);
+
+        var finalResponse = operator.reduce();
+        var error = (QueryError) finalResponse.getErrors().get(0);
+        assertEquals("Expression 'A / B' is invalid: Unknown function or variable 'B' at pos 4 in"
+            + " expression 'A / B'", error.getError());
+    }
+
+    @Test
+    public void testTooManySerieses() {
+        var metrics = MetricCollection.build(MetricType.POINT, pointsRange(0, 100));
+
+        var lotsOfResponses = IntStream.range(0, 1000).mapToObj(
+            i -> createMetricsResponse(new ArrayList<ShardedResultGroup>() {
+                {
+                    add(
+                        createDefaultResultGroup(metrics));
+                }
+            })
+        ).collect(Collectors.toList());
+
+        int count = 0;
+        var queryNameToResponse = new HashMap<String, QueryMetricsResponse>(1000);
+        for (var r : lotsOfResponses) {
+            queryNameToResponse.put("Series_" + String.valueOf(++count), r);
+        }
+
+        // Note that "B" Series is missing
+        var operator = new SeriesArithmeticOperator(new Arithmetic("A / B"), queryNameToResponse);
+
+        var finalResponse = operator.reduce();
+
+        var error = (QueryError) finalResponse.getErrors().get(0);
+
+        assertEquals("bananas", error.getError());
+    }
+
+    @Test
+    public void testZeroLengthSerieses() {
+        var responses = new ArrayList<QueryMetricsResponse>();
+        var metrics = MetricCollection.build(MetricType.POINT, pointsRange(0, 0));
+
+        responses.add(createMetricsResponse(new ArrayList<ShardedResultGroup>() {
+            {
+                add(
+                    createDefaultResultGroup(metrics));
+            }
+        }));
+
+        var queryNameToResponse = Map.of("A", responses.get(0));
+        var operator = new SeriesArithmeticOperator(new Arithmetic("A * 100.5"),
+            queryNameToResponse);
+
+        var finalResponse = operator.reduce();
+        var error = (QueryError) finalResponse.getErrors().get(0);
+        assertTrue(error.getError().contains("All series results must return the same number of "
+            + "points"));
+    }
+
+    @Test
     public void testUnequalLengthSerieses() {
-        // TODO
-//        final var copiedResponse = queryMetricsResponse
+        var allResponses = new ArrayList<QueryMetricsResponse>();
+
+        {
+            // one shorter than the next result
+            var metrics = MetricCollection.build(MetricType.POINT, pointsRange(0, 99));
+
+            // TODO How can there be 3 series and 1 metrics List?
+            allResponses.add(createMetricsResponse(new ArrayList<ShardedResultGroup>() {
+                {
+                    add(
+                        createDefaultResultGroup(metrics));
+                }
+            }));
+        }
+
+        {
+            var metrics = MetricCollection.build(MetricType.POINT, pointsRange(0, 100));
+
+            allResponses.add(createMetricsResponse(new ArrayList<ShardedResultGroup>() {
+                {
+                    add(
+                        createDefaultResultGroup(metrics));
+                }
+            }));
+        }
+
+        var queryNameToResponse = Map.of("A", allResponses.get(0), "B", allResponses.get(1));
+        var operator = new SeriesArithmeticOperator(new Arithmetic("A / B"), queryNameToResponse);
+
+        var finalResponse = operator.reduce();
+        var error = (QueryError) finalResponse.getErrors().get(0);
+        assertTrue(error.getError().contains("All series results must return the same number of "
+            + "points"));
+    }
+
+    @NotNull
+    private static ShardedResultGroup createDefaultResultGroup(MetricCollection metrics) {
+        return new ShardedResultGroup(
+            createStringMap("shard", 1, 3),
+            createStringMap("key", 4, 3),
+            createSerieses(3),
+            metrics,
+            CADENCE);
     }
 
 
@@ -181,5 +308,26 @@ public class ArithmeticEngineExp4JTest extends TestCase {
             .mapToObj(i -> (i + 1))
             .collect(collector);
     }
+
+    private static QueryMetricsResponse createMetricsResponse(List<ShardedResultGroup> resultGroups) {
+        var errors = List.of(new QueryError("error1"));
+
+        QueryTrace trace = ActiveTrace.create(Identifier.create("123"),
+            DateTime.now().getMillis(), List.of());
+
+        ResultLimits limits = new ResultLimits();
+
+        long preAggregationSampleSize = 1000L;
+
+        Optional<CacheInfo> cache = Optional.empty();
+
+        DateRange range = DateRange.create(0L, 0L);
+
+        var uuid = UUID.randomUUID();
+
+        return new QueryMetricsResponse(uuid, range, resultGroups, errors, trace,
+            limits, Optional.of(preAggregationSampleSize), cache);
+    }
+
 
 }

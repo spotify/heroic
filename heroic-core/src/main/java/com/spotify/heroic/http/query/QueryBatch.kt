@@ -28,13 +28,13 @@ import java.util.*
 
 /**
  * Encapsulates multiple query definitions with accompanying arithmetic query
- * definitions that pertain to those queries. For example:
+ * definitions that pertain to those queries. For example:<p>
  * <pre>
  * queries = {  "A" → { query:..., source:..., filter:... },
  *              "B" → { query:..., source:..., filter:... }, ... }
  *
  * arithmeticQueries = { "C" → "A / B * 100" }
- *</pre>
+ * </pre><p>
  * - you can see illustrated here that "C" pertains to the queries "A" and "B"
  * in the <code>queries</code> parameter.
  *

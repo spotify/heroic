@@ -27,13 +27,18 @@ import com.spotify.heroic.common.Histogram
 import com.spotify.heroic.common.Series
 import java.util.*
 
+/**
+ * Cornerstone result class that encapsulates a result from ? TODO.
+ * The series property identifies the Series' returned and the metrics property
+ * contains the actual numerical payload.
+ */
 data class ShardedResultGroup(
-    val shard: Map<String, String>,
-    // key-value pairs that act as a lookup key, identifying this result group
-    val key: Map<String, String>,
-    val series: Set<Series>,
-    val metrics: MetricCollection,
-    val cadence: Long
+        val shard: Map<String, String>,
+        // key-value pairs that act as a lookup key, identifying this result group
+        val key: Map<String, String>,
+        val series: Set<Series>,
+        val metrics: MetricCollection,
+        val cadence: Long
 ) {
     @JsonIgnore
     fun isEmpty() = metrics.isEmpty
@@ -80,15 +85,15 @@ data class ShardedResultGroup(
             }
 
             return MultiSummary(shardSummary.toSet(), keySize.build(),
-                seriesSummarizer.end(), dataSize.build(), cadence)
+                    seriesSummarizer.end(), dataSize.build(), cadence)
         }
     }
 
     data class MultiSummary(
-        val shards: Set<Map<String, String>>,
-        val keySize: Histogram,
-        val series: SeriesSetsSummarizer.Summary,
-        val dataSize: Histogram,
-        val cadence: Optional<Long>
+            val shards: Set<Map<String, String>>,
+            val keySize: Histogram,
+            val series: SeriesSetsSummarizer.Summary,
+            val dataSize: Histogram,
+            val cadence: Optional<Long>
     )
 }

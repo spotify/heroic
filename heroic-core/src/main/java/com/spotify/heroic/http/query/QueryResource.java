@@ -26,7 +26,7 @@ import com.spotify.heroic.Query;
 import com.spotify.heroic.QueryManager;
 import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.http.CoreHttpContextFactory;
-import com.spotify.heroic.http.arithmetic.ArithmeticEngineFactory;
+import com.spotify.heroic.http.arithmetic.SeriesArithmeticOperator;
 import com.spotify.heroic.metric.QueryMetrics;
 import com.spotify.heroic.metric.QueryMetricsResponse;
 import com.spotify.heroic.metric.QueryResult;
@@ -175,9 +175,11 @@ public class QueryResource {
             arithmeticQueries.get().forEach((queryName, arithmetic) -> {
 
                 // Here's where we actually perform the arithmetic operation
-                final var response = ArithmeticEngineFactory.create(arithmetic, responses).run();
-
-                arithmeticResults.put(queryName, response);
+                // TODO convert this to dagger e.g.
+//                var op = DaggerSeriesArithmeticOperatorComponent.create();
+                var operator = new SeriesArithmeticOperator(arithmetic, responses);
+                var reducedResponse = operator.reduce();
+                arithmeticResults.put(queryName, reducedResponse);
             });
 
             arithmeticResults.putAll(batchResponse.getResults());
