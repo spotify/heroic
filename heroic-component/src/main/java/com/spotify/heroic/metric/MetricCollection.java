@@ -72,6 +72,7 @@ import java.util.Set;
     @JsonSubTypes.Type(MetricCollection.SpreadCollection.class),
     @JsonSubTypes.Type(MetricCollection.GroupCollection.class),
     @JsonSubTypes.Type(MetricCollection.CardinalityCollection.class),
+    @JsonSubTypes.Type(MetricCollection.DistributionPointCollection.class),
 })
 public interface MetricCollection {
     /**
@@ -159,6 +160,16 @@ public interface MetricCollection {
     }
 
     /**
+     * Create a new distribution point collection
+     *
+     * @param metric distribution points
+     * @return a new collection of distribution point
+     */
+    static MetricCollection distributionPoints(List<DistributionPoint> metric) {
+        return DistributionPointCollection.create(metric);
+    }
+
+    /**
      * Build a new spreads collection.
      *
      * @param metrics spreads to include in the collection
@@ -197,6 +208,8 @@ public interface MetricCollection {
                 return SpreadCollection.create((List<Spread>) metrics);
             case POINT:
                 return PointCollection.create((List<Point>) metrics);
+            case DISTRIBUTION_POINTS:
+                return DistributionPointCollection.create((List<DistributionPoint>) metrics);
             default:
                 throw new RuntimeException("unsupported metric collection");
         }
@@ -228,7 +241,7 @@ public interface MetricCollection {
         }
 
         @JsonProperty
-        public abstract List<Point> data();
+        public abstract  List<Point> data();
 
         @Override
         public MetricType getType() {
@@ -240,6 +253,31 @@ public interface MetricCollection {
             AggregationSession session, Map<String, String> key, Set<Series> series
         ) {
             session.updatePoints(key, series, data());
+        }
+    }
+
+    @AutoValue
+    @JsonTypeName("distributionPoints")
+    abstract class DistributionPointCollection implements MetricCollection {
+        @JsonCreator
+        public static PointCollection create(
+            @JsonProperty("data") final List<DistributionPoint> data) {
+            return new AutoValue_MetricCollection_PointCollection(data);
+        }
+
+        @JsonProperty
+        public abstract  List<DistributionPoint> data();
+
+        @Override
+        public MetricType getType() {
+            return MetricType.DISTRIBUTION_POINTS;
+        }
+
+        @Override
+        public void updateAggregation(
+            AggregationSession session, Map<String, String> key, Set<Series> series
+        ) {
+            session.updateDistributionPoints(key, series, data());
         }
     }
 
