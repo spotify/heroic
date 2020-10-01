@@ -260,9 +260,9 @@ public interface MetricCollection {
     @JsonTypeName("distributionPoints")
     abstract class DistributionPointCollection implements MetricCollection {
         @JsonCreator
-        public static PointCollection create(
+        public static DistributionPointCollection create(
             @JsonProperty("data") final List<DistributionPoint> data) {
-            return new AutoValue_MetricCollection_PointCollection(data);
+            return new AutoValue_MetricCollection_DistributionPointCollection(data);
         }
 
         @JsonProperty
