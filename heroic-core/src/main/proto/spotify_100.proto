@@ -25,10 +25,6 @@ message Metric {
   Value distribution_type_value = 6;
 }
 
-message Message {
-  Metric metric = 1;
-}
-
 message Batch {
   repeated Metric metric = 1;
 }
