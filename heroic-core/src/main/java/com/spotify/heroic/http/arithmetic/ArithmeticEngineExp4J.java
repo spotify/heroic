@@ -45,12 +45,15 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import net.objecthunter.exp4j.Expression;
 import net.objecthunter.exp4j.ExpressionBuilder;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
+/**
+ * The sole concrete implementation of ArithmeticEngine. Other libs (MxParser)
+ * were tried but were 10x slower.
+ */
 public class ArithmeticEngineExp4J implements ArithmeticEngine {
 
     private static final Logger log =
@@ -62,9 +65,8 @@ public class ArithmeticEngineExp4J implements ArithmeticEngine {
     private Expression expressionEngine;
     private int numSeriesLimit = 10_000;
 
-    // PSK transitioning to no-param constructor
     public ArithmeticEngineExp4J() {
-
+        // Required by Dagger 2
     }
 
     private void initialize(Arithmetic arithmetic,
@@ -76,6 +78,15 @@ public class ArithmeticEngineExp4J implements ArithmeticEngine {
         expressionEngine = createExpression();
     }
 
+    /**
+     * The "go" method for this class but it's just an EH wrapper around
+     * {@code evaluateExpression()} really.
+     *
+     * @param arithmetic     string that the user has passed e.g. "A[requests] / B[failed]"
+     * @param queryResponses e.g. { "A" → { ... , [1.4,2.8,...]}, "B" → { ..., [0.8,0.1,...]}} where
+     *                       "A" and "B" are responses to queries named as such in Grafana.
+     * @return
+     */
     public QueryMetricsResponse run(Arithmetic arithmetic,
         Map<String, QueryMetricsResponse> queryResponses) {
         try {
@@ -149,20 +160,16 @@ public class ArithmeticEngineExp4J implements ArithmeticEngine {
         return resultMap;
     }
 
-    /** Simply check that we're not dealing with too many series'. */
-    private boolean checkForExcessivelyLargeNumberOfSerieses() {
+    /** Simply check that we're not dealing with too many Series'. */
+    private boolean checkForExcessivelyLargeNumberOfSeries() {
         return queryResponses.size() >= numSeriesLimit;
     }
 
     /**
-     * return true iff, for this query, the number of series returned and the number of variables
-     * match and they are non-zero in size.
-     * <p>
-     * Of course, they might be the "wrong" variable names e.g. where arithmetic = "A / B" and
-     * variables = "[X, Y]" but we let the exp4j library discover that.
-     * <p>
      * TODO given that exp4j will validate this anyway, is there really a need for this function?
      * Shouldn't the whole query just fail as a whole if the variables are messed-up?
+     *
+     * POTENTIALLY DELETE THIS METHOD
      *
      * @param evaluateEntry query name and its results
      * @param variableNames all variables supposedly in the query
@@ -175,27 +182,43 @@ public class ArithmeticEngineExp4J implements ArithmeticEngine {
         final Map.Entry<String, ResultList> evaluateEntry,
         final Set<String> variableNames,
         final List<RequestError> errors) {
-        if (evaluateEntry.getValue().size() ==
-            variableNames.size() && evaluateEntry.getValue().size() > 0) {
+
+        final ResultList results = evaluateEntry.getValue();
+
+        // Create a new (intermediary) List, and hence avoid mutating `results`.
+        var resultNames = new HashSet<String>(
+            results
+                .stream()
+                .map(x -> x.getLeft())
+                .collect(Collectors.toList()));
+
+        // Similarly create a new Set to avoid clobbering `variableNames`.
+        var varNames = new HashSet<String>(variableNames);
+
+        // We have to create a clone of resultNames because it's mutated just
+        // below.
+        var resultNamesClone = new HashSet<String>(resultNames);
+
+        // Now get the first diff
+        resultNames.removeAll(varNames);
+
+        // Get the second diff
+        varNames.removeAll(resultNamesClone);
+
+        // `resultNames` and `varNames` now contain the "left over" / "missing"
+        // variables. Compound them and we have all orphan variables.
+        varNames.addAll(resultNames);
+
+        if (varNames.isEmpty()) {
             return true;
-        } else {
-            final var variables = new HashSet<>(variableNames);
-
-            variables.removeAll(
-                evaluateEntry
-                    .getValue()
-                    .stream()
-                    .map(Pair::getLeft)
-                    .collect(Collectors.toSet()));
-
-            final String variablesSetRep = StringUtils.join(",", variables);
-
-            // TODO but what about when there are too many variables? This will fail that situation
-            errors.add(new QueryError(String.format("Missing entries for variables %s and key "
-                + "%s", variablesSetRep, evaluateEntry.getKey())));
-
-            return false;
         }
+
+        String orphanMsg = String.join(", ", varNames);
+
+        errors.add(new QueryError("The following are variables that are either "
+            + "referenced but not supplied, or supplied but not referenced: " + orphanMsg));
+
+        return false;
     }
 
     /**
@@ -290,12 +313,12 @@ public class ArithmeticEngineExp4J implements ArithmeticEngine {
         final Set<String> variableNames,
         final List<RequestError> errors) {
 
-        if (!doNumOfSeriesAndVariablesMatch(
-            query,
-            variableNames,
-            errors)) {
-            return false;
-        }
+//        if (!doNumOfSeriesAndVariablesMatch(
+//            query,
+//            variableNames,
+//            errors)) {
+//            return false;
+//        }
 
         if (!areResultSeriesOfEqualLength(query, errors)) {
             return false;
@@ -379,23 +402,45 @@ public class ArithmeticEngineExp4J implements ArithmeticEngine {
          */
         final var resultsPoints =
 
-            // for int i = 0 to i = (size - 1)
+            // iterate all points
             IntStream.range(0, sampleShardGroupPoints.size())
 
-                // convert each int to a Point object
+                // convert the index int to a Point object
                 .mapToObj(i -> {
                     // pluck out the query's variable names (e.g. ['A', 'B'] for Series A and B)
                     // and values for the ith element of all Series and end up with e.g. [A=2
                     // .425,B=0.923]
                     final var variableMap = getVariableToValueMapForIthMetric(i, results);
 
-                    // plug the variables and their values into the engine and evaluate the result
-                    final double result = expressionEngine.setVariables(variableMap).evaluate();
+                    double result = 0.0;
 
-                    // TODO bug alert: what if the timestamps aren't lined up? We'll be assigning
-                    //  the wrong timestamp here
+                    try {
+                        // plug the variables and their values into the engine and evaluate the result
+                        result = expressionEngine.setVariables(variableMap).evaluate();
+                    } catch (ArithmeticException e) {
+                        /** lookup java's message. this will be very expensive computationally.
+                         Should we attempt to parse/detect that it's division and the last param is 0?
+                         That's not easy and will almost certainly be hacky. A better option would be
+                         to fork exp4j, make a PR and add an:
+                         <pre>
+                         enum DivByZeroPolicy { THROW, RETURN_ZERO, RETURN_ONE, RETURN_INFINITY }
+                         </pre>
+                         and then add a field of that type to net/objecthunter/exp4j/Expression.java
+                         which defaults to `THROW` and then respect that setting in Expression.evaluate().
+                         Then submit a PR so that it gets into master in exp4j.
+
+                         TODO make call on if we need more efficient impl and if so, how to do it
+                         **/
+                        if (e.getMessage().toLowerCase().contains("division by zero")) {
+                            result = 0.0;
+                        }
+
+                        // TODO return the number of exceptions of each type
+                    }
+
+                    // Note that we know that using a sample timestamp is OK,
+                    // because we've called checkSeriesTimestamps
                     return new Point(sampleShardGroupPoints.get(i).getTimestamp(), result);
-
                 }).collect(Collectors.toList());
 
         return new ShardedResultGroup(
@@ -406,6 +451,14 @@ public class ArithmeticEngineExp4J implements ArithmeticEngine {
             sampleShardGroup.getCadence());
     }
 
+    /**
+     * This is the "engine" of the ... "engine". It builds the correctly-structured
+     * result via {@code createResultsMap}. This is then iterated and "bad" Series'
+     * are filtered out. For the remaining Series', we {@code applyArithmetic()} on
+     * them using the {@code expressionEngine}
+     *
+     * @return the overall response after all the processing has been done.
+     */
     @NotNull
     private QueryMetricsResponse evaluateExpression() {
 
@@ -448,6 +501,7 @@ public class ArithmeticEngineExp4J implements ArithmeticEngine {
 
     @Contract("_, _, _, _ -> new")
     @NotNull
+    // TODO {@code message} isn't even used!
     private QueryMetricsResponse createQueryMetricsResponse(
         DateRange range, String message, List<ShardedResultGroup> results,
         List<RequestError> errors) {

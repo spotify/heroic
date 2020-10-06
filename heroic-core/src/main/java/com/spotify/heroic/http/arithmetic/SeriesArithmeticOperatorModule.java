@@ -21,13 +21,13 @@
 
 package com.spotify.heroic.http.arithmetic;
 
-import dagger.Binds;
 import dagger.Module;
 import dagger.Provides;
 
 @Module
 public class SeriesArithmeticOperatorModule {
 
+    @SuppressWarnings("MethodMayBeStatic")
     @Provides
     public ArithmeticEngine provideArithmeticEngine() {
         return new ArithmeticEngineExp4J();
