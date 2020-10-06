@@ -19,22 +19,10 @@
  * under the License.
  */
 
-package com.spotify.heroic.statistics;
+package com.spotify.heroic.metric;
 
-import com.spotify.heroic.metric.MetricBackend;
+import com.google.protobuf.ByteString;
 
-public interface MetricBackendReporter {
-    MetricBackend decorate(MetricBackend backend);
-
-    DataInMemoryReporter newDataInMemoryReporter();
-
-    FutureReporter.Context reportFindSeries();
-
-    FutureReporter.Context reportQueryMetrics();
-
-    void reportWritesDroppedBySize();
-
-    void reportTotalReadDataPoints(long points);
-
-    void reportTotalRetainedDataPoints(long points);
+public interface Distribution {
+   ByteString getValue();
 }

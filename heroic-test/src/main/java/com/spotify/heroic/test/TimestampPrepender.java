@@ -19,22 +19,35 @@
  * under the License.
  */
 
-package com.spotify.heroic.statistics;
+package com.spotify.heroic.test;
 
-import com.spotify.heroic.metric.MetricBackend;
+/**
+ * Simple class to encapsulate conditional logic on whether a key, tag or tag value should be
+ * prepended with a [uniquely-identifying] timestamp.
+ */
+public class TimestampPrepender {
 
-public interface MetricBackendReporter {
-    MetricBackend decorate(MetricBackend backend);
+    public enum EntityType {
+        KEY,
+        TAG,
+        TAG_VALUE
+    }
 
-    DataInMemoryReporter newDataInMemoryReporter();
+    public TimestampPrepender(EntityType et, long timestamp) {
+        this.et = et;
+        this.timestamp = timestamp;
+    }
 
-    FutureReporter.Context reportFindSeries();
+    private EntityType et;
+    private long timestamp;
 
-    FutureReporter.Context reportQueryMetrics();
+    public static String prepend(long timestamp, String input) {
+        return Long.toString(timestamp) + "-" + input;
+    }
 
-    void reportWritesDroppedBySize();
-
-    void reportTotalReadDataPoints(long points);
-
-    void reportTotalRetainedDataPoints(long points);
+    public String prepend(String input, EntityType et) {
+        return et == this.et
+            ? prepend(timestamp, input)
+            : input;
+    }
 }

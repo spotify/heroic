@@ -41,6 +41,7 @@ import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.metric.AbstractMetricBackend;
 import com.spotify.heroic.metric.BackendEntry;
+import com.spotify.heroic.metric.DistributionPoint;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.Metric;
@@ -108,6 +109,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         QueryTrace.identifier(BigtableBackend.class, "fetch");
 
     public static final String POINTS = "points";
+    public static final String DISTRIBUTION_POINTS = "distriubutionPoints";
     public static final String EVENTS = "events";
     public static final long PERIOD = 0x100_000_000L;
 
@@ -179,6 +181,13 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             });
 
             waitUntilColumnFamily(admin, table, POINTS).get();
+
+            table.getColumnFamily(DISTRIBUTION_POINTS).orElseGet(() -> {
+                log.info("Creating missing column family: " + DISTRIBUTION_POINTS);
+                return admin.createColumnFamily(table, DISTRIBUTION_POINTS);
+            });
+
+            waitUntilColumnFamily(admin, table, DISTRIBUTION_POINTS).get();
 
             table.getColumnFamily(EVENTS).orElseGet(() -> {
                 log.info("Creating missing column family: " + EVENTS);
@@ -322,6 +331,10 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             case POINT:
                 return writeBatch(POINTS, series, client, g.getDataAs(Point.class),
                     d -> serializeValue(d.getValue()), parentSpan);
+            case DISTRIBUTION_POINTS:
+                return writeBatch(DISTRIBUTION_POINTS, series, client, g.getDataAs(
+                    DistributionPoint.class),
+                    d -> d.value().getValue(), parentSpan);
             default:
                 return async.resolved(new WriteMetric(
                     new QueryError("Unsupported metric type: " + g.getType())));

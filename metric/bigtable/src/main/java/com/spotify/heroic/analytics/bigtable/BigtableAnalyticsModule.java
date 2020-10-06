@@ -46,7 +46,7 @@ import javax.inject.Named;
 
 @Module
 public class BigtableAnalyticsModule implements AnalyticsModule {
-    private static final String DEFAULT_CLUSTER = "heroic";
+    private static final String DEFAULT_INSTANCE = "heroic";
     private static final CredentialsBuilder DEFAULT_CREDENTIALS =
         new ComputeEngineCredentialsBuilder();
     private static final String HITS_TABLE = "hits";
@@ -56,20 +56,23 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
     private static final int DEFAULT_FLUSH_INTERVAL_SECONDS = 2;
 
     private final String project;
-    private final String cluster;
+    private final String instance;
+    private final String profile;
     private final CredentialsBuilder credentials;
     private final String emulatorEndpoint;
     private final int maxPendingReports;
 
     public BigtableAnalyticsModule(
         final String project,
-        final String cluster,
+        final String instance,
+        final String profile,
         final CredentialsBuilder credentials,
         @Nullable final String emulatorEndpoint,
         final int maxPendingReports
     ) {
         this.project = project;
-        this.cluster = cluster;
+        this.instance = instance;
+        this.profile = profile;
         this.credentials = credentials;
         this.emulatorEndpoint = emulatorEndpoint;
         this.maxPendingReports = maxPendingReports;
@@ -97,9 +100,9 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
             @Override
             public AsyncFuture<BigtableConnection> construct() {
                 return async.call(
-                    new BigtableConnectionBuilder(project, cluster, credentials, emulatorEndpoint,
-                        async, DEFAULT_DISABLE_BULK_MUTATIONS, DEFAULT_FLUSH_INTERVAL_SECONDS,
-                        Optional.empty()));
+                    new BigtableConnectionBuilder(project, instance, profile, credentials,
+                        emulatorEndpoint, async, DEFAULT_DISABLE_BULK_MUTATIONS,
+                        DEFAULT_FLUSH_INTERVAL_SECONDS, Optional.empty()));
             }
 
             @Override
@@ -145,14 +148,15 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
     }
 
     public String toString() {
-      return "BigtableAnalyticsModule(project=" + this.project + ", cluster=" + this.cluster
-             + ", credentials=" + this.credentials + ", maxPendingReports=" + this.maxPendingReports
-             + ")";
+      return "BigtableAnalyticsModule(project=" + this.project + ", cluster=" + this.instance
+          + ", profile=" + this.profile + ", credentials=" + this.credentials
+          + ", maxPendingReports=" + this.maxPendingReports + ")";
     }
 
   public static class Builder implements AnalyticsModule.Builder {
         private Optional<String> project = Optional.empty();
         private Optional<String> instance = Optional.empty();
+        private Optional<String> profile = Optional.empty();
         private Optional<CredentialsBuilder> credentials = Optional.empty();
         private Optional<String> emulatorEndpoint = Optional.empty();
         private Optional<Integer> maxPendingReports = Optional.empty();
@@ -161,12 +165,14 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
         public Builder(
             @JsonProperty("project") Optional<String> project,
             @JsonProperty("instance") Optional<String> instance,
+            @JsonProperty("profile") Optional<String> profile,
             @JsonProperty("credentials") Optional<CredentialsBuilder> credentials,
             @JsonProperty("emulatorEndpoint") Optional<String> emulatorEndpoint,
             @JsonProperty("maxPendingReports") Optional<Integer> maxPendingReports
         ) {
             this.project = project;
             this.instance = instance;
+            this.profile = profile;
             this.credentials = credentials;
             this.emulatorEndpoint = emulatorEndpoint;
             this.maxPendingReports = maxPendingReports;
@@ -182,6 +188,11 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
 
         public Builder instance(String instance) {
             this.instance = Optional.of(instance);
+            return this;
+        }
+
+        public Builder profile(String profile) {
+            this.profile = Optional.of(profile);
             return this;
         }
 
@@ -206,7 +217,8 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
 
             return new BigtableAnalyticsModule(
                 project,
-                instance.orElse(DEFAULT_CLUSTER),
+                instance.orElse(DEFAULT_INSTANCE),
+                profile.orElse(null),
                 credentials.orElse(DEFAULT_CREDENTIALS),
                 emulatorEndpoint.orElse(null),
                 maxPendingReports.orElse(DEFAULT_MAX_PENDING_REPORTS)

@@ -76,6 +76,7 @@ public class BigtableConnection {
 
     public String toString() {
         return "BigtableConnectionBuilder.GrpcBigtableConnection(project=" + this.project
-               + ", instance=" + this.instance + ")";
+               + ", instance=" + this.instance
+               + ", profile=" + this.session.getOptions().getAppProfileId() + ")";
     }
 }

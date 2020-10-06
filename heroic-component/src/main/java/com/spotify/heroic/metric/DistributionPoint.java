@@ -19,22 +19,30 @@
  * under the License.
  */
 
-package com.spotify.heroic.statistics;
+package com.spotify.heroic.metric;
 
-import com.spotify.heroic.metric.MetricBackend;
+import com.google.auto.value.AutoValue;
+import com.google.common.hash.Hasher;
+import org.jetbrains.annotations.NotNull;
 
-public interface MetricBackendReporter {
-    MetricBackend decorate(MetricBackend backend);
 
-    DataInMemoryReporter newDataInMemoryReporter();
+@AutoValue
+public abstract class DistributionPoint implements Metric {
 
-    FutureReporter.Context reportFindSeries();
+    public abstract long getTimestamp();
+    public abstract Distribution value();
 
-    FutureReporter.Context reportQueryMetrics();
+    public static DistributionPoint create(final Distribution value, final long timestamp) {
+        return new AutoValue_DistributionPoint(timestamp, value);
+    }
 
-    void reportWritesDroppedBySize();
+    @Override
+    public boolean valid() {
+        return value().getValue() != null &&  !value().getValue().isEmpty();
+    }
 
-    void reportTotalReadDataPoints(long points);
-
-    void reportTotalRetainedDataPoints(long points);
+    @Override
+    public void hash(@NotNull Hasher hasher) {
+        hasher.putInt(this.hashCode());
+    }
 }

@@ -15,6 +15,7 @@ bin
 *.iml
 *.p12
 .idea
+.idea-run-configurations/
 /reports/
 /assets/out/
 .meghanada
@@ -30,7 +31,12 @@ build/
 out/
 gradle-app.setting
 .gradle
-.settings/
+
+# VS Code auto-created files
 .classpath
 .project
+.settings
 .java-version
+
+# direnv config file
+/.envrc

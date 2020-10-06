@@ -19,22 +19,16 @@
  * under the License.
  */
 
-package com.spotify.heroic.statistics;
+package com.spotify.heroic.metric;
 
-import com.spotify.heroic.metric.MetricBackend;
+import com.google.auto.value.AutoValue;
+import com.google.protobuf.ByteString;
 
-public interface MetricBackendReporter {
-    MetricBackend decorate(MetricBackend backend);
+@AutoValue
+public abstract class HeroicDistribution implements Distribution {
+    public abstract ByteString getValue();
+    public static HeroicDistribution create(final ByteString byteString) {
+        return new AutoValue_HeroicDistribution(byteString);
+    }
 
-    DataInMemoryReporter newDataInMemoryReporter();
-
-    FutureReporter.Context reportFindSeries();
-
-    FutureReporter.Context reportQueryMetrics();
-
-    void reportWritesDroppedBySize();
-
-    void reportTotalReadDataPoints(long points);
-
-    void reportTotalRetainedDataPoints(long points);
 }
