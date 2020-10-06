@@ -174,11 +174,11 @@ public class QueryResource {
             // Apply each arithmetic operation to each result
             arithmeticQueries.get().forEach((queryName, arithmetic) -> {
 
-                // Here's where we actually perform the arithmetic operation
-                // TODO convert this to dagger e.g.
-//                var op = DaggerSeriesArithmeticOperatorComponent.create();
+                // Here's where we actually perform the arithmetic operation.
+                // Note that operator.engine is injected by Dagger 2.
                 var operator = new SeriesArithmeticOperator(arithmetic, responses);
                 var reducedResponse = operator.reduce();
+
                 arithmeticResults.put(queryName, reducedResponse);
             });
 
