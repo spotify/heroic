@@ -61,6 +61,7 @@ dependencies {
     implementation 'eu.toolchain.async:tiny-async-core'
     implementation 'jline:jline:2.12'
     implementation 'com.google.protobuf:protobuf-java'
+    implementation 'org.apache.commons:commons-math3'
 
     testImplementation project(':heroic-test')
     testImplementation 'org.hamcrest:java-hamcrest'
