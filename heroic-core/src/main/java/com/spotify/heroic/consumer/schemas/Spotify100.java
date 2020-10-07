@@ -23,6 +23,7 @@ package com.spotify.heroic.consumer.schemas;
 
 import static io.opencensus.trace.AttributeValue.stringAttributeValue;
 
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
@@ -38,9 +39,12 @@ import com.spotify.heroic.consumer.ConsumerSchemaValidationException;
 import com.spotify.heroic.consumer.SchemaScope;
 import com.spotify.heroic.consumer.schemas.spotify100.JsonMetric;
 import com.spotify.heroic.consumer.schemas.spotify100.Version;
+import com.spotify.heroic.consumer.schemas.spotify100.v2.Value;
 import com.spotify.heroic.ingestion.Ingestion;
 import com.spotify.heroic.ingestion.IngestionGroup;
 import com.spotify.heroic.ingestion.Request;
+import com.spotify.heroic.metric.DistributionPoint;
+import com.spotify.heroic.metric.HeroicDistribution;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.statistics.ConsumerReporter;
@@ -126,6 +130,8 @@ public class Spotify100 implements ConsumerSchema {
 
                 if (version.getMajor() == 1) {
                     return handleVersion1(tree).onFinished(span::end);
+                } else if (version.getMajor() == 2) {
+                    return handleVersion2(tree).onFinished(span::end);
                 }
 
                 span.setStatus(Status.INVALID_ARGUMENT.withDescription("Unsupported version"));
@@ -178,6 +184,76 @@ public class Spotify100 implements ConsumerSchema {
             reporter.reportMetricsIn(1);
             AsyncFuture<Ingestion> ingestionFuture =
                 ingestion.write(new Request(series, MetricCollection.points(points)));
+
+            // Return Void future, to not leak unnecessary information from the backend but just
+            // allow monitoring of when the consumption is done.
+            return ingestionFuture.directTransform(future -> null);
+        }
+
+        private AsyncFuture<Void> handleVersion2(final JsonNode tree)
+            throws ConsumerSchemaValidationException {
+            final com.spotify.heroic.consumer.schemas.spotify100.v2.JsonMetric metric;
+
+            try {
+                metric = new TreeTraversingParser(tree, mapper)
+                    .readValueAs(
+                        com.spotify.heroic.consumer.schemas.spotify100.v2.JsonMetric.class);
+            } catch (IOException e) {
+                throw new ConsumerSchemaValidationException("Invalid metric", e);
+            }
+
+            if (metric.getValue() == null) {
+                throw new ConsumerSchemaValidationException(
+                    "Metric must have a value but this metric has a null value: " + metric);
+            }
+
+            if (metric.getTime() == null) {
+                throw new ConsumerSchemaValidationException("time: field must be defined: " + tree);
+            }
+
+            if (metric.getTime() <= 0) {
+                throw new ConsumerSchemaValidationException(
+                    "time: field must be a positive number: " + tree);
+            }
+
+            if (metric.getKey() == null) {
+                throw new ConsumerSchemaValidationException("key: field must be defined: " + tree);
+            }
+
+            final Map<String, String> tags = new HashMap<>(metric.getAttributes());
+
+            if (metric.getHost() != null) {
+                tags.put(HOST_TAG, metric.getHost());
+            }
+
+            final Map<String, String> resource = new HashMap<>(metric.getResource());
+
+            final Series series = Series.of(metric.getKey(), tags, resource);
+
+            AsyncFuture<Ingestion> ingestionFuture;
+            Value value = metric.getValue();
+            if (value instanceof Value.DoubleValue) {
+                final Value.DoubleValue doubleValue = (Value.DoubleValue) value;
+                final double val = doubleValue.getValue();
+                final Point p = new Point(metric.getTime(), val);
+                final List<Point> points = ImmutableList.of(p);
+                ingestionFuture =
+                    ingestion.write(new Request(series, MetricCollection.points(points)));
+            } else if (value instanceof Value.DistributionValue) {
+                final Value.DistributionValue distributionValue = (Value.DistributionValue) value;
+                final HeroicDistribution heroicDistribution =
+                    HeroicDistribution.create(distributionValue.getValue());
+                final DistributionPoint point = DistributionPoint.create(heroicDistribution,
+                    metric.getTime());
+                ingestionFuture = ingestion.write(new Request(series,
+                    MetricCollection.distributionPoints(List.of(point))));
+            } else {
+                throw new RuntimeException("Unknown type value = " + value);
+            }
+
+            reporter.reportMessageDrift(clock.currentTimeMillis() - metric.getTime());
+            reporter.reportMetricsIn(1);
+
 
             // Return Void future, to not leak unnecessary information from the backend but just
             // allow monitoring of when the consumption is done.

@@ -44,6 +44,7 @@ import com.spotify.heroic.metric.BackendEntry;
 import com.spotify.heroic.metric.DistributionPoint;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
+import com.spotify.heroic.metric.HeroicDistribution;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricReadResult;
@@ -270,6 +271,13 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         });
     }
 
+    private List<PreparedQuery> distributionPointsRanges(final FetchData.Request request)
+        throws IOException {
+        return ranges(request.getSeries(), request.getRange(), DISTRIBUTION_POINTS, (t, d) -> {
+            return DistributionPoint.create(HeroicDistribution.create(d), t);
+        });
+    }
+
     @Override
     public AsyncFuture<FetchData.Result> fetch(
         final FetchData.Request request,
@@ -288,6 +296,9 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                 case POINT:
                     return fetchBatch(
                         watcher, type, pointsRanges(request), c, consumer, parentSpan);
+                case DISTRIBUTION_POINTS:
+                    return fetchBatch(watcher, type, distributionPointsRanges(request), c,
+                        consumer, parentSpan);
                 default:
                     return async.resolved(new FetchData.Result(QueryTrace.of(FETCH),
                         new QueryError("unsupported source: " + request.getType())));
@@ -632,9 +643,9 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
         // @formatter:off
         return ((long) (bytes[0] & 0xff) << 24) +
-               ((long) (bytes[1] & 0xff) << 16) +
-               ((long) (bytes[2] & 0xff) << 8) +
-               ((long) (bytes[3] & 0xff) << 0);
+            ((long) (bytes[1] & 0xff) << 16) +
+            ((long) (bytes[2] & 0xff) << 8) +
+            ((long) (bytes[3] & 0xff) << 0);
         // @formatter:on
     }
 
@@ -652,9 +663,9 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         private final long base;
 
         @java.beans.ConstructorProperties({ "rowKeyStart", "rowKeyEnd", "columnFamily",
-                                            "startQualifierOpen", "endQualifierClosed",
-                                            "deserializer",
-                                            "base" })
+            "startQualifierOpen", "endQualifierClosed",
+            "deserializer",
+            "base" })
         public PreparedQuery(final ByteString rowKeyStart,
                              final ByteString rowKeyEnd,
                              final String columnFamily,
