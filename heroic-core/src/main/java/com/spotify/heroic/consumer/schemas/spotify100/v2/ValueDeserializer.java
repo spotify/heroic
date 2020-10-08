@@ -55,8 +55,7 @@ public class ValueDeserializer extends StdDeserializer<Value> {
 
         if (node.get("distributionValue") != null) {
             byte[] bytes = node.get("distributionValue").binaryValue();
-            ByteString byteString = ByteString.copyFrom(bytes);
-            return Value.DistributionValue.create(byteString);
+            return Value.DistributionValue.create(ByteString.copyFrom(bytes));
         }
 
         if (node.get("doubleValue") != null) {

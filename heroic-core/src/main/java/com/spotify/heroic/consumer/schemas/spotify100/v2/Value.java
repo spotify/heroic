@@ -35,7 +35,7 @@ import com.google.protobuf.ByteString;
  */
 @JsonSerialize(using = ValueSerializer.class)
 @JsonDeserialize(using = ValueDeserializer.class)
-public  abstract class Value {
+public abstract class Value {
     @JsonProperty("value")
     public abstract Object getValue();
 
@@ -65,5 +65,4 @@ public  abstract class Value {
         @Override
         public abstract ByteString getValue();
     }
-
 }

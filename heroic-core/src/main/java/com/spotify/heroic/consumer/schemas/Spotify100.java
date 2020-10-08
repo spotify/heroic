@@ -128,9 +128,11 @@ public class Spotify100 implements ConsumerSchema {
                     throw new ConsumerSchemaValidationException("Bad version: " + versionNode);
                 }
 
-                if (version.getMajor() == 1) {
+                int major = version.getMajor();
+
+                if (major == 1) {
                     return handleVersion1(tree).onFinished(span::end);
-                } else if (version.getMajor() == 2) {
+                } else if (major == 2) {
                     return handleVersion2(tree).onFinished(span::end);
                 }
 

@@ -3,6 +3,12 @@ package com.spotify.heroic.consumer.schemas.spotify100.v2
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 
+/**
+ * Metric used by ffwd-http and ffwd-json clients.
+ * This version uses an object type value to add distribution
+ * support for http clients.
+ *
+ */
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class JsonMetric(
         val key: String?,

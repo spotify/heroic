@@ -40,7 +40,6 @@ public class ValueSerializer extends StdSerializer<Value> {
     }
 
 
-
     public ValueSerializer(Class<Value> t) {
         super(t);
     }
