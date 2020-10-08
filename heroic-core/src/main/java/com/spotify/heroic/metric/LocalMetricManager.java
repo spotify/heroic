@@ -378,7 +378,7 @@ public class LocalMetricManager implements MetricManager {
             );
 
             // Add watcher to set to compute stats across all queries
-            quotaWatchers.put(quotaWatcher.hashCode(), quotaWatcher);
+            quotaWatchers.put(System.identityHashCode(quotaWatcher), quotaWatcher);
 
             final OptionalLimit seriesLimit =
                 options.seriesLimit().orElse(LocalMetricManager.this.seriesLimit);
@@ -417,23 +417,23 @@ public class LocalMetricManager implements MetricManager {
                 .onDone(new FutureDone<>() {
                     @Override
                     public void failed(final Throwable cause) throws Exception {
-                        quotaWatchers.remove(quotaWatcher.hashCode());
+                        QuotaWatcher removed = quotaWatchers.remove(System.identityHashCode(quotaWatcher));
                         cleanQuotaWatchers(quotaWatcher);
-                        log.info("onDone.failed {}", quotaWatchers.size());
+                        log.info("onDone.failed {}; removed: {}", quotaWatchers.size(), removed);
                     }
 
                     @Override
                     public void resolved(final FullQuery result) throws Exception {
-                        quotaWatchers.remove(quotaWatcher.hashCode());
+                        QuotaWatcher removed = quotaWatchers.remove(System.identityHashCode(quotaWatcher));
                         cleanQuotaWatchers(quotaWatcher);
-                        log.info("onDone.resolved {}", quotaWatchers.size());
+                        log.info("onDone.resolved {}; removed: {}", quotaWatchers.size(), removed);
                     }
 
                     @Override
                     public void cancelled() throws Exception {
-                        quotaWatchers.remove(quotaWatcher.hashCode());
+                        QuotaWatcher removed = quotaWatchers.remove(System.identityHashCode(quotaWatcher));
                         cleanQuotaWatchers(quotaWatcher);
-                        log.info("onDone.cancelled {}", quotaWatchers.size());
+                        log.info("onDone.cancelled {}; removed: {}", quotaWatchers.size(), removed);
                     }
                 });
         }
