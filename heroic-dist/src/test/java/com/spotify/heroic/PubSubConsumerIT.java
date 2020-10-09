@@ -19,7 +19,7 @@
  * under the License.
  */
 
-    package com.spotify.heroic;
+package com.spotify.heroic;
 
 import static junit.framework.TestCase.assertEquals;
 
@@ -35,15 +35,12 @@ import com.spotify.heroic.consumer.pubsub.EmulatorHelper;
 import com.spotify.heroic.consumer.pubsub.PubSubConsumerModule;
 import com.spotify.heroic.consumer.schemas.Spotify100;
 import com.spotify.heroic.consumer.schemas.spotify100.Version;
-import com.spotify.heroic.consumer.schemas.spotify100.v2.Value;
 import com.spotify.heroic.ingestion.IngestionModule;
 import com.spotify.heroic.instrumentation.OperationsLogImpl;
-import com.spotify.heroic.metric.DistributionPoint;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricManagerModule;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.memory.MemoryMetricModule;
 import java.io.IOException;
@@ -162,8 +159,3 @@ public class PubSubConsumerIT extends AbstractConsumerIT {
         assertEquals(writeRequests, writeCompletions);
     }
 }
-
-
-
-
-
