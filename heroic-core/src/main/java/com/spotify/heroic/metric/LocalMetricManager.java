@@ -772,7 +772,8 @@ public class LocalMetricManager implements MetricManager {
         @Override
         public void readData(long n) {
             long curDataPoints = read.addAndGet(n);
-            long total = quotaWatchers.values().stream().map(QuotaWatcher::getReadData)
+            List<QuotaWatcher> watchers = new ArrayList<>(quotaWatchers.values());
+            long total = watchers.stream().map(QuotaWatcher::getReadData)
                 .reduce(0L, Long::sum);
             reporter.reportTotalReadDataPoints(total);
             if (curDataPoints > LOGLIMIT) {
@@ -788,7 +789,8 @@ public class LocalMetricManager implements MetricManager {
         @Override
         public void retainData(final long n) {
             long curRetainedDataPoints = retained.addAndGet(n);
-            long total = quotaWatchers.values().stream().map(QuotaWatcher::getRetainData)
+            List<QuotaWatcher> watchers = new ArrayList<>(quotaWatchers.values());
+            long total = watchers.stream().map(QuotaWatcher::getRetainData)
                 .reduce(0L, Long::sum);
             reporter.reportTotalRetainedDataPoints(total);
             if (curRetainedDataPoints > LOGLIMIT) {
