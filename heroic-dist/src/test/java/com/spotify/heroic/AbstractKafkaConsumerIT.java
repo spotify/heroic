@@ -10,8 +10,11 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.consumer.kafka.FakeKafkaConnection;
 import com.spotify.heroic.consumer.kafka.KafkaConsumerModule;
 import com.spotify.heroic.consumer.schemas.Spotify100;
+import com.spotify.heroic.consumer.schemas.spotify100.Version;
+import com.spotify.heroic.consumer.schemas.spotify100.v2.Value;
 import com.spotify.heroic.ingestion.IngestionModule;
 import com.spotify.heroic.instrumentation.OperationsLogImpl;
+import com.spotify.heroic.metric.DistributionPoint;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricManagerModule;
 import com.spotify.heroic.metric.MetricModule;
@@ -19,6 +22,8 @@ import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.memory.MemoryMetricModule;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import org.junit.After;
@@ -62,31 +67,36 @@ public abstract class AbstractKafkaConsumerIT extends AbstractConsumerIT {
     }
 
     @Override
-    protected Consumer<WriteMetric.Request> setupConsumer() {
+    protected Consumer<WriteMetric.Request> setupConsumer(Version version) {
         return request -> {
             final MetricCollection mc = request.getData();
 
-            if (mc.getType() != MetricType.POINT) {
+            final List<MetricType> list = List.of(MetricType.POINT, MetricType.DISTRIBUTION_POINTS);
+
+            if (!list.contains(mc.getType())) {
                 throw new RuntimeException("Unsupported metric type: " + mc.getType());
             }
 
             final Series series = request.getSeries();
-            for (final Point p : mc.getDataAs(Point.class)) {
-                final DataVersion1 src =
-                    new DataVersion1("1.1.0", series.getKey(), "localhost", p.getTimestamp(),
-                        series.getTags(), series.getResource(), p.getValue());
 
-                final byte[] message;
+            final List<TMetric> metrics = createTestMetricCollection(request);
 
-                try {
-                    message = objectMapper.writeValueAsBytes(src);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-
-                connection.publish(topic, message);
+            for (TMetric metric : metrics){
+                 Object jsonMetric = createJsonMetric(metric, series);
+                 publish(jsonMetric);
             }
         };
+    }
+
+    private void publish(Object jsonMetric){
+        byte[] message;
+        try {
+            message = objectMapper.writeValueAsBytes(jsonMetric);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        connection.publish(topic, message);
     }
 
     @After
