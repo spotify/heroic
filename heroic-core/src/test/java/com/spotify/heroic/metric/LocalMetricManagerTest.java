@@ -111,12 +111,14 @@ public class LocalMetricManagerTest {
             for (int i = 0; i < NUM_WATCHERS; i++) {
                 final QuotaWatcher qw = new QuotaWatcher(1000 + i, 2000 + i, dimr);
 
+                // Count when the "correctly" implemented HashMap clobbers a QueryWatcher
                 if (correctWatcherMap.containsKey(qw)) {
                     correctClobberCount.incrementAndGet();
                 } else {
                     correctWatcherMap.put(qw, qw);
                 }
 
+                // Count when the "incorrectly" implemented HashMap clobbers a QueryWatcher
                 final Integer idx = Integer.class.cast(i);
                 if (realWatchers.containsKey(idx)) {
                     realClobberCount.incrementAndGet();
@@ -135,10 +137,15 @@ public class LocalMetricManagerTest {
 
         System.out.println("All threads have launched. Now we wait...");
 
+        // This is hacky, but surprisingly there isn't a nice, elegant way of awaiting
+        // thread termination apart from converting the Runnables to a list of Futures,
+        // and I can't be arsed, basically.
         pool.awaitTermination(4, TimeUnit.SECONDS);
 
         System.out.println("All threads are done");
 
+        // We expect 0 clobbers on the "correct" impl and N (which is non-deterministic)
+        // for the "incorrect" impl.
         assertEquals(0, correctClobberCount.get());
         assertTrue("Highly unexpected, there should be clobbered map entries.", realClobberCount.get() > 0);
     }
