@@ -60,9 +60,9 @@ import com.spotify.heroic.statistics.MetricBackendReporter;
 import com.spotify.heroic.tracing.EndSpanFutureReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.StreamCollector;
-import eu.toolchain.async.FutureDone;
 import io.opencensus.trace.Span;
 import io.opencensus.trace.Tracer;
 import java.util.ArrayList;
@@ -71,12 +71,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.inject.Inject;
@@ -104,7 +104,7 @@ public class LocalMetricManager implements MetricManager {
     private final AsyncFramework async;
     private final GroupSet<MetricBackend> groupSet;
     private final MetadataManager metadata;
-    private final MetricBackendReporter reporter;
+    private static MetricBackendReporter reporter = null;
     private final QueryLogger queryLogger;
     private final Semaphore concurrentQueries;
     private static final ConcurrentMap<Integer, QuotaWatcher> quotaWatchers =
@@ -146,6 +146,10 @@ public class LocalMetricManager implements MetricManager {
         this.reporter = reporter;
         this.queryLogger = queryLoggerFactory.create("LocalMetricManager");
         this.concurrentQueries = new Semaphore(this.concurrentQueriesBackoff);
+    }
+
+    static ConcurrentMap<Integer, QuotaWatcher> getQuotaWatchers() {
+        return quotaWatchers;
     }
 
     @Override
@@ -750,7 +754,8 @@ public class LocalMetricManager implements MetricManager {
         }
     }
 
-    private class QuotaWatcher implements FetchQuotaWatcher, RetainQuotaWatcher {
+    static class QuotaWatcher implements FetchQuotaWatcher, RetainQuotaWatcher {
+
         private final long dataLimit;
         private final long retainLimit;
         private final DataInMemoryReporter dataInMemoryReporter;
@@ -761,8 +766,8 @@ public class LocalMetricManager implements MetricManager {
         private final long startMS;
         private final LongAdder rowsAccessed = new LongAdder();
 
-        private QuotaWatcher(final long dataLimit, final long retainLimit,
-                             final DataInMemoryReporter dataInMemoryReporter) {
+        QuotaWatcher(final long dataLimit, final long retainLimit,
+            final DataInMemoryReporter dataInMemoryReporter) {
             this.dataLimit = dataLimit;
             this.retainLimit = retainLimit;
             this.dataInMemoryReporter = dataInMemoryReporter;
