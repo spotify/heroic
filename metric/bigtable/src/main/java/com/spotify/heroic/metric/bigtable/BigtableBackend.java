@@ -101,8 +101,6 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
     /* maximum number of bytes of BigTable row key size allowed*/
     public static final int MAX_KEY_ROW_SIZE = 4000;
-    /* maximum number of cells supported for each batch mutation */
-    public static final int MAX_BATCH_SIZE = 10000;
 
     public static final QueryTrace.Identifier FETCH_SEGMENT =
         QueryTrace.identifier(BigtableBackend.class, "fetch_segment");
@@ -131,6 +129,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         };
 
     private final Meter written = new Meter();
+    private final int maxWriteBatchSize;
 
     @Inject
     public BigtableBackend(
@@ -141,6 +140,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         final Groups groups,
         @Named("table") final String table,
         @Named("configure") final boolean configure,
+        @Named("maxWriteBatchSize") final int maxWriteBatchSize,
         MetricBackendReporter reporter,
         @Named("application/json") ObjectMapper mapper
     ) {
@@ -150,6 +150,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         this.rowKeySerializer = rowKeySerializer;
         this.sortedMapSerializer = serializer.sortedMap(serializer.string(), serializer.string());
         this.connection = connection;
+        this.maxWriteBatchSize = maxWriteBatchSize;
         this.groups = groups;
         this.table = table;
         this.configure = configure;
@@ -397,7 +398,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
             builder.setCell(columnFamily, offsetBytes, valueBytes);
 
-            if (builder.size() >= MAX_BATCH_SIZE) {
+            if (builder.size() >= maxWriteBatchSize) {
                 saved.add(Pair.of(rowKey, builder.build()));
                 building.put(rowKey, Mutations.builder());
             }
@@ -651,6 +652,10 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
     public String toString() {
         return "BigtableBackend(connection=" + this.connection + ")";
+    }
+
+    public int getMaxWriteBatchSize() {
+        return maxWriteBatchSize;
     }
 
     private static final class PreparedQuery {

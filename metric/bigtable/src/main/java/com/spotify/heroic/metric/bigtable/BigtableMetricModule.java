@@ -49,6 +49,15 @@ import javax.inject.Named;
 public final class BigtableMetricModule implements MetricModule, DynamicModuleId {
     private static final String BIGTABLE_CONFIGURE_PARAM = "bigtable.configure";
 
+    /* default number of Rows for each batch mutation */
+    public static final int DEFAULT_MUTATION_BATCH_SIZE = 1_000;
+
+    /* maximum possible number of Rows for each batch mutation */
+    public static final int MAX_MUTATION_BATCH_SIZE = 1_000_000;
+
+    /* minimum possible number of Rows supported for each batch mutation */
+    public static final int MIN_MUTATION_BATCH_SIZE = 10;
+
     private static final String DEFAULT_GROUP = "bigtable";
     private static final String DEFAULT_INSTANCE = "heroic";
     private static final String DEFAULT_TABLE = "metrics";
@@ -66,7 +75,22 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
     private final CredentialsBuilder credentials;
     private final boolean configure;
     private final boolean disableBulkMutations;
+    /** This sets the max number of Rows in each batch that's written to the
+     * BigTable Client. <p>Note that that does not mean that the client will send
+     * that many in one request. That is seemingly controlled by:
+     * @see BigtableMetricModule#batchSize
+     */
+    private final int maxWriteBatchSize;
     private final int flushIntervalSeconds;
+
+    /**
+    * PSK - I believe this sets
+    * com.google.cloud.bigtable.config.BulkOptions.BIGTABLE_BULK_MAX_ROW_KEY_COUNT_DEFAULT
+    * See <a href="https://github.com/googleapis/java-bigtable-hbase/blob/500eed1ef0bb52dc90f170e8675ac21b5cb2d872/bigtable-client-core-parent/bigtable-client-core/src/main/java/com/google/cloud/bigtable/config/BulkOptions.java#L53">http://github.com/googleapis/java-bigtable-hbase</a>
+    * <p>
+    * For controlling how many rows we send each time to the Bigtable client:
+    * @see BigtableMetricModule#maxWriteBatchSize
+    */
     private final Optional<Integer> batchSize;
     private final String emulatorEndpoint;
 
@@ -81,6 +105,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         @JsonProperty("credentials") Optional<CredentialsBuilder> credentials,
         @JsonProperty("configure") Optional<Boolean> configure,
         @JsonProperty("disableBulkMutations") Optional<Boolean> disableBulkMutations,
+        @JsonProperty("maxWriteBatchSize") Optional<Integer> maxWriteBatchSize,
         @JsonProperty("flushIntervalSeconds") Optional<Integer> flushIntervalSeconds,
         @JsonProperty("batchSize") Optional<Integer> batchSize,
         @JsonProperty("emulatorEndpoint") Optional<String> emulatorEndpoint
@@ -94,6 +119,13 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         this.credentials = credentials.orElse(DEFAULT_CREDENTIALS);
         this.configure = configure.orElse(DEFAULT_CONFIGURE);
         this.disableBulkMutations = disableBulkMutations.orElse(DEFAULT_DISABLE_BULK_MUTATIONS);
+
+        // Basically make sure that maxWriteBatchSize, if set, is sane
+        int maxWriteBatch = maxWriteBatchSize.orElse(DEFAULT_MUTATION_BATCH_SIZE);
+        maxWriteBatch = Math.max(MIN_MUTATION_BATCH_SIZE, maxWriteBatch);
+        maxWriteBatch = Math.min(MAX_MUTATION_BATCH_SIZE, maxWriteBatch);
+
+        this.maxWriteBatchSize = maxWriteBatch;
         this.flushIntervalSeconds = flushIntervalSeconds.orElse(DEFAULT_FLUSH_INTERVAL_SECONDS);
         this.batchSize = batchSize;
         this.emulatorEndpoint = emulatorEndpoint.orElse(null);
@@ -152,6 +184,13 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
 
         @Provides
         @BigtableScope
+        @Named("maxWriteBatchSize")
+        public Integer maxWriteBatchSize() {
+            return maxWriteBatchSize;
+        }
+
+        @Provides
+        @BigtableScope
         @Named("configure")
         public boolean configure(final ExtraParameters params) {
             return params.contains(ExtraParameters.CONFIGURE) ||
@@ -196,6 +235,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         private Optional<CredentialsBuilder> credentials = empty();
         private Optional<Boolean> configure = empty();
         private Optional<Boolean> disableBulkMutations = empty();
+        private Optional<Integer> maxWriteBatchSize = empty();
         private Optional<Integer> flushIntervalSeconds = empty();
         private Optional<Integer> batchSize = empty();
         private Optional<String> emulatorEndpoint = empty();
@@ -245,6 +285,11 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
             return this;
         }
 
+        public Builder maxWriteBatchSize(int maxWriteBatchSize) {
+            this.maxWriteBatchSize = of(maxWriteBatchSize);
+            return this;
+        }
+
         public Builder batchSize(int batchSize) {
             this.batchSize = of(batchSize);
             return this;
@@ -262,7 +307,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
 
         public BigtableMetricModule build() {
             return new BigtableMetricModule(id, groups, project, instance, profile,
-                table, credentials, configure, disableBulkMutations, flushIntervalSeconds,
+                table, credentials, configure, disableBulkMutations, maxWriteBatchSize, flushIntervalSeconds,
                 batchSize, emulatorEndpoint);
         }
     }
