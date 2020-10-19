@@ -107,7 +107,7 @@ public class LocalMetricManager implements MetricManager {
     private final MetricBackendReporter reporter;
     private final QueryLogger queryLogger;
     private final Semaphore concurrentQueries;
-    private static final ConcurrentMap<Integer, QuotaWatcher> quotaWatchers =
+    private static final ConcurrentMap<QuotaWatcher, QuotaWatcher> quotaWatchers =
         new ConcurrentHashMap<>();
 
     /**
@@ -371,15 +371,6 @@ public class LocalMetricManager implements MetricManager {
 
             final DataInMemoryReporter dataInMemoryReporter = reporter.newDataInMemoryReporter();
 
-            final QuotaWatcher quotaWatcher = new QuotaWatcher(
-                options.dataLimit().orElse(dataLimit).asLong().orElse(Long.MAX_VALUE),
-                options.aggregationLimit().orElse(aggregationLimit).asLong().orElse(Long.MAX_VALUE),
-                dataInMemoryReporter
-            );
-
-            // Add watcher to set to compute stats across all queries
-            quotaWatchers.put(System.identityHashCode(quotaWatcher), quotaWatcher);
-
             final OptionalLimit seriesLimit =
                 options.seriesLimit().orElse(LocalMetricManager.this.seriesLimit);
 
@@ -392,65 +383,68 @@ public class LocalMetricManager implements MetricManager {
             final Span findSeriesSpan = tracer.spanBuilderWithExplicitParent(
                 "localMetricsManager.findSeries", parentSpan).startSpan();
 
-            // Transform that takes the result from ES metadata lookup to fetch from backend
-            final LazyTransform<FindSeries, FullQuery> transform =
-                new Transform(request,
-                    failOnLimits,
-                    seriesLimit,
-                    groupLimit,
-                    quotaWatcher,
-                    dataInMemoryReporter,
-                    findSeriesSpan);
+            final QuotaWatcher quotaWatcher = new QuotaWatcher(
+                options.dataLimit().orElse(dataLimit).asLong().orElse(Long.MAX_VALUE),
+                options.aggregationLimit().orElse(aggregationLimit).asLong().orElse(Long.MAX_VALUE),
+                dataInMemoryReporter
+            );
 
-            return metadata
-                .findSeries(FindSeries.Request.withLimit(request, seriesLimit))
-                .onDone(reporter.reportFindSeries())
-                .onResolved(t -> findSeriesSpan.putAttribute(
-                    "seriesCount", longAttributeValue(t.getSeries().size())))
-                .lazyTransform(transform)
-                .directTransform(fullQuery -> {
-                    queryLogger.logOutgoingResponseAtNode(queryContext, fullQuery);
-                    return fullQuery;
-                })
-                .onDone(reporter.reportQueryMetrics())
-                .onDone(new EndSpanFutureReporter(findSeriesSpan))
-                .onDone(new FutureDone<>() {
-                    @Override
-                    public void failed(final Throwable cause) throws Exception {
-                        QuotaWatcher removed = quotaWatchers.remove(System.identityHashCode(quotaWatcher));
-                        cleanQuotaWatchers(quotaWatcher);
-                        log.info("onDone.failed {}; removed: {}", quotaWatchers.size(), removed);
-                    }
+            try {
 
-                    @Override
-                    public void resolved(final FullQuery result) throws Exception {
-                        QuotaWatcher removed = quotaWatchers.remove(System.identityHashCode(quotaWatcher));
-                        cleanQuotaWatchers(quotaWatcher);
-                        log.info("onDone.resolved {}; removed: {}", quotaWatchers.size(), removed);
-                    }
+                // Transform that takes the result from ES metadata lookup to fetch from backend
+                final LazyTransform<FindSeries, FullQuery> transform =
+                    new Transform(request,
+                        failOnLimits,
+                        seriesLimit,
+                        groupLimit,
+                        quotaWatcher,
+                        dataInMemoryReporter,
+                        findSeriesSpan);
 
-                    @Override
-                    public void cancelled() throws Exception {
-                        QuotaWatcher removed = quotaWatchers.remove(System.identityHashCode(quotaWatcher));
-                        cleanQuotaWatchers(quotaWatcher);
-                        log.info("onDone.cancelled {}; removed: {}", quotaWatchers.size(), removed);
-                    }
-                });
-        }
+                // Add watcher to set to compute stats across all queries
+                quotaWatchers.put(quotaWatcher, quotaWatcher);
 
-        private void cleanQuotaWatchers(QuotaWatcher quotaWatcher) {
-            // Let's find any old watchers based on start timestamp
-            log.info("Millis QuotaWatcher was alive: {}",
-                (System.currentTimeMillis() - quotaWatcher.startMS));
+                return metadata
+                    .findSeries(FindSeries.Request.withLimit(request, seriesLimit))
+                    .onDone(reporter.reportFindSeries())
+                    .onResolved(t -> findSeriesSpan.putAttribute(
+                        "seriesCount", longAttributeValue(t.getSeries().size())))
+                    .lazyTransform(transform)
+                    .directTransform(fullQuery -> {
+                        queryLogger.logOutgoingResponseAtNode(queryContext, fullQuery);
+                        return fullQuery;
+                    })
+                    .onDone(reporter.reportQueryMetrics())
+                    .onDone(new EndSpanFutureReporter(findSeriesSpan))
+                    .onDone(new FutureDone<>() {
+                        @Override
+                        public void failed(final Throwable cause) throws Exception {
+                            QuotaWatcher removed = quotaWatchers.remove(quotaWatcher);
+                            log.info("onDone.failed {}; removed: {}",
+                                quotaWatchers.size(), removed);
+                        }
 
-            quotaWatchers.entrySet().removeIf(qw -> {
-                if (System.currentTimeMillis() - qw.getValue().startMS > 120_000) {
-                    log.info("Removing QuotaWatcher with MS alive: {}",
-                        (System.currentTimeMillis() - qw.getValue().startMS));
-                    return true;
-                }
-                return false;
-            });
+                        @Override
+                        public void resolved(final FullQuery result) throws Exception {
+                            QuotaWatcher removed = quotaWatchers.remove(quotaWatcher);
+                            log.info("onDone.resolved {}; removed: {}",
+                                quotaWatchers.size(), removed);
+                        }
+
+                        @Override
+                        public void cancelled() throws Exception {
+                            QuotaWatcher removed = quotaWatchers.remove(quotaWatcher);
+                            log.info("onDone.cancelled {}; removed: {}",
+                                quotaWatchers.size(), removed);
+                        }
+                    });
+            } catch (Exception e) {
+                log.error("Transform exception", e);
+                QuotaWatcher removed = quotaWatchers.remove(quotaWatcher);
+                log.info("Transform exception {}; removed: {}",
+                    quotaWatchers.size(), removed);
+                throw e;
+            }
         }
 
         @Override
