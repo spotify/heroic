@@ -49,13 +49,13 @@ import javax.inject.Named;
 public final class BigtableMetricModule implements MetricModule, DynamicModuleId {
     private static final String BIGTABLE_CONFIGURE_PARAM = "bigtable.configure";
 
-    /* default number of Rows for each batch mutation */
-    public static final int DEFAULT_MUTATION_BATCH_SIZE = 1_000;
+    /* default number of Cells for each batch mutation */
+    public static final int DEFAULT_MUTATION_BATCH_SIZE = 10_000;
 
-    /* maximum possible number of Rows for each batch mutation */
+    /* maximum possible number of Cells for each batch mutation */
     public static final int MAX_MUTATION_BATCH_SIZE = 1_000_000;
 
-    /* minimum possible number of Rows supported for each batch mutation */
+    /* minimum possible number of Cells supported for each batch mutation */
     public static final int MIN_MUTATION_BATCH_SIZE = 10;
 
     private static final String DEFAULT_GROUP = "bigtable";
