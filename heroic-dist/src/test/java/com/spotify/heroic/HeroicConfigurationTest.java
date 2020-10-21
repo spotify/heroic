@@ -88,7 +88,6 @@ public class HeroicConfigurationTest {
             int limit = suggestBackendKV.getNumSuggestionsLimit().getLimit();
             assertEquals(EXPECTED_NUM_SUGGESTIONS_LIMIT, limit);
 
-
             return null;
         });
     }

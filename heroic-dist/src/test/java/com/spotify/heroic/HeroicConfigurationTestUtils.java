@@ -3,6 +3,9 @@ package com.spotify.heroic;
 import java.io.InputStream;
 import java.util.function.Supplier;
 
+/**
+ * Provides utility functions for testing the processing of heroic.yaml.
+ */
 public class HeroicConfigurationTestUtils {
 
     public static HeroicCoreInstance testConfiguration(final String name) throws Exception {

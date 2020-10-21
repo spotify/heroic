@@ -75,6 +75,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
     private final CredentialsBuilder credentials;
     private final boolean configure;
     private final boolean disableBulkMutations;
+
     /** This sets the max number of Rows in each batch that's written to the
      * BigTable Client. <p>Note that that does not mean that the client will send
      * that many in one request. That is seemingly controlled by:
@@ -91,6 +92,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
     * For controlling how many rows we send each time to the Bigtable client:
     * @see BigtableMetricModule#maxWriteBatchSize
     */
+    @SuppressWarnings("LongLine")
     private final Optional<Integer> batchSize;
     private final String emulatorEndpoint;
 
@@ -139,6 +141,10 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
             .depends(depends)
             .m(new M())
             .build();
+    }
+
+    public int getMaxWriteBatchSize() {
+        return maxWriteBatchSize;
     }
 
     @BigtableScope
