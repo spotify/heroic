@@ -1,4 +1,4 @@
-FROM maven:3.5.4-jdk-11 as builder
+FROM maven:3.6.3-jdk-11 as builder
 LABEL maintainer="prism <prism@spotify.com>"
 
 RUN apt-get update && apt-get install -y git
