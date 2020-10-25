@@ -85,14 +85,13 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
     private final int flushIntervalSeconds;
 
     /**
-    * PSK - I believe this sets
-    * com.google.cloud.bigtable.config.BulkOptions.BIGTABLE_BULK_MAX_ROW_KEY_COUNT_DEFAULT
-    * See <a href="https://github.com/googleapis/java-bigtable-hbase/blob/500eed1ef0bb52dc90f170e8675ac21b5cb2d872/bigtable-client-core-parent/bigtable-client-core/src/main/java/com/google/cloud/bigtable/config/BulkOptions.java#L53">http://github.com/googleapis/java-bigtable-hbase</a>
-    * <p>
-    * For controlling how many rows we send each time to the Bigtable client:
-    * @see BigtableMetricModule#maxWriteBatchSize
-    */
-    @SuppressWarnings("LongLine")
+     * batchSize is thought to set com.google.cloud.bigtable.config.BulkOptions
+     * .BIGTABLE_BULK_MAX_ROW_KEY_COUNT_DEFAULT .
+     * <p>
+     * For controlling how many rows we send each time to the Bigtable client,
+     * @see BigtableMetricModule#maxWriteBatchSize
+     */
+    @SuppressWarnings("LineLength")
     private final Optional<Integer> batchSize;
     private final String emulatorEndpoint;
 
@@ -312,9 +311,20 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         }
 
         public BigtableMetricModule build() {
-            return new BigtableMetricModule(id, groups, project, instance, profile,
-                table, credentials, configure, disableBulkMutations, maxWriteBatchSize, flushIntervalSeconds,
-                batchSize, emulatorEndpoint);
+            return new BigtableMetricModule(
+                id,
+                groups,
+                project,
+                instance,
+                profile,
+                table,
+                credentials,
+                configure,
+                disableBulkMutations,
+                maxWriteBatchSize,
+                flushIntervalSeconds,
+                batchSize,
+                emulatorEndpoint);
         }
     }
 }
