@@ -23,6 +23,7 @@ package com.spotify.heroic.metric.bigtable;
 
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
+import static org.apache.commons.lang3.builder.ToStringStyle.MULTI_LINE_STYLE;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -44,9 +45,14 @@ import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
 import java.util.Optional;
 import javax.inject.Named;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @ModuleId("bigtable")
 public final class BigtableMetricModule implements MetricModule, DynamicModuleId {
+
+    private static final Logger log = LoggerFactory.getLogger(BigtableMetricModule.class);
     private static final String BIGTABLE_CONFIGURE_PARAM = "bigtable.configure";
 
     /* default number of Cells for each batch mutation */
@@ -130,6 +136,8 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         this.flushIntervalSeconds = flushIntervalSeconds.orElse(DEFAULT_FLUSH_INTERVAL_SECONDS);
         this.batchSize = batchSize;
         this.emulatorEndpoint = emulatorEndpoint.orElse(null);
+
+        log.info("BigTable Metric Module: \n{}", toString());
     }
 
     @Override
@@ -326,5 +334,24 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
                 batchSize,
                 emulatorEndpoint);
         }
+    }
+
+    @Override
+    public String toString() {
+        return new ToStringBuilder(this, MULTI_LINE_STYLE)
+            .append("id", id.orElse("N/A"))
+            .append("groups", groups)
+            .append("project", project)
+            .append("instance", instance)
+            .append("profile", profile)
+            .append("table", table)
+            .append("credentials", credentials)
+            .append("configure", configure)
+            .append("disableBulkMutations", disableBulkMutations)
+            .append("maxWriteBatchSize", maxWriteBatchSize)
+            .append("flushIntervalSeconds", flushIntervalSeconds)
+            .append("batchSize", batchSize)
+            .append("emulatorEndpoint", emulatorEndpoint)
+            .toString();
     }
 }
