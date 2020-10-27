@@ -14,6 +14,7 @@ shadowJar {
 
     // Log4j2 plugins get lost/overwritten when creating a shaded jar. This transformer merges
     // them.
+    //noinspection LongLine
     transform(com.github.jengelman.gradle.plugins.shadow.transformers.Log4j2PluginsCacheFileTransformer)
 
     append 'META-INF/services/org.eclipse.jetty.http.HttpFieldPreEncoder'
@@ -59,6 +60,8 @@ dependencies {
     implementation 'args4j:args4j'
     implementation 'com.google.guava:guava'
     implementation 'eu.toolchain.async:tiny-async-core'
+    implementation 'eu.toolchain.serializer:tiny-serializer-core'
+
     implementation 'jline:jline:2.12'
     implementation 'com.google.protobuf:protobuf-java'
     implementation 'org.apache.commons:commons-math3'

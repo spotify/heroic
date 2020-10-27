@@ -141,4 +141,8 @@ class BigtableAnalyticsMetricBackend implements MetricBackend {
         return "BigtableAnalyticsMetricBackend(analytics=" + this.analytics + ", backend="
                + this.backend + ")";
   }
+
+    public MetricBackend getBackend() {
+        return backend;
+    }
 }
