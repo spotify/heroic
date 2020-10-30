@@ -770,7 +770,7 @@ public class LocalMetricManager implements MetricManager {
             long total = watchers.stream().map(QuotaWatcher::getReadData)
                 .reduce(0L, Long::sum);
             reporter.reportTotalReadDataPoints(total);
-            if (curDataPoints > LOGLIMIT) {
+            if (total > LOGLIMIT) {
                 log.info("Data Points READ: Instance {}; This Query: {}; Delta: {}" +
                     " (# Watchers: {})", total, curDataPoints,
                     n, quotaWatchers.size());
@@ -787,7 +787,7 @@ public class LocalMetricManager implements MetricManager {
             long total = watchers.stream().map(QuotaWatcher::getRetainData)
                 .reduce(0L, Long::sum);
             reporter.reportTotalRetainedDataPoints(total);
-            if (curRetainedDataPoints > LOGLIMIT) {
+            if (total > LOGLIMIT) {
                 log.info("Data Points RETAINED: Instance {}; This Query: {}; Delta: {} " +
                     "(# Watchers: {})", total, curRetainedDataPoints,
                     n, quotaWatchers.size());
