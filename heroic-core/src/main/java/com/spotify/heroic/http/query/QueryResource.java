@@ -1,3 +1,4 @@
+package com.spotify.heroic.http.query;
 /*
  * Copyright (c) 2015 Spotify AB.
  *
@@ -19,7 +20,6 @@
  * under the License.
  */
 
-package com.spotify.heroic.http.query;
 
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.Query;
