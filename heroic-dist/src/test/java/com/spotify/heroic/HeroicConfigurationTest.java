@@ -126,22 +126,23 @@ public class HeroicConfigurationTest {
     public void testConditionalFeatures() throws Exception {
         final HeroicCoreInstance instance = testConfiguration("heroic-conditional-features.yml");
 
-        final HttpContext httpContext1 = mock(HttpContext.class);
-        doReturn(Optional.of("bar")).when(httpContext1).getClientId();
-        final HttpContext httpContext2 = mock(HttpContext.class);
-        doReturn(Optional.empty()).when(httpContext2).getClientId();
+        final HttpContext httpContextClientIdBar = mock(HttpContext.class);
+        doReturn(Optional.of("bar")).when(httpContextClientIdBar).getClientId();
+        final HttpContext httpContextEmptyClientId = mock(HttpContext.class);
+        doReturn(Optional.empty()).when(httpContextEmptyClientId).getClientId();
 
-        final QueryContext context1 = mock(QueryContext.class);
-        doReturn(Optional.of(httpContext1)).when(context1).httpContext();
-        final QueryContext context2 = mock(QueryContext.class);
-        doReturn(Optional.of(httpContext2)).when(context2).httpContext();
+        final QueryContext queryContextClientIdBar = mock(QueryContext.class);
+        doReturn(Optional.of(httpContextClientIdBar)).when(queryContextClientIdBar).httpContext();
+        final QueryContext queryContextAnonymous = mock(QueryContext.class);
+        doReturn(Optional.of(httpContextEmptyClientId)).when(queryContextAnonymous).httpContext();
 
         instance.inject(coreComponent -> {
             final ConditionalFeatures conditional = coreComponent.conditionalFeatures().get();
 
             assertEquals(FeatureSet.of(Feature.CACHE_QUERY),
-                conditional.match(context1));
-            assertEquals(FeatureSet.empty(), conditional.match(context2));
+                conditional.match(queryContextClientIdBar));
+            assertEquals(FeatureSet.empty(), conditional.match(queryContextAnonymous));
+            assertEquals(Feature.END_BUCKET, conditional.match(queryContextAnonymous));
 
             return null;
         });

@@ -7,12 +7,6 @@ import com.spotify.heroic.dagger.DaggerCoreComponent;
 import com.spotify.heroic.metric.LocalMetricManager;
 import com.spotify.heroic.metric.bigtable.BigtableBackend;
 import com.spotify.heroic.metric.bigtable.BigtableMetricModule;
-import com.spotify.heroic.metric.bigtable.MetricsRowKeySerializer;
-import eu.toolchain.async.TinyAsync;
-import eu.toolchain.serializer.TinySerializer;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
 /**
@@ -29,22 +23,18 @@ public class HeroicMetricsConfigurationTest {
 
     public static final int EXPECTED_MAX_WRITE_BATCH_SIZE = 250;
 
-    @NotNull
-    private static BigtableBackend getBigtableBackend(int maxWriteBatchSize) {
-        final ExecutorService executor = Executors.newSingleThreadExecutor();
-        final TinyAsync async = TinyAsync.builder().executor(executor).build();
-        var serializer = TinySerializer.builder().build();
-
-        var bigtableBackend = new BigtableBackend(async, serializer, new MetricsRowKeySerializer(), null, null, "bananas", false, maxWriteBatchSize, null, null);
-        return bigtableBackend;
-    }
-
     private static BigtableMetricModule getBigtableMetricModule(int maxWriteBatchSize) {
         return new BigtableMetricModule.Builder()
             .maxWriteBatchSize(maxWriteBatchSize)
             .batchSize(1000)
             .project("banana_count")
             .build();
+    }
+
+    @Test
+    public void testMandatoryClientIdWarning() throws Exception {
+        final var instance = testConfiguration("heroic-all.yml");
+        // TODO ...
     }
 
     @Test

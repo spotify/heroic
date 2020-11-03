@@ -32,6 +32,8 @@ import com.spotify.heroic.jetty.JettyJSONErrorHandler;
 import com.spotify.heroic.jetty.JettyServerConnector;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
+import com.spotify.heroic.requestfilters.MandatoryClientIdUtil.InfractionSeverity;
+import com.spotify.heroic.servlet.ClientIdFilter;
 import com.spotify.heroic.servlet.ShutdownFilter;
 import com.spotify.heroic.tracing.TracingConfig;
 import eu.toolchain.async.AsyncFramework;
@@ -220,6 +222,10 @@ public class HttpServer implements LifeCycles {
 
         final RewriteHandler rewrite = new RewriteHandler();
         makeRewriteRules(rewrite);
+
+        // TODO pass the correct InfractionSeverity from config
+        context.addFilter(new FilterHolder(
+            new ClientIdFilter(InfractionSeverity.PERMIT, mapper)), "/*", null);
 
         final HandlerCollection handlers = new HandlerCollection();
         handlers.setHandlers(new Handler[]{rewrite, context, requestLogHandler});

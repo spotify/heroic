@@ -131,6 +131,8 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     private final Meter written = new Meter();
     private final int maxWriteBatchSize;
 
+    private final String missingClientIdSeverity;
+
     @Inject
     public BigtableBackend(
         final AsyncFramework async,
@@ -141,6 +143,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         @Named("table") final String table,
         @Named("configure") final boolean configure,
         @Named("maxWriteBatchSize") final int maxWriteBatchSize,
+        @Named("missingClientIdSeverity") final String missingClientIdSeverity,
         MetricBackendReporter reporter,
         @Named("application/json") ObjectMapper mapper
     ) {
@@ -151,6 +154,10 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         this.sortedMapSerializer = serializer.sortedMap(serializer.string(), serializer.string());
         this.connection = connection;
         this.maxWriteBatchSize = maxWriteBatchSize;
+        // TODO
+        //this.missingClientIdSeverity =
+        // MandatoryClientIdUtil.parseErrorLevel(missingClientIdSeverity);
+        this.missingClientIdSeverity = "";
         this.groups = groups;
         this.table = table;
         this.configure = configure;

@@ -21,6 +21,7 @@ metrics:
     - type: bigtable
       project: project
       maxWriteBatchSize: 250
+      missingClientIdSeverity: Warning
     - type: datastax
     - type: memory
 
