@@ -22,6 +22,7 @@
 package com.spotify.heroic.consumer.schemas;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -117,16 +118,28 @@ public class Spotify100ProtoTest {
             .putResource("resource", "bar")
             .build();
 
-        final Batch batch = Batch.newBuilder().addMetric(metric).build();
+        final Metric metric2 = Metric.newBuilder()
+            .setKey("foo")
+            .setDistributionTypeValue(Spotify100.Value.newBuilder()
+                .setDoubleValue(0.00).build())
+            .setTime(1542830480000L)
+            .putTags("tag1", "foo")
+            .putResource("resource", "bar")
+            .build();
+
+        List<Metric> metrics = List.of(metric, metric2);
+
+        final Batch batch = Batch.newBuilder().addAllMetric(metrics).build();
 
         consumer.consume(Snappy.compress(batch.toByteArray()));
 
         final Series s = Series.of(metric.getKey(), metric.getTagsMap(), metric.getResourceMap());
-        final Point p = new Point(metric.getTime(), metric.getDistributionTypeValue().getDoubleValue());
-        final List<Point> points = ImmutableList.of(p);
+        final Point p1 = new Point(metric.getTime(), metric.getDistributionTypeValue().getDoubleValue());
+        final Point p2 = new Point(metric2.getTime(), metric2.getDistributionTypeValue().getDoubleValue());
 
-        verify(reporter).reportMessageDrift(5000);
-        verify(ingestion).write(new Request(s, MetricCollection.points(points)));
+        verify(reporter, times(2)).reportMessageDrift(5000);
+        verify(ingestion).write(new Request(s, MetricCollection.points(ImmutableList.of(p1))));
+        verify(ingestion).write(new Request(s, MetricCollection.points(ImmutableList.of(p2))));
     }
 
 
