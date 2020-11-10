@@ -20,8 +20,20 @@ message Metric {
 
   // resource "tags" associated to metric.
   map<string, string> resource = 5;
+
+  // Distribution type value
+  Value distribution_type_value = 6;
 }
 
 message Batch {
   repeated Metric metric = 1;
 }
+
+
+message Value {
+  oneof value {
+    double double_value = 1;
+    bytes distribution_value= 2;
+  }
+}
+

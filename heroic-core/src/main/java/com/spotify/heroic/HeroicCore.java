@@ -142,6 +142,8 @@ public class HeroicCore implements HeroicConfiguration {
         (Thread t, Throwable e) -> {
             //noinspection finally
             try {
+                System.out.print("The Heroic is dying heroically now!\n");
+                System.out.flush();
                 System.err.println(
                     String.format("Uncaught exception caught in thread %s, exiting...", t));
                 e.printStackTrace(System.err);

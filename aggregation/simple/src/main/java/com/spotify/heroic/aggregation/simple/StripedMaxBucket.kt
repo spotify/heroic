@@ -26,7 +26,6 @@ import com.spotify.heroic.aggregation.DoubleBucket
 import com.spotify.heroic.metric.Point
 import com.spotify.heroic.metric.Spread
 import java.util.concurrent.atomic.DoubleAccumulator
-import java.util.function.DoubleBinaryOperator
 
 /**
  * A bucket implementation that retains the largest (max) value seen.
@@ -40,12 +39,12 @@ data class StripedMaxBucket(override val timestamp: Long) : AbstractBucket(), Do
 
     private val max = DoubleAccumulator(maxFn, java.lang.Double.NEGATIVE_INFINITY)
 
-    override fun updatePoint(key: Map<String, String>, d: Point) {
-        max.accumulate(d.value)
+    override fun updatePoint(key: Map<String, String>, sample: Point) {
+        max.accumulate(sample.value)
     }
 
-    override fun updateSpread(key: Map<String, String>, d: Spread) {
-        max.accumulate(d.max)
+    override fun updateSpread(key: Map<String, String>, sample: Spread) {
+        max.accumulate(sample.max)
     }
 
     override fun value(): Double {

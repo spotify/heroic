@@ -23,6 +23,7 @@ package com.spotify.heroic.suggest.elasticsearch;
 
 import static org.junit.Assert.assertEquals;
 
+import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.elasticsearch.ClientWrapper;
 import com.spotify.heroic.elasticsearch.ConnectionModule;
 import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
@@ -31,6 +32,7 @@ import com.spotify.heroic.suggest.SuggestModule;
 import com.spotify.heroic.suggest.WriteSuggest;
 import com.spotify.heroic.test.AbstractSuggestBackendIT;
 import com.spotify.heroic.test.ElasticSearchTestContainer;
+import com.spotify.heroic.test.TimestampPrepender.EntityType;
 import org.junit.Test;
 
 public abstract class AbstractSuggestBackendKVIT extends AbstractSuggestBackendIT {
@@ -63,10 +65,15 @@ public abstract class AbstractSuggestBackendKVIT extends AbstractSuggestBackendI
 
     @Test
     public void writeDuplicatesReturnErrorInResponse() throws Exception {
+        var smallTestSeries =
+            createSmallSeries(0L, EntityType.KEY);
+
         final WriteSuggest firstWrite =
-            backend.write(new WriteSuggest.Request(testSeries.get(0).getKey(), range)).get();
+            backend.write(new WriteSuggest.Request(smallTestSeries.get(0).getKey(),
+                UNIVERSAL_RANGE)).get();
         final WriteSuggest secondWrite =
-            backend.write(new WriteSuggest.Request(testSeries.get(0).getKey(), range)).get();
+            backend.write(new WriteSuggest.Request(smallTestSeries.get(0).getKey(),
+                UNIVERSAL_RANGE)).get();
 
         assertEquals(0, firstWrite.getErrors().size());
         assertEquals(2, secondWrite.getErrors().size());

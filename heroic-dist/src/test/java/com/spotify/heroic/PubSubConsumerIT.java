@@ -22,7 +22,7 @@
 package com.spotify.heroic;
 
 import static junit.framework.TestCase.assertEquals;
-import static org.junit.Assume.assumeNotNull;
+
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.cloud.pubsub.v1.Publisher;
@@ -34,16 +34,17 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.consumer.pubsub.EmulatorHelper;
 import com.spotify.heroic.consumer.pubsub.PubSubConsumerModule;
 import com.spotify.heroic.consumer.schemas.Spotify100;
+import com.spotify.heroic.consumer.schemas.spotify100.Version;
 import com.spotify.heroic.ingestion.IngestionModule;
 import com.spotify.heroic.instrumentation.OperationsLogImpl;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricManagerModule;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.memory.MemoryMetricModule;
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import net.jcip.annotations.NotThreadSafe;
@@ -97,34 +98,41 @@ public class PubSubConsumerIT extends AbstractConsumerIT {
             .metrics(MetricManagerModule.builder().backends(ImmutableList.of(metricModule)));
     }
 
+
     @Override
-    protected Consumer<WriteMetric.Request> setupConsumer() {
+    protected Consumer<WriteMetric.Request> setupConsumer(Version version) {
         return request -> {
             final MetricCollection mc = request.getData();
 
-            if (mc.getType() != MetricType.POINT) {
+            final List<MetricType> list = List.of(MetricType.POINT, MetricType.DISTRIBUTION_POINTS);
+
+            if (!list.contains(mc.getType())) {
                 throw new RuntimeException("Unsupported metric type: " + mc.getType());
             }
 
             final Series series = request.getSeries();
-            for (final Point p : mc.getDataAs(Point.class)) {
-                final DataVersion1 src =
-                    new DataVersion1("1.1.0", series.getKey(), "localhost", p.getTimestamp(),
-                        series.getTags(), series.getResource(), p.getValue());
 
-                final PubsubMessage pubsubMessage;
+            final List<TMetric> metrics = createTestMetricCollection(request);
 
-                try {
-                    String message = objectMapper.writeValueAsString(src);
-                    ByteString data = ByteString.copyFromUtf8(message);
-                    pubsubMessage = PubsubMessage.newBuilder().setData(data).build();
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-
-                publisher.publish(pubsubMessage);
+            for (TMetric metric : metrics){
+                Object jsonMetric = createJsonMetric(metric, series);
+                publish(jsonMetric);
             }
         };
+    }
+
+    private void publish(Object jsonMetric){
+        final PubsubMessage pubsubMessage;
+
+        try {
+            String message = objectMapper.writeValueAsString(jsonMetric);
+            ByteString data = ByteString.copyFromUtf8(message);
+            pubsubMessage = PubsubMessage.newBuilder().setData(data).build();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        publisher.publish(pubsubMessage);
     }
 
     @Override

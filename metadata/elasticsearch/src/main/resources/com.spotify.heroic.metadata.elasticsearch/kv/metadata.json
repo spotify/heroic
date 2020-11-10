@@ -13,7 +13,8 @@
       "doc_values": true
     },
     "hash": {
-      "type": "keyword"
+      "type": "keyword",
+      "doc_values": true
     }
   }
 }

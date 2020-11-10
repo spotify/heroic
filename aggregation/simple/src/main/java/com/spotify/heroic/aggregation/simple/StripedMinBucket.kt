@@ -39,12 +39,12 @@ data class StripedMinBucket(override val timestamp: Long) : AbstractBucket(), Do
 
     private val min = DoubleAccumulator(minFn, java.lang.Double.POSITIVE_INFINITY)
 
-    override fun updateSpread(key: Map<String, String>, d: Spread) {
-        min.accumulate(d.min)
+    override fun updateSpread(key: Map<String, String>, sample: Spread) {
+        min.accumulate(sample.min)
     }
 
-    override fun updatePoint(key: Map<String, String>, d: Point) {
-        min.accumulate(d.value)
+    override fun updatePoint(key: Map<String, String>, sample: Point) {
+        min.accumulate(sample.value)
     }
 
     override fun value(): Double {

@@ -41,7 +41,8 @@ public enum MetricType {
     SPREAD(Spread.class, "spreads"),
     GROUP(MetricGroup.class, "groups"),
     // TODO: rename to PAYLOAD.
-    CARDINALITY(Payload.class, "cardinality");
+    CARDINALITY(Payload.class, "cardinality"),
+    DISTRIBUTION_POINTS(DistributionPoint.class, "distributionPoints");
     // @formatter:on
 
     private final Class<? extends Metric> type;

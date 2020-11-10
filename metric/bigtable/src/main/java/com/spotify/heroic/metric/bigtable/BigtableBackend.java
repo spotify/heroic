@@ -41,8 +41,10 @@ import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.metric.AbstractMetricBackend;
 import com.spotify.heroic.metric.BackendEntry;
+import com.spotify.heroic.metric.DistributionPoint;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
+import com.spotify.heroic.metric.HeroicDistribution;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricReadResult;
@@ -97,8 +99,8 @@ import org.slf4j.LoggerFactory;
 public class BigtableBackend extends AbstractMetricBackend implements LifeCycles {
     private static final Logger log = LoggerFactory.getLogger(BigtableBackend.class);
 
-    /* maxmimum number of cells supported for each batch mutation */
-    public static final int MAX_BATCH_SIZE = 10000;
+    /* maximum number of bytes of BigTable row key size allowed*/
+    public static final int MAX_KEY_ROW_SIZE = 4000;
 
     public static final QueryTrace.Identifier FETCH_SEGMENT =
         QueryTrace.identifier(BigtableBackend.class, "fetch_segment");
@@ -106,6 +108,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         QueryTrace.identifier(BigtableBackend.class, "fetch");
 
     public static final String POINTS = "points";
+    public static final String DISTRIBUTION_POINTS = "distriubutionPoints";
     public static final String EVENTS = "events";
     public static final long PERIOD = 0x100_000_000L;
 
@@ -126,6 +129,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         };
 
     private final Meter written = new Meter();
+    private final int maxWriteBatchSize;
 
     @Inject
     public BigtableBackend(
@@ -136,6 +140,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         final Groups groups,
         @Named("table") final String table,
         @Named("configure") final boolean configure,
+        @Named("maxWriteBatchSize") final int maxWriteBatchSize,
         MetricBackendReporter reporter,
         @Named("application/json") ObjectMapper mapper
     ) {
@@ -145,6 +150,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         this.rowKeySerializer = rowKeySerializer;
         this.sortedMapSerializer = serializer.sortedMap(serializer.string(), serializer.string());
         this.connection = connection;
+        this.maxWriteBatchSize = maxWriteBatchSize;
         this.groups = groups;
         this.table = table;
         this.configure = configure;
@@ -177,6 +183,13 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             });
 
             waitUntilColumnFamily(admin, table, POINTS).get();
+
+            table.getColumnFamily(DISTRIBUTION_POINTS).orElseGet(() -> {
+                log.info("Creating missing column family: " + DISTRIBUTION_POINTS);
+                return admin.createColumnFamily(table, DISTRIBUTION_POINTS);
+            });
+
+            waitUntilColumnFamily(admin, table, DISTRIBUTION_POINTS).get();
 
             table.getColumnFamily(EVENTS).orElseGet(() -> {
                 log.info("Creating missing column family: " + EVENTS);
@@ -259,6 +272,13 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         });
     }
 
+    private List<PreparedQuery> distributionPointsRanges(final FetchData.Request request)
+        throws IOException {
+        return ranges(request.getSeries(), request.getRange(), DISTRIBUTION_POINTS, (t, d) -> {
+            return DistributionPoint.create(HeroicDistribution.create(d), t);
+        });
+    }
+
     @Override
     public AsyncFuture<FetchData.Result> fetch(
         final FetchData.Request request,
@@ -277,6 +297,9 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                 case POINT:
                     return fetchBatch(
                         watcher, type, pointsRanges(request), c, consumer, parentSpan);
+                case DISTRIBUTION_POINTS:
+                    return fetchBatch(watcher, type, distributionPointsRanges(request), c,
+                        consumer, parentSpan);
                 default:
                     return async.resolved(new FetchData.Result(QueryTrace.of(FETCH),
                         new QueryError("unsupported source: " + request.getType())));
@@ -320,6 +343,10 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             case POINT:
                 return writeBatch(POINTS, series, client, g.getDataAs(Point.class),
                     d -> serializeValue(d.getValue()), parentSpan);
+            case DISTRIBUTION_POINTS:
+                return writeBatch(DISTRIBUTION_POINTS, series, client, g.getDataAs(
+                    DistributionPoint.class),
+                    d -> d.value().getValue(), parentSpan);
             default:
                 return async.resolved(new WriteMetric(
                     new QueryError("Unsupported metric type: " + g.getType())));
@@ -371,7 +398,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
             builder.setCell(columnFamily, offsetBytes, valueBytes);
 
-            if (builder.size() >= MAX_BATCH_SIZE) {
+            if (builder.size() >= maxWriteBatchSize) {
                 saved.add(Pair.of(rowKey, builder.build()));
                 building.put(rowKey, Mutations.builder());
             }
@@ -390,6 +417,14 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
         for (final Pair<RowKey, Mutations> e : saved) {
             final ByteString rowKeyBytes = rowKeySerializer.serializeFull(e.getKey());
+
+            if (rowKeyBytes.size() >= MAX_KEY_ROW_SIZE) {
+                reporter.reportWritesDroppedBySize();
+                log.error("Row key length greater than 4096 bytes (2): " + rowKeyBytes.size()
+                    + " " + rowKeyBytes);
+                continue;
+            }
+
             writes.add(client
                 .mutateRow(table, rowKeyBytes, e.getValue())
                 .directTransform(result -> timer.end()));
@@ -419,6 +454,14 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         final RequestTimer<WriteMetric> timer = WriteMetric.timer();
 
         final ByteString rowKeyBytes = rowKeySerializer.serializeFull(rowKey);
+
+        if (rowKeyBytes.size() >= MAX_KEY_ROW_SIZE) {
+            reporter.reportWritesDroppedBySize();
+            log.error("Row key length greater than 4096 bytes (1): " +
+                rowKeyBytes.size() + " " + rowKey);
+            return async.resolved().directTransform(result -> timer.end());
+        }
+
         return client
             .mutateRow(table, rowKeyBytes, builder.build())
             .directTransform(result -> timer.end());
@@ -601,14 +644,18 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
         // @formatter:off
         return ((long) (bytes[0] & 0xff) << 24) +
-               ((long) (bytes[1] & 0xff) << 16) +
-               ((long) (bytes[2] & 0xff) << 8) +
-               ((long) (bytes[3] & 0xff) << 0);
+            ((long) (bytes[1] & 0xff) << 16) +
+            ((long) (bytes[2] & 0xff) << 8) +
+            ((long) (bytes[3] & 0xff) << 0);
         // @formatter:on
     }
 
     public String toString() {
         return "BigtableBackend(connection=" + this.connection + ")";
+    }
+
+    public int getMaxWriteBatchSize() {
+        return maxWriteBatchSize;
     }
 
     private static final class PreparedQuery {
@@ -621,9 +668,9 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         private final long base;
 
         @java.beans.ConstructorProperties({ "rowKeyStart", "rowKeyEnd", "columnFamily",
-                                            "startQualifierOpen", "endQualifierClosed",
-                                            "deserializer",
-                                            "base" })
+            "startQualifierOpen", "endQualifierClosed",
+            "deserializer",
+            "base" })
         public PreparedQuery(final ByteString rowKeyStart,
                              final ByteString rowKeyEnd,
                              final String columnFamily,

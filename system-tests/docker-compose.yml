@@ -40,7 +40,8 @@ services:
       - 0.0.0.0:8085
 
   bigtable:
-    image: bigtruedata/gcloud-bigtable-emulator
+    # TODO reverse emulator image to bigtruedata/gcloud-bigtable-emulator when they fix it
+    image: malish8632/bigtable-emulator:latest
     ports:
       - '8086:8086'
     command:

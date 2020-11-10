@@ -62,6 +62,7 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.StreamCollector;
+import eu.toolchain.async.FutureDone;
 import io.opencensus.trace.Span;
 import io.opencensus.trace.Tracer;
 import java.util.ArrayList;
@@ -74,6 +75,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.inject.Inject;
@@ -102,6 +105,8 @@ public class LocalMetricManager implements MetricManager {
     private final MetricBackendReporter reporter;
     private final QueryLogger queryLogger;
     private final Semaphore concurrentQueries;
+    private static final ConcurrentMap<QuotaWatcher, QuotaWatcher> quotaWatchers =
+        new ConcurrentHashMap<>();
 
     /**
      * @param groupLimit The maximum amount of groups this manager will allow to be generated.
@@ -369,12 +374,6 @@ public class LocalMetricManager implements MetricManager {
 
             final DataInMemoryReporter dataInMemoryReporter = reporter.newDataInMemoryReporter();
 
-            final QuotaWatcher quotaWatcher = new QuotaWatcher(
-                options.dataLimit().orElse(dataLimit).asLong().orElse(Long.MAX_VALUE),
-                options.aggregationLimit().orElse(aggregationLimit).asLong().orElse(Long.MAX_VALUE),
-                dataInMemoryReporter
-            );
-
             final OptionalLimit seriesLimit =
                 options.seriesLimit().orElse(LocalMetricManager.this.seriesLimit);
 
@@ -387,30 +386,69 @@ public class LocalMetricManager implements MetricManager {
             final Span findSeriesSpan = tracer.spanBuilderWithExplicitParent(
                 "localMetricsManager.findSeries", parentSpan).startSpan();
 
-            // Transform that takes the result from ES metadata lookup to fetch from backend
-            final LazyTransform<FindSeries, FullQuery> transform =
-                new Transform(request,
-                    failOnLimits,
-                    seriesLimit,
-                    groupLimit,
-                    quotaWatcher,
-                    dataInMemoryReporter,
-                    findSeriesSpan);
+            final QuotaWatcher quotaWatcher = new QuotaWatcher(
+                options.dataLimit().orElse(dataLimit).asLong().orElse(Long.MAX_VALUE),
+                options.aggregationLimit().orElse(aggregationLimit).asLong().orElse(Long.MAX_VALUE),
+                dataInMemoryReporter
+            );
 
-            return metadata
-                .findSeries(FindSeries.Request.withLimit(request, seriesLimit))
-                .onDone(reporter.reportFindSeries())
-                .onResolved(t -> findSeriesSpan.putAttribute(
-                    "seriesCount", longAttributeValue(t.getSeries().size())))
-                .lazyTransform(transform)
-                .directTransform(fullQuery -> {
-                    queryLogger.logOutgoingResponseAtNode(queryContext, fullQuery);
-                    return fullQuery;
-                })
-                .onDone(reporter.reportQueryMetrics())
-                .onDone(new EndSpanFutureReporter(findSeriesSpan));
+            try {
+
+                // Transform that takes the result from ES metadata lookup to fetch from backend
+                final LazyTransform<FindSeries, FullQuery> transform =
+                    new Transform(request,
+                        failOnLimits,
+                        seriesLimit,
+                        groupLimit,
+                        quotaWatcher,
+                        dataInMemoryReporter,
+                        findSeriesSpan);
+
+                // Add watcher to set to compute stats across all queries
+                quotaWatchers.put(quotaWatcher, quotaWatcher);
+
+                return metadata
+                    .findSeries(FindSeries.Request.withLimit(request, seriesLimit))
+                    .onDone(reporter.reportFindSeries())
+                    .onResolved(t -> findSeriesSpan.putAttribute(
+                        "seriesCount", longAttributeValue(t.getSeries().size())))
+                    .lazyTransform(transform)
+                    .directTransform(fullQuery -> {
+                        queryLogger.logOutgoingResponseAtNode(queryContext, fullQuery);
+                        return fullQuery;
+                    })
+                    .onDone(reporter.reportQueryMetrics())
+                    .onDone(new EndSpanFutureReporter(findSeriesSpan))
+                    .onDone(new FutureDone<>() {
+                        @Override
+                        public void failed(final Throwable cause) throws Exception {
+                            QuotaWatcher removed = quotaWatchers.remove(quotaWatcher);
+                            log.info("onDone.failed {}; removed: {}",
+                                quotaWatchers.size(), removed);
+                        }
+
+                        @Override
+                        public void resolved(final FullQuery result) throws Exception {
+                            QuotaWatcher removed = quotaWatchers.remove(quotaWatcher);
+                            log.info("onDone.resolved {}; removed: {}",
+                                quotaWatchers.size(), removed);
+                        }
+
+                        @Override
+                        public void cancelled() throws Exception {
+                            QuotaWatcher removed = quotaWatchers.remove(quotaWatcher);
+                            log.info("onDone.cancelled {}; removed: {}",
+                                quotaWatchers.size(), removed);
+                        }
+                    });
+            } catch (Exception e) {
+                log.error("Transform exception", e);
+                QuotaWatcher removed = quotaWatchers.remove(quotaWatcher);
+                log.info("Transform exception {}; removed: {}",
+                    quotaWatchers.size(), removed);
+                throw e;
+            }
         }
-
 
         @Override
         public Statistics getStatistics() {
@@ -645,6 +683,7 @@ public class LocalMetricManager implements MetricManager {
             }
 
             checkIssues(failed, cancelled).map(RuntimeException::new).ifPresent(e -> {
+                log.info("in top check {}", watcher);
                 for (final Throwable t : errors) {
                     e.addSuppressed(t);
                 }
@@ -708,14 +747,15 @@ public class LocalMetricManager implements MetricManager {
         }
     }
 
-    private static class QuotaWatcher implements FetchQuotaWatcher, RetainQuotaWatcher {
+    private class QuotaWatcher implements FetchQuotaWatcher, RetainQuotaWatcher {
         private final long dataLimit;
         private final long retainLimit;
         private final DataInMemoryReporter dataInMemoryReporter;
+        private static final long LOGLIMIT = 5_000_000;
 
         private final AtomicLong read = new AtomicLong();
         private final AtomicLong retained = new AtomicLong();
-
+        private final long startMS;
         private final LongAdder rowsAccessed = new LongAdder();
 
         private QuotaWatcher(final long dataLimit, final long retainLimit,
@@ -723,11 +763,21 @@ public class LocalMetricManager implements MetricManager {
             this.dataLimit = dataLimit;
             this.retainLimit = retainLimit;
             this.dataInMemoryReporter = dataInMemoryReporter;
+            this.startMS = System.currentTimeMillis();
         }
 
         @Override
         public void readData(long n) {
-            read.addAndGet(n);
+            long curDataPoints = read.addAndGet(n);
+            List<QuotaWatcher> watchers = new ArrayList<>(quotaWatchers.values());
+            long total = watchers.stream().map(QuotaWatcher::getReadData)
+                .reduce(0L, Long::sum);
+            reporter.reportTotalReadDataPoints(total);
+            if (total > LOGLIMIT) {
+                log.info("Data Points READ: Instance {}; This Query: {}; Delta: {}" +
+                    " (# Watchers: {})", total, curDataPoints,
+                    n, quotaWatchers.size());
+            }
             throwIfViolated();
             // Must be called after checkViolation above, since that one might throw an exception.
             dataInMemoryReporter.reportDataHasBeenRead(n);
@@ -735,7 +785,16 @@ public class LocalMetricManager implements MetricManager {
 
         @Override
         public void retainData(final long n) {
-            retained.addAndGet(n);
+            long curRetainedDataPoints = retained.addAndGet(n);
+            List<QuotaWatcher> watchers = new ArrayList<>(quotaWatchers.values());
+            long total = watchers.stream().map(QuotaWatcher::getRetainData)
+                .reduce(0L, Long::sum);
+            reporter.reportTotalRetainedDataPoints(total);
+            if (total > LOGLIMIT) {
+                log.info("Data Points RETAINED: Instance {}; This Query: {}; Delta: {} " +
+                    "(# Watchers: {})", total, curRetainedDataPoints,
+                    n, quotaWatchers.size());
+            }
             throwIfViolated();
         }
 
@@ -758,6 +817,14 @@ public class LocalMetricManager implements MetricManager {
         public void accessedRows(final long n) {
             dataInMemoryReporter.reportRowsAccessed(n);
             rowsAccessed.add(n);
+        }
+
+        public long getReadData() {
+            return read.get();
+        }
+
+        public long getRetainData() {
+            return retained.get();
         }
 
         public long getRowsAccessed() {
@@ -783,7 +850,7 @@ public class LocalMetricManager implements MetricManager {
             return retained.get() >= retainLimit;
         }
 
-        private static int getLeft(long limit, long current) {
+        private int getLeft(long limit, long current) {
             final long left = limit - current;
 
             if (left < 0) {

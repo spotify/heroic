@@ -37,8 +37,8 @@ import java.util.concurrent.atomic.AtomicReference
 data class StdDevBucket(override val timestamp: Long) : AbstractBucket(), DoubleBucket {
     private val cell = AtomicReference(ZERO)
 
-    override fun updatePoint(key: Map<String, String>, d: Point) {
-        val value = d.value
+    override fun updatePoint(key: Map<String, String>, sample: Point) {
+        val value = sample.value
 
         while (true) {
             val c = cell.get()

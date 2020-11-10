@@ -37,12 +37,19 @@ import io.grpc.Status;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import javax.annotation.Nullable;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
+    private static final Logger log = LoggerFactory.getLogger(BigtableConnectionBuilder.class);
+
     private static final String USER_AGENT = "heroic";
 
     private final String project;
     private final String instance;
+    private final String profile;
 
     private final CredentialsBuilder credentials;
 
@@ -56,6 +63,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
     public BigtableConnectionBuilder(
         final String project,
         final String instance,
+        final String profile,
         final CredentialsBuilder credentials,
         @Nullable final String emulatorEndpoint,
         final AsyncFramework async,
@@ -65,6 +73,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
     ) {
         this.project = project;
         this.instance = instance;
+        this.profile = profile;
         this.credentials = credentials;
         this.emulatorEndpoint = emulatorEndpoint;
         this.async = async;
@@ -96,11 +105,22 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
             .setRetryOptions(retryOptions)
             .setBulkOptions(bulkOptions);
 
+        if (profile != null) {
+            builder.setAppProfileId(profile);
+        }
+
         if (emulatorEndpoint != null) {
             builder.enableEmulator(emulatorEndpoint);
         }
 
-        final BigtableSession session = new BigtableSession(builder.build());
+        final BigtableOptions bigtableOptions = builder.build();
+
+        log.info("Retry Options: {}", retryOptions.toString());
+        log.info("Bulk Options: {}", bulkOptions.toString());
+        log.info("Bigtable Options: {}", bigtableOptions.toString());
+        log.info("BigTable Connection Builder: \n{}", toString());
+
+        final BigtableSession session = new BigtableSession(bigtableOptions);
 
         final BigtableTableAdminClient adminClient =
             new BigtableTableTableAdminClientImpl(session.getTableAdminClient(), project, instance);
@@ -115,8 +135,17 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
             client);
     }
 
+    @Override
     public String toString() {
-        return "BigtableConnectionBuilder(project=" + this.project + ", instance=" + this.instance
-               + ", credentials=" + this.credentials + ")";
+        return new ToStringBuilder(this, ToStringStyle.MULTI_LINE_STYLE)
+            .append("project", project)
+            .append("instance", instance)
+            .append("profile", profile)
+            .append("credentials", credentials)
+            .append("disableBulkMutations", disableBulkMutations)
+            .append("flushIntervalSeconds", flushIntervalSeconds)
+            .append("batchSize", batchSize.orElse(-1))
+            .append("emulatorEndpoint", emulatorEndpoint)
+            .toString();
     }
 }

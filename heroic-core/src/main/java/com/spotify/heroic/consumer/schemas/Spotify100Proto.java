@@ -30,6 +30,9 @@ import com.spotify.heroic.consumer.SchemaScope;
 import com.spotify.heroic.ingestion.Ingestion;
 import com.spotify.heroic.ingestion.IngestionGroup;
 import com.spotify.heroic.ingestion.Request;
+import com.spotify.heroic.metric.Distribution;
+import com.spotify.heroic.metric.DistributionPoint;
+import com.spotify.heroic.metric.HeroicDistribution;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.statistics.ConsumerReporter;
@@ -53,70 +56,91 @@ import org.xerial.snappy.Snappy;
  */
 public class Spotify100Proto implements ConsumerSchema {
 
-  @SchemaScope
-  public static class Consumer implements ConsumerSchema.Consumer {
+    @SchemaScope
+    public static class Consumer implements ConsumerSchema.Consumer {
 
-    private final Clock clock;
-    private final IngestionGroup ingestion;
-    private final ConsumerReporter reporter;
-    private final AsyncFramework async;
+        private final Clock clock;
+        private final IngestionGroup ingestion;
+        private final ConsumerReporter reporter;
+        private final AsyncFramework async;
 
-    @Inject
-    public Consumer(
-      Clock clock,
-      IngestionGroup ingestion,
-      ConsumerReporter reporter,
-      AsyncFramework async
-    ) {
-      this.clock = clock;
-      this.ingestion = ingestion;
-      this.reporter = reporter;
-      this.async = async;
-    }
-
-    @Override
-    public AsyncFuture<Void> consume(final byte[] message) throws ConsumerSchemaException {
-      final List<Spotify100.Metric> metrics;
-      try {
-        metrics = Spotify100.Batch.parseFrom(Snappy.uncompress(message)).getMetricList();
-      } catch (IOException e) {
-        throw new ConsumerSchemaValidationException("Invalid batch of metrics", e);
-      }
-
-      final List<AsyncFuture<Ingestion>> ingestions = new ArrayList<>();
-      for (Spotify100.Metric metric : metrics) {
-
-        if (metric.getTime() <= 0) {
-          throw new ConsumerSchemaValidationException(
-            "time: field must be a positive number: " + metric.toString());
+        @Inject
+        public Consumer(
+            Clock clock,
+            IngestionGroup ingestion,
+            ConsumerReporter reporter,
+            AsyncFramework async
+        ) {
+            this.clock = clock;
+            this.ingestion = ingestion;
+            this.reporter = reporter;
+            this.async = async;
         }
 
-        final Series s = Series.of(metric.getKey(), metric.getTagsMap(), metric.getResourceMap());
-        final Point p = new Point(metric.getTime(), metric.getValue());
-        final List<Point> points = ImmutableList.of(p);
+        @Override
+        public AsyncFuture<Void> consume(final byte[] message) throws ConsumerSchemaException {
+            final List<Spotify100.Metric> metrics;
+            try {
+                metrics = Spotify100.Batch.parseFrom(Snappy.uncompress(message)).getMetricList();
+            } catch (IOException e) {
+                throw new ConsumerSchemaValidationException("Invalid batch of metrics", e);
+            }
 
-        reporter.reportMessageDrift(clock.currentTimeMillis() - p.getTimestamp());
+            final List<AsyncFuture<Ingestion>> ingestions = new ArrayList<>();
+            for (Spotify100.Metric metric : metrics) {
 
-        ingestions.add(ingestion.write(new Request(s, MetricCollection.points(points))));
-      }
+                if (metric.getTime() <= 0) {
+                    throw new ConsumerSchemaValidationException(
+                        "time: field must be a positive number: " + metric.toString());
+                }
+                reporter.reportMessageDrift(clock.currentTimeMillis() - metric.getTime());
 
-      reporter.reportMetricsIn(metrics.size());
+                final Series s = Series.of(metric.getKey(), metric.getTagsMap(),
+                    metric.getResourceMap());
 
-      // Return Void future, to not leak unnecessary information from the backend but just
-      // allow monitoring of when the consumption is done.
-      return async.collectAndDiscard(ingestions);
+
+                Spotify100.Value distributionTypeValue = metric.getDistributionTypeValue();
+                Point point = null;
+                if (!metric.hasDistributionTypeValue()) {
+                    point = new Point(metric.getTime(), metric.getValue());
+                } else if (distributionTypeValue.getValueCase()
+                    .equals(Spotify100.Value.ValueCase.DOUBLE_VALUE)) {
+                    point = new Point(metric.getTime(), distributionTypeValue.getDoubleValue());
+                } else if (distributionTypeValue.getValueCase()
+                    .equals(Spotify100.Value.ValueCase.DISTRIBUTION_VALUE)) {
+                    Distribution distribution = HeroicDistribution.
+                        create(distributionTypeValue.getDistributionValue());
+                    DistributionPoint distributionPoint =
+                        DistributionPoint.create(distribution, metric.getTime());
+                    final List<DistributionPoint> distributionPoints =
+                        ImmutableList.of(distributionPoint);
+                    ingestions
+                        .add(ingestion.write(new Request(s,
+                            MetricCollection.distributionPoints(distributionPoints))));
+                }
+                if (point != null) {
+                    List<Point> points = ImmutableList.of(point);
+                    ingestions
+                        .add(ingestion.write(new Request(s, MetricCollection.points(points))));
+                }
+
+            }
+            reporter.reportMetricsIn(metrics.size());
+            // Return Void future, to not leak unnecessary information from the backend but just
+            // allow monitoring of when the consumption is done.
+            return async.collectAndDiscard(ingestions);
+        }
     }
-  }
 
-  @Override
-  public Exposed setup(final Depends depends) {
-    return DaggerSpotify100Proto_C.builder().depends(depends).build();
-  }
-
-  @SchemaScope
-  @Component(dependencies = Depends.class)
-  interface C extends Exposed {
     @Override
-    Spotify100Proto.Consumer consumer();
-  }
+    public Exposed setup(final Depends depends) {
+        return DaggerSpotify100Proto_C.builder().depends(depends).build();
+    }
+
+    @SchemaScope
+    @Component(dependencies = Depends.class)
+    interface C extends Exposed {
+        @Override
+        Spotify100Proto.Consumer consumer();
+    }
 }

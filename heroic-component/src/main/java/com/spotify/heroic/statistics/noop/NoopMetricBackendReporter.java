@@ -77,6 +77,21 @@ public class NoopMetricBackendReporter implements MetricBackendReporter {
         return NoopFutureReporterContext.get();
     }
 
+    @Override
+    public void reportWritesDroppedBySize() {
+
+    }
+
+    @Override
+    public void reportTotalReadDataPoints(long points) {
+
+    }
+
+    @Override
+    public void reportTotalRetainedDataPoints(long points) {
+
+    }
+
     private static final NoopMetricBackendReporter instance = new NoopMetricBackendReporter();
 
     public static NoopMetricBackendReporter get() {

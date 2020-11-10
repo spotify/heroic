@@ -40,7 +40,7 @@ data class StdDevInstance(
         val value = bucket.value()
 
         return if (java.lang.Double.isNaN(value)) {
-            Metric.invalid()
+            Metric.invalid
         } else Point(bucket.timestamp, value)
 
     }

@@ -45,9 +45,15 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import javax.inject.Named;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Module
 public class MetricManagerModule {
+    private static final Logger log = LoggerFactory.getLogger(MetricManagerModule.class);
+
     public static final int DEFAULT_FETCH_PARALLELISM = 100;
     public static final boolean DEFAULT_FAIL_ON_LIMITS = false;
     public static final long DEFAULT_SMALL_QUERY_THRESHOLD = 200000;
@@ -118,6 +124,8 @@ public class MetricManagerModule {
         this.fetchParallelism = fetchParallelism;
         this.failOnLimits = failOnLimits;
         this.smallQueryThreshold = smallQueryThreshold;
+
+        log.info("Metric Manager Module: \n{}", toString());
     }
 
     @Provides
@@ -228,6 +236,22 @@ public class MetricManagerModule {
     @Named("smallQueryThreshold")
     public long smallQueryThreshold() {
         return smallQueryThreshold;
+    }
+
+    @Override
+    public String toString() {
+        return new ToStringBuilder(this, ToStringStyle.MULTI_LINE_STYLE)
+            .append("backends", backends)
+            .append("defaultBackends", defaultBackends.orElse(new ArrayList<String>()))
+            .append("groupLimit", groupLimit)
+            .append("seriesLimit", seriesLimit)
+            .append("aggregationLimit", aggregationLimit)
+            .append("dataLimit", dataLimit)
+            .append("concurrentQueriesBackoff", concurrentQueriesBackoff)
+            .append("fetchParallelism", fetchParallelism)
+            .append("failOnLimits", failOnLimits)
+            .append("smallQueryThreshold", smallQueryThreshold)
+            .toString();
     }
 
     public static Builder builder() {
