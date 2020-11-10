@@ -103,6 +103,16 @@ public class Series implements Comparable<Series> {
         return resource;
     }
 
+    private void appendMapToTags(SortedMap<String, String> mapToAppend) {
+        this.tags.putAll(mapToAppend);
+    }
+
+    public void appendResourceToTags() {
+        final SortedMap<String, String> resource = getResource();
+
+        appendMapToTags(resource);
+    }
+
     private HashCode generateHash() {
         final Hasher hasher = HASH_FUNCTION.newHasher();
 

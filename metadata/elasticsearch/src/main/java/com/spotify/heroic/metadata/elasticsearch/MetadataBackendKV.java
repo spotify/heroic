@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.metadata.elasticsearch;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.spotify.heroic.elasticsearch.ResourceLoader.loadJson;
 import static java.util.Optional.ofNullable;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
@@ -90,6 +91,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
@@ -143,6 +145,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     private final boolean configure;
     private final int deleteParallelism;
     private final int scrollSize;
+    private final boolean indexResourceIdentifiers;
 
     @Inject
     public MetadataBackendKV(
@@ -153,7 +156,8 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         RateLimitedCache<Pair<String, HashCode>> writeCache,
         @Named("configure") boolean configure,
         @Named("deleteParallelism") int deleteParallelism,
-        @Named("scrollSize") int scrollSize
+        @Named("scrollSize") int scrollSize,
+        @Named("indexResourceIdentifiers") boolean indexResourceIdentifiers
     ) {
         super(async, METADATA_TYPE, reporter);
         this.groups = groups;
@@ -164,6 +168,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         this.configure = configure;
         this.deleteParallelism = deleteParallelism;
         this.scrollSize = scrollSize;
+        this.indexResourceIdentifiers = indexResourceIdentifiers;
     }
 
     @Override
@@ -197,7 +202,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         return write(request, tracer.getCurrentSpan());
     }
 
-
+    // option flag to merge tags and resource maps
     @Override
     public AsyncFuture<WriteMetadata> write(
         final WriteMetadata.Request request, final Span parentSpan
@@ -209,7 +214,20 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                 .startSpan();
             final Scope rootScope = tracer.withSpan(rootSpan);
 
-            final Series series = request.getSeries();
+            final Series series;
+            if(indexResourceIdentifiers) {
+                Series initialSeries = request.getSeries();
+                final int numberOfResourceIds = initialSeries.getResource().size();
+
+                rootSpan.putAttribute("resource_id_count", AttributeValue.doubleAttributeValue(numberOfResourceIds));
+
+                initialSeries.appendResourceToTags();
+
+                series = initialSeries;
+            } else {
+                series = request.getSeries();
+            }
+
             final String id = series.hash();
             rootSpan.putAttribute("id", AttributeValue.stringAttributeValue(id));
 
@@ -242,6 +260,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                     indexSpans.add(span);
 
                     final XContentBuilder source = XContentFactory.jsonBuilder();
+
 
                     source.startObject();
                     buildContext(source, series);

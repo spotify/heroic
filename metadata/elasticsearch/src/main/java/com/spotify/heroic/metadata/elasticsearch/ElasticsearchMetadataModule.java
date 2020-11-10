@@ -98,6 +98,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
     private final int deleteParallelism;
     private final boolean configure;
     private final int scrollSize;
+    private final boolean indexResourceIdentifiers;
 
     private static Supplier<BackendType> defaultSetup = MetadataBackendKV::backendType;
 
@@ -129,7 +130,8 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
         @JsonProperty("templateName") Optional<String> templateName,
         @JsonProperty("backendType") Optional<String> backendType,
         @JsonProperty("configure") Optional<Boolean> configure,
-        @JsonProperty("scrollSize") Optional<Integer> scrollSize
+        @JsonProperty("scrollSize") Optional<Integer> scrollSize,
+        @JsonProperty("indexResourceIdentifiers") Optional<Boolean> indexResourceIdentifiers
     ) {
         this.id = id;
         this.groups = groups.orElseGet(Groups::empty).or(DEFAULT_GROUP);
@@ -152,6 +154,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
         this.backendTypeBuilder =
             backendType.flatMap(bt -> ofNullable(backendTypes.get(bt))).orElse(defaultSetup);
         this.configure = configure.orElse(false);
+        this.indexResourceIdentifiers = indexResourceIdentifiers.orElse(false);
     }
 
     @Override
@@ -306,6 +309,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
         private Optional<String> backendType = empty();
         private Optional<Boolean> configure = empty();
         private Optional<Integer> scrollSize = empty();
+        private Optional<Boolean> indexResourceIdentifiers = empty();
 
         public Builder id(final String id) {
             checkNotNull(id, "id");
@@ -384,6 +388,11 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
             return this;
         }
 
+        public Builder indexResourceIdentifiers(final boolean indexResourceIdentifiers) {
+            this.indexResourceIdentifiers = of(indexResourceIdentifiers);
+            return this;
+        }
+
         public ElasticsearchMetadataModule build() {
             return new ElasticsearchMetadataModule(
                 id,
@@ -399,7 +408,8 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
                 templateName,
                 backendType,
                 configure,
-                scrollSize
+                scrollSize,
+                indexResourceIdentifiers
             );
         }
     }
