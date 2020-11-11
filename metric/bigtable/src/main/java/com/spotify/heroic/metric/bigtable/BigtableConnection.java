@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.metric.bigtable;
 
+import com.google.cloud.bigtable.data.v2.BigtableDataClient;
 import com.google.cloud.bigtable.grpc.BigtableSession;
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.metric.bigtable.api.BigtableDataClient;
 import com.spotify.heroic.metric.bigtable.api.BigtableMutator;
 import com.spotify.heroic.metric.bigtable.api.BigtableTableAdminClient;
 import eu.toolchain.async.AsyncFramework;
@@ -37,7 +37,7 @@ public class BigtableConnection {
     private final BigtableSession session;
     private final BigtableMutator mutator;
     private final BigtableTableAdminClient tableAdminClient;
-    private final BigtableDataClient dataClient;
+    private final com.google.cloud.bigtable.data.v2.BigtableDataClient dataClient;
 
     BigtableConnection(
         final AsyncFramework async,
@@ -46,7 +46,7 @@ public class BigtableConnection {
         final BigtableSession session,
         final BigtableMutator mutator,
         final BigtableTableAdminClient tableAdminClient,
-        final BigtableDataClient dataClient
+        final com.google.cloud.bigtable.data.v2.BigtableDataClient dataClient
     ) {
         this.async = async;
         this.project = project;

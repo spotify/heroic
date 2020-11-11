@@ -21,10 +21,13 @@
 
 package com.spotify.heroic.metric.bigtable;
 
+import com.google.api.gax.core.CredentialsProvider;
+import com.google.api.gax.core.GoogleCredentialsProvider;
 import com.google.cloud.bigtable.config.BigtableOptions;
 import com.google.cloud.bigtable.config.BulkOptions;
 import com.google.cloud.bigtable.config.CredentialOptions;
 import com.google.cloud.bigtable.config.RetryOptions;
+import com.google.cloud.bigtable.data.v2.BigtableDataSettings;
 import com.google.cloud.bigtable.grpc.BigtableSession;
 import com.spotify.heroic.metric.bigtable.api.BigtableDataClient;
 import com.spotify.heroic.metric.bigtable.api.BigtableDataClientImpl;
@@ -131,8 +134,18 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
         final BigtableDataClient client =
             new BigtableDataClientImpl(async, session, mutator, project, instance);
 
+        CredentialsProvider credentialsProvider = GoogleCredentialsProvider.newBuilder().build();
+        BigtableDataSettings dataSettings = BigtableDataSettings.newBuilder()
+            .setInstanceId(instance)
+            .setProjectId(project)
+            .setCredentialsProvider(credentialsProvider)
+            .setRefreshingChannel(true)
+            .build();
+
+        var clientV2 = com.google.cloud.bigtable.data.v2.BigtableDataClient.create(dataSettings);
+
         return new BigtableConnection(async, project, instance, session, mutator, adminClient,
-            client);
+            clientV2);
     }
 
     @Override

@@ -12,6 +12,7 @@ dependencies {
     implementation 'com.google.guava:guava'
     implementation project(':heroic-component')
     implementation 'eu.toolchain.serializer:tiny-serializer-core'
+    compile 'com.google.cloud:google-cloud-bigtable:1.17.1'
 
     // dropwizard is a runtime requirement for bigtable-client-core.
     // since its excluded above, we need to ensure it gets pulled in via semantic-metrics

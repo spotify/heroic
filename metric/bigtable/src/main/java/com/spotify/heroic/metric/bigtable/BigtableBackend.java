@@ -26,11 +26,15 @@ import static io.opencensus.trace.AttributeValue.longAttributeValue;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.api.core.ApiFutureCallback;
+import com.google.api.core.ApiFutures;
+import com.google.cloud.bigtable.data.v2.models.RowMutation;
 import com.google.cloud.bigtable.grpc.scanner.FlatRow;
 import com.google.cloud.bigtable.util.RowKeyUtil;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.protobuf.ByteString;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
@@ -53,7 +57,6 @@ import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.QueryError;
 import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.WriteMetric;
-import com.spotify.heroic.metric.bigtable.api.BigtableDataClient;
 import com.spotify.heroic.metric.bigtable.api.BigtableTableAdminClient;
 import com.spotify.heroic.metric.bigtable.api.ColumnFamily;
 import com.spotify.heroic.metric.bigtable.api.Mutations;
@@ -257,7 +260,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             final Series series = request.getSeries();
             final List<AsyncFuture<WriteMetric>> results = new ArrayList<>();
 
-            final BigtableDataClient client = c.getDataClient();
+            final var client = c.getDataClient();
 
             final MetricCollection g = request.getData();
             results.add(writeTyped(series, client, g, parentSpan));
@@ -335,7 +338,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
     private AsyncFuture<WriteMetric> writeTyped(
         final Series series,
-        final BigtableDataClient client,
+        final com.google.cloud.bigtable.data.v2.BigtableDataClient client,
         final MetricCollection g,
         final Span parentSpan
     ) throws IOException {
@@ -354,7 +357,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     }
 
     private <T extends Metric> AsyncFuture<WriteMetric> writeBatch(
-        final String columnFamily, final Series series, final BigtableDataClient client,
+        final String columnFamily, final Series series, final com.google.cloud.bigtable.data.v2.BigtableDataClient client,
         final List<T> batch, final Function<T, ByteString> serializer, final Span parentSpan
     ) throws IOException {
         final Span span = tracer
@@ -435,7 +438,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     }
 
     private <T extends Metric> AsyncFuture<WriteMetric> writeOne(
-        final String columnFamily, Series series, BigtableDataClient client, T p,
+        final String columnFamily, Series series, com.google.cloud.bigtable.data.v2.BigtableDataClient client, T p,
         Function<T, ByteString> serializer
     ) throws IOException {
         final long timestamp = p.getTimestamp();
@@ -448,12 +451,14 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
         final ByteString offsetBytes = serializeOffset(offset);
         final ByteString valueBytes = serializer.apply(p);
+        final ByteString rowKeyBytes = rowKeySerializer.serializeFull(rowKey);
+
+        var mutationV2 = RowMutation.create(table, rowKeyBytes);
+        mutationV2.setCell(columnFamily, offsetBytes, valueBytes);
 
         builder.setCell(columnFamily, offsetBytes, valueBytes);
 
         final RequestTimer<WriteMetric> timer = WriteMetric.timer();
-
-        final ByteString rowKeyBytes = rowKeySerializer.serializeFull(rowKey);
 
         if (rowKeyBytes.size() >= MAX_KEY_ROW_SIZE) {
             reporter.reportWritesDroppedBySize();
@@ -462,9 +467,24 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             return async.resolved().directTransform(result -> timer.end());
         }
 
-        return client
-            .mutateRow(table, rowKeyBytes, builder.build())
-            .directTransform(result -> timer.end());
+        // TODO figure out if it's possible to get a future out of v2 code. And if not,
+        // what then to do.
+        var future = client
+            //            .mutateRow(table, rowKeyBytes, builder.build())
+            .mutateRowAsync(mutationV2);
+
+        new Future
+
+        ApiFutures.addCallback(future, new ApiFutureCallback<Void>() {
+            public void onFailure(Throwable t) {
+                throw new RuntimeException(t);
+            }
+
+            public void onSuccess(Void ignored) {
+                timer.end();
+            }
+        }, MoreExecutors.directExecutor());
+
     }
 
     private AsyncFuture<FetchData.Result> fetchBatch(
@@ -475,7 +495,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         final Consumer<MetricReadResult> metricsConsumer,
         final Span parentSpan
     ) {
-        final BigtableDataClient client = c.getDataClient();
+        final var client = c.getDataClient();
 
         final Span fetchBatchSpan =
             tracer.spanBuilderWithExplicitParent("bigtable.fetchBatch", parentSpan).startSpan();
