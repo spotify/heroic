@@ -200,7 +200,6 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         return write(request, tracer.getCurrentSpan());
     }
 
-    // option flag to merge tags and resource maps
     @Override
     public AsyncFuture<WriteMetadata> write(
         final WriteMetadata.Request request, final Span parentSpan
@@ -215,7 +214,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
             final Series series;
             if (indexResourceIdentifiers) {
                 Series initialSeries = request.getSeries();
-                final int numberOfResourceIds = initialSeries.getResource().size();
+                final double numberOfResourceIds = initialSeries.getResource().size();
 
                 rootSpan.putAttribute(
                     "resource_id_count",
@@ -261,8 +260,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                     indexSpans.add(span);
 
                     final XContentBuilder source = XContentFactory.jsonBuilder();
-
-
+                    
                     source.startObject();
                     buildContext(source, series);
                     source.endObject();
