@@ -84,7 +84,7 @@ public abstract class AbstractMetadataBackendIT {
 
     protected final Series s1 = Series.of("s1", ImmutableMap.of("role", "foo"));
     protected final Series s2 = Series.of("s2", ImmutableMap.of("role", "bar"));
-    protected final Series s3 = Series.of("s3", ImmutableMap.of("role", "baz"));
+    protected final Series s3 = Series.of("s3", ImmutableMap.of("role", "baz"), ImmutableMap.of("podname", "foo-bar-123"));
 
     protected final DateRange range = new DateRange(0L, 0L);
 
