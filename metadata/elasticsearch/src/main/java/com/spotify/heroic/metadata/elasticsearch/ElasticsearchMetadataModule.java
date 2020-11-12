@@ -249,6 +249,13 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
 
         @Provides
         @ElasticsearchScope
+        @Named("indexResourceIdentifiers")
+        public boolean indexResourceIdentifiers() {
+            return indexResourceIdentifiers;
+        }
+
+        @Provides
+        @ElasticsearchScope
         public RateLimitedCache<Pair<String, HashCode>> writeCache(HeroicReporter reporter) {
             final Cache<Pair<String, HashCode>, Boolean> cache = CacheBuilder
                 .newBuilder()

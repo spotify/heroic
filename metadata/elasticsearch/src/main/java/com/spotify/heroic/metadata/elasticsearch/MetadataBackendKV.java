@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.metadata.elasticsearch;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.spotify.heroic.elasticsearch.ResourceLoader.loadJson;
 import static java.util.Optional.ofNullable;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
@@ -91,7 +90,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
@@ -215,11 +213,14 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
             final Scope rootScope = tracer.withSpan(rootSpan);
 
             final Series series;
-            if(indexResourceIdentifiers) {
+            if (indexResourceIdentifiers) {
                 Series initialSeries = request.getSeries();
                 final int numberOfResourceIds = initialSeries.getResource().size();
 
-                rootSpan.putAttribute("resource_id_count", AttributeValue.doubleAttributeValue(numberOfResourceIds));
+                rootSpan.putAttribute(
+                    "resource_id_count",
+                    AttributeValue.doubleAttributeValue(numberOfResourceIds)
+                );
 
                 initialSeries.appendResourceToTags();
 
