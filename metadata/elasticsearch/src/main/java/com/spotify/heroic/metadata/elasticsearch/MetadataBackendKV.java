@@ -215,18 +215,6 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
             final Scope rootScope = tracer.withSpan(rootSpan);
 
             final Series series = request.getSeries();
-//            if (indexResourceIdentifiers) {
-//                SortedMap<String, String> tagsAndResource = request.getSeries().getTags();
-//                tagsAndResource.putAll(request.getSeries().getResource());
-//                series = new Series(request.getSeries().getKey(), tagsAndResource, request.getSeries().getResource());
-//
-//                rootSpan.putAttribute(
-//                    "resource_id_count",
-//                    AttributeValue.doubleAttributeValue(series.getResource().size())
-//                );
-//            } else {
-//                series = request.getSeries();
-//            }
 
             final String id = series.hash();
             rootSpan.putAttribute("id", AttributeValue.stringAttributeValue(id));
@@ -457,11 +445,15 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         final Iterator<Map.Entry<String, String>> tags =
             ((List<String>) source.get(TAGS)).stream().map(this::buildTag).iterator();
 
-        @SuppressWarnings("unchecked")
-        final Iterator<Map.Entry<String, String>> resource =
-            ((List<String>) source.get(RESOURCE)).stream().map(this::buildTag).iterator();
+        if (indexResourceIdentifiers) {
+            @SuppressWarnings("unchecked")
+            final Iterator<Map.Entry<String, String>> resource =
+                ((List<String>) source.get(RESOURCE)).stream().map(this::buildTag).iterator();
 
-        return Series.of(key, tags, resource);
+            return Series.of(key, tags, resource);
+        } else {
+            return Series.of(key, tags);
+        }
     }
 
     protected <T, O> AsyncFuture<O> entries(
@@ -610,35 +602,27 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         for (final Map.Entry<String, String> entry : series.getTags().entrySet()) {
             b.value(entry.getKey() + TAG_DELIMITER + entry.getValue());
         }
-        if (indexResourceIdentifiers) {
-            for (final Map.Entry<String, String> entry : series.getResource().entrySet()) {
-                b.value(entry.getKey() + TAG_DELIMITER + entry.getValue());
-            }
-        }
         b.endArray();
 
         b.startArray(TAG_KEYS);
         for (final Map.Entry<String, String> entry : series.getTags().entrySet()) {
             b.value(entry.getKey());
         }
+        b.endArray();
+
         if (indexResourceIdentifiers) {
-            for (final Map.Entry<String, String> entry : series.getResource().entrySet()) {
-                b.value(entry.getKey());
-            }
-        }
-        b.endArray();
-
-        b.startArray(RESOURCE);
-        for (final Map.Entry<String, String> entry : series.getResource().entrySet()) {
+          b.startArray(RESOURCE);
+          for (final Map.Entry<String, String> entry : series.getResource().entrySet()) {
             b.value(entry.getKey() + TAG_DELIMITER + entry.getValue());
-        }
-        b.endArray();
+          }
+          b.endArray();
 
-        b.startArray(RESOURCE_KEYS);
-        for (final Map.Entry<String, String> entry : series.getResource().entrySet()) {
+          b.startArray(RESOURCE_KEYS);
+          for (final Map.Entry<String, String> entry : series.getResource().entrySet()) {
             b.value(entry.getKey());
+          }
+          b.endArray();
         }
-        b.endArray();
 
         b.field(HASH_FIELD, series.hash());
     }
