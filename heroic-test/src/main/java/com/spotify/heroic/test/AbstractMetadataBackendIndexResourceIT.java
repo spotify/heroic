@@ -81,10 +81,22 @@ public abstract class AbstractMetadataBackendIndexResourceIT {
     private AsyncFramework async;
 
     protected final int numSeries = 3;
-    
-    protected final Series s1 = Series.of("s1", ImmutableMap.of("role", "foo"), ImmutableMap.of("podname", "foo-bar-123"));
-    protected final Series s2 = Series.of("s2", ImmutableMap.of("role", "bar"), ImmutableMap.of("podname", "foo-bar-456"));
-    protected final Series s3 = Series.of("s3", ImmutableMap.of("role", "baz"), ImmutableMap.of("podname", "foo-bar-789"));
+
+    protected final Series s1 = Series.of(
+        "s1",
+        ImmutableMap.of("role", "foo"),
+        ImmutableMap.of("podname", "foo-bar-123")
+    );
+    protected final Series s2 = Series.of(
+        "s2",
+        ImmutableMap.of("role", "bar"),
+        ImmutableMap.of("podname", "foo-bar-456")
+    );
+    protected final Series s3 = Series.of(
+        "s3",
+        ImmutableMap.of("role", "baz"),
+        ImmutableMap.of("podname", "foo-bar-789")
+    );
 
     protected final DateRange range = new DateRange(0L, 0L);
 
