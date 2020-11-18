@@ -77,7 +77,7 @@ public class Spotify100Proto implements ConsumerSchema {
             this.async = async;
         }
 
-        @Override //TODO why is consume static
+        @Override
         public AsyncFuture<Void> consume(final byte[] message) throws ConsumerSchemaException {
             final List<Spotify100.Metric> metrics;
             try {
@@ -100,27 +100,24 @@ public class Spotify100Proto implements ConsumerSchema {
 
 
                 Spotify100.Value distributionTypeValue = metric.getDistributionTypeValue();
-
                 Point point = null;
-
                 if (!metric.hasDistributionTypeValue()) {
                     point = new Point(metric.getTime(), metric.getValue());
-                } else if (distributionTypeValue != null) {
-                    if (distributionTypeValue.getDoubleValue() != 0) {
-                        point = new Point(metric.getTime(), distributionTypeValue.getDoubleValue());
-                    } else {
-                        Distribution distribution = HeroicDistribution.
-                            create(distributionTypeValue.getDistributionValue());
-                        DistributionPoint distributionPoint =
-                            DistributionPoint.create(distribution, metric.getTime());
-                        final List<DistributionPoint> distributionPoints =
-                            ImmutableList.of(distributionPoint);
-                        ingestions
-                            .add(ingestion.write(new Request(s,
-                                MetricCollection.distributionPoints(distributionPoints))));
-                    }
+                } else if (distributionTypeValue.getValueCase()
+                    .equals(Spotify100.Value.ValueCase.DOUBLE_VALUE)) {
+                    point = new Point(metric.getTime(), distributionTypeValue.getDoubleValue());
+                } else if (distributionTypeValue.getValueCase()
+                    .equals(Spotify100.Value.ValueCase.DISTRIBUTION_VALUE)) {
+                    Distribution distribution = HeroicDistribution.
+                        create(distributionTypeValue.getDistributionValue());
+                    DistributionPoint distributionPoint =
+                        DistributionPoint.create(distribution, metric.getTime());
+                    final List<DistributionPoint> distributionPoints =
+                        ImmutableList.of(distributionPoint);
+                    ingestions
+                        .add(ingestion.write(new Request(s,
+                            MetricCollection.distributionPoints(distributionPoints))));
                 }
-
                 if (point != null) {
                     List<Point> points = ImmutableList.of(point);
                     ingestions
@@ -128,9 +125,7 @@ public class Spotify100Proto implements ConsumerSchema {
                 }
 
             }
-
             reporter.reportMetricsIn(metrics.size());
-
             // Return Void future, to not leak unnecessary information from the backend but just
             // allow monitoring of when the consumption is done.
             return async.collectAndDiscard(ingestions);
