@@ -129,7 +129,6 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     private static final String TAGS = "tags";
     private static final String TAG_KEYS = "tag_keys";
     private static final String RESOURCE = "resource";
-    private static final String RESOURCE_KEYS = "resource_keys";
     private static final String HASH_FIELD = "hash";
     private static final Character TAG_DELIMITER = '\0';
 
@@ -613,12 +612,6 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
           b.startArray(RESOURCE);
           for (final Map.Entry<String, String> entry : series.getResource().entrySet()) {
             b.value(entry.getKey() + TAG_DELIMITER + entry.getValue());
-          }
-          b.endArray();
-
-          b.startArray(RESOURCE_KEYS);
-          for (final Map.Entry<String, String> entry : series.getResource().entrySet()) {
-            b.value(entry.getKey());
           }
           b.endArray();
         }
