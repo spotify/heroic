@@ -75,16 +75,16 @@ import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
-public abstract class AbstractMetadataBackendIT {
+public abstract class AbstractMetadataBackendIndexResourceIT {
     protected final String testName = "heroic-it-" + UUID.randomUUID().toString();
 
     private AsyncFramework async;
 
     protected final int numSeries = 3;
-
-    protected final Series s1 = Series.of("s1", ImmutableMap.of("role", "foo"));
-    protected final Series s2 = Series.of("s2", ImmutableMap.of("role", "bar"));
-    protected final Series s3 = Series.of("s3", ImmutableMap.of("role", "baz"));
+    
+    protected final Series s1 = Series.of("s1", ImmutableMap.of("role", "foo"), ImmutableMap.of("podname", "foo-bar-123"));
+    protected final Series s2 = Series.of("s2", ImmutableMap.of("role", "bar"), ImmutableMap.of("podname", "foo-bar-456"));
+    protected final Series s3 = Series.of("s3", ImmutableMap.of("role", "baz"), ImmutableMap.of("podname", "foo-bar-789"));
 
     protected final DateRange range = new DateRange(0L, 0L);
 
@@ -131,11 +131,11 @@ public abstract class AbstractMetadataBackendIT {
                 .findFirst())
             .orElseThrow(() -> new IllegalStateException("Failed to find backend"));
 
-        final List<AsyncFuture<Void>> writes = new ArrayList<>();
-        writes.add(writeSeries(backend, s1, range));
-        writes.add(writeSeries(backend, s2, range));
-        writes.add(writeSeries(backend, s3, range));
-        async.collectAndDiscard(writes).get();
+        final List<AsyncFuture<Void>> writesIndexResource = new ArrayList<>();
+        writesIndexResource.add(writeSeries(backend, s1, range));
+        writesIndexResource.add(writeSeries(backend, s2, range));
+        writesIndexResource.add(writeSeries(backend, s3, range));
+        async.collectAndDiscard(writesIndexResource).get();
 
         setupConditions();
 
@@ -149,6 +149,19 @@ public abstract class AbstractMetadataBackendIT {
 
     @Test
     public void findSeriesComplexTest() throws Exception {
+        final FindSeries.Request f =
+            new FindSeries.Request(
+                and(matchKey("s2"), startsWith("role", "ba")),
+                range,
+                OptionalLimit.empty(),
+                Features.DEFAULT
+            );
+
+        assertEquals(ImmutableSet.of(s2), backend.findSeries(f).get().getSeries());
+    }
+
+    @Test
+    public void findSeriesComplexTestIndexResource() throws Exception {
         final FindSeries.Request f =
             new FindSeries.Request(
                 and(matchKey("s2"), startsWith("role", "ba")),

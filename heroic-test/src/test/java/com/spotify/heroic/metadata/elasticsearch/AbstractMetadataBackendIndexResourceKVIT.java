@@ -35,12 +35,13 @@ import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
 import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.MetadataModule;
-import com.spotify.heroic.test.AbstractMetadataBackendIT;
+import com.spotify.heroic.test.AbstractMetadataBackendIndexResourceIT;
 import com.spotify.heroic.test.ElasticSearchTestContainer;
 import java.util.Set;
 import org.junit.Test;
 
-public abstract class AbstractMetadataBackendKVIT extends AbstractMetadataBackendIT {
+public abstract class AbstractMetadataBackendIndexResourceKVIT extends
+    AbstractMetadataBackendIndexResourceIT {
     final static ElasticSearchTestContainer esContainer;
 
     static {
@@ -73,6 +74,7 @@ public abstract class AbstractMetadataBackendKVIT extends AbstractMetadataBacken
                 .clientSetup(setupClient())
                 .build())
             .scrollSize(numSeries / 2)
+            .indexResourceIdentifiers(true)
             .build();
     }
 
