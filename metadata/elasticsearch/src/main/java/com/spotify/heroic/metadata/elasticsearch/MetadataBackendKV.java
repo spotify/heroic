@@ -596,11 +596,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     ) throws IOException {
         b.field(KEY, series.getKey());
 
-        b.startArray(TAGS);
-        for (final Map.Entry<String, String> entry : series.getTags().entrySet()) {
-            b.value(entry.getKey() + TAG_DELIMITER + entry.getValue());
-        }
-        b.endArray();
+        appendData(b, series.getTags(), TAGS, TAG_DELIMITER);
 
         b.startArray(TAG_KEYS);
         for (final Map.Entry<String, String> entry : series.getTags().entrySet()) {
@@ -609,14 +605,20 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         b.endArray();
 
         if (indexResourceIdentifiers) {
-          b.startArray(RESOURCE);
-          for (final Map.Entry<String, String> entry : series.getResource().entrySet()) {
-            b.value(entry.getKey() + TAG_DELIMITER + entry.getValue());
-          }
-          b.endArray();
+            appendData(b, series.getResource(), RESOURCE, TAG_DELIMITER);
         }
 
         b.field(HASH_FIELD, series.hash());
+    }
+
+    private static void appendData(
+      final XContentBuilder b, Map<String, String> data, String name, Character delimiter)
+      throws IOException {
+        b.startArray(name);
+        for (var entry : data.entrySet()) {
+            b.value(entry.getKey() + delimiter + entry.getValue());
+        }
+        b.endArray();
     }
 
     private static final Filter.Visitor<QueryBuilder> FILTER_CONVERTER =
