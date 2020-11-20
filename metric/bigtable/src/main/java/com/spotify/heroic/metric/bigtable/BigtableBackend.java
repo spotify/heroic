@@ -108,7 +108,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         QueryTrace.identifier(BigtableBackend.class, "fetch");
 
     public static final String POINTS = "points";
-    public static final String DISTRIBUTION_POINTS = "distriubutionPoints";
+    public static final String DISTRIBUTION_POINTS = "distributionPoints";
     public static final String EVENTS = "events";
     public static final long PERIOD = 0x100_000_000L;
 
