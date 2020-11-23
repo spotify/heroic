@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicCoreInstance;
+import com.spotify.heroic.common.MandatoryClientIdUtil.RequestInfractionSeverity;
 import com.spotify.heroic.common.ServiceInfo;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.http.tracing.OpenCensusFeature;
@@ -32,8 +33,7 @@ import com.spotify.heroic.jetty.JettyJSONErrorHandler;
 import com.spotify.heroic.jetty.JettyServerConnector;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
-import com.spotify.heroic.requestfilters.MandatoryClientIdUtil.InfractionSeverity;
-import com.spotify.heroic.servlet.ClientIdFilter;
+import com.spotify.heroic.servlet.MandatoryClientIdFilter;
 import com.spotify.heroic.servlet.ShutdownFilter;
 import com.spotify.heroic.tracing.TracingConfig;
 import eu.toolchain.async.AsyncFramework;
@@ -75,6 +75,12 @@ public class HttpServer implements LifeCycles {
     private final AsyncFramework async;
     private final boolean enableCors;
     private final Optional<String> corsAllowOrigin;
+
+    // We default to REJECT as that provides the best protection for
+    // Heroic.
+    private RequestInfractionSeverity anonymousRequestInfractionSeverity =
+        RequestInfractionSeverity.REJECT;
+
     private final List<JettyServerConnector> connectors;
     private final Supplier<Boolean> stopping;
     private final ServiceInfo service;
@@ -92,6 +98,8 @@ public class HttpServer implements LifeCycles {
         final AsyncFramework async,
         @Named("enableCors") final boolean enableCors,
         @Named("corsAllowOrigin") final Optional<String> corsAllowOrigin,
+        @Named("anonymousRequestInfractionSeverity")
+        final RequestInfractionSeverity anonymousRequestInfractionSeverity,
         final List<JettyServerConnector> connectors,
         @Named("stopping") final Supplier<Boolean> stopping,
         final ServiceInfo service,
@@ -104,6 +112,7 @@ public class HttpServer implements LifeCycles {
         this.async = async;
         this.enableCors = enableCors;
         this.corsAllowOrigin = corsAllowOrigin;
+        this.anonymousRequestInfractionSeverity = anonymousRequestInfractionSeverity;
         this.connectors = connectors;
         this.stopping = stopping;
         this.service = service;
@@ -223,9 +232,11 @@ public class HttpServer implements LifeCycles {
         final RewriteHandler rewrite = new RewriteHandler();
         makeRewriteRules(rewrite);
 
-        // TODO pass the correct InfractionSeverity from config
+        // TODO pass the correct RequestInfractionSeverity from config
         context.addFilter(new FilterHolder(
-            new ClientIdFilter(InfractionSeverity.PERMIT, mapper)), "/*", null);
+            new MandatoryClientIdFilter(
+                RequestInfractionSeverity.PERMIT,
+                Optional.of(log))), "/*", null);
 
         final HandlerCollection handlers = new HandlerCollection();
         handlers.setHandlers(new Handler[]{rewrite, context, requestLogHandler});

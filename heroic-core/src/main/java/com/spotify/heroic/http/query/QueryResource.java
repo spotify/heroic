@@ -25,25 +25,32 @@ import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.Query;
 import com.spotify.heroic.QueryManager;
 import com.spotify.heroic.common.JavaxRestFramework;
+import com.spotify.heroic.common.MandatoryClientIdUtil;
+import com.spotify.heroic.common.MandatoryClientIdUtil.RequestInfractionSeverity;
 import com.spotify.heroic.http.CoreHttpContextFactory;
 import com.spotify.heroic.metric.QueryMetrics;
 import com.spotify.heroic.metric.QueryMetricsResponse;
 import com.spotify.heroic.metric.QueryResult;
+import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.querylogging.HttpContext;
 import com.spotify.heroic.querylogging.QueryContext;
 import com.spotify.heroic.querylogging.QueryLogger;
 import com.spotify.heroic.querylogging.QueryLoggerFactory;
+import com.spotify.heroic.servlet.MandatoryClientIdFilter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import io.opencensus.trace.Span;
 import io.opencensus.trace.Tracer;
 import io.opencensus.trace.Tracing;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import javax.annotation.Nonnull;
 import javax.inject.Inject;
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
@@ -96,7 +103,7 @@ public class QueryResource {
         final QueryManager.Group g = this.query.useOptionalGroup(Optional.ofNullable(group));
         final AsyncFuture<QueryResult> callback = g.query(q, queryContext);
 
-        bindMetricsResponse(response, callback, queryContext);
+        bindMetricsResponse(response, callback, queryContext, servletReq);
     }
 
     @POST
@@ -117,7 +124,7 @@ public class QueryResource {
         final QueryManager.Group g = this.query.useOptionalGroup(Optional.ofNullable(group));
         final AsyncFuture<QueryResult> callback = g.query(q, queryContext);
 
-        bindMetricsResponse(response, callback, queryContext);
+        bindMetricsResponse(response, callback, queryContext, servletReq);
     }
 
     @POST
@@ -185,17 +192,39 @@ public class QueryResource {
     private void bindMetricsResponse(
         final AsyncResponse response,
         final AsyncFuture<QueryResult> callback,
-        final QueryContext queryContext
+        final QueryContext queryContext,
+        final HttpServletRequest servletReq
     ) {
         response.setTimeout(300, TimeUnit.SECONDS);
 
-        httpAsync.bind(response, callback, r -> {
-            final QueryMetricsResponse qmr =
-                new QueryMetricsResponse(queryContext.queryId(), r.getRange(), r.getGroups(),
-                    r.getErrors(), r.getTrace(), r.getLimits(),
-                    Optional.of(r.getPreAggregationSampleSize()), r.getCache());
+        httpAsync.bind(response, callback, qr -> {
+            final ArrayList<RequestError> requestErrors =
+                getRequestErrors(servletReq, qr);
+
+            final var qmr =
+                new QueryMetricsResponse(queryContext.queryId(), qr.getRange(), qr.getGroups(),
+                    requestErrors, qr.getTrace(), qr.getLimits(),
+                    Optional.of(qr.getPreAggregationSampleSize()), qr.getCache());
+
             queryLogger.logFinalResponse(queryContext, qmr);
             return qmr;
         });
+    }
+
+    @Nonnull
+    private static ArrayList<RequestError> getRequestErrors(
+        HttpServletRequest servletReq, QueryResult qr) throws IOException, ServletException {
+        // So, we don't know if .errors is an immutable list. It could be a mutatble
+        // one. So the safe thing to do is copy it.
+        final var requestErrors = new ArrayList<>(qr.getErrors());
+
+        // TODO use the configured severity from config
+        final RequestInfractionSeverity severity = RequestInfractionSeverity.PERMIT;
+
+        if (!MandatoryClientIdFilter.passesFilter(severity, servletReq)) {
+            requestErrors.add(MandatoryClientIdUtil.
+                createMandatoryClientIdWarningError(severity));
+        }
+        return requestErrors;
     }
 }

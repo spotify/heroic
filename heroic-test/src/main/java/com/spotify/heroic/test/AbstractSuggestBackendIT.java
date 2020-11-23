@@ -102,7 +102,6 @@ public abstract class AbstractSuggestBackendIT {
     protected SuggestBackend backend;
     private HeroicCoreInstance core;
 
-
     protected abstract SuggestModule setupModule() throws Exception;
 
     @Before
@@ -121,7 +120,7 @@ public abstract class AbstractSuggestBackendIT {
         backend = core.inject(
             c -> c.suggestManager().groupSet().inspectAll().stream()
                 .map(GroupMember::getMember).findFirst()).orElseThrow(
-            () -> new IllegalStateException("Failed to find backend"));
+                    () -> new IllegalStateException("Failed to find backend"));
     }
 
     @After
@@ -274,7 +273,6 @@ public abstract class AbstractSuggestBackendIT {
         assertEquals(REQ_SUGGESTION_ENTITY_LIMIT, result.getValues().size());
     }
 
-
     @Test
     public void keySuggest() throws Exception {
         var et = EntityType.KEY;
@@ -377,12 +375,14 @@ public abstract class AbstractSuggestBackendIT {
             matchKey(s.getKey()), range,
             OptionalLimit.empty(), MatchOptions.builder().build(),
             Optional.empty())).directTransform(result -> {
-            if (result.getSuggestions().isEmpty()) {
-                throw new IllegalStateException("No key suggestion available for the given series");
-            }
+                if (result.getSuggestions().isEmpty()) {
+                    throw new IllegalStateException(
+                        "No key suggestion available for the given series");
+                }
 
-            return null;
-        }));
+                return null;
+            }
+        ));
 
         return async.collectAndDiscard(checks);
     }
@@ -502,7 +502,6 @@ public abstract class AbstractSuggestBackendIT {
         final long t = Instant.now().toEpochMilli() + (long) Math.random();
         return t;
     }
-
 
     private static List<Pair<Series, DateRange>> createTestSeriesData(int numKeys,
         int tagsAndTagValuesPerKey, long timestamp, EntityType et) {

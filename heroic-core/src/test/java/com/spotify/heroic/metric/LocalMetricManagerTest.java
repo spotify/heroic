@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.spotify.heroic.common.GroupSet;
 import com.spotify.heroic.common.Groups;
+import com.spotify.heroic.common.MandatoryClientIdUtil.RequestInfractionSeverity;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.querylogging.QueryLogger;
@@ -54,6 +55,7 @@ public class LocalMetricManagerTest {
         final OptionalLimit seriesLimit = OptionalLimit.empty();
         final OptionalLimit aggregationLimit = OptionalLimit.empty();
         final OptionalLimit dataLimit = OptionalLimit.empty();
+        final RequestInfractionSeverity anonymousRequestInfractionSeverity = RequestInfractionSeverity.REJECT;
         final OptionalLimit concurrentQueriesBackoff = OptionalLimit.empty();
         final int fetchParallelism = 20;
         final boolean failOnLimits = true;
@@ -66,9 +68,20 @@ public class LocalMetricManagerTest {
         final QueryLoggerFactory queryLoggerFactory = mock(QueryLoggerFactory.class);
         when(queryLoggerFactory.create(any())).thenReturn(queryLogger);
 
-        manager = new LocalMetricManager(groupLimit, seriesLimit, aggregationLimit, dataLimit,
-            concurrentQueriesBackoff, fetchParallelism, failOnLimits, async, groupSet, metadata,
-            reporter, queryLoggerFactory);
+        manager = new LocalMetricManager(
+            groupLimit,
+            seriesLimit,
+            aggregationLimit,
+            dataLimit,
+            concurrentQueriesBackoff,
+            fetchParallelism,
+            failOnLimits,
+            anonymousRequestInfractionSeverity,
+            async,
+            groupSet,
+            metadata,
+            reporter,
+            queryLoggerFactory);
     }
 
     @Test
