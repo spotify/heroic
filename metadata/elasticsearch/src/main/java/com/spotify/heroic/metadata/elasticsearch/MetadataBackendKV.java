@@ -128,6 +128,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     private static final String KEY = "key";
     private static final String TAGS = "tags";
     private static final String TAG_KEYS = "tag_keys";
+    private static final String RESOURCE = "resource";
     private static final String HASH_FIELD = "hash";
     private static final Character TAG_DELIMITER = '\0';
 
@@ -143,6 +144,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     private final boolean configure;
     private final int deleteParallelism;
     private final int scrollSize;
+    private final boolean indexResourceIdentifiers;
 
     @Inject
     public MetadataBackendKV(
@@ -153,7 +155,8 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         RateLimitedCache<Pair<String, HashCode>> writeCache,
         @Named("configure") boolean configure,
         @Named("deleteParallelism") int deleteParallelism,
-        @Named("scrollSize") int scrollSize
+        @Named("scrollSize") int scrollSize,
+        @Named("indexResourceIdentifiers") boolean indexResourceIdentifiers
     ) {
         super(async, METADATA_TYPE, reporter);
         this.groups = groups;
@@ -164,6 +167,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         this.configure = configure;
         this.deleteParallelism = deleteParallelism;
         this.scrollSize = scrollSize;
+        this.indexResourceIdentifiers = indexResourceIdentifiers;
     }
 
     @Override
@@ -197,7 +201,6 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         return write(request, tracer.getCurrentSpan());
     }
 
-
     @Override
     public AsyncFuture<WriteMetadata> write(
         final WriteMetadata.Request request, final Span parentSpan
@@ -210,6 +213,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
             final Scope rootScope = tracer.withSpan(rootSpan);
 
             final Series series = request.getSeries();
+
             final String id = series.hash();
             rootSpan.putAttribute("id", AttributeValue.stringAttributeValue(id));
 
@@ -244,7 +248,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                     final XContentBuilder source = XContentFactory.jsonBuilder();
 
                     source.startObject();
-                    buildContext(source, series);
+                    buildContext(source, series, indexResourceIdentifiers);
                     source.endObject();
 
                     IndexRequest indexRequest = new IndexRequest(index)
@@ -439,7 +443,15 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         final Iterator<Map.Entry<String, String>> tags =
             ((List<String>) source.get(TAGS)).stream().map(this::buildTag).iterator();
 
-        return Series.of(key, tags);
+        if (indexResourceIdentifiers) {
+            @SuppressWarnings("unchecked")
+            final Iterator<Map.Entry<String, String>> resource =
+                ((List<String>) source.get(RESOURCE)).stream().map(this::buildTag).iterator();
+
+            return Series.of(key, tags, resource);
+        } else {
+            return Series.of(key, tags);
+        }
     }
 
     protected <T, O> AsyncFuture<O> entries(
@@ -577,14 +589,14 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         return Pair.of(tk, tv);
     }
 
-    private static void buildContext(final XContentBuilder b, Series series) throws IOException {
+    private static void buildContext(
+        final XContentBuilder b,
+        Series series,
+        boolean indexResourceIdentifiers
+    ) throws IOException {
         b.field(KEY, series.getKey());
 
-        b.startArray(TAGS);
-        for (final Map.Entry<String, String> entry : series.getTags().entrySet()) {
-            b.value(entry.getKey() + TAG_DELIMITER + entry.getValue());
-        }
-        b.endArray();
+        appendData(b, series.getTags(), TAGS, TAG_DELIMITER);
 
         b.startArray(TAG_KEYS);
         for (final Map.Entry<String, String> entry : series.getTags().entrySet()) {
@@ -592,7 +604,21 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         }
         b.endArray();
 
+        if (indexResourceIdentifiers) {
+            appendData(b, series.getResource(), RESOURCE, TAG_DELIMITER);
+        }
+
         b.field(HASH_FIELD, series.hash());
+    }
+
+    private static void appendData(
+      final XContentBuilder b, Map<String, String> data, String name, Character delimiter)
+      throws IOException {
+        b.startArray(name);
+        for (var entry : data.entrySet()) {
+            b.value(entry.getKey() + delimiter + entry.getValue());
+        }
+        b.endArray();
     }
 
     private static final Filter.Visitor<QueryBuilder> FILTER_CONVERTER =
