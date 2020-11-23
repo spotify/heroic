@@ -16,12 +16,6 @@
         <property name="message" value="Line has trailing spaces." />
     </module>
 
-    <!-- use eclipse-style suppression comments -->
-    <module name="SuppressionCommentFilter">
-        <property name="offCommentFormat" value="@formatter:off"/>
-        <property name="onCommentFormat" value="@formatter:on"/>
-    </module>
-
     <module name="SuppressionFilter">
         <!-- note that $basedir must be set to TLD of heroic in your local dev
         environment for checkstyle to function. You may wish to emply the direnv
@@ -29,8 +23,13 @@
         <property name="file" value="${basedir}/suppressions.xml"/>
     </module>
 
+    <property name="cacheFile" value="${basedir}/.cache/checkstyle-cache"/>
+
+    <module name="LineLength">
+        <property name="max" value="100"/>
+    </module>
+
     <module name="TreeWalker">
-        <property name="cacheFile" value="${basedir}/.cache/checkstyle-cache" />
 
         <module name="ArrayTypeStyle" />
         <module name="AvoidStarImport" />
@@ -46,16 +45,12 @@
         </module>
         <module name="EmptyStatement" />
         <module name="EqualsHashCode" />
-        <module name="FileContentsHolder" />
         <module name="IllegalImport" />
         <module name="IllegalInstantiation" />
         <!-- Indentation. We go with the Checkstyle/Google default of 4 spaces. For details, see
         https://checkstyle.sourceforge.io/config_misc.html#Indentation_Properties -->
         <module name="Indentation"/>
         <module name="LeftCurly" />
-        <module name="LineLength">
-            <property name="max" value="100"/>
-        </module>
         <module name="LocalFinalVariableName" />
         <module name="LocalVariableName" />
         <module name="MemberName" />
@@ -74,6 +69,11 @@
         <module name="RightCurly" />
         <module name="SimplifyBooleanExpression" />
         <module name="StaticVariableName" />
+        <!-- use eclipse-style suppression comments -->
+        <module name="SuppressionCommentFilter">
+            <property name="offCommentFormat" value="@formatter:off"/>
+            <property name="onCommentFormat" value="@formatter:on"/>
+        </module>
         <module name="TypecastParenPad" />
         <module name="TypeName" />
         <module name="UnusedImports" />
