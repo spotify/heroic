@@ -214,6 +214,7 @@ allprojects {
             dependency 'io.thekraken:grok:0.1.1'
             dependency 'org.jfree:jfreechart:1.0.19'
             dependency 'joda-time:joda-time:2.8.2'
+            dependency 'com.tdunning:t-digest:3.2'
 
             dependencySet(group: 'org.apache.logging.log4j', version: '2.13.3') {
                 entry 'log4j-core'

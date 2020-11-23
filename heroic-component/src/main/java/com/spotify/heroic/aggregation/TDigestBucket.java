@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2020 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,20 +19,10 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric;
+package com.spotify.heroic.aggregation;
 
-    import com.google.auto.value.AutoValue;
-    import com.google.protobuf.ByteString;
-    import java.nio.ByteBuffer;
+import com.tdunning.math.stats.TDigest;
 
-@AutoValue
-public abstract class HeroicDistribution implements Distribution {
-    public abstract ByteString getValue();
-    public static HeroicDistribution create(final ByteString byteString) {
-        return new AutoValue_HeroicDistribution(byteString);
-    }
-
-    public ByteBuffer toByteBuffer() {
-        return getValue().asReadOnlyByteBuffer();
-    }
+public interface TDigestBucket extends Bucket {
+    TDigest value();
 }

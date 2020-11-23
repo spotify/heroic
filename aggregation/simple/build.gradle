@@ -1,6 +1,8 @@
 dependencies {
     implementation project(':heroic-component')
     testImplementation project(':heroic-test')
+    implementation 'com.tdunning:t-digest'
+    implementation 'com.google.protobuf:protobuf-java'
 }
 
 group = 'com.spotify.heroic.aggregation'
