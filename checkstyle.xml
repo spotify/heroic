@@ -69,11 +69,6 @@
         <module name="RightCurly" />
         <module name="SimplifyBooleanExpression" />
         <module name="StaticVariableName" />
-        <!-- use eclipse-style suppression comments -->
-        <module name="SuppressionCommentFilter">
-            <property name="offCommentFormat" value="@formatter:off"/>
-            <property name="onCommentFormat" value="@formatter:on"/>
-        </module>
         <module name="TypecastParenPad" />
         <module name="TypeName" />
         <module name="UnusedImports" />
