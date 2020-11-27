@@ -396,7 +396,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                 building.put(rowKey, builder);
             }
 
-            builder.setCell(columnFamily, offsetBytes, valueBytes);
+            builder.setCell("foooooooo", offsetBytes, valueBytes);
 
             if (builder.size() >= maxWriteBatchSize) {
                 saved.add(Pair.of(rowKey, builder.build()));

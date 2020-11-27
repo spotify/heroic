@@ -186,6 +186,7 @@ public class BigtableMutatorImpl implements BigtableMutator {
 
             @Override
             public void onFailure(Throwable t) {
+                log.error("Mutation exception:", t);
                 future.fail(t);
             }
         }, MoreExecutors.directExecutor());

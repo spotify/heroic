@@ -29,8 +29,11 @@ import com.google.protobuf.ByteString;
 import com.google.pubsub.v1.PubsubMessage;
 import com.spotify.heroic.consumer.ConsumerSchema;
 import com.spotify.heroic.consumer.ConsumerSchemaValidationException;
+import com.spotify.heroic.ingestion.Ingestion;
+import com.spotify.heroic.metric.FullQuery;
 import com.spotify.heroic.statistics.ConsumerReporter;
 import com.spotify.heroic.statistics.FutureReporter;
+import eu.toolchain.async.FutureDone;
 import io.opencensus.common.Scope;
 import io.opencensus.trace.Span;
 import io.opencensus.trace.Status;
@@ -76,11 +79,31 @@ class Receiver implements MessageReceiver {
 
         // process the data
         try (Scope ws = tracer.withSpan(span)) {
-            consumer.consume(bytes).onDone(consumptionContext).onFinished(() -> {
-                reporter.reportMessageSize(bytes.length);
-                replyConsumer.ack();
-                span.end();
-            });
+            consumer.consume(bytes)
+                .onDone(consumptionContext)
+                .onDone(new FutureDone<>() {
+                    @Override
+                    public void failed(final Throwable cause) throws Exception {
+                        System.out.println("We are in receiveMessage - failed");
+                        replyConsumer.nack();
+                    }
+
+                    @Override
+                    public void resolved(Void unused) throws Exception {
+                        System.out.println("We are in receiveMessage - Success");
+                        replyConsumer.ack();
+                    }
+
+                    @Override
+                    public void cancelled() throws Exception {
+                        System.out.println("We are in receiveMessage - cancelled");
+                        replyConsumer.nack();
+                    }
+                })
+                .onFinished(() -> {
+                    reporter.reportMessageSize(bytes.length);
+                    span.end();
+                });
         } catch (ConsumerSchemaValidationException e) {
             reporter.reportConsumerSchemaError();
             log.error("ID:{} - {}", messageId, e.getMessage(), e);
