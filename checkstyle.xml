@@ -35,18 +35,20 @@
         <module name="AvoidStarImport" />
         <module name="CommentsIndentation"/>
         <module name="EmptyForIteratorPad" />
-        <module name="EmptyLineSeparator">
-            <!-- Do Not Allow multiple empty lines between class members. -->
-            <property name="allowMultipleEmptyLines" value="false"/>
-            <!-- Do Not Allow multiple empty lines inside class members -->
-            <property name="allowMultipleEmptyLinesInsideClassMembers" value="false"/>
-            <!-- Do Not enforce an empty line between fields. -->
-            <property name="allowNoEmptyLineBetweenFields" value="true"/>
-        </module>
+        <!-- TODO uncomment this when someone's feeling brave enough to fix all the errors. -->
+        <!--        <module name="EmptyLineSeparator">-->
+        <!--            &lt;!&ndash; Do Not Allow multiple empty lines between class members. &ndash;&gt;-->
+        <!--            <property name="allowMultipleEmptyLines" value="false"/>-->
+        <!--            &lt;!&ndash; Do Not Allow multiple empty lines inside class members &ndash;&gt;-->
+        <!--            <property name="allowMultipleEmptyLinesInsideClassMembers" value="false"/>-->
+        <!--            &lt;!&ndash;            &lt;!&ndash; Do Not enforce an empty line between fields. &ndash;&gt;&ndash;&gt;-->
+        <!--            &lt;!&ndash;            <property name="allowNoEmptyLineBetweenFields" value="false"/>&ndash;&gt;-->
+        <!--        </module>-->
         <module name="EmptyStatement" />
         <module name="EqualsHashCode" />
         <module name="IllegalImport" />
         <module name="IllegalInstantiation" />
+        <!-- TODO uncomment this when someone's feeling brave enough to fix all the errors. -->
         <!-- Indentation. We go with the Checkstyle/Google default of 4 spaces. For details, see
         https://checkstyle.sourceforge.io/config_misc.html#Indentation_Properties .
         ... However, a lot (many, many files) of Heroic's java code is incorrectly indented with 2
