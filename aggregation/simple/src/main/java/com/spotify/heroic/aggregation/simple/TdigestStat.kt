@@ -8,8 +8,7 @@ import com.spotify.heroic.common.Duration
 data class TdigestStat(
         val sampling: SamplingQuery?,
         override var size: Duration?,
-        override var extent: Duration?,
-        val quantiles : DoubleArray?
+        override var extent: Duration?
 ) : SamplingAggregation {
 
     init {
@@ -18,11 +17,12 @@ data class TdigestStat(
     }
 
     override fun apply(context: AggregationContext?, size: Long, extent: Long): TdigestStatInstance {
-        return TdigestStatInstance(size, extent, quantiles ?: DEFAULT_QUANTILES)
+        val quantiles :DoubleArray = DEFAULT_QUANTILES
+        return TdigestStatInstance(size, extent, quantiles )
     }
 
     companion object {
         const val NAME = "tdigeststat"
-        val DEFAULT_QUANTILES  = doubleArrayOf(0.5,0.75,0.99)
+         val DEFAULT_QUANTILES  = doubleArrayOf(0.5,0.75,0.99)
     }
 }

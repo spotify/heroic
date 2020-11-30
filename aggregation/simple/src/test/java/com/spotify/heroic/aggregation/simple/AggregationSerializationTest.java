@@ -1,10 +1,14 @@
 package com.spotify.heroic.aggregation.simple;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertSame;
+
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationInstance;
+import com.spotify.heroic.aggregation.TDigestBucket;
 import com.spotify.heroic.test.FakeModuleLoader;
 import java.util.Optional;
 import org.junit.Test;
@@ -16,6 +20,15 @@ public class AggregationSerializationTest {
     private void assertSerializes(String json, AggregationInstance aggregation) throws Exception {
         assertEquals(json, mapper.writeValueAsString(aggregation));
         assertEquals(aggregation, mapper.readValue(json, AggregationInstance.class));
+    }
+
+    @Test
+    public void testTDigestInstance() throws Exception {
+        final double [] quantiles = {0.5,0.75,0.99};
+        final String json = "{\"type\":\"tdigeststat\",\"size\":1,\"extent\":2,\"quantiles\":[0.5,0.75,0.99]}";
+        AggregationInstance aggregationInstance = new TdigestStatInstance(1, 2, quantiles );
+        assertEquals(json, mapper.writeValueAsString(aggregationInstance));
+        assertEquals(aggregationInstance.toString(), mapper.readValue(json, TdigestStatInstance.class).toString());
     }
 
     @Test

@@ -22,10 +22,12 @@
 package com.spotify.heroic.aggregation.simple
 
 import com.google.common.collect.ImmutableSet
+import com.spotify.heroic.ObjectHasher
 import com.spotify.heroic.aggregation.BucketAggregationInstance
 import com.spotify.heroic.aggregation.TDigestBucket
 import com.spotify.heroic.metric.Metric
 import com.spotify.heroic.metric.MetricType
+import java.util.*
 
 
 data class TdigestStatInstance (
@@ -43,9 +45,13 @@ val quantiles : DoubleArray?
     }
 
     override fun build(bucket: TDigestBucket): Metric {
-        return  TdigestStatInstanceHelper.computePercentile(bucket.value(),
+        return  TdigestStatInstanceUtils.computePercentile(bucket.value(),
                 bucket.timestamp,
                 quantiles)
     }
-}
+    override fun bucketHashTo(hasher: ObjectHasher) {
+        Arrays.sort(quantiles);
+        hasher.putField("quantiles", Arrays.toString(quantiles), hasher.string())
+    }
+    }
 
