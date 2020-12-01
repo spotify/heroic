@@ -23,15 +23,6 @@ public class AggregationSerializationTest {
     }
 
     @Test
-    public void testTDigestInstance() throws Exception {
-        final double [] quantiles = {0.5,0.75,0.99};
-        final String json = "{\"type\":\"tdigeststat\",\"size\":1,\"extent\":2,\"quantiles\":[0.5,0.75,0.99]}";
-        AggregationInstance aggregationInstance = new TdigestStatInstance(1, 2, quantiles );
-        assertEquals(json, mapper.writeValueAsString(aggregationInstance));
-        assertEquals(aggregationInstance.toString(), mapper.readValue(json, TdigestStatInstance.class).toString());
-    }
-
-    @Test
     public void testAboveK() throws Exception {
         assertEquals(new AboveK(1.5, Optional.empty()),
             mapper.readValue(m.jsonObject().put("type", AboveK.NAME).put("k", 1.5).string(),
