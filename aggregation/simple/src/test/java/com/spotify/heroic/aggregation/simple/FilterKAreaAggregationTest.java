@@ -61,18 +61,17 @@ public class FilterKAreaAggregationTest {
 
         final List<AggregationOutput> result = session.result().getResult();
 
-        //assertEquals(1, result.size());
+        assertEquals(1, result.size());
 
-        System.out.println("Result :=" + result.size());
-        System.out.println(result);
+
         AggregationOutput first = result.get(0);
 
 
-//        if (first.getKey().equals(ImmutableMap.of("site", "lon"))) {
-//            assertEquals(ImmutableList.of(new Point(1, 3.0), new Point(2, 3.0)),
-//                first.getMetrics().data());
-//        } else {
-//            Assert.fail("unexpected group: " + first.getKey());
-//        }
+        if (first.getKey().equals(ImmutableMap.of("site", "lon"))) {
+            assertEquals(ImmutableList.of(new Point(1, 3.0), new Point(2, 3.0)),
+                first.getMetrics().data());
+        } else {
+            Assert.fail("unexpected group: " + first.getKey());
+        }
     }
 }

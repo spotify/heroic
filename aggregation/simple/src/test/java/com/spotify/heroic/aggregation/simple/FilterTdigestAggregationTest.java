@@ -55,7 +55,7 @@ public class FilterTdigestAggregationTest {
 
         double [] quantiles = {0.5,0.75,0.99};
 
-        final AggregationInstance b1 = ChainInstance.of(g, new TdigestStatInstance(2, 1, quantiles ));
+        final AggregationInstance b1 = ChainInstance.of(g, new TdigestStatInstance(1, 1, quantiles ));
 
 
         final Set<Series> series = new HashSet<>();
@@ -78,6 +78,6 @@ public class FilterTdigestAggregationTest {
 
         final List<AggregationOutput> result = session.result().getResult();
 
-        assertEquals(1, result.size());  //TODO compute percentile
+        assertEquals(1, result.size());
     }
 }

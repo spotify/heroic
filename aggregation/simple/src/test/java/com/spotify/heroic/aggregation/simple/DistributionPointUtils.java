@@ -9,6 +9,12 @@ import java.util.Arrays;
 
 public class DistributionPointUtils {
 
+    /**
+     * Record data and create a distribution data point.
+     * @param data  data to record
+     * @param timestamp  distribution point timestamp
+     * @return  DistributionPoint.
+     */
     public static DistributionPoint createDistributionPoint(final double [] data, long timestamp){
         TDigest tDigest = TDigest.createDigest(100.0);
         Arrays.stream(data).forEach(tDigest::add);

@@ -29,7 +29,9 @@ import com.spotify.heroic.metric.Metric
 import com.spotify.heroic.metric.MetricType
 import java.util.*
 
-
+/**
+ *  Creates Tdigest buckets and computes distribution stats.
+ */
 data class TdigestStatInstance (
 override val size: Long,
 override val extent: Long,

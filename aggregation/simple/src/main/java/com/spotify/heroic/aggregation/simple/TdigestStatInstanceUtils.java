@@ -35,7 +35,9 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.UnaryOperator;
 
-
+/**
+ * Utility class for Tdigest aggregation and computation.
+ */
 public class TdigestStatInstanceUtils {
     public static final double TDIGEST_COMPRESSION_LEVEL = 100.0;
 

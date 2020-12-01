@@ -5,6 +5,13 @@ import com.spotify.heroic.aggregation.SamplingAggregation
 import com.spotify.heroic.aggregation.SamplingQuery
 import com.spotify.heroic.common.Duration
 
+/**
+ * TDigest distribution point aggregation module.
+ * As the name indicates, this module supports distribution point built
+ * * with tDigest data sketches.
+ *
+ *  @author adeleo
+ */
 data class TdigestStat(
         val sampling: SamplingQuery?,
         override var size: Duration?,
