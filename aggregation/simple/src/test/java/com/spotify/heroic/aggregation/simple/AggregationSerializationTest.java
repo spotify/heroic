@@ -1,14 +1,10 @@
 package com.spotify.heroic.aggregation.simple;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
-
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationInstance;
-import com.spotify.heroic.aggregation.TDigestBucket;
 import com.spotify.heroic.test.FakeModuleLoader;
 import java.util.Optional;
 import org.junit.Test;
