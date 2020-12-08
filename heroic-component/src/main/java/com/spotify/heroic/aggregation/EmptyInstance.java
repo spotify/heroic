@@ -29,6 +29,7 @@ import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.metric.DistributionPoint;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricGroup;
@@ -119,6 +120,15 @@ public class EmptyInstance implements AggregationInstance {
             session(key).cardinality.update(s, values);
         }
 
+        @Override
+        public void updateDistributionPoints(
+            final Map<String, String> key, final Set<Series> s,
+            final List<DistributionPoint> values
+        ) {
+            quotaWatcher.retainData(values.size());
+            session(key).distributionPoints.update(s, values);
+        }
+
         private SubSession session(Map<String, String> key) {
             final SubSession session = sessions.get(key);
 
@@ -153,6 +163,11 @@ public class EmptyInstance implements AggregationInstance {
 
                 if (!sub.points.isEmpty()) {
                     groups.add(collectGroup(group, sub.points, MetricCollection::points));
+                }
+
+                if (!sub.distributionPoints.isEmpty()) {
+                    groups.add(collectGroup(group, sub.distributionPoints,
+                        MetricCollection::distributionPoints));
                 }
 
                 if (!sub.spreads.isEmpty()) {
@@ -208,6 +223,7 @@ public class EmptyInstance implements AggregationInstance {
     }
 
     static class SubSession {
+        private final SessionPair<DistributionPoint> distributionPoints = new SessionPair<>();
         private final SessionPair<Point> points = new SessionPair<>();
         private final SessionPair<Spread> spreads = new SessionPair<>();
         private final SessionPair<MetricGroup> groups = new SessionPair<>();

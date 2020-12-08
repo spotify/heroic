@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.aggregation;
 
+import com.spotify.heroic.metric.DistributionPoint;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Payload;
@@ -49,6 +50,10 @@ public interface AnyBucket extends Bucket {
     default void updatePayload(Map<String, String> key, Payload sample) {
         update(key, sample);
     }
+
+    @Override
+    default void updateDistributionPoint(Map<String, String> key, DistributionPoint sample) {
+        update(key, sample); }
 
     void update(Map<String, String> key, Metric sample);
 }

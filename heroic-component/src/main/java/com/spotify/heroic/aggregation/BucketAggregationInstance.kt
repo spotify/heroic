@@ -65,6 +65,14 @@ abstract class BucketAggregationInstance<B : Bucket>(
                 { bucket, m -> bucket.updatePoint(key, m as Point) })
         }
 
+        override fun updateDistributionPoints(
+                key: Map<String, String>, s: Set<Series>, values: List<DistributionPoint>
+        ) {
+            series.add(s)
+            feed(MetricType.DISTRIBUTION_POINTS, values,
+                    { bucket, m -> bucket.updateDistributionPoint(key, m as DistributionPoint) })
+        }
+
         override fun updateSpreads(
             key: Map<String, String>, s: Set<Series>, values: List<Spread>
         ) {
@@ -89,6 +97,8 @@ abstract class BucketAggregationInstance<B : Bucket>(
                 { bucket, m -> bucket.updatePayload(key, m as Payload) })
 
         }
+
+
 
         private fun <T : Metric> feed(
             type: MetricType, values: List<T>, consumer: (B : Bucket, T : Metric) -> Unit
