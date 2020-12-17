@@ -94,7 +94,7 @@ public abstract class AbstractMetadataBackendIndexResourceIT {
     );
     protected final Series s3 = Series.of(
         "s3",
-        ImmutableMap.of("role", "baz"),
+        ImmutableMap.of("role", "bar"),
         ImmutableMap.of("podname", "foo-bar-789")
     );
 
