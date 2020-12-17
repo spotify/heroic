@@ -32,10 +32,19 @@ import javax.inject.Named;
 public class QueryModule {
     private final OptionalLimit groupLimit;
     private final long smallQueryThreshold;
+    private final int mutateRpcTimeoutMs;
+    private final int shortRpcTimeoutMs;
+    private final int readRowsRpcTimeoutMs;
 
-    public QueryModule(OptionalLimit groupLimit, long smallQueryThreshold) {
+
+    public QueryModule(OptionalLimit groupLimit, long smallQueryThreshold,
+                       int mutateRpcTimeoutMs, int shortRpcTimeoutMs,
+                       int readRowsRpcTimeoutMs) {
         this.groupLimit = groupLimit;
         this.smallQueryThreshold = smallQueryThreshold;
+        this.mutateRpcTimeoutMs = mutateRpcTimeoutMs;
+        this.readRowsRpcTimeoutMs = readRowsRpcTimeoutMs;
+        this.shortRpcTimeoutMs = shortRpcTimeoutMs;
     }
 
     @Provides
@@ -51,6 +60,21 @@ public class QueryModule {
     public long smallQueryThreshold() {
         return smallQueryThreshold;
     }
+
+    @Provides
+    @QueryScope
+    @Named("mutateRpcTimeoutMs")
+    public int mutateRpcTimeoutMs() { return mutateRpcTimeoutMs; }
+
+    @Provides
+    @QueryScope
+    @Named("readRowsRpcTimeoutMs")
+    public int readRowsRpcTimeoutMs() { return readRowsRpcTimeoutMs; }
+
+    @Provides
+    @QueryScope
+    @Named("shortRpcTimeoutMs")
+    public int shortRpcTimeoutMs() { return shortRpcTimeoutMs; }
 
     @Provides
     @QueryScope

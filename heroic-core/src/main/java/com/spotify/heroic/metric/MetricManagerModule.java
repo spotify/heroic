@@ -23,6 +23,9 @@ package com.spotify.heroic.metric;
 
 import static com.spotify.heroic.common.Optionals.mergeOptionalList;
 import static com.spotify.heroic.common.Optionals.pickOptional;
+import static com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_MUTATE_RPC_TIMEOUT_MS;
+import static com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_READ_ROWS_RPC_TIMEOUT_MS;
+import static com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_SHORT_RPC_TIMEOUT_MS;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
 
@@ -51,12 +54,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Module
+@SuppressWarnings({"LineLength"})
 public class MetricManagerModule {
     private static final Logger log = LoggerFactory.getLogger(MetricManagerModule.class);
 
     public static final int DEFAULT_FETCH_PARALLELISM = 100;
     public static final boolean DEFAULT_FAIL_ON_LIMITS = false;
     public static final long DEFAULT_SMALL_QUERY_THRESHOLD = 200000;
+
 
     public final List<MetricModule> backends;
     public final Optional<List<String>> defaultBackends;
@@ -102,6 +107,42 @@ public class MetricManagerModule {
      */
     private final long smallQueryThreshold;
 
+    /**
+     * MutateRpcTimeoutMs
+     * - The amount of milliseconds to wait before issuing a client side timeout
+     * for mutation remote procedure calls.
+     * <p>Also defined as (source to be rediscovered...) :
+     * If timeouts are set, how many milliseconds should pass before a
+     * DEADLINE_EXCEEDED for a long mutation. Currently, this feature is
+     * experimental.
+     *
+     * @see <a href="https://cloud.google.com/bigtable/docs/hbase-client/javadoc/com/google/cloud/bigtable/config/CallOptionsConfig.Builder.html#setmutaterpctimeoutms">CallOptionsConfig.Builder#setmutaterpctimeoutms</a>
+     */
+    private final int mutateRpcTimeoutMs;
+
+    /**
+     * ReadRowsRpcTimeoutMs
+     * - The amount of milliseconds to wait before issuing a client side
+     * timeout for readRows streaming remote procedure calls.
+     * <p>AKA
+     * The default duration to wait before timing out read stream RPC
+     * (default value: 12 hour).
+     * <p>AKA
+     * The amount of time in millisecond to wait before issuing a client side
+     * timeout for readRows streaming RPCs.
+     */
+    private final int readRowsRpcTimeoutMs;
+
+    /**
+     * ShortRpcTimeoutMs
+     * - The amount of milliseconds to wait before issuing a client side timeout for
+     * short remote procedure calls.
+     * <p>AKA
+     * The default duration to wait before timing out RPCs (default value: 60
+     * seconds) @see <a href="https://cloud.google.com/bigtable/docs/hbase-client/javadoc/com/google/cloud/bigtable/config/CallOptionsConfig#SHORT_TIMEOUT_MS_DEFAULT">CallOptionsConfig.SHORT_TIMEOUT_MS_DEFAULT</a>
+     */
+    private final int shortRpcTimeoutMs;
+
     private MetricManagerModule(
         List<MetricModule> backends,
         Optional<List<String>> defaultBackends,
@@ -112,7 +153,10 @@ public class MetricManagerModule {
         OptionalLimit concurrentQueriesBackoff,
         int fetchParallelism,
         boolean failOnLimits,
-        long smallQueryThreshold
+        long smallQueryThreshold,
+        int mutateRpcTimeoutMs,
+        int readRowsRpcTimeoutMs,
+        int shortRpcTimeoutMs
     ) {
         this.backends = backends;
         this.defaultBackends = defaultBackends;
@@ -124,6 +168,9 @@ public class MetricManagerModule {
         this.fetchParallelism = fetchParallelism;
         this.failOnLimits = failOnLimits;
         this.smallQueryThreshold = smallQueryThreshold;
+        this.mutateRpcTimeoutMs = mutateRpcTimeoutMs;
+        this.readRowsRpcTimeoutMs = readRowsRpcTimeoutMs;
+        this.shortRpcTimeoutMs = shortRpcTimeoutMs;
 
         log.info("Metric Manager Module: \n{}", toString());
     }
@@ -238,6 +285,27 @@ public class MetricManagerModule {
         return smallQueryThreshold;
     }
 
+    @Provides
+    @MetricScope
+    @Named("mutateRpcTimeoutMs")
+    public int mutateRpcTimeoutMs() {
+        return mutateRpcTimeoutMs;
+    }
+
+    @Provides
+    @MetricScope
+    @Named("readRowsRpcTimeoutMs")
+    public int readRowsRpcTimeoutMs() {
+        return readRowsRpcTimeoutMs;
+    }
+
+    @Provides
+    @MetricScope
+    @Named("shortRpcTimeoutMs")
+    public int shortRpcTimeoutMs() {
+        return shortRpcTimeoutMs;
+    }
+
     @Override
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.MULTI_LINE_STYLE)
@@ -251,6 +319,9 @@ public class MetricManagerModule {
             .append("fetchParallelism", fetchParallelism)
             .append("failOnLimits", failOnLimits)
             .append("smallQueryThreshold", smallQueryThreshold)
+            .append("mutateRpcTimeoutMs", mutateRpcTimeoutMs)
+            .append("readRowsRpcTimeoutMs", readRowsRpcTimeoutMs)
+            .append("shortRpcTimeoutMs", shortRpcTimeoutMs)
             .toString();
     }
 
@@ -269,6 +340,9 @@ public class MetricManagerModule {
         private Optional<Integer> fetchParallelism = empty();
         private Optional<Boolean> failOnLimits = empty();
         private Optional<Long> smallQueryThreshold = empty();
+        private Optional<Integer> mutateRpcTimeoutMs = empty();
+        private Optional<Integer> readRowsRpcTimeoutMs = empty();
+        private Optional<Integer> shortRpcTimeoutMs = empty();
 
         private Builder() {
         }
@@ -284,8 +358,11 @@ public class MetricManagerModule {
             @JsonProperty("concurrentQueriesBackoff") OptionalLimit concurrentQueriesBackoff,
             @JsonProperty("fetchParallelism") Optional<Integer> fetchParallelism,
             @JsonProperty("failOnLimits") Optional<Boolean> failOnLimits,
-            @JsonProperty("smallQueryThreshold") Optional<Long> smallQueryThreshold
-        ) {
+            @JsonProperty("smallQueryThreshold") Optional<Long> smallQueryThreshold,
+            @JsonProperty("mutateRpcTimeoutMs") Optional<Integer> mutateRpcTimeoutMs,
+            @JsonProperty("readRowsRpcTimeoutMs") Optional<Integer> readRowsRpcTimeoutMs,
+            @JsonProperty("shortRpcTimeoutMs") Optional<Integer> shortRpcTimeoutMs
+            ) {
             this.backends = backends;
             this.defaultBackends = defaultBackends;
             this.groupLimit = groupLimit;
@@ -296,6 +373,9 @@ public class MetricManagerModule {
             this.fetchParallelism = fetchParallelism;
             this.failOnLimits = failOnLimits;
             this.smallQueryThreshold = smallQueryThreshold;
+            this.mutateRpcTimeoutMs = mutateRpcTimeoutMs;
+            this.readRowsRpcTimeoutMs = readRowsRpcTimeoutMs;
+            this.shortRpcTimeoutMs = shortRpcTimeoutMs;
         }
 
         public Builder backends(List<MetricModule> backends) {
@@ -348,6 +428,21 @@ public class MetricManagerModule {
             return this;
         }
 
+        public Builder mutateRpcTimeoutMs(int mutateRpcTimeoutMs) {
+            this.mutateRpcTimeoutMs = of(mutateRpcTimeoutMs);
+            return this;
+        }
+
+        public Builder readRowsRpcTimeoutMs(int readRowsRpcTimeoutMs) {
+            this.readRowsRpcTimeoutMs = of(readRowsRpcTimeoutMs);
+            return this;
+        }
+
+        public Builder shortReadRpcTimeoutMs(int shortRpcTimeoutMs) {
+            this.shortRpcTimeoutMs = of(shortRpcTimeoutMs);
+            return this;
+        }
+
         public Builder merge(final Builder o) {
             // @formatter:off
             return new Builder(
@@ -360,7 +455,10 @@ public class MetricManagerModule {
                 concurrentQueriesBackoff.orElse(o.concurrentQueriesBackoff),
                 pickOptional(fetchParallelism, o.fetchParallelism),
                 pickOptional(failOnLimits, o.failOnLimits),
-                pickOptional(smallQueryThreshold, o.smallQueryThreshold)
+                pickOptional(smallQueryThreshold, o.smallQueryThreshold),
+                pickOptional(mutateRpcTimeoutMs, o.mutateRpcTimeoutMs),
+                pickOptional(readRowsRpcTimeoutMs, o.readRowsRpcTimeoutMs),
+                pickOptional(shortRpcTimeoutMs, o.shortRpcTimeoutMs)
             );
             // @formatter:on
         }
@@ -377,7 +475,10 @@ public class MetricManagerModule {
                 concurrentQueriesBackoff,
                 fetchParallelism.orElse(DEFAULT_FETCH_PARALLELISM),
                 failOnLimits.orElse(DEFAULT_FAIL_ON_LIMITS),
-                smallQueryThreshold.orElse(DEFAULT_SMALL_QUERY_THRESHOLD)
+                smallQueryThreshold.orElse(DEFAULT_SMALL_QUERY_THRESHOLD),
+                mutateRpcTimeoutMs.orElse(DEFAULT_MUTATE_RPC_TIMEOUT_MS),
+                readRowsRpcTimeoutMs.orElse(DEFAULT_READ_ROWS_RPC_TIMEOUT_MS),
+                shortRpcTimeoutMs.orElse(DEFAULT_SHORT_RPC_TIMEOUT_MS)
             );
             // @formatter:on
         }

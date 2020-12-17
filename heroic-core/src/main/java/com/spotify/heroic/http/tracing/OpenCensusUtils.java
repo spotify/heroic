@@ -39,7 +39,7 @@ class OpenCensusUtils {
             .collect(Collectors.joining(", "));
     }
 
-    @SuppressWarnings("checkstyle:LineLength")
+    @SuppressWarnings("LineLength")
     static Status mapStatusCode(int status) {
         // @formatter:off
         //

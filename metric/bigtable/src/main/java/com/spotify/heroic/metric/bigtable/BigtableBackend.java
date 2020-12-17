@@ -130,6 +130,9 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
     private final Meter written = new Meter();
     private final int maxWriteBatchSize;
+    private final int mutateRpcTimeoutMs;
+    private final int readRowsRpcTimeoutMs;
+    private final int shortRpcTimeoutMs;
 
     @Inject
     public BigtableBackend(
@@ -141,6 +144,9 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         @Named("table") final String table,
         @Named("configure") final boolean configure,
         @Named("maxWriteBatchSize") final int maxWriteBatchSize,
+        @Named("mutateRpcTimeoutMs") final int mutateRpcTimeoutMs,
+        @Named("readRowsRpcTimeoutMs") final int readRowsRpcTimeoutMs,
+        @Named("shortRpcTimeoutMs") final int shortRpcTimeoutMs,
         MetricBackendReporter reporter,
         @Named("application/json") ObjectMapper mapper
     ) {
@@ -151,6 +157,9 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         this.sortedMapSerializer = serializer.sortedMap(serializer.string(), serializer.string());
         this.connection = connection;
         this.maxWriteBatchSize = maxWriteBatchSize;
+        this.mutateRpcTimeoutMs = mutateRpcTimeoutMs;
+        this.readRowsRpcTimeoutMs = readRowsRpcTimeoutMs;
+        this.shortRpcTimeoutMs = shortRpcTimeoutMs;
         this.groups = groups;
         this.table = table;
         this.configure = configure;
@@ -656,6 +665,18 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
     public int getMaxWriteBatchSize() {
         return maxWriteBatchSize;
+    }
+
+    public int getMutateRpcTimeoutMs() {
+        return mutateRpcTimeoutMs;
+    }
+
+    public int getReadRowsRpcTimeoutMs() {
+        return readRowsRpcTimeoutMs;
+    }
+
+    public int getShortRpcTimeoutMs() {
+        return shortRpcTimeoutMs;
     }
 
     private static final class PreparedQuery {

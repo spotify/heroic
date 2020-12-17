@@ -122,7 +122,28 @@ public class CoreQueryManager implements QueryManager {
     private final Optional<ConditionalFeatures> conditionalFeatures;
 
     private final long smallQueryThreshold;
+    private final int mutateRpcTimeoutMs;
+    private final int shortRpcTimeoutMs;
+    private final int readRowsRpcTimeoutMs;
 
+
+    /**
+     * Instantiates a new Core query manager.
+     *
+     * @param features            the features
+     * @param async               the async
+     * @param clock               the clock
+     * @param cluster             the cluster
+     * @param parser              the parser
+     * @param queryCache          the query cache
+     * @param aggregations        the aggregations
+     * @param groupLimit          the group limit
+     * @param smallQueryThreshold the small query threshold
+     * @param reporter            the reporter
+     * @param conditionalFeatures the conditional features
+     * @param queryLoggerFactory  the query logger factory
+     */
+    @SuppressWarnings({"LineLength"})
     @Inject
     public CoreQueryManager(
         @Named("features") final Features features,
@@ -134,6 +155,40 @@ public class CoreQueryManager implements QueryManager {
         final AggregationFactory aggregations,
         @Named("groupLimit") final OptionalLimit groupLimit,
         @Named("smallQueryThreshold") final long smallQueryThreshold,
+        /* Reference: https://cloud.google.com/bigtable/docs/hbase-client/javadoc/com/google/cloud/bigtable/config/CallOptionsConfig.Builder */
+
+        /* MutateRpcTimeoutMs
+        - The amount of milliseconds to wait before issuing a client side timeout for mutation remote
+        procedure calls.
+        AKA
+        If timeouts are set, how many milliseconds should pass before a DEADLINE_EXCEEDED for a long
+        mutation. Currently, this feature is experimental.
+        */
+        @Named("mutateRpcTimeoutMs") final int mutateRpcTimeoutMs,
+
+        /* ReadRowsRpcTimeoutMs
+        - The amount of milliseconds to wait before issuing a client side timeout for readRows streaming
+        remote procedure calls.
+        AKA
+        from https://github.com/hegemonic/cloud-bigtable-client/blob/master/bigtable-client-core-parent/bigtable-client-core/src/main/java/com/google/cloud/bigtable/config/CallOptionsConfig.java :
+
+        The default duration to wait before timing out read stream RPC (default value: 12 hour).
+
+        The amount of time in millisecond to wait before issuing a client side timeout for readRows
+        streaming RPCs.
+        */
+        @Named("readRowsRpcTimeoutMs") final int readRowsRpcTimeoutMs,
+
+        /* shortRpcTimeoutMs
+        https://cloud.google.com/bigtable/docs/hbase-client/javadoc/com/google/cloud/bigtable/config/CallOptionsConfig.html#short_timeout_ms_default
+        ShortRpcTimeoutMs - The amount of milliseconds to wait before issuing a client side timeout for
+        short remote procedure calls.
+        AKA
+        The default duration to wait before timing out RPCs (default value: 60 seconds) : https://cloud.google.com/bigtable/docs/hbase-client/javadoc/com/google/cloud/bigtable/config/CallOptionsConfig#SHORT_TIMEOUT_MS_DEFAULT
+        */
+        @Named("shortRpcTimeoutMs") final int shortRpcTimeoutMs,
+
+
         final QueryReporter reporter,
         final Optional<ConditionalFeatures> conditionalFeatures,
         final QueryLoggerFactory queryLoggerFactory
@@ -148,6 +203,9 @@ public class CoreQueryManager implements QueryManager {
         this.groupLimit = groupLimit;
         this.reporter = reporter;
         this.smallQueryThreshold = smallQueryThreshold;
+        this.mutateRpcTimeoutMs = mutateRpcTimeoutMs;
+        this.readRowsRpcTimeoutMs = readRowsRpcTimeoutMs;
+        this.shortRpcTimeoutMs = shortRpcTimeoutMs;
         this.conditionalFeatures = conditionalFeatures;
         this.queryLogger = queryLoggerFactory.create("CoreQueryManager");
     }
