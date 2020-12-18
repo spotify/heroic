@@ -246,6 +246,9 @@ public abstract class AbstractMetricBackendIT {
     }
 
     private class TestCase {
+
+        // https://en.wikipedia.org/wiki/Phrases_from_The_Hitchhiker%27s_Guide_to_the_Galaxy
+        public static final double MEANING_OF_LIFE_HHGTTG = 42D;
         private Optional<Integer> denseStart = Optional.empty();
         private Optional<Integer> dense = Optional.empty();
         private final List<Long> input = new ArrayList<>();
@@ -284,8 +287,8 @@ public abstract class AbstractMetricBackendIT {
                 final Points input = new Points();
                 final Points expected = new Points();
 
-                inputStream().forEach(t -> input.p(t, 42D));
-                expectedStream().forEach(t -> expected.p(t, 42D));
+                inputStream().forEach(t -> input.p(t, MEANING_OF_LIFE_HHGTTG));
+                expectedStream().forEach(t -> expected.p(t, MEANING_OF_LIFE_HHGTTG));
 
                 consumer.accept(input.build(), expected.build());
             }

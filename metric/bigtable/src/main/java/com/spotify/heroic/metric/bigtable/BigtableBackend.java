@@ -120,6 +120,11 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
     private final Meter written = new Meter();
     private final int maxWriteBatchSize;
+    private final int mutateRpcTimeoutMs;
+    private final int readRowsRpcTimeoutMs;
+    private final int shortRpcTimeoutMs;
+    private final int maxScanTimeoutRetries;
+    private final int maxElapsedBackoffMs;
 
 
     @Inject
@@ -131,13 +136,24 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         @Named("table") final String table,
         @Named("configure") final boolean configure,
         @Named("maxWriteBatchSize") final int maxWriteBatchSize,
-        MetricBackendReporter reporter
+        @Named("mutateRpcTimeoutMs") final int mutateRpcTimeoutMs,
+        @Named("readRowsRpcTimeoutMs") final int readRowsRpcTimeoutMs,
+        @Named("shortRpcTimeoutMs") final int shortRpcTimeoutMs,
+        @Named("maxScanTimeoutRetries") final int maxScanTimeoutRetries,
+        @Named("maxElapsedBackoffMs") final int maxElapsedBackoffMs,
+        MetricBackendReporter reporter,
+        @Named("application/json") ObjectMapper mapper
     ) {
         super(async);
         this.async = async;
         this.rowKeySerializer = rowKeySerializer;
         this.connection = connection;
         this.maxWriteBatchSize = maxWriteBatchSize;
+        this.mutateRpcTimeoutMs = mutateRpcTimeoutMs;
+        this.readRowsRpcTimeoutMs = readRowsRpcTimeoutMs;
+        this.shortRpcTimeoutMs = shortRpcTimeoutMs;
+        this.maxScanTimeoutRetries = maxScanTimeoutRetries;
+        this.maxElapsedBackoffMs = maxElapsedBackoffMs;
         this.groups = groups;
         this.table = table;
         this.configure = configure;
@@ -267,7 +283,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     public AsyncFuture<FetchData.Result> fetch(
         final FetchData.Request request,
         final FetchQuotaWatcher watcher,
-        final Consumer<MetricReadResult> consumer,
+        final Consumer<MetricReadResult> metricsConsumer,
         final Span parentSpan
     ) {
         return connection.doto(c -> {
@@ -280,10 +296,10 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             switch (type) {
                 case POINT:
                     return fetchBatch(
-                        watcher, type, pointsRanges(request), c, consumer, parentSpan);
+                        watcher, type, pointsRanges(request), c, metricsConsumer, parentSpan);
                 case DISTRIBUTION_POINTS:
                     return fetchBatch(watcher, type, distributionPointsRanges(request), c,
-                        consumer, parentSpan);
+                        metricsConsumer, parentSpan);
                 default:
                     return async.resolved(new FetchData.Result(QueryTrace.of(FETCH),
                         new QueryError("unsupported source: " + request.getType())));
@@ -656,6 +672,26 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
     public int getMaxWriteBatchSize() {
         return maxWriteBatchSize;
+    }
+
+    public int getMutateRpcTimeoutMs() {
+        return mutateRpcTimeoutMs;
+    }
+
+    public int getReadRowsRpcTimeoutMs() {
+        return readRowsRpcTimeoutMs;
+    }
+
+    public int getShortRpcTimeoutMs() {
+        return shortRpcTimeoutMs;
+    }
+
+    public int getMaxScanTimeoutRetries() {
+        return maxScanTimeoutRetries;
+    }
+
+    public int getmaxElapsedBackoffMs() {
+        return maxElapsedBackoffMs;
     }
 
     private static final class PreparedQuery {

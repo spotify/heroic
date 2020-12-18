@@ -21,6 +21,11 @@
 
 package com.spotify.heroic.metric.bigtable;
 
+import static com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_MAX_ELAPSED_BACKOFF_MILLIS;
+import static com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_MAX_SCAN_TIMEOUT_RETRIES;
+import static com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_MUTATE_RPC_TIMEOUT_MS;
+import static com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_READ_ROWS_RPC_TIMEOUT_MS;
+import static com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_SHORT_RPC_TIMEOUT_MS;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
 import static org.apache.commons.lang3.builder.ToStringStyle.MULTI_LINE_STYLE;
@@ -36,6 +41,7 @@ import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.bigtable.credentials.DefaultCredentialsBuilder;
+import com.spotify.heroic.metric.consts.ApiQueryConsts;
 import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
@@ -49,6 +55,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@SuppressWarnings({"LineLength"})
 @ModuleId("bigtable")
 public final class BigtableMetricModule implements MetricModule, DynamicModuleId {
 
@@ -88,6 +95,38 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
      * @see BigtableMetricModule#batchSize
      */
     private final int maxWriteBatchSize;
+    /**
+     * The amount of milliseconds to wait before issuing a client side timeout
+     * for mutation remote procedure calls.
+     * @see ApiQueryConsts#DEFAULT_MUTATE_RPC_TIMEOUT_MS
+     */
+    private final int mutateRpcTimeoutMs;
+    /**
+     * The amount of milliseconds to wait before issuing a client side
+     * timeout for readRows streaming remote procedure calls.
+     * @see ApiQueryConsts#DEFAULT_READ_ROWS_RPC_TIMEOUT_MS for description
+     */
+    private final int readRowsRpcTimeoutMs;
+    /**
+     * The amount of milliseconds to wait before issuing a client side timeout for
+     * short remote procedure calls.
+     * @see ApiQueryConsts#DEFAULT_SHORT_RPC_TIMEOUT_MS
+     */
+    private final int shortRpcTimeoutMs;
+
+    /**
+     * Maximum number of times to retry after a scan timeout (Google default value: 10 retries).
+     * @See ApiQueryConsts#DEFAULT_MAX_SCAN_TIMEOUT_RETRIES
+     */
+    public final int maxScanTimeoutRetries;
+
+    /**
+     * Maximum amount of time to retry before failing the operation (Google default value: 600
+     * seconds).
+     * @See ApiQueryConsts#DEFAULT_MAX_ELAPSED_BACKOFF_MILLIS
+     */
+    public final int maxElapsedBackoffMs;
+
     private final int flushIntervalSeconds;
 
     /**
@@ -113,6 +152,11 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         @JsonProperty("configure") Optional<Boolean> configure,
         @JsonProperty("disableBulkMutations") Optional<Boolean> disableBulkMutations,
         @JsonProperty("maxWriteBatchSize") Optional<Integer> maxWriteBatchSize,
+        @JsonProperty("mutateRpcTimeoutMs") Optional<Integer> mutateRpcTimeoutMs,
+        @JsonProperty("readRowsRpcTimeoutMs") Optional<Integer> readRowsRpcTimeoutMs,
+        @JsonProperty("shortRpcTimeoutMs") Optional<Integer> shortRpcTimeoutMs,
+        @JsonProperty("maxScanTimeoutRetries") Optional<Integer> maxScanTimeoutRetries,
+        @JsonProperty("maxElapsedBackoffMs") Optional<Integer> maxElapsedBackoffMs,
         @JsonProperty("flushIntervalSeconds") Optional<Integer> flushIntervalSeconds,
         @JsonProperty("batchSize") Optional<Integer> batchSize,
         @JsonProperty("emulatorEndpoint") Optional<String> emulatorEndpoint
@@ -133,6 +177,14 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         maxWriteBatch = Math.min(MAX_MUTATION_BATCH_SIZE, maxWriteBatch);
 
         this.maxWriteBatchSize = maxWriteBatch;
+
+        this.mutateRpcTimeoutMs = mutateRpcTimeoutMs.orElse(DEFAULT_MUTATE_RPC_TIMEOUT_MS);
+        this.readRowsRpcTimeoutMs = readRowsRpcTimeoutMs.orElse(DEFAULT_READ_ROWS_RPC_TIMEOUT_MS);
+        this.shortRpcTimeoutMs = shortRpcTimeoutMs.orElse(DEFAULT_SHORT_RPC_TIMEOUT_MS);
+        this.maxScanTimeoutRetries = maxScanTimeoutRetries.orElse(DEFAULT_MAX_SCAN_TIMEOUT_RETRIES);
+        this.maxElapsedBackoffMs =
+         maxElapsedBackoffMs.orElse(DEFAULT_MAX_ELAPSED_BACKOFF_MILLIS);
+
         this.flushIntervalSeconds = flushIntervalSeconds.orElse(DEFAULT_FLUSH_INTERVAL_SECONDS);
         this.batchSize = batchSize;
         this.emulatorEndpoint = emulatorEndpoint.orElse(null);
@@ -175,7 +227,10 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
                     return async.call(
                         new BigtableConnectionBuilder(
                             project, instance, profile, credentials, emulatorEndpoint,
-                            async, disableBulkMutations, flushIntervalSeconds, batchSize));
+                            async, disableBulkMutations, flushIntervalSeconds, batchSize,
+                                mutateRpcTimeoutMs, readRowsRpcTimeoutMs, shortRpcTimeoutMs,
+                                maxScanTimeoutRetries, maxElapsedBackoffMs
+                        ));
                 }
 
                 @Override
@@ -200,6 +255,41 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         @Named("maxWriteBatchSize")
         public Integer maxWriteBatchSize() {
             return maxWriteBatchSize;
+        }
+
+        @Provides
+        @BigtableScope
+        @Named("mutateRpcTimeoutMs")
+        public Integer mutateRpcTimeoutMs() {
+            return mutateRpcTimeoutMs;
+        }
+
+        @Provides
+        @BigtableScope
+        @Named("readRowsRpcTimeoutMs")
+        public Integer readRowsRpcTimeoutMs() {
+            return readRowsRpcTimeoutMs;
+        }
+
+        @Provides
+        @BigtableScope
+        @Named("shortRpcTimeoutMs")
+        public Integer shortRpcTimeoutMs() {
+            return shortRpcTimeoutMs;
+        }
+
+        @Provides
+        @BigtableScope
+        @Named("maxScanTimeoutRetries")
+        public Integer maxScanTimeoutRetries() {
+            return maxScanTimeoutRetries;
+        }
+
+        @Provides
+        @BigtableScope
+        @Named("maxElapsedBackoffMs")
+        public Integer maxElapsedBackoffMs() {
+            return maxElapsedBackoffMs;
         }
 
         @Provides
@@ -249,6 +339,11 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         private Optional<Boolean> configure = empty();
         private Optional<Boolean> disableBulkMutations = empty();
         private Optional<Integer> maxWriteBatchSize = empty();
+        private Optional<Integer> mutateRpcTimeoutMs = empty();
+        private Optional<Integer> readRowsRpcTimeoutMs = empty();
+        private Optional<Integer> shortRpcTimeoutMs = empty();
+        private Optional<Integer> maxScanTimeoutRetries = empty();
+        private Optional<Integer> maxElapsedBackoffMs = empty();
         private Optional<Integer> flushIntervalSeconds = empty();
         private Optional<Integer> batchSize = empty();
         private Optional<String> emulatorEndpoint = empty();
@@ -303,6 +398,31 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
             return this;
         }
 
+        public Builder mutateRpcTimeoutMs(int mutateRpcTimeoutMs) {
+            this.mutateRpcTimeoutMs = of(mutateRpcTimeoutMs);
+            return this;
+        }
+
+        public Builder readRowsRpcTimeoutMs(int readRowsRpcTimeoutMs) {
+            this.readRowsRpcTimeoutMs = of(readRowsRpcTimeoutMs);
+            return this;
+        }
+
+        public Builder shortRpcTimeoutMs(int shortRpcTimeoutMs) {
+            this.shortRpcTimeoutMs = of(shortRpcTimeoutMs);
+            return this;
+        }
+
+        public Builder maxScanTimeoutRetries(int maxScanTimeoutRetries) {
+            this.maxScanTimeoutRetries = of(maxScanTimeoutRetries);
+            return this;
+        }
+
+        public Builder maxElapsedBackoffMs(int maxElapsedBackoffMs) {
+            this.maxElapsedBackoffMs = of(maxElapsedBackoffMs);
+            return this;
+        }
+
         public Builder batchSize(int batchSize) {
             this.batchSize = of(batchSize);
             return this;
@@ -330,6 +450,11 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
                 configure,
                 disableBulkMutations,
                 maxWriteBatchSize,
+                mutateRpcTimeoutMs,
+                readRowsRpcTimeoutMs,
+                shortRpcTimeoutMs,
+                maxScanTimeoutRetries,
+                maxElapsedBackoffMs,
                 flushIntervalSeconds,
                 batchSize,
                 emulatorEndpoint);
@@ -349,7 +474,12 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
             .append("configure", configure)
             .append("disableBulkMutations", disableBulkMutations)
             .append("maxWriteBatchSize", maxWriteBatchSize)
+            .append("mutateRpcTimeoutMs", mutateRpcTimeoutMs)
+            .append("readRowsRpcTimeoutMs", readRowsRpcTimeoutMs)
+            .append("shortRpcTimeoutMs", shortRpcTimeoutMs)
+            .append("maxScanTimeoutRetries", maxScanTimeoutRetries)
             .append("flushIntervalSeconds", flushIntervalSeconds)
+            .append("maxElapsedBackoffMs", maxElapsedBackoffMs)
             .append("batchSize", batchSize)
             .append("emulatorEndpoint", emulatorEndpoint)
             .toString();

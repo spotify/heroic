@@ -39,14 +39,10 @@ class OpenCensusUtils {
             .collect(Collectors.joining(", "));
     }
 
-    @SuppressWarnings("checkstyle:LineLength")
+    @SuppressWarnings("LineLength")
     static Status mapStatusCode(int status) {
-        // @formatter:off
-        //
         // Mapping from:
         // https://github.com/census-instrumentation/opencensus-specs/blob/master/trace/HTTP.md#mapping-from-http-status-codes-to-trace-status-codes
-        //
-        // @formatter:on
         final Status traceStatus;
         if (status < 200) {
             traceStatus = Status.UNKNOWN;

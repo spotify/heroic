@@ -124,6 +124,8 @@ public class CoreQueryManager implements QueryManager {
 
     private final long smallQueryThreshold;
 
+
+    @SuppressWarnings({"LineLength"})
     @Inject
     public CoreQueryManager(
         @Named("features") final Features features,
