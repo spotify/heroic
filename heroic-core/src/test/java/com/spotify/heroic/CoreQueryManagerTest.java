@@ -53,8 +53,8 @@ public class CoreQueryManagerTest {
         when(queryLoggerFactory.create(any())).thenReturn(queryLogger);
 
         manager = new CoreQueryManager(Features.empty(), async, Clock.system(), cluster, parser,
-            queryCache, aggregations, OptionalLimit.empty(), smallQueryThreshold, queryReporter,
-            Optional.empty(), queryLoggerFactory);
+                queryCache, aggregations, OptionalLimit.empty(), smallQueryThreshold,
+                queryReporter, Optional.empty(), queryLoggerFactory);
     }
 
     @Test

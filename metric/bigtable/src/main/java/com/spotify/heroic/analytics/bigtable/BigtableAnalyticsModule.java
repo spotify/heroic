@@ -21,6 +21,12 @@
 
 package com.spotify.heroic.analytics.bigtable;
 
+import static com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_MAX_ELAPSED_BACKOFF_MILLIS;
+import static com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_MAX_SCAN_TIMEOUT_RETRIES;
+import static com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_MUTATE_RPC_TIMEOUT_MS;
+import static com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_READ_ROWS_RPC_TIMEOUT_MS;
+import static com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_SHORT_RPC_TIMEOUT_MS;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.analytics.AnalyticsComponent;
@@ -100,9 +106,21 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
             @Override
             public AsyncFuture<BigtableConnection> construct() {
                 return async.call(
-                    new BigtableConnectionBuilder(project, instance, profile, credentials,
-                        emulatorEndpoint, async, DEFAULT_DISABLE_BULK_MUTATIONS,
-                        DEFAULT_FLUSH_INTERVAL_SECONDS, Optional.empty()));
+                    new BigtableConnectionBuilder(
+                            project,
+                            instance,
+                            profile,
+                            credentials,
+                            emulatorEndpoint,
+                            async,
+                            DEFAULT_DISABLE_BULK_MUTATIONS,
+                            DEFAULT_FLUSH_INTERVAL_SECONDS,
+                            Optional.empty(),
+                            DEFAULT_MUTATE_RPC_TIMEOUT_MS,
+                            DEFAULT_READ_ROWS_RPC_TIMEOUT_MS,
+                            DEFAULT_SHORT_RPC_TIMEOUT_MS,
+                            DEFAULT_MAX_SCAN_TIMEOUT_RETRIES,
+                            DEFAULT_MAX_ELAPSED_BACKOFF_MILLIS));
             }
 
             @Override
