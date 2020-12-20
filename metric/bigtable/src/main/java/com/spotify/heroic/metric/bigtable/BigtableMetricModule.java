@@ -63,10 +63,10 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
     private static final String BIGTABLE_CONFIGURE_PARAM = "bigtable.configure";
 
     /* default number of Cells for each batch mutation */
-    public static final int DEFAULT_MUTATION_BATCH_SIZE = 10_000;
+    public static final int DEFAULT_MUTATION_BATCH_SIZE = 1_000;
 
     /* maximum possible number of Cells for each batch mutation */
-    public static final int MAX_MUTATION_BATCH_SIZE = 1_000_000;
+    public static final int MAX_MUTATION_BATCH_SIZE = 100_000;
 
     /* minimum possible number of Cells supported for each batch mutation */
     public static final int MIN_MUTATION_BATCH_SIZE = 10;

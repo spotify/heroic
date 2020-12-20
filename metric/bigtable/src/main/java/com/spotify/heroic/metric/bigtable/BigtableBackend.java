@@ -673,23 +673,38 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         return maxWriteBatchSize;
     }
 
+    /**
+    * Do not use - public purely to enable unit testing
+    */
     public int getMutateRpcTimeoutMs() {
         return mutateRpcTimeoutMs;
     }
 
+    /**
+    * Do not use - public purely to enable unit testing
+    */
     public int getReadRowsRpcTimeoutMs() {
         return readRowsRpcTimeoutMs;
     }
 
+    /**
+    * Do not use - public purely to enable unit testing
+    */
     public int getShortRpcTimeoutMs() {
         return shortRpcTimeoutMs;
     }
 
+    /**
+    * Do not use - public purely to enable unit testing
+    */
     public int getMaxScanTimeoutRetries() {
         return maxScanTimeoutRetries;
     }
 
-    public int getmaxElapsedBackoffMs() {
+    /**
+    * Do not use - public purely to enable unit testing
+    */
+    public int getMaxElapsedBackoffMs() {
         return maxElapsedBackoffMs;
     }
 
