@@ -152,7 +152,7 @@ public class HeroicMetricsConfigurationTest {
                     bigtableBackend.getMaxWriteBatchSize());
         }
         {
-            final int validSize = 500_000;
+            final int validSize = 100_000;
             var bigtableBackend = getBigtableMetricModule(validSize);
 
             assertEquals(validSize, bigtableBackend.getMaxWriteBatchSize());
