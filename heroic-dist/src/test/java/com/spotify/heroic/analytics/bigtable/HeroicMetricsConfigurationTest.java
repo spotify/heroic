@@ -129,7 +129,7 @@ public class HeroicMetricsConfigurationTest {
                     assertEquals(EXPECTED_MAX_SCAN_RETRIES,
                             bigtableBackend.getMaxScanTimeoutRetries());
                     assertEquals(EXPECTED_MAX_ELAPSED_BACKOFF_MS,
-                            bigtableBackend.getmaxElapsedBackoffMs());
+                            bigtableBackend.getMaxElapsedBackoffMs());
 
                 return null;
                 });

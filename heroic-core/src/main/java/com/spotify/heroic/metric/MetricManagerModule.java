@@ -351,18 +351,24 @@ public class MetricManagerModule {
         private Optional<Boolean> failOnLimits = empty();
         private Optional<Long> smallQueryThreshold = empty();
         /**
-         * @See com.spotify.heroic.metric.consts.ApiQueryConsts#DEFAULT_MUTATE_RPC_TIMEOUT_MS
+         * See com.spotify.heroic.metric.consts.ApiQueryConsts#DEFAULT_MUTATE_RPC_TIMEOUT_MS
          */
         private Optional<Integer> mutateRpcTimeoutMs = empty();
         /**
-         * @See com.spotify.heroic.metric.consts.ApiQueryConsts#DEFAULT_READ_RPC_TIMEOUT_MS
+         * See com.spotify.heroic.metric.consts.ApiQueryConsts#DEFAULT_READ_ROWS_RPC_TIMEOUT_MS
          */
         private Optional<Integer> readRowsRpcTimeoutMs = empty();
         /**
-         * @See com.spotify.heroic.metric.consts.ApiQueryConsts#DEFAULT_SHORT_RPC_TIMEOUT_MS
+         * See com.spotify.heroic.metric.consts.ApiQueryConsts#DEFAULT_SHORT_RPC_TIMEOUT_MS
          */
         private Optional<Integer> shortRpcTimeoutMs = empty();
+        /**
+         * See com.spotify.heroic.metric.consts.ApiQueryConsts#DEFAULT_MAX_SCAN_TIMEOUT_RETRIES
+         */
         private Optional<Integer> maxScanTimeoutRetries = empty();
+        /**
+         * See com.spotify.heroic.metric.consts.ApiQueryConsts#DEFAULT_MAX_ELAPSED_BACKOFF_MILLIS
+         */
         private Optional<Integer> maxElapsedBackoffMs = empty();
 
         private Builder() {

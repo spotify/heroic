@@ -35,7 +35,7 @@ public class ApiQueryConsts {
      *
      * @see <a href="https://cloud.google.com/bigtable/docs/hbase-client/javadoc/com/google/cloud/bigtable/config/CallOptionsConfig.Builder.html#setmutaterpctimeoutms">CallOptionsConfig.Builder#MutateRpcTimeoutMs</a>
      */
-    public static final int DEFAULT_MUTATE_RPC_TIMEOUT_MS = 4_000;
+    public static final int DEFAULT_MUTATE_RPC_TIMEOUT_MS = 1_000;
 
     /**
      * ReadRowsRpcTimeoutMs
@@ -48,7 +48,7 @@ public class ApiQueryConsts {
      * (default value: 12 hour).
      * @see <a href="https://cloud.google.com/bigtable/docs/hbase-client/javadoc/com/google/cloud/bigtable/config/CallOptionsConfig.Builder.html#setreadrowsrpctimeoutms">ReadRowsRpcTimeoutMs</a>
      */
-    public static final int DEFAULT_READ_ROWS_RPC_TIMEOUT_MS = 4_000;
+    public static final int DEFAULT_READ_ROWS_RPC_TIMEOUT_MS = 1_000;
 
     /**
      * ShortRpcTimeoutMs
@@ -60,7 +60,7 @@ public class ApiQueryConsts {
      * The default duration to wait before timing out RPCs (default Google value: 60
      * seconds) @see <a href="https://cloud.google.com/bigtable/docs/hbase-client/javadoc/com/google/cloud/bigtable/config/CallOptionsConfig#SHORT_TIMEOUT_MS_DEFAULT">CallOptionsConfig.SHORT_TIMEOUT_MS_DEFAULT</a>
      */
-    public static final int DEFAULT_SHORT_RPC_TIMEOUT_MS = 4_000;
+    public static final int DEFAULT_SHORT_RPC_TIMEOUT_MS = 1_000;
 
     /**
      * Maximum number of times to retry after a scan timeout (Google default value: 10 retries).
@@ -71,20 +71,47 @@ public class ApiQueryConsts {
     public static final int DEFAULT_MAX_SCAN_TIMEOUT_RETRIES  = 2;
 
     /**
+    * Copy of com.google.cloud.bigtable.config.RetryOptions#DEFAULT_INITIAL_BACKOFF_MILLIS
+    * so that we don't have to link/depend on the Google jar
+    * <p></p>
+    * Initial amount of time to wait before retrying failed operations (default value: 5ms).
+    **/
+    public static final int DEFAULT_INITIAL_BACKOFF_MILLIS = 5;
+
+    /**
+    * Copy of com.google.cloud.bigtable.config.RetryOptions#DEFAULT_BACKOFF_MULTIPLIER
+    * So that we don't have to link/depend on the Google jar
+    * <p></p>
+    * Multiplier to apply to wait times after failed retries (default value: 1.5).
+    * */
+    public static final double DEFAULT_BACKOFF_MULTIPLIER = 1.5;
+
+    /**
+     * A little "safety buffer" to err on the side of caution (against ceasing
+     * retrying prematurely).
+     */
+    private static final int SAFETY_BUFFER_MILLIS = 25;
+
+    /**
      * Maximum amount of time to retry before failing the operation (Google default value: 600
      * seconds).
+     * <p></p>
      * From Adam Steele [adamsteele@google.com]:
      * The operation will be retried until you hit either maxElapsedBackoffMs or (for scan
      * operations) maxScanTimeoutRetries.
+     * <p></p>
+     * So, we use com.google.cloud.bigtable.config.RetryOptions#DEFAULT_BACKOFF_MULTIPLIER
+     * and com.google.cloud.bigtable.config.RetryOptions#DEFAULT_INITIAL_BACKOFF_MILLIS
+     * to come up with a number of millis, which is currently :
+     * <p></p>
+     * 3 * 1000 * 1.5 + 5 + 25 = 4,530 ms total potential wait for an operation
+     * <p></p>
+     * which is pretty reasonable.
      */
-    private static final double DEFAULT_BACKOFF_MULTIPLIER = 2.0;
-    private static final int DEFAULT_INITIAL_BACKOFF_MILLIS = 10;
-    private static final int SANITY_BUFFER_MILLIS = 100;
-
     public static final int DEFAULT_MAX_ELAPSED_BACKOFF_MILLIS = (int)
-                    ((1 + DEFAULT_MAX_SCAN_TIMEOUT_RETRIES) *
+            ((1 + DEFAULT_MAX_SCAN_TIMEOUT_RETRIES) *
                     DEFAULT_READ_ROWS_RPC_TIMEOUT_MS *
                     DEFAULT_BACKOFF_MULTIPLIER) +
-                    DEFAULT_INITIAL_BACKOFF_MILLIS +
-                    SANITY_BUFFER_MILLIS;
+            DEFAULT_INITIAL_BACKOFF_MILLIS +
+            SAFETY_BUFFER_MILLIS;
 }
