@@ -49,6 +49,13 @@ public class FilterAggregationTest {
         verifyRoundtrip("{\"type\":\"topk\",\"k\":0}", new TopKInstance(0), TopKInstance.class);
     }
 
+    @Test
+    public void testTDigestStatInstance() throws Exception {
+        AggregationInstance aggregationInstance = new TdigestInstance(0, 0);
+        verifyRoundtrip("{\"type\":\"tdigest\",\"size\":0,\"extent\":0}",
+            aggregationInstance , AggregationInstance.class);
+    }
+
     private <T> void verifyRoundtrip(
         final String json, final T reference, final Class<T> cls
     ) throws Exception {

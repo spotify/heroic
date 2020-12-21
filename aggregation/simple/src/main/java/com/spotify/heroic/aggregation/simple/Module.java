@@ -97,6 +97,9 @@ public class Module implements HeroicModule {
             c.register(GroupUnique.NAME, GroupUnique.class, GroupUniqueInstance.class,
                 samplingBuilder(GroupUnique::new));
 
+            c.register(Tdigest.NAME, Tdigest.class, TdigestInstance.class,
+                samplingBuilder(Tdigest::new));
+
             c.register(Quantile.NAME, Quantile.class, QuantileInstance.class,
                 new SamplingAggregationDSL<Quantile>(factory) {
                     @Override

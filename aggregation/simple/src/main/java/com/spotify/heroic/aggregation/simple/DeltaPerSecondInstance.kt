@@ -112,6 +112,11 @@ object DeltaPerSecondInstance : AggregationInstance {
         ) {
         }
 
+        override fun updateTDigestPoints(
+                key: Map<String, String>, series: Set<Series>, values: List<TdigestPoint>
+        ) {
+        }
+
         override fun result(): AggregationResult {
             val (result, statistics) = this.childSession.result()
             val outputs = result

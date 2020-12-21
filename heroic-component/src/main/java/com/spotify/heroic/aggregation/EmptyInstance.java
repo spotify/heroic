@@ -36,6 +36,7 @@ import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
+import com.spotify.heroic.metric.TdigestPoint;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -127,6 +128,14 @@ public class EmptyInstance implements AggregationInstance {
         ) {
             quotaWatcher.retainData(values.size());
             session(key).distributionPoints.update(s, values);
+        }
+
+        @Override
+        public void updateTDigestPoints(
+            Map<String, String> key, Set<Series> s, List<TdigestPoint> values
+        ) {
+            quotaWatcher.retainData(values.size());
+            session(key).tDigestPoints.update(s, values);
         }
 
         private SubSession session(Map<String, String> key) {
@@ -223,6 +232,7 @@ public class EmptyInstance implements AggregationInstance {
     }
 
     static class SubSession {
+        private final SessionPair<TdigestPoint> tDigestPoints = new SessionPair<>();
         private final SessionPair<DistributionPoint> distributionPoints = new SessionPair<>();
         private final SessionPair<Point> points = new SessionPair<>();
         private final SessionPair<Spread> spreads = new SessionPair<>();
