@@ -71,6 +71,7 @@ public class HeroicMetricsConfigurationTest {
 
     /**
      * Use this convenience overload if you don't care about *timeoutMs.
+     *
      * @param maxWriteBatchSize max size of each written batch of metrics
      * @return a bigtable module object
      */
@@ -107,16 +108,17 @@ public class HeroicMetricsConfigurationTest {
         // Check that the BigTableBackend's maxWriteBatchSize was picked up
         // from the heroic-all.yml config file
         instance.inject(
-            coreComponent -> {
-                var metricManager =
-                    (LocalMetricManager) ((DaggerCoreComponent) coreComponent).metricManager();
-                var analyticsBackend =
-                    metricManager
-                        .groupSet()
-                        .useGroup("bigtable")
-                        .getMembers()
-                        .toArray(new BigtableAnalyticsMetricBackend[0])[0];
-                var bigtableBackend = (BigtableBackend) analyticsBackend.getBackend();
+                coreComponent -> {
+                    var metricManager =
+                            (LocalMetricManager) ((DaggerCoreComponent) coreComponent)
+                                    .metricManager();
+                    var analyticsBackend =
+                            metricManager
+                                    .groupSet()
+                                    .useGroup("bigtable")
+                                    .getMembers()
+                                    .toArray(new BigtableAnalyticsMetricBackend[0])[0];
+                    var bigtableBackend = (BigtableBackend) analyticsBackend.getBackend();
 
                     assertEquals(EXPECTED_MAX_WRITE_BATCH_SIZE,
                             bigtableBackend.getMaxWriteBatchSize());
@@ -131,7 +133,7 @@ public class HeroicMetricsConfigurationTest {
                     assertEquals(EXPECTED_MAX_ELAPSED_BACKOFF_MS,
                             bigtableBackend.getMaxElapsedBackoffMs());
 
-                return null;
+                    return null;
                 });
     }
 
@@ -139,23 +141,24 @@ public class HeroicMetricsConfigurationTest {
     public void testMaxWriteBatchSizeLimitsAreEnforced() {
         {
             final int tooBigBatchSize = 5_000_000;
-            var bigtableBackend = getBigtableMetricModule(tooBigBatchSize);
+            var bigtableMetricModule = getBigtableMetricModule(tooBigBatchSize);
 
             assertEquals(BigtableMetricModule.MAX_MUTATION_BATCH_SIZE,
-                    bigtableBackend.getMaxWriteBatchSize());
+                    bigtableMetricModule.getConnectionSettings().maxWriteBatchSize().intValue());
         }
         {
             final int tooSmallBatchSize = 1;
             var bigtableBackend = getBigtableMetricModule(tooSmallBatchSize);
 
             assertEquals(BigtableMetricModule.MIN_MUTATION_BATCH_SIZE,
-                    bigtableBackend.getMaxWriteBatchSize());
+                    bigtableBackend.getConnectionSettings().maxWriteBatchSize().intValue());
         }
         {
             final int validSize = 100_000;
             var bigtableBackend = getBigtableMetricModule(validSize);
 
-            assertEquals(validSize, bigtableBackend.getMaxWriteBatchSize());
+            assertEquals(validSize,
+                    bigtableBackend.getConnectionSettings().maxWriteBatchSize().intValue());
         }
     }
 }

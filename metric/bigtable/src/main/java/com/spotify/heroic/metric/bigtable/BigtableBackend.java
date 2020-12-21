@@ -49,6 +49,7 @@ import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricReadResult;
 import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.MetricsConnectionSettingsModule;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.QueryError;
 import com.spotify.heroic.metric.QueryTrace;
@@ -129,12 +130,13 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         };
 
     private final Meter written = new Meter();
-    private final int maxWriteBatchSize;
-    private final int mutateRpcTimeoutMs;
-    private final int readRowsRpcTimeoutMs;
-    private final int shortRpcTimeoutMs;
-    private final int maxScanTimeoutRetries;
-    private final int maxElapsedBackoffMs;
+//    private final int maxWriteBatchSize;
+//    private final int mutateRpcTimeoutMs;
+//    private final int readRowsRpcTimeoutMs;
+//    private final int shortRpcTimeoutMs;
+//    private final int maxScanTimeoutRetries;
+//    private final int maxElapsedBackoffMs;
+    private final MetricsConnectionSettingsModule connectionSettings;
 
     @Inject
     public BigtableBackend(
@@ -145,12 +147,13 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         final Groups groups,
         @Named("table") final String table,
         @Named("configure") final boolean configure,
-        @Named("maxWriteBatchSize") final int maxWriteBatchSize,
-        @Named("mutateRpcTimeoutMs") final int mutateRpcTimeoutMs,
-        @Named("readRowsRpcTimeoutMs") final int readRowsRpcTimeoutMs,
-        @Named("shortRpcTimeoutMs") final int shortRpcTimeoutMs,
-        @Named("maxScanTimeoutRetries") final int maxScanTimeoutRetries,
-        @Named("maxElapsedBackoffMs") final int maxElapsedBackoffMs,
+        @Named("connectionsettings") final MetricsConnectionSettingsModule connectionSettings,
+//        @Named("maxWriteBatchSize") final int maxWriteBatchSize,
+//        @Named("mutateRpcTimeoutMs") final int mutateRpcTimeoutMs,
+//        @Named("readRowsRpcTimeoutMs") final int readRowsRpcTimeoutMs,
+//        @Named("shortRpcTimeoutMs") final int shortRpcTimeoutMs,
+//        @Named("maxScanTimeoutRetries") final int maxScanTimeoutRetries,
+//        @Named("maxElapsedBackoffMs") final int maxElapsedBackoffMs,
         MetricBackendReporter reporter,
         @Named("application/json") ObjectMapper mapper
     ) {
@@ -160,12 +163,13 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         this.rowKeySerializer = rowKeySerializer;
         this.sortedMapSerializer = serializer.sortedMap(serializer.string(), serializer.string());
         this.connection = connection;
-        this.maxWriteBatchSize = maxWriteBatchSize;
-        this.mutateRpcTimeoutMs = mutateRpcTimeoutMs;
-        this.readRowsRpcTimeoutMs = readRowsRpcTimeoutMs;
-        this.shortRpcTimeoutMs = shortRpcTimeoutMs;
-        this.maxScanTimeoutRetries = maxScanTimeoutRetries;
-        this.maxElapsedBackoffMs = maxElapsedBackoffMs;
+//        this.maxWriteBatchSize = maxWriteBatchSize;
+//        this.mutateRpcTimeoutMs = mutateRpcTimeoutMs;
+//        this.readRowsRpcTimeoutMs = readRowsRpcTimeoutMs;
+//        this.shortRpcTimeoutMs = shortRpcTimeoutMs;
+//        this.maxScanTimeoutRetries = maxScanTimeoutRetries;
+//        this.maxElapsedBackoffMs = maxElapsedBackoffMs;
+        this.connectionSettings = connectionSettings;
         this.groups = groups;
         this.table = table;
         this.configure = configure;
@@ -413,7 +417,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
             builder.setCell(columnFamily, offsetBytes, valueBytes);
 
-            if (builder.size() >= maxWriteBatchSize) {
+            if (builder.size() >= connectionSettings.maxWriteBatchSizeImpl()) {
                 saved.add(Pair.of(rowKey, builder.build()));
                 building.put(rowKey, Mutations.builder());
             }
@@ -669,44 +673,50 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         return "BigtableBackend(connection=" + this.connection + ")";
     }
 
-    public int getMaxWriteBatchSize() {
-        return maxWriteBatchSize;
-    }
-
     /**
     * Do not use - public purely to enable unit testing
     */
-    public int getMutateRpcTimeoutMs() {
-        return mutateRpcTimeoutMs;
+    public MetricsConnectionSettingsModule connectionSettings() {
+        return connectionSettings;
     }
-
-    /**
-    * Do not use - public purely to enable unit testing
-    */
-    public int getReadRowsRpcTimeoutMs() {
-        return readRowsRpcTimeoutMs;
-    }
-
-    /**
-    * Do not use - public purely to enable unit testing
-    */
-    public int getShortRpcTimeoutMs() {
-        return shortRpcTimeoutMs;
-    }
-
-    /**
-    * Do not use - public purely to enable unit testing
-    */
-    public int getMaxScanTimeoutRetries() {
-        return maxScanTimeoutRetries;
-    }
-
-    /**
-    * Do not use - public purely to enable unit testing
-    */
-    public int getMaxElapsedBackoffMs() {
-        return maxElapsedBackoffMs;
-    }
+//    public int getMaxWriteBatchSize() {
+//        return maxWriteBatchSize;
+//    }
+//
+//    /**
+//    * Do not use - public purely to enable unit testing
+//    */
+//    public int getMutateRpcTimeoutMs() {
+//        return mutateRpcTimeoutMs;
+//    }
+//
+//    /**
+//    * Do not use - public purely to enable unit testing
+//    */
+//    public int getReadRowsRpcTimeoutMs() {
+//        return readRowsRpcTimeoutMs;
+//    }
+//
+//    /**
+//    * Do not use - public purely to enable unit testing
+//    */
+//    public int getShortRpcTimeoutMs() {
+//        return shortRpcTimeoutMs;
+//    }
+//
+//    /**
+//    * Do not use - public purely to enable unit testing
+//    */
+//    public int getMaxScanTimeoutRetries() {
+//        return maxScanTimeoutRetries;
+//    }
+//
+//    /**
+//    * Do not use - public purely to enable unit testing
+//    */
+//    public int getMaxElapsedBackoffMs() {
+//        return maxElapsedBackoffMs;
+//    }
 
     private static final class PreparedQuery {
         private final ByteString rowKeyStart;

@@ -23,11 +23,6 @@ package com.spotify.heroic.metric;
 
 import static com.spotify.heroic.common.Optionals.mergeOptionalList;
 import static com.spotify.heroic.common.Optionals.pickOptional;
-import static com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_MAX_ELAPSED_BACKOFF_MILLIS;
-import static com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_MAX_SCAN_TIMEOUT_RETRIES;
-import static com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_MUTATE_RPC_TIMEOUT_MS;
-import static com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_READ_ROWS_RPC_TIMEOUT_MS;
-import static com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_SHORT_RPC_TIMEOUT_MS;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
 
@@ -106,32 +101,7 @@ public class MetricManagerModule {
     /**
      * Threshold for defining a "small" query, measured in pre-aggregation sample size
      */
-    private final long smallQueryThreshold;
-
-    /**
-     * @See com.spotify.heroic.metric.consts.ApiQueryConsts#DEFAULT_MUTATE_RPC_TIMEOUT_MS
-     */
-    private final int mutateRpcTimeoutMs;
-
-    /**
-     * @See com.spotify.heroic.metric.consts.ApiQueryConsts#DEFAULT_READ_ROWS_RPC_TIMEOUT_MS
-     */
-    private final int readRowsRpcTimeoutMs;
-
-    /**
-     * @See com.spotify.heroic.metric.consts.ApiQueryConsts#DEFAULT_SHORT_RPC_TIMEOUT_MS
-     */
-    private final int shortRpcTimeoutMs;
-
-    /**
-     * @See com.spotify.heroic.metric.consts.ApiQueryConsts#DEFAULT_MAX_SCAN_TIMEOUT_RETRIES
-     */
-    private final int maxScanTimeoutRetries;
-
-    /**
-     * @See com.spotify.heroic.metric.consts.ApiQueryConsts#DEFAULT_MAX_ELAPSED_BACKOFF_MILLIS
-     */
-    private final int maxElapsedBackoffMs;
+    private final long smallQueryThreshold;    private final MetricsConnectionSettings connectionSettings;
 
     private MetricManagerModule(
         List<MetricModule> backends,
@@ -144,11 +114,7 @@ public class MetricManagerModule {
         int fetchParallelism,
         boolean failOnLimits,
         long smallQueryThreshold,
-        int mutateRpcTimeoutMs,
-        int readRowsRpcTimeoutMs,
-        int shortRpcTimeoutMs,
-        int maxScanTimeoutRetries,
-        int maxElapsedBackoffMs
+        MetricsConnectionSettings connectionSettings
     ) {
         this.backends = backends;
         this.defaultBackends = defaultBackends;
@@ -160,11 +126,7 @@ public class MetricManagerModule {
         this.fetchParallelism = fetchParallelism;
         this.failOnLimits = failOnLimits;
         this.smallQueryThreshold = smallQueryThreshold;
-        this.mutateRpcTimeoutMs = mutateRpcTimeoutMs;
-        this.readRowsRpcTimeoutMs = readRowsRpcTimeoutMs;
-        this.shortRpcTimeoutMs = shortRpcTimeoutMs;
-        this.maxScanTimeoutRetries = maxScanTimeoutRetries;
-        this.maxElapsedBackoffMs = maxElapsedBackoffMs;
+        this.connectionSettings = connectionSettings;
 
         log.info("Metric Manager Module: \n{}", toString());
     }
@@ -281,37 +243,9 @@ public class MetricManagerModule {
 
     @Provides
     @MetricScope
-    @Named("mutateRpcTimeoutMs")
-    public int mutateRpcTimeoutMs() {
-        return mutateRpcTimeoutMs;
-    }
-
-    @Provides
-    @MetricScope
-    @Named("readRowsRpcTimeoutMs")
-    public int readRowsRpcTimeoutMs() {
-        return readRowsRpcTimeoutMs;
-    }
-
-    @Provides
-    @MetricScope
-    @Named("shortRpcTimeoutMs")
-    public int shortRpcTimeoutMs() {
-        return shortRpcTimeoutMs;
-    }
-
-    @Provides
-    @MetricScope
-    @Named("maxScanTimeoutRetries")
-    public int maxScanTimeoutRetries() {
-        return maxScanTimeoutRetries;
-    }
-
-    @Provides
-    @MetricScope
-    @Named("maxElapsedBackoffMs")
-    public int maxElapsedBackoffMs() {
-        return maxElapsedBackoffMs;
+    @Named("connectionSettings")
+    public MetricsConnectionSettings connectionSettings() {
+        return connectionSettings;
     }
 
     @Override
@@ -327,11 +261,12 @@ public class MetricManagerModule {
             .append("fetchParallelism", fetchParallelism)
             .append("failOnLimits", failOnLimits)
             .append("smallQueryThreshold", smallQueryThreshold)
-            .append("mutateRpcTimeoutMs", mutateRpcTimeoutMs)
-            .append("readRowsRpcTimeoutMs", readRowsRpcTimeoutMs)
-            .append("shortRpcTimeoutMs", shortRpcTimeoutMs)
-            .append("maxScanTimeoutRetries", maxScanTimeoutRetries)
-            .append("maxElapsedBackoffMs", maxElapsedBackoffMs)
+            .append("connectionSettings", connectionSettings)
+//            .append("mutateRpcTimeoutMs", mutateRpcTimeoutMs)
+//            .append("readRowsRpcTimeoutMs", readRowsRpcTimeoutMs)
+//            .append("shortRpcTimeoutMs", shortRpcTimeoutMs)
+//            .append("maxScanTimeoutRetries", maxScanTimeoutRetries)
+//            .append("maxElapsedBackoffMs", maxElapsedBackoffMs)
             .toString();
     }
 
@@ -340,6 +275,7 @@ public class MetricManagerModule {
     }
 
     public static class Builder {
+        private Optional<MetricsConnectionSettings> connectionSettings;
         private Optional<List<MetricModule>> backends = empty();
         private Optional<List<String>> defaultBackends = empty();
         private OptionalLimit groupLimit = OptionalLimit.empty();
@@ -350,26 +286,6 @@ public class MetricManagerModule {
         private Optional<Integer> fetchParallelism = empty();
         private Optional<Boolean> failOnLimits = empty();
         private Optional<Long> smallQueryThreshold = empty();
-        /**
-         * See com.spotify.heroic.metric.consts.ApiQueryConsts#DEFAULT_MUTATE_RPC_TIMEOUT_MS
-         */
-        private Optional<Integer> mutateRpcTimeoutMs = empty();
-        /**
-         * See com.spotify.heroic.metric.consts.ApiQueryConsts#DEFAULT_READ_ROWS_RPC_TIMEOUT_MS
-         */
-        private Optional<Integer> readRowsRpcTimeoutMs = empty();
-        /**
-         * See com.spotify.heroic.metric.consts.ApiQueryConsts#DEFAULT_SHORT_RPC_TIMEOUT_MS
-         */
-        private Optional<Integer> shortRpcTimeoutMs = empty();
-        /**
-         * See com.spotify.heroic.metric.consts.ApiQueryConsts#DEFAULT_MAX_SCAN_TIMEOUT_RETRIES
-         */
-        private Optional<Integer> maxScanTimeoutRetries = empty();
-        /**
-         * See com.spotify.heroic.metric.consts.ApiQueryConsts#DEFAULT_MAX_ELAPSED_BACKOFF_MILLIS
-         */
-        private Optional<Integer> maxElapsedBackoffMs = empty();
 
         private Builder() {
         }
@@ -402,11 +318,12 @@ public class MetricManagerModule {
             this.fetchParallelism = fetchParallelism;
             this.failOnLimits = failOnLimits;
             this.smallQueryThreshold = smallQueryThreshold;
-            this.mutateRpcTimeoutMs = mutateRpcTimeoutMs;
-            this.readRowsRpcTimeoutMs = readRowsRpcTimeoutMs;
-            this.shortRpcTimeoutMs = shortRpcTimeoutMs;
-            this.maxScanTimeoutRetries = maxScanTimeoutRetries;
-            this.maxElapsedBackoffMs = maxElapsedBackoffMs;
+
+            this.connectionSettings = Optional.of(new MetricsConnectionSettingsModule(
+                    Optional.ofNullable(null),
+                    mutateRpcTimeoutMs, readRowsRpcTimeoutMs, shortRpcTimeoutMs,
+                    maxScanTimeoutRetries,
+                    maxElapsedBackoffMs));
         }
 
         public Builder backends(List<MetricModule> backends) {
@@ -459,51 +376,29 @@ public class MetricManagerModule {
             return this;
         }
 
-        public Builder mutateRpcTimeoutMs(int mutateRpcTimeoutMs) {
-            this.mutateRpcTimeoutMs = of(mutateRpcTimeoutMs);
-            return this;
-        }
-
-        public Builder readRowsRpcTimeoutMs(int readRowsRpcTimeoutMs) {
-            this.readRowsRpcTimeoutMs = of(readRowsRpcTimeoutMs);
-            return this;
-        }
-
-        public Builder shortReadRpcTimeoutMs(int shortRpcTimeoutMs) {
-            this.shortRpcTimeoutMs = of(shortRpcTimeoutMs);
-            return this;
-        }
-
-        public Builder maxScanTimeoutRetries(int maxScanTimeoutRetries) {
-            this.maxScanTimeoutRetries = of(maxScanTimeoutRetries);
-            return this;
-        }
-
-        public Builder maxElapsedBackoffMs(int maxElapsedBackoffMs) {
-            this.maxElapsedBackoffMs = of(maxElapsedBackoffMs);
-            return this;
-        }
-
         public Builder merge(final Builder o) {
-            // @formatter:off
+
+            var connSettings =
+                    connectionSettings
+                            .orElse(o.connectionSettings.orElse(new MetricsConnectionSettings()));
+
             return new Builder(
-                mergeOptionalList(o.backends, backends),
-                mergeOptionalList(o.defaultBackends, defaultBackends),
-                groupLimit.orElse(o.groupLimit),
-                seriesLimit.orElse(o.seriesLimit),
-                aggregationLimit.orElse(o.aggregationLimit),
-                dataLimit.orElse(o.dataLimit),
-                concurrentQueriesBackoff.orElse(o.concurrentQueriesBackoff),
-                pickOptional(fetchParallelism, o.fetchParallelism),
-                pickOptional(failOnLimits, o.failOnLimits),
-                pickOptional(smallQueryThreshold, o.smallQueryThreshold),
-                pickOptional(mutateRpcTimeoutMs, o.mutateRpcTimeoutMs),
-                pickOptional(readRowsRpcTimeoutMs, o.readRowsRpcTimeoutMs),
-                pickOptional(shortRpcTimeoutMs, o.shortRpcTimeoutMs),
-                pickOptional(maxScanTimeoutRetries, o.maxScanTimeoutRetries),
-                pickOptional(maxElapsedBackoffMs, o.maxElapsedBackoffMs)
+                    mergeOptionalList(o.backends, backends),
+                    mergeOptionalList(o.defaultBackends, defaultBackends),
+                    groupLimit.orElse(o.groupLimit),
+                    seriesLimit.orElse(o.seriesLimit),
+                    aggregationLimit.orElse(o.aggregationLimit),
+                    dataLimit.orElse(o.dataLimit),
+                    concurrentQueriesBackoff.orElse(o.concurrentQueriesBackoff),
+                    pickOptional(fetchParallelism, o.fetchParallelism),
+                    pickOptional(failOnLimits, o.failOnLimits),
+                    pickOptional(smallQueryThreshold, o.smallQueryThreshold),
+                    Optional.of(connSettings.mutateRpcTimeoutMs),
+                    Optional.of(connSettings.readRowsRpcTimeoutMs),
+                    Optional.of(connSettings.shortRpcTimeoutMs),
+                    Optional.of(connSettings.maxScanTimeoutRetries),
+                    Optional.of(connSettings.maxElapsedBackoffMs)
             );
-            // @formatter:on
         }
 
         public MetricManagerModule build() {
@@ -519,11 +414,7 @@ public class MetricManagerModule {
                 fetchParallelism.orElse(DEFAULT_FETCH_PARALLELISM),
                 failOnLimits.orElse(DEFAULT_FAIL_ON_LIMITS),
                 smallQueryThreshold.orElse(DEFAULT_SMALL_QUERY_THRESHOLD),
-                mutateRpcTimeoutMs.orElse(DEFAULT_MUTATE_RPC_TIMEOUT_MS),
-                readRowsRpcTimeoutMs.orElse(DEFAULT_READ_ROWS_RPC_TIMEOUT_MS),
-                shortRpcTimeoutMs.orElse(DEFAULT_SHORT_RPC_TIMEOUT_MS),
-                maxScanTimeoutRetries.orElse(DEFAULT_MAX_SCAN_TIMEOUT_RETRIES),
-                maxElapsedBackoffMs.orElse(DEFAULT_MAX_ELAPSED_BACKOFF_MILLIS)
+                connectionSettings.orElse(MetricsConnectionSettingsModule.createDefault())
             );
             // @formatter:on
         }
