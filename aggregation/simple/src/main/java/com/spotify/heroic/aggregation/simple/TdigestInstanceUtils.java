@@ -30,7 +30,7 @@ import java.util.function.UnaryOperator;
 /**
  * Utility class for Tdigest aggregation and computation.
  */
-public class TdigestStatInstanceUtils {
+public class TdigestInstanceUtils {
     public static final double TDIGEST_COMPRESSION_LEVEL = 100.0;
 
     public static AtomicReference<TDigest> buildAtomicReference() {

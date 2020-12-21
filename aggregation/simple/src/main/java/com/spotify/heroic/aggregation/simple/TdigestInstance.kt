@@ -22,13 +22,11 @@
 package com.spotify.heroic.aggregation.simple
 
 import com.google.common.collect.ImmutableSet
-import com.spotify.heroic.ObjectHasher
 import com.spotify.heroic.aggregation.BucketAggregationInstance
 import com.spotify.heroic.aggregation.TDigestBucket
 import com.spotify.heroic.metric.Metric
 import com.spotify.heroic.metric.MetricType
 import com.spotify.heroic.metric.TdigestPoint
-import java.util.*
 
 /**
  *  Creates Tdigest buckets and computes distribution stats.

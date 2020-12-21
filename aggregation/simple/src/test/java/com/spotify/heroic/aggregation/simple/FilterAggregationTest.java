@@ -50,7 +50,7 @@ public class FilterAggregationTest {
     }
 
     @Test
-    public void testTDigestStatInstance() throws Exception {
+    public void testTDigestInstance() throws Exception {
         AggregationInstance aggregationInstance = new TdigestInstance(0, 0);
         verifyRoundtrip("{\"type\":\"tdigest\",\"size\":0,\"extent\":0}",
             aggregationInstance , AggregationInstance.class);
