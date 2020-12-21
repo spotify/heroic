@@ -26,12 +26,12 @@ import com.google.cloud.bigtable.config.BulkOptions;
 import com.google.cloud.bigtable.config.CallOptionsConfig;
 import com.google.cloud.bigtable.config.RetryOptions;
 import com.google.cloud.bigtable.grpc.BigtableSession;
+import com.spotify.heroic.metric.MetricsConnectionSettingsModule;
 import com.spotify.heroic.metric.bigtable.api.BigtableDataClientImpl;
 import com.spotify.heroic.metric.bigtable.api.BigtableMutatorImpl;
 import com.spotify.heroic.metric.bigtable.api.BigtableTableTableAdminClientImpl;
 import eu.toolchain.async.AsyncFramework;
 import io.grpc.Status;
-import java.util.Optional;
 import java.util.concurrent.Callable;
 import javax.annotation.Nullable;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -54,14 +54,15 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
 
     private final boolean disableBulkMutations;
     private final int flushIntervalSeconds;
-    private final Optional<Integer> batchSize;
-    private final int mutateRpcTimeoutMs;
-    private final int readRowsRpcTimeoutMs;
-    private final int shortRpcTimeoutMs;
-    private final int maxScanTimeoutRetries;
-    private final int maxElapsedBackoffMs;
+//    private final Optional<Integer> batchSize;
+//    private final int mutateRpcTimeoutMs;
+//    private final int readRowsRpcTimeoutMs;
+//    private final int shortRpcTimeoutMs;
+//    private final int maxScanTimeoutRetries;
+//    private final int maxElapsedBackoffMs;
 
     private final String emulatorEndpoint;
+    private final MetricsConnectionSettingsModule settings;
 
     public BigtableConnectionBuilder(
         final String project,
@@ -72,12 +73,13 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
         final AsyncFramework async,
         final boolean disableBulkMutations,
         final int flushIntervalSeconds,
-        final Optional<Integer> batchSize,
-        final int mutateRpcTimeoutMs,
-        final int readRowsRpcTimeoutMs,
-        final int maxScanTimeoutRetries,
-        final int shortRpcTimeoutMs,
-        final int maxElapsedBackoffMs
+//        final Optional<Integer> batchSize,
+//        final int mutateRpcTimeoutMs,
+//        final int readRowsRpcTimeoutMs,
+//        final int maxScanTimeoutRetries,
+//        final int shortRpcTimeoutMs,
+//        final int maxElapsedBackoffMs
+        MetricsConnectionSettingsModule settings
     ) {
         this.project = project;
         this.instance = instance;
@@ -87,12 +89,13 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
         this.async = async;
         this.disableBulkMutations = disableBulkMutations;
         this.flushIntervalSeconds = flushIntervalSeconds;
-        this.batchSize = batchSize;
-        this.mutateRpcTimeoutMs = mutateRpcTimeoutMs;
-        this.readRowsRpcTimeoutMs = readRowsRpcTimeoutMs;
-        this.shortRpcTimeoutMs = shortRpcTimeoutMs;
-        this.maxScanTimeoutRetries = maxScanTimeoutRetries;
-        this.maxElapsedBackoffMs = maxElapsedBackoffMs;
+//        this.batchSize = batchSize;
+//        this.mutateRpcTimeoutMs = mutateRpcTimeoutMs;
+//        this.readRowsRpcTimeoutMs = readRowsRpcTimeoutMs;
+//        this.shortRpcTimeoutMs = shortRpcTimeoutMs;
+//        this.maxScanTimeoutRetries = maxScanTimeoutRetries;
+//        this.maxElapsedBackoffMs = maxElapsedBackoffMs;
+        this.settings = settings;
     }
 
     @Override
@@ -104,18 +107,17 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
             .addStatusToRetryOn(Status.Code.UNAVAILABLE)
             .setAllowRetriesWithoutTimestamp(true)
             .setEnableRetries(true)
-            .setMaxScanTimeoutRetries(maxScanTimeoutRetries)
-            .setMaxElapsedBackoffMillis(maxElapsedBackoffMs)
+            .setMaxScanTimeoutRetries(settings.maxScanTimeoutRetries())
+            .setMaxElapsedBackoffMillis(settings.maxElapsedBackoffMs())
             .build();
 
-        final var bulkOptions = batchSize
-            .map(integer ->  BulkOptions.builder().setBulkMaxRowKeyCount(integer).build())
-            .orElseGet(() -> BulkOptions.builder().build());
+        final var bulkOptions =
+            BulkOptions.builder().setBulkMaxRowKeyCount(settings.maxWriteBatchSize()).build();
 
         var callOptionsConfig = CallOptionsConfig.builder()
-                .setReadRowsRpcTimeoutMs(readRowsRpcTimeoutMs)
-                .setMutateRpcTimeoutMs(mutateRpcTimeoutMs)
-                .setShortRpcTimeoutMs(shortRpcTimeoutMs)
+                .setReadRowsRpcTimeoutMs(settings.readRowsRpcTimeoutMs())
+                .setMutateRpcTimeoutMs(settings.mutateRpcTimeoutMs())
+                .setShortRpcTimeoutMs(settings.shortRpcTimeoutMs())
                 .setUseTimeout(true).build();
 
         var builder = BigtableOptions.builder()
@@ -168,13 +170,16 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
             .append("credentials", credentials)
             .append("disableBulkMutations", disableBulkMutations)
             .append("flushIntervalSeconds", flushIntervalSeconds)
-            .append("batchSize", batchSize.orElse(-1))
             .append("emulatorEndpoint", emulatorEndpoint)
-            .append("mutateRpcTimeoutMs", mutateRpcTimeoutMs)
-            .append("readRowsRpcTimeoutMs", readRowsRpcTimeoutMs)
-            .append("shortRpcTimeoutMs", shortRpcTimeoutMs)
-            .append("maxScanTimeoutRetries", maxScanTimeoutRetries)
-            .append("maxElapsedBackoffMs", maxElapsedBackoffMs)
+            .append("settings", settings)
             .toString();
+//            .append("batchSize", batchSize.orElse(-1))
+//            .append("emulatorEndpoint", emulatorEndpoint)
+//            .append("mutateRpcTimeoutMs", mutateRpcTimeoutMs)
+//            .append("readRowsRpcTimeoutMs", readRowsRpcTimeoutMs)
+//            .append("shortRpcTimeoutMs", shortRpcTimeoutMs)
+//            .append("maxScanTimeoutRetries", maxScanTimeoutRetries)
+//            .append("maxElapsedBackoffMs", maxElapsedBackoffMs)
+//            .toString();
     }
 }
