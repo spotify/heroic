@@ -56,17 +56,21 @@ public class ApiQueryConsts {
      * ShortRpcTimeoutMs
      * The amount of milliseconds to wait before issuing a client side timeout for
      * short remote procedure calls.
-     * TODO get from Adam proper description
      *
      * <p>AKA
      * The default duration to wait before timing out RPCs (default Google value: 60
      * seconds) @see <a https://github.com/googleapis/java-bigtable-hbase/blob/534288cfebf4732b7998c369a6e278581a64f758/bigtable-client-core-parent/bigtable-client-core/src/main/java/com/google/cloud/bigtable/config/CallOptionsConfig.java#L37">CallOptionsConfig.SHORT_TIMEOUT_MS_DEFAULT</a>
+     *
+     * Accoding to our Google rep, this is the value that's used for all read
+     * operations that target exactly 1 row. Since Heroic never does this (it
+     * calls readRows()), this setting will have no effect. Note that
+     * MutateRpcTimeoutMs governs all write timeouts.
      */
     public static final int DEFAULT_SHORT_RPC_TIMEOUT_MS = 4_000;
 
     /**
      * Maximum number of times to retry after a scan timeout (Google default value: 10 retries).
-     * Note that we're going with 3 retries since that's what the common-config BT repo. Note
+     * Note that we're going with 3 retries since that's what the common-config BT repo has. Note
      * that that repo specifies "max-attempts" so we want 3-1 = 2.
      *  @see <a href=https://github.com/googleapis/java-bigtable-hbase/blob/534288cfebf4732b7998c369a6e278581a64f758/bigtable-client-core-parent/bigtable-client-core/src/main/java/com/google/cloud/bigtable/config/RetryOptions.java#L92>RetryOptions.DEFAULT_MAX_SCAN_TIMEOUT_RETRIES</a>
      */
