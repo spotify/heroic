@@ -168,12 +168,12 @@ public abstract class AbstractMetricBackendIT {
     public void testMaxBatchSize() throws Exception {
         assumeTrue("max batch size", maxBatchSize.isPresent());
         final int maxBatchSize = this.maxBatchSize.get();
-        final int multiplier = 4;
-        DateRange range = new DateRange(99L, 100L + (maxBatchSize * 4));
+        final int maxBatchMultiplier = 4;
+        DateRange range = new DateRange(99L, 100L + (maxBatchSize * maxBatchMultiplier));
 
         new TestCase()
             .denseStart(100)
-            .dense(maxBatchSize * 4)
+            .dense(maxBatchSize * maxBatchMultiplier)
             .forEach((input, expected) -> verifyReadWrite(input, expected, range));
     }
 

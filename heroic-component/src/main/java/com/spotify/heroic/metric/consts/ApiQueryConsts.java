@@ -73,19 +73,16 @@ public class ApiQueryConsts {
     public static final int DEFAULT_MAX_SCAN_TIMEOUT_RETRIES = 2;
 
     /**
-    * Copy of
-    *
-    * <a href=https://github.com/googleapis/java-bigtable-hbase/blob/534288cfebf4732b7998c369a6e278581a64f758/bigtable-client-core-parent/bigtable-client-core/src/main/java/com/google/cloud/bigtable/config/RetryOptions.java#L71>RetryOptions#DEFAULT_INITIAL_BACKOFF_MILLIS</a>
-    * so that we don't have to link/depend on the Google jar
+    * Copy of <a href=https://github.com/googleapis/java-bigtable-hbase/blob/534288cfebf4732b7998c369a6e278581a64f758/bigtable-client-core-parent/bigtable-client-core/src/main/java/com/google/cloud/bigtable/config/RetryOptions.java#L71>RetryOptions#DEFAULT_INITIAL_BACKOFF_MILLIS</a>
+    * so that we don't have to link/depend on the Google jar.
+    * We go with 10 since that's what common-config repo has.
     * <p>
     * Initial amount of time to wait before retrying failed operations (default value: 5ms).
     **/
-    public static final int DEFAULT_INITIAL_BACKOFF_MILLIS = 5;
+    public static final int DEFAULT_INITIAL_BACKOFF_MILLIS = 10;
 
     /**
-    * Copy of
-    *
-    * <a href="https://github.com/googleapis/java-bigtable-hbase/blob/534288cfebf4732b7998c369a6e278581a64f758/bigtable-client-core-parent/bigtable-client-core/src/main/java/com/google/cloud/bigtable/config/RetryOptions.java#L78">com.google.cloud.bigtable.config.RetryOptions#DEFAULT_BACKOFF_MULTIPLIER</a>
+    * Copy of <a href="https://github.com/googleapis/java-bigtable-hbase/blob/534288cfebf4732b7998c369a6e278581a64f758/bigtable-client-core-parent/bigtable-client-core/src/main/java/com/google/cloud/bigtable/config/RetryOptions.java#L78">com.google.cloud.bigtable.config.RetryOptions#DEFAULT_BACKOFF_MULTIPLIER</a>
     * So that we don't have to link/depend on the Google jar
     * <p>
     * Multiplier to apply to wait times after failed retries (default value: 2.0).
