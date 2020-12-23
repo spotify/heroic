@@ -21,6 +21,9 @@
 
 package com.spotify.heroic.test;
 
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * Simple class to encapsulate conditional logic on whether a key, tag or tag value should be
  * prepended with a [uniquely-identifying] timestamp.
@@ -33,21 +36,33 @@ public class TimestampPrepender {
         TAG_VALUE
     }
 
+    private Set<EntityType> ets;
+    private long timestamp;
+
     public TimestampPrepender(EntityType et, long timestamp) {
-        this.et = et;
+        this.ets = new HashSet<EntityType>();
+        this.ets.add(et);
         this.timestamp = timestamp;
     }
 
-    private EntityType et;
-    private long timestamp;
+    public TimestampPrepender(Set<EntityType> et, long timestamp) {
+        this.ets = et;
+        this.timestamp = timestamp;
+    }
 
     public static String prepend(long timestamp, String input) {
         return Long.toString(timestamp) + "-" + input;
     }
 
     public String prepend(String input, EntityType et) {
-        return et == this.et
+        return this.ets.contains(et)
             ? prepend(timestamp, input)
             : input;
     }
+
+//    public String prepend(String input, Set<EntityType> ets) {
+//        return this.ets.containsAll(ets)
+//            ? prepend(timestamp, input)
+//            : input;
+//    }
 }
