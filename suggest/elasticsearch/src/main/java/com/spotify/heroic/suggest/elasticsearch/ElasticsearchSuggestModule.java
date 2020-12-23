@@ -143,7 +143,8 @@ public final class ElasticsearchSuggestModule implements SuggestModule, DynamicM
         this.distributedCacheSrvRecord = distributedCacheSrvRecord.orElse("");
 
         this.templateName = templateName.orElse(DEFAULT_TEMPLATE_NAME);
-        this.type = backendType.map(ElasticsearchSuggestModule::lookupBackendType).orElse(defaultSetup);
+        this.type = backendType
+                .map(ElasticsearchSuggestModule::lookupBackendType).orElse(defaultSetup);
         this.configure = configure.orElse(DEFAULT_CONFIGURE);
 
         this.numSuggestionsLimit = NumSuggestionsLimit.of(numSuggestionsLimit);
