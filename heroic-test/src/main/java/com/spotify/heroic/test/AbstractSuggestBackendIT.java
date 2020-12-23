@@ -138,8 +138,9 @@ public abstract class AbstractSuggestBackendIT {
     }
 
     @NotNull
-    private static TagValuesSuggest.Request buildTagValuesRequest(Filter filter,
-                                                                  OptionalLimit numSuggestionsLimit) {
+    private static TagValuesSuggest.Request buildTagValuesRequest(
+            Filter filter,
+            OptionalLimit numSuggestionsLimit) {
         return new TagValuesSuggest.Request(filter,
                 UNIVERSAL_RANGE, numSuggestionsLimit,
                 OptionalLimit.of(EFFECTIVELY_NO_LIMIT), ImmutableList.of());
@@ -206,9 +207,10 @@ public abstract class AbstractSuggestBackendIT {
     }
 
     @NotNull
-    private static ArrayList<Pair<Series, DateRange>> createSeriesTestDataImpl(int numKeys,
-                                                                               int tagsAndTagValuesPerKey,
-                                                                               TimestampPrepender p) {
+    private static ArrayList<Pair<Series, DateRange>> createSeriesTestDataImpl(
+            int numKeys,
+            int tagsAndTagValuesPerKey,
+            TimestampPrepender p) {
         var series = new ArrayList<Pair<Series, DateRange>>(numKeys);
 
         for (int i = 0; i < numKeys; i++) {

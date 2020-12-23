@@ -30,15 +30,8 @@ import java.util.Set;
  */
 public class TimestampPrepender {
 
-    public enum EntityType {
-        KEY,
-        TAG,
-        TAG_VALUE
-    }
-
     private Set<EntityType> ets;
     private long timestamp;
-
     public TimestampPrepender(EntityType et, long timestamp) {
         this.ets = new HashSet<EntityType>();
         this.ets.add(et);
@@ -56,13 +49,13 @@ public class TimestampPrepender {
 
     public String prepend(String input, EntityType et) {
         return this.ets.contains(et)
-            ? prepend(timestamp, input)
-            : input;
+                ? prepend(timestamp, input)
+                : input;
     }
 
-//    public String prepend(String input, Set<EntityType> ets) {
-//        return this.ets.containsAll(ets)
-//            ? prepend(timestamp, input)
-//            : input;
-//    }
+    public enum EntityType {
+        KEY,
+        TAG,
+        TAG_VALUE
+    }
 }
