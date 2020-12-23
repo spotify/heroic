@@ -1,8 +1,9 @@
 dependencies {
     implementation project(':heroic-component')
     implementation project(':heroic-core')
-    
+
     implementation 'junit:junit'
+    implementation 'org.apache.logging.log4j:log4j-core'
     implementation 'org.mockito:mockito-core'
     implementation 'org.testcontainers:testcontainers'
     implementation "org.testcontainers:elasticsearch"
