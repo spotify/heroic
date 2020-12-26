@@ -55,9 +55,11 @@ import com.spotify.heroic.test.TimestampPrepender.EntityType;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.RetryPolicy;
+import eu.toolchain.async.RetryResult;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -96,6 +98,15 @@ public abstract class AbstractSuggestBackendIT {
     private static final int SMALL_SERIES_SIZE = 3;
     private static final int LARGE_NUM_ENTITIES = 20;
     private static final int VERY_LARGE_NUM_ENTITIES = 500;
+
+    // longest that we will wait for a write to ES to complete
+    public static final int ES_WRITE_MAX_ELAPSED_MS = 20_000;
+
+    // We check to see if the writes are done every 200ms
+    public static final int ES_WRITE_CHECK_DONE_WAIT_MS = 200;
+    public static final String NO_SUGGESTIONS = "No tag suggestion available for the given "
+            + "series";
+
     protected final String testName = "heroic-it-" + UUID.randomUUID().toString();
     protected AsyncFramework async;
     protected SuggestBackend backend;
@@ -491,48 +502,79 @@ public abstract class AbstractSuggestBackendIT {
         assertEquals(Collections.emptySet(), result);
     }
 
-    private AsyncFuture<Void> writeSeries(
+    private AsyncFuture<RetryResult<Collection<Integer>>> writeSeries(
             final SuggestBackend suggest, final Series s, final DateRange range) {
-        return suggest.write(new WriteSuggest.Request(s, range)).lazyTransform(r -> async
-                .retryUntilResolved(() -> checks(s, range), RetryPolicy.timed(
-                        10000, RetryPolicy.exponential(100, 200))))
-                .directTransform(retry -> null);
+
+        return suggest
+                .write(new WriteSuggest.Request(s, range))
+                .lazyTransform(
+                        r -> async
+                                // we wait up to ES_WRITE_MAX_ELAPSED_MS millis for the write to
+                                // succeed. We test to see if it's done every
+                                // ES_WRITE_RETRY_WAIT_MS millis.
+                                .retryUntilResolved(
+                                        () ->
+                                                checks(s, range),
+                                        RetryPolicy.timed(
+                                                ES_WRITE_MAX_ELAPSED_MS,
+                                                RetryPolicy.linear(ES_WRITE_CHECK_DONE_WAIT_MS)
+                                        )
+                                )
+                );
     }
 
-    private AsyncFuture<Void> checks(final Series s, DateRange range) {
-        final List<AsyncFuture<Void>> checks = new ArrayList<>();
+    private AsyncFuture<Collection<Integer>> checks(final Series s, DateRange range) {
+        final List<AsyncFuture<Integer>> checks = new ArrayList<>();
 
-        checks.add(backend.tagSuggest(new TagSuggest.Request(
-                matchKey(s.getKey()), range,
-                OptionalLimit.empty(), MatchOptions.builder().build(),
-                Optional.empty(), Optional.empty()))
-                .directTransform(result -> {
-                    if (result.getSuggestions().isEmpty()) {
-                        throw new IllegalStateException("No tag suggestion available for the given "
-                                + "series");
-                    }
+        checks.add(
+                backend.tagSuggest(
+                        new TagSuggest.Request(
+                                matchKey(
+                                        s.getKey()
+                                ),
+                                range,
+                                OptionalLimit.empty(),
+                                MatchOptions.builder().build(),
+                                Optional.empty(),
+                                Optional.empty()))
+                        .directTransform(
+                                result -> {
+                                    if (result.getSuggestions().isEmpty()) {
+                                        throw new IllegalStateException(
+                                                "No tag suggestion available for the given "
+                                                        + "series");
+                                    }
 
-                    return null;
-                }));
+                                    return result.getSuggestions().size();
+                                }));
 
-        checks.add(backend.keySuggest(new KeySuggest.Request(
-                matchKey(s.getKey()), range,
-                OptionalLimit.empty(), MatchOptions.builder().build(),
-                Optional.empty())).directTransform(result -> {
-            if (result.getSuggestions().isEmpty()) {
-                throw new IllegalStateException("No key suggestion available for the given series");
-            }
+        checks.add(
+                backend.keySuggest(
+                        new KeySuggest.Request(
+                                matchKey(
+                                        s.getKey()
+                                ),
+                                range,
+                                OptionalLimit.empty(),
+                                MatchOptions.builder().build(),
+                                Optional.empty()))
+                        .directTransform(
+                                result -> {
+                                    if (result.getSuggestions().isEmpty()) {
+                                        throw new IllegalStateException(
+                                                "No key suggestion available for the given series");
+                                    }
 
-            return null;
-        }));
+                                    return result.getSuggestions().size();
+                                }));
 
-        return async.collectAndDiscard(checks);
+        return async.collect(checks);
     }
 
     private void writeSeries(final SuggestBackend backend,
                              final List<Pair<Series, DateRange>> data) throws Exception {
 
-        final List<AsyncFuture<Void>> writes = new ArrayList<>();
+        final List<AsyncFuture<RetryResult<Collection<Integer>>>> writes = new ArrayList<>();
         for (Pair<Series, DateRange> p : data) {
             writes.add(writeSeries(backend, p.getKey(), p.getValue()));
         }
