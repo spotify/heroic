@@ -72,6 +72,7 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -87,10 +88,10 @@ public abstract class AbstractSuggestBackendIT {
     public static final String BAR = "bar";
     public static final String BAZ = "baz";
     public static final String FOO = "foo";
-    public static final String AA_2 = "aa2";
     public static final String AA = "aa";
     public static final String ROLE = "role";
     public static final String AA_1 = "aa1";
+    public static final String AA_2 = "aa2";
     public static final String BB_3 = "bb3";
     // MetaData and Suggest have no concept of datetime ranges so just set
     // the same for all.
@@ -111,12 +112,18 @@ public abstract class AbstractSuggestBackendIT {
     protected AsyncFramework async;
     protected SuggestBackend backend;
     private HeroicCoreInstance core;
+    private static final int EXPECTED_TAG_VALUE_COUNT = 20;
+    private static final int EXPECTED_KEY_COUNT = 1;
 
-    protected static List<Pair<Series, DateRange>> createSmallSeries(long timestamp,
-                                                                     EntityType et) {
+    private static final int EXPECTED_SMALL_SERIES_COUNT = 1; // foo, bar, baz
+
+    protected static List<Pair<Series, DateRange>> createSmallSerieses(long timestamp,
+                                                                       EntityType et) {
 
         var p = new TimestampPrepender(et, timestamp);
 
+        // Create 3 series of the form e.g.
+        // { key: aa1, tags: { role, foo } }
         return new ArrayList<>() {
             {
                 add(createSeriesPair(AA_1, FOO, p));
@@ -125,12 +132,12 @@ public abstract class AbstractSuggestBackendIT {
             }
 
             @NotNull
-            private ImmutablePair<Series, DateRange> createSeriesPair(String key, String foo,
+            private ImmutablePair<Series, DateRange> createSeriesPair(String key, String tagValue,
                                                                       TimestampPrepender p) {
                 return new ImmutablePair<>(Series.of(
                         p.prepend(key, EntityType.KEY),
                         ImmutableMap.of(p.prepend(ROLE, EntityType.TAG),
-                                p.prepend(foo, EntityType.TAG_VALUE))), UNIVERSAL_RANGE);
+                                p.prepend(tagValue, EntityType.TAG_VALUE))), UNIVERSAL_RANGE);
             }
         };
     }
@@ -271,7 +278,8 @@ public abstract class AbstractSuggestBackendIT {
         // Check a single suggestion with values
         final long timestamp = getUniqueTimestamp();
 
-        writeSeries(backend, createSmallSeries(timestamp, EntityType.TAG));
+        writeSeries(backend,
+            createSmallSerieses(timestamp, EntityType.TAG), EXPECTED_SMALL_SERIES_COUNT);
 
         var result = getTagValuesSuggest(
                 buildTagValuesRequest(OptionalLimit.empty()));
@@ -285,7 +293,7 @@ public abstract class AbstractSuggestBackendIT {
 
     @Test
     public void tagValuesTruncatedSuggest() throws Exception {
-        tagValuesTruncatedSuggestImpl();
+        tagValuesTruncatedSuggestImpl(0);
     }
 
     /**
@@ -295,11 +303,11 @@ public abstract class AbstractSuggestBackendIT {
     @Test
     public void tagValuesTruncatedSuggestMany() throws Exception {
         for (int i = 0; i < 15; i++) {
-            tagValuesTruncatedSuggestImpl();
+            tagValuesTruncatedSuggestImpl(i + 1);
         }
     }
 
-    private void tagValuesTruncatedSuggestImpl() throws Exception {
+    private void tagValuesTruncatedSuggestImpl(int count) throws Exception {
         // Check that a number of tag values larger than the supplied limit is
         // correctly truncated.
         final long timestamp = getUniqueTimestamp();
@@ -308,7 +316,7 @@ public abstract class AbstractSuggestBackendIT {
 
         var seriesData =
                 createTestSeriesData(1, LARGE_NUM_ENTITIES, timestamp, entitiesToTimestamp);
-        writeSeries(backend, seriesData);
+        writeSeries(backend, seriesData, EXPECTED_TAG_VALUE_COUNT);
 
         final var key = p.prepend(AA + "-1", EntityType.KEY);
         var result =
@@ -318,15 +326,16 @@ public abstract class AbstractSuggestBackendIT {
 
         final var suggestions = result.getSuggestions();
         assertEquals(1, suggestions.size());
-        assertEquals(REQ_SUGGESTION_ENTITY_LIMIT, suggestions.get(0).getValues().size());
+        Assert.assertEquals("Iteration " + count + " not equal", REQ_SUGGESTION_ENTITY_LIMIT,
+                suggestions.get(0).getValues().size());
     }
 
     @Test
     public void tagKeyCount() throws Exception {
         final long timestamp = getUniqueTimestamp();
 
-        var smallTestSeries = createSmallSeries(timestamp, EntityType.TAG);
-        writeSeries(backend, smallTestSeries);
+        var smallTestSeries = createSmallSerieses(timestamp, EntityType.TAG);
+        writeSeries(backend, smallTestSeries, EXPECTED_SMALL_SERIES_COUNT);
 
         final TagKeyCount result = getTagKeyCount(createTagCountRequest(timestamp));
         final TagKeyCount.Suggestion s = result.getSuggestions().get(0);
@@ -343,8 +352,8 @@ public abstract class AbstractSuggestBackendIT {
 
         final long timestamp = getUniqueTimestamp();
         var smallTestSeries =
-                createSmallSeries(timestamp, EntityType.TAG);
-        writeSeries(backend, smallTestSeries); // adds 3 tags
+                createSmallSerieses(timestamp, EntityType.TAG);
+        writeSeries(backend, smallTestSeries, EXPECTED_SMALL_SERIES_COUNT); // adds 3 tags
 
         var result = getTagSuggest(
                 buildTagSuggestRequest(STARTS_WITH_RO, timestamp));
@@ -365,7 +374,7 @@ public abstract class AbstractSuggestBackendIT {
         // add LARGE_NUM_ENTITIES tags. Total is now 23
         var largeNumTagsSeries =
                 createTestSeriesData(1, LARGE_NUM_ENTITIES, timestamp, EntityType.TAG);
-        writeSeries(backend, largeNumTagsSeries);
+        writeSeries(backend, largeNumTagsSeries, EXPECTED_TAG_VALUE_COUNT);
 
         var result =
                 getTagSuggest(buildTagSuggestRequest(STARTS_WITH_RO, timestamp,
@@ -391,7 +400,7 @@ public abstract class AbstractSuggestBackendIT {
         long timestamp = getUniqueTimestamp();
         var veryLargeNumTagsSeries =
                 createTestSeriesData(1, VERY_LARGE_NUM_ENTITIES, timestamp, EntityType.TAG);
-        writeSeries(backend, veryLargeNumTagsSeries);
+        writeSeries(backend, veryLargeNumTagsSeries, NumSuggestionsLimit.DEFAULT_LIMIT);
 
         var reqStartsWithRo = buildTagSuggestRequest(STARTS_WITH_RO, timestamp,
                 AbstractSuggestBackendIT.EFFECTIVELY_NO_LIMIT);
@@ -403,7 +412,8 @@ public abstract class AbstractSuggestBackendIT {
     public void tagValueSuggestSmall() throws Exception {
         final long timestamp = getUniqueTimestamp();
 
-        writeSeries(backend, createSmallSeries(timestamp, EntityType.TAG));
+        writeSeries(backend,
+            createSmallSerieses(timestamp, EntityType.TAG), EXPECTED_SMALL_SERIES_COUNT);
 
         var result = getTagValueSuggest(
                 buildTagValueSuggestReq(ROLE, timestamp, OptionalLimit.empty()));
@@ -419,7 +429,7 @@ public abstract class AbstractSuggestBackendIT {
         var largeNumTagsSeries =
                 createTestSeriesData(1, LARGE_NUM_ENTITIES, timestamp, EntityType.TAG);
 
-        writeSeries(backend, largeNumTagsSeries);
+        writeSeries(backend, largeNumTagsSeries, EXPECTED_TAG_VALUE_COUNT);
 
         var result = getTagValueSuggest(
                 buildTagValueSuggestReq(ROLE, timestamp,
@@ -433,9 +443,9 @@ public abstract class AbstractSuggestBackendIT {
         var et = EntityType.KEY;
         {
             final long timestamp = getUniqueTimestamp();
-            var smallTestSeries = createSmallSeries(timestamp, et);
+            var smallTestSeries = createSmallSerieses(timestamp, et);
 
-            writeSeries(backend, smallTestSeries);
+            writeSeries(backend, smallTestSeries, EXPECTED_KEY_COUNT);
 
             var result = getKeySuggest(keySuggestStartsWithReq(AA, timestamp));
             assertEquals(ImmutableSet.of(TimestampPrepender.prepend(timestamp, AA_1),
@@ -450,7 +460,7 @@ public abstract class AbstractSuggestBackendIT {
             var largeNumKeysSeries =
                     createTestSeriesData(LARGE_NUM_ENTITIES, 1, timestamp, EntityType.KEY);
 
-            writeSeries(backend, largeNumKeysSeries);
+            writeSeries(backend, largeNumKeysSeries, EXPECTED_KEY_COUNT);
 
             var result =
                     getKeySuggest(
@@ -503,7 +513,8 @@ public abstract class AbstractSuggestBackendIT {
     }
 
     private AsyncFuture<RetryResult<Collection<Integer>>> writeSeries(
-            final SuggestBackend suggest, final Series s, final DateRange range) {
+            final SuggestBackend suggest, final Series s, final DateRange range,
+             int expectedTagValueCount) {
 
         return suggest
                 .write(new WriteSuggest.Request(s, range))
@@ -514,7 +525,7 @@ public abstract class AbstractSuggestBackendIT {
                                 // ES_WRITE_RETRY_WAIT_MS millis.
                                 .retryUntilResolved(
                                         () ->
-                                                checks(s, range),
+                                                checks(s, range, expectedTagValueCount),
                                         RetryPolicy.timed(
                                                 ES_WRITE_MAX_ELAPSED_MS,
                                                 RetryPolicy.linear(ES_WRITE_CHECK_DONE_WAIT_MS)
@@ -523,7 +534,8 @@ public abstract class AbstractSuggestBackendIT {
                 );
     }
 
-    private AsyncFuture<Collection<Integer>> checks(final Series s, DateRange range) {
+    private AsyncFuture<Collection<Integer>> checks(final Series s, DateRange range,
+                                                    int expectedTagValueCount) {
         final List<AsyncFuture<Integer>> checks = new ArrayList<>();
 
         checks.add(
@@ -539,13 +551,16 @@ public abstract class AbstractSuggestBackendIT {
                                 Optional.empty()))
                         .directTransform(
                                 result -> {
-                                    if (result.getSuggestions().isEmpty()) {
+                                    var suggestions = result.getSuggestions();
+                                    int count = suggestions == null ? 0 : suggestions.size();
+                                    if (suggestions.size() != expectedTagValueCount) {
                                         throw new IllegalStateException(
-                                                "No tag suggestion available for the given "
-                                                        + "series");
+                                                suggestions.size() + "/" + expectedTagValueCount +
+                                                        " tag suggestions returned. Will wait for" +
+                                                         " the rest.");
                                     }
 
-                                    return result.getSuggestions().size();
+                                    return suggestions.size();
                                 }));
 
         checks.add(
@@ -572,11 +587,13 @@ public abstract class AbstractSuggestBackendIT {
     }
 
     private void writeSeries(final SuggestBackend backend,
-                             final List<Pair<Series, DateRange>> data) throws Exception {
+                             final List<Pair<Series, DateRange>> data,
+                             int expectedTagValueCount)
+            throws Exception {
 
         final List<AsyncFuture<RetryResult<Collection<Integer>>>> writes = new ArrayList<>();
         for (Pair<Series, DateRange> p : data) {
-            writes.add(writeSeries(backend, p.getKey(), p.getValue()));
+            writes.add(writeSeries(backend, p.getKey(), p.getValue(), expectedTagValueCount));
         }
         async.collectAndDiscard(writes).get();
     }

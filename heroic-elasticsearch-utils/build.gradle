@@ -5,6 +5,7 @@ dependencies {
     api 'org.elasticsearch.client:elasticsearch-rest-high-level-client'
     implementation 'org.elasticsearch.client:elasticsearch-rest-client-sniffer'
     implementation project(path: ':heroic-component', configuration: 'testRuntime')
+    implementation 'org.apache.logging.log4j:log4j-core'
 }
 
 description = 'Heroic: Elasticsearch Utilities'

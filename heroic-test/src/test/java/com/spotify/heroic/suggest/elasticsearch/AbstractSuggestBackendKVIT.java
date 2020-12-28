@@ -23,7 +23,6 @@ package com.spotify.heroic.suggest.elasticsearch;
 
 import static org.junit.Assert.assertEquals;
 
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.elasticsearch.ClientWrapper;
 import com.spotify.heroic.elasticsearch.ConnectionModule;
 import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
@@ -66,7 +65,7 @@ public abstract class AbstractSuggestBackendKVIT extends AbstractSuggestBackendI
     @Test
     public void writeDuplicatesReturnErrorInResponse() throws Exception {
         var smallTestSeries =
-            createSmallSeries(0L, EntityType.KEY);
+            createSmallSerieses(0L, EntityType.KEY);
 
         final WriteSuggest firstWrite =
             backend.write(new WriteSuggest.Request(smallTestSeries.get(0).getKey(),
