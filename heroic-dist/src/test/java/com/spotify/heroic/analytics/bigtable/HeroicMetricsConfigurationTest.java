@@ -5,10 +5,12 @@ import static org.junit.Assert.assertEquals;
 import com.spotify.heroic.HeroicConfigurationTestUtils;
 import com.spotify.heroic.dagger.DaggerCoreComponent;
 import com.spotify.heroic.metric.LocalMetricManager;
+import com.spotify.heroic.metric.MetricsConnectionSettingsModule;
 import com.spotify.heroic.metric.bigtable.BigtableBackend;
 import com.spotify.heroic.metric.bigtable.BigtableMetricModule;
 import com.spotify.heroic.metric.bigtable.MetricsRowKeySerializer;
 import eu.toolchain.serializer.TinySerializer;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.jetbrains.annotations.NotNull;
@@ -51,6 +53,11 @@ public class HeroicMetricsConfigurationTest {
         final ExecutorService executor = Executors.newSingleThreadExecutor();
         var serializer = TinySerializer.builder().build();
 
+        var connectionSettings = new MetricsConnectionSettingsModule(Optional.of(maxWriteBatchSize),
+        Optional.of(mutateRpcTimeoutMs), Optional.of(readRowsRpcTimeoutMs),
+         Optional.of(shortRpcTimeoutMs), Optional.of(maxScanTimeoutRetries),
+          Optional.of(maxElapsedBackoffMs));
+
         var bigtableBackend = new BigtableBackend(null,
                 serializer,
                 new MetricsRowKeySerializer(),
@@ -58,12 +65,7 @@ public class HeroicMetricsConfigurationTest {
                 null,
                 "bananas",
                 false,
-                maxWriteBatchSize,
-                mutateRpcTimeoutMs,
-                readRowsRpcTimeoutMs,
-                shortRpcTimeoutMs,
-                maxScanTimeoutRetries,
-                maxElapsedBackoffMs,
+                connectionSettings,
                 null,
                 null);
         return bigtableBackend;
@@ -121,17 +123,17 @@ public class HeroicMetricsConfigurationTest {
                     var bigtableBackend = (BigtableBackend) analyticsBackend.getBackend();
 
                     assertEquals(EXPECTED_MAX_WRITE_BATCH_SIZE,
-                            bigtableBackend.getMaxWriteBatchSize());
+                            (long)bigtableBackend.metricsConnectionSettings().maxWriteBatchSize());
                     assertEquals(EXPECTED_MUTATE_RPC_TIMEOUT_MS,
-                            bigtableBackend.getMutateRpcTimeoutMs());
+                            (long)bigtableBackend.metricsConnectionSettings().mutateRpcTimeoutMs());
                     assertEquals(EXPECTED_READ_ROWS_RPC_TIMEOUT_MS,
-                            bigtableBackend.getReadRowsRpcTimeoutMs());
+                            (long)bigtableBackend.metricsConnectionSettings().readRowsRpcTimeoutMs());
                     assertEquals(EXPECTED_SHORT_RPC_TIMEOUT_MS,
-                            bigtableBackend.getShortRpcTimeoutMs());
+                            (long)bigtableBackend.metricsConnectionSettings().shortRpcTimeoutMs());
                     assertEquals(EXPECTED_MAX_SCAN_RETRIES,
-                            bigtableBackend.getMaxScanTimeoutRetries());
+                            (long)bigtableBackend.metricsConnectionSettings().maxScanTimeoutRetries());
                     assertEquals(EXPECTED_MAX_ELAPSED_BACKOFF_MS,
-                            bigtableBackend.getMaxElapsedBackoffMs());
+                            (long)bigtableBackend.metricsConnectionSettings().maxElapsedBackoffMs());
 
                     return null;
                 });
@@ -144,21 +146,21 @@ public class HeroicMetricsConfigurationTest {
             var bigtableMetricModule = getBigtableMetricModule(tooBigBatchSize);
 
             assertEquals(BigtableMetricModule.MAX_MUTATION_BATCH_SIZE,
-                    bigtableMetricModule.getConnectionSettings().maxWriteBatchSize().intValue());
+                    bigtableMetricModule.getMetricsConnectionSettings().maxWriteBatchSize().intValue());
         }
         {
             final int tooSmallBatchSize = 1;
             var bigtableBackend = getBigtableMetricModule(tooSmallBatchSize);
 
             assertEquals(BigtableMetricModule.MIN_MUTATION_BATCH_SIZE,
-                    bigtableBackend.getConnectionSettings().maxWriteBatchSize().intValue());
+                    bigtableBackend.getMetricsConnectionSettings().maxWriteBatchSize().intValue());
         }
         {
             final int validSize = 100_000;
             var bigtableBackend = getBigtableMetricModule(validSize);
 
             assertEquals(validSize,
-                    bigtableBackend.getConnectionSettings().maxWriteBatchSize().intValue());
+                    bigtableBackend.getMetricsConnectionSettings().maxWriteBatchSize().intValue());
         }
     }
 }

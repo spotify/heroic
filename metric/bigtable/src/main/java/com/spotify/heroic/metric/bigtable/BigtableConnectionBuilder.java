@@ -54,12 +54,6 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
 
     private final boolean disableBulkMutations;
     private final int flushIntervalSeconds;
-//    private final Optional<Integer> batchSize;
-//    private final int mutateRpcTimeoutMs;
-//    private final int readRowsRpcTimeoutMs;
-//    private final int shortRpcTimeoutMs;
-//    private final int maxScanTimeoutRetries;
-//    private final int maxElapsedBackoffMs;
 
     private final String emulatorEndpoint;
     private final MetricsConnectionSettingsModule settings;
@@ -73,12 +67,6 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
         final AsyncFramework async,
         final boolean disableBulkMutations,
         final int flushIntervalSeconds,
-//        final Optional<Integer> batchSize,
-//        final int mutateRpcTimeoutMs,
-//        final int readRowsRpcTimeoutMs,
-//        final int maxScanTimeoutRetries,
-//        final int shortRpcTimeoutMs,
-//        final int maxElapsedBackoffMs
         MetricsConnectionSettingsModule settings
     ) {
         this.project = project;
@@ -89,12 +77,6 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
         this.async = async;
         this.disableBulkMutations = disableBulkMutations;
         this.flushIntervalSeconds = flushIntervalSeconds;
-//        this.batchSize = batchSize;
-//        this.mutateRpcTimeoutMs = mutateRpcTimeoutMs;
-//        this.readRowsRpcTimeoutMs = readRowsRpcTimeoutMs;
-//        this.shortRpcTimeoutMs = shortRpcTimeoutMs;
-//        this.maxScanTimeoutRetries = maxScanTimeoutRetries;
-//        this.maxElapsedBackoffMs = maxElapsedBackoffMs;
         this.settings = settings;
     }
 
@@ -173,13 +155,5 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
             .append("emulatorEndpoint", emulatorEndpoint)
             .append("settings", settings)
             .toString();
-//            .append("batchSize", batchSize.orElse(-1))
-//            .append("emulatorEndpoint", emulatorEndpoint)
-//            .append("mutateRpcTimeoutMs", mutateRpcTimeoutMs)
-//            .append("readRowsRpcTimeoutMs", readRowsRpcTimeoutMs)
-//            .append("shortRpcTimeoutMs", shortRpcTimeoutMs)
-//            .append("maxScanTimeoutRetries", maxScanTimeoutRetries)
-//            .append("maxElapsedBackoffMs", maxElapsedBackoffMs)
-//            .toString();
     }
 }

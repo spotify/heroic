@@ -130,13 +130,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         };
 
     private final Meter written = new Meter();
-//    private final int maxWriteBatchSize;
-//    private final int mutateRpcTimeoutMs;
-//    private final int readRowsRpcTimeoutMs;
-//    private final int shortRpcTimeoutMs;
-//    private final int maxScanTimeoutRetries;
-//    private final int maxElapsedBackoffMs;
-    private final MetricsConnectionSettingsModule connectionSettings;
+    private final MetricsConnectionSettingsModule metricsConnectionSettings;
 
     @Inject
     public BigtableBackend(
@@ -147,13 +141,8 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         final Groups groups,
         @Named("table") final String table,
         @Named("configure") final boolean configure,
-        @Named("connectionsettings") final MetricsConnectionSettingsModule connectionSettings,
-//        @Named("maxWriteBatchSize") final int maxWriteBatchSize,
-//        @Named("mutateRpcTimeoutMs") final int mutateRpcTimeoutMs,
-//        @Named("readRowsRpcTimeoutMs") final int readRowsRpcTimeoutMs,
-//        @Named("shortRpcTimeoutMs") final int shortRpcTimeoutMs,
-//        @Named("maxScanTimeoutRetries") final int maxScanTimeoutRetries,
-//        @Named("maxElapsedBackoffMs") final int maxElapsedBackoffMs,
+        @Named("metricsConnectionSettings")
+        final MetricsConnectionSettingsModule metricsConnectionSettings,
         MetricBackendReporter reporter,
         @Named("application/json") ObjectMapper mapper
     ) {
@@ -163,13 +152,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         this.rowKeySerializer = rowKeySerializer;
         this.sortedMapSerializer = serializer.sortedMap(serializer.string(), serializer.string());
         this.connection = connection;
-//        this.maxWriteBatchSize = maxWriteBatchSize;
-//        this.mutateRpcTimeoutMs = mutateRpcTimeoutMs;
-//        this.readRowsRpcTimeoutMs = readRowsRpcTimeoutMs;
-//        this.shortRpcTimeoutMs = shortRpcTimeoutMs;
-//        this.maxScanTimeoutRetries = maxScanTimeoutRetries;
-//        this.maxElapsedBackoffMs = maxElapsedBackoffMs;
-        this.connectionSettings = connectionSettings;
+        this.metricsConnectionSettings = metricsConnectionSettings;
         this.groups = groups;
         this.table = table;
         this.configure = configure;
@@ -417,7 +400,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
             builder.setCell(columnFamily, offsetBytes, valueBytes);
 
-            if (builder.size() >= connectionSettings.maxWriteBatchSizeImpl()) {
+            if (builder.size() >= metricsConnectionSettings.maxWriteBatchSizeImpl()) {
                 saved.add(Pair.of(rowKey, builder.build()));
                 building.put(rowKey, Mutations.builder());
             }
@@ -676,47 +659,9 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     /**
     * Do not use - public purely to enable unit testing
     */
-    public MetricsConnectionSettingsModule connectionSettings() {
-        return connectionSettings;
+    public MetricsConnectionSettingsModule metricsConnectionSettings() {
+        return metricsConnectionSettings;
     }
-//    public int getMaxWriteBatchSize() {
-//        return maxWriteBatchSize;
-//    }
-//
-//    /**
-//    * Do not use - public purely to enable unit testing
-//    */
-//    public int getMutateRpcTimeoutMs() {
-//        return mutateRpcTimeoutMs;
-//    }
-//
-//    /**
-//    * Do not use - public purely to enable unit testing
-//    */
-//    public int getReadRowsRpcTimeoutMs() {
-//        return readRowsRpcTimeoutMs;
-//    }
-//
-//    /**
-//    * Do not use - public purely to enable unit testing
-//    */
-//    public int getShortRpcTimeoutMs() {
-//        return shortRpcTimeoutMs;
-//    }
-//
-//    /**
-//    * Do not use - public purely to enable unit testing
-//    */
-//    public int getMaxScanTimeoutRetries() {
-//        return maxScanTimeoutRetries;
-//    }
-//
-//    /**
-//    * Do not use - public purely to enable unit testing
-//    */
-//    public int getMaxElapsedBackoffMs() {
-//        return maxElapsedBackoffMs;
-//    }
 
     private static final class PreparedQuery {
         private final ByteString rowKeyStart;

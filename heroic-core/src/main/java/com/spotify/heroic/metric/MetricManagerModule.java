@@ -262,11 +262,6 @@ public class MetricManagerModule {
             .append("failOnLimits", failOnLimits)
             .append("smallQueryThreshold", smallQueryThreshold)
             .append("connectionSettings", connectionSettings)
-//            .append("mutateRpcTimeoutMs", mutateRpcTimeoutMs)
-//            .append("readRowsRpcTimeoutMs", readRowsRpcTimeoutMs)
-//            .append("shortRpcTimeoutMs", shortRpcTimeoutMs)
-//            .append("maxScanTimeoutRetries", maxScanTimeoutRetries)
-//            .append("maxElapsedBackoffMs", maxElapsedBackoffMs)
             .toString();
     }
 
@@ -275,7 +270,7 @@ public class MetricManagerModule {
     }
 
     public static class Builder {
-        private Optional<MetricsConnectionSettings> connectionSettings;
+        private Optional<MetricsConnectionSettingsModule> connectionSettings = empty();
         private Optional<List<MetricModule>> backends = empty();
         private Optional<List<String>> defaultBackends = empty();
         private OptionalLimit groupLimit = OptionalLimit.empty();
@@ -380,7 +375,7 @@ public class MetricManagerModule {
 
             var connSettings =
                     connectionSettings
-                            .orElse(o.connectionSettings.orElse(new MetricsConnectionSettings()));
+                            .orElse(o.connectionSettings.orElse(new MetricsConnectionSettingsModule()));
 
             return new Builder(
                     mergeOptionalList(o.backends, backends),
