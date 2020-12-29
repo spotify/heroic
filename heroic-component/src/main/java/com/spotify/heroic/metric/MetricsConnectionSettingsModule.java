@@ -24,14 +24,15 @@ package com.spotify.heroic.metric;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.common.ModuleId;
+import dagger.Module;
 import dagger.Provides;
 import java.util.Optional;
 import javax.inject.Named;
 
 // TODO probably move this to bigtable module since that's the only implementation...?
 // or maybe not, precisely for that very reason.
-@ModuleId("connectionsettings")
-@dagger.Module
+@Module
+@ModuleId("bigtable")
 public class MetricsConnectionSettingsModule extends MetricsConnectionSettings {
     @JsonCreator
     public MetricsConnectionSettingsModule(
@@ -52,8 +53,14 @@ public class MetricsConnectionSettingsModule extends MetricsConnectionSettings {
     }
 
     @JsonCreator
-    public static MetricsConnectionSettings createDefault() {
+    public static MetricsConnectionSettingsModule createDefault() {
         return new MetricsConnectionSettingsModule();
+    }
+
+    @Provides
+    @Named("metricsConnectionSettings")
+    public MetricsConnectionSettingsModule metricsConnectionSettings() {
+        return this;
     }
 
     @Provides
