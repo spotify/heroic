@@ -238,7 +238,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                 c.execute(searchRequest, bind(future));
 
                 return future.directTransform(
-                    (SearchResponse response) -> {
+                        response -> {
                         return createTagValuesSuggest(numSuggestionsLimit,
                                 groupLimit, response);
                     });

@@ -94,7 +94,7 @@ public abstract class AbstractMetadataBackendIndexResourceIT {
     );
     protected final Series s3 = Series.of(
         "s3",
-        ImmutableMap.of("role", "baz"),
+        ImmutableMap.of("role", "bar"),
         ImmutableMap.of("podname", "foo-bar-789")
     );
 
@@ -403,7 +403,7 @@ public abstract class AbstractMetadataBackendIndexResourceIT {
     private void retrySome(final ThrowingRunnable action) throws Exception {
         AssertionError error = null;
 
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 20; i++) {
             try {
                 action.run();
             } catch (final AssertionError e) {
