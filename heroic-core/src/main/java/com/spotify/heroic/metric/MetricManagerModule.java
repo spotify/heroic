@@ -314,7 +314,7 @@ public class MetricManagerModule {
             this.failOnLimits = failOnLimits;
             this.smallQueryThreshold = smallQueryThreshold;
 
-            this.connectionSettings = Optional.of(new MetricsConnectionSettingsModule(
+            this.connectionSettings = Optional.of(new MetricsConnectionSettings(
                     Optional.ofNullable(null),
                     mutateRpcTimeoutMs, readRowsRpcTimeoutMs, shortRpcTimeoutMs,
                     maxScanTimeoutRetries,
@@ -374,8 +374,10 @@ public class MetricManagerModule {
         public Builder merge(final Builder o) {
 
             var connSettings =
-                    connectionSettings
-                            .orElse(o.connectionSettings.orElse(new MetricsConnectionSettingsModule()));
+                    connectionSettings.
+                            orElse(
+                                    o.connectionSettings.
+                                            orElse(MetricsConnectionSettings.createDefault()));
 
             return new Builder(
                     mergeOptionalList(o.backends, backends),
@@ -409,7 +411,7 @@ public class MetricManagerModule {
                 fetchParallelism.orElse(DEFAULT_FETCH_PARALLELISM),
                 failOnLimits.orElse(DEFAULT_FAIL_ON_LIMITS),
                 smallQueryThreshold.orElse(DEFAULT_SMALL_QUERY_THRESHOLD),
-                connectionSettings.orElse(MetricsConnectionSettingsModule.createDefault())
+                connectionSettings.orElse(MetricsConnectionSettings.createDefault())
             );
             // @formatter:on
         }

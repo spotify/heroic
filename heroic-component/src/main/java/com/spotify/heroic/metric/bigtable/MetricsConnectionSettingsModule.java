@@ -19,11 +19,12 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric;
+package com.spotify.heroic.metric.bigtable;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.common.ModuleId;
+import com.spotify.heroic.metric.MetricsConnectionSettings;
 import dagger.Module;
 import dagger.Provides;
 import java.util.Optional;
