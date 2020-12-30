@@ -1,5 +1,6 @@
 package com.spotify.heroic;
 
+import static com.spotify.heroic.HeroicConfigurationTestUtils.testConfiguration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.doReturn;
@@ -18,10 +19,8 @@ import com.spotify.heroic.usagetracking.UsageTracking;
 import com.spotify.heroic.usagetracking.disabled.DisabledUsageTracking;
 import com.spotify.heroic.usagetracking.google.GoogleAnalytics;
 import eu.toolchain.async.AsyncFuture;
-import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.hamcrest.core.IsInstanceOf;
 import org.junit.Test;
@@ -162,19 +161,7 @@ public class HeroicConfigurationTest {
         });
     }
 
-    private HeroicCoreInstance testConfiguration(final String name) throws Exception {
-        final HeroicCore.Builder builder = HeroicCore.builder();
-        builder.modules(HeroicModules.ALL_MODULES);
-        builder.configStream(stream(name));
-        return builder.build().newInstance();
-    }
-
-    private Supplier<InputStream> stream(String name) {
-        return () -> getClass().getClassLoader().getResourceAsStream(name);
-    }
-
-
-    private void checkStartersAndStoppers(HeroicCoreInstance instance) throws Exception {
+    private static void checkStartersAndStoppers(HeroicCoreInstance instance) throws Exception {
         final List<String> referenceInternalStarters = ImmutableList.of(
             "startup future"
         );

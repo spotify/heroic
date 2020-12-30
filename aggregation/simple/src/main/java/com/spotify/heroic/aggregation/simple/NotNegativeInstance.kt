@@ -104,6 +104,11 @@ object NotNegativeInstance : AggregationInstance {
         ) {
         }
 
+        override fun updateDistributionPoints(
+                key: Map<String, String>, series: Set<Series>, values: List<DistributionPoint>
+        ) {
+        }
+
         override fun result(): AggregationResult {
             val (result, statistics) = this.childSession.result()
             val outputs = result

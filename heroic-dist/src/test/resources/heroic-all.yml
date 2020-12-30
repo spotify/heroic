@@ -20,6 +20,7 @@ metrics:
   backends:
     - type: bigtable
       project: project
+      maxWriteBatchSize: 250
     - type: datastax
     - type: memory
 

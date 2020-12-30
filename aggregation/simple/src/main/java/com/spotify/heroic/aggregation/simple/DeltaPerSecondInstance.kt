@@ -103,7 +103,12 @@ object DeltaPerSecondInstance : AggregationInstance {
         }
 
         override fun updateSpreads(
-            key: Map<String, String>, series: Set<Series>, values: List<Spread>
+                key: Map<String, String>, series: Set<Series>, values: List<Spread>
+        ) {
+        }
+
+        override fun updateDistributionPoints(
+                key: Map<String, String>, series: Set<Series>, values: List<DistributionPoint>
         ) {
         }
 

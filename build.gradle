@@ -120,7 +120,7 @@ allprojects {
                 entry 'elasticsearch-rest-high-level-client'
                 entry 'elasticsearch-rest-client-sniffer'
             }
-            
+
             dependency 'com.datastax.cassandra:cassandra-driver-core:3.8.0'
             dependency 'com.spotify:folsom:1.7.4'
 
@@ -209,10 +209,12 @@ allprojects {
             dependency 'javax.mail:mail:1.4.7'
             dependency 'args4j:args4j:2.33'
             dependency 'org.apache.commons:commons-lang3:3.3.2'
+            dependency 'org.apache.commons:commons-math3:3.4.1'
             dependency 'com.google.guava:guava:28.0-jre'
             dependency 'io.thekraken:grok:0.1.1'
             dependency 'org.jfree:jfreechart:1.0.19'
             dependency 'joda-time:joda-time:2.8.2'
+            dependency 'com.tdunning:t-digest:3.2'
 
             dependencySet(group: 'org.apache.logging.log4j', version: '2.13.3') {
                 entry 'log4j-core'
@@ -343,9 +345,9 @@ subprojects {
     [checkstyleMain, checkstyleTest].each { task ->
         task.logging.setLevel(LogLevel.LIFECYCLE)
     }
-    
+
     checkstyle {
-        toolVersion = '6.13'
+        toolVersion = '8.37'
         configFile = rootProject.file('checkstyle.xml')
         configProperties = [ 'basedir': rootProject.rootDir ]
         showViolations = true

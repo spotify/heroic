@@ -158,7 +158,7 @@ public class BigtableDataClientImpl implements BigtableDataClient {
         while (true) {
             final T n;
 
-                /* this will unfortunately block once in a while */
+            /* this will unfortunately block once in a while */
             try {
                 n = scanner.next();
             } catch (final Exception e) {

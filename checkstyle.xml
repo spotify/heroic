@@ -16,12 +16,6 @@
         <property name="message" value="Line has trailing spaces." />
     </module>
 
-    <!-- use eclipse-style suppression comments -->
-    <module name="SuppressionCommentFilter">
-        <property name="offCommentFormat" value="@formatter:off"/>
-        <property name="onCommentFormat" value="@formatter:on"/>
-    </module>
-
     <module name="SuppressionFilter">
         <!-- note that $basedir must be set to TLD of heroic in your local dev
         environment for checkstyle to function. You may wish to emply the direnv
@@ -29,46 +23,65 @@
         <property name="file" value="${basedir}/suppressions.xml"/>
     </module>
 
+    <property name="cacheFile" value="${basedir}/.cache/checkstyle-cache"/>
+
+    <module name="LineLength">
+        <property name="max" value="100"/>
+    </module>
+
+    <module name="SuppressWarningsFilter"/>
+
     <module name="TreeWalker">
-        <property name="cacheFile" value="${basedir}/.cache/checkstyle-cache" />
 
-        <module name="LineLength">
-            <property name="max" value="100" />
-        </module>
-
-        <module name="FileContentsHolder" />
+        <module name="ArrayTypeStyle" />
+        <module name="AvoidStarImport" />
+        <module name="CommentsIndentation"/>
+        <module name="EmptyForIteratorPad" />
+        <!-- TODO uncomment this when someone's feeling brave enough to fix all the errors. -->
+        <!--        <module name="EmptyLineSeparator">-->
+        <!--            &lt;!&ndash; Do Not Allow multiple empty lines between class members. &ndash;&gt;-->
+        <!--            <property name="allowMultipleEmptyLines" value="false"/>-->
+        <!--            &lt;!&ndash; Do Not Allow multiple empty lines inside class members &ndash;&gt;-->
+        <!--            <property name="allowMultipleEmptyLinesInsideClassMembers" value="false"/>-->
+        <!--            &lt;!&ndash;            &lt;!&ndash; Do Not enforce an empty line between fields. &ndash;&gt;&ndash;&gt;-->
+        <!--            &lt;!&ndash;            <property name="allowNoEmptyLineBetweenFields" value="false"/>&ndash;&gt;-->
+        <!--        </module>-->
+        <module name="EmptyStatement" />
+        <module name="EqualsHashCode" />
+        <module name="IllegalImport" />
+        <module name="IllegalInstantiation" />
+        <!-- TODO uncomment this when someone's feeling brave enough to fix all the errors. -->
+        <!-- Indentation. We go with the Checkstyle/Google default of 4 spaces. For details, see
+        https://checkstyle.sourceforge.io/config_misc.html#Indentation_Properties .
+        ... However, a lot (many, many files) of Heroic's java code is incorrectly indented with 2
+        spaces unfortunately, which means the build fails. Hence commenting this out for now. -->
+        <!-- <module name="Indentation"/>-->
+        <module name="LeftCurly" />
         <module name="LocalFinalVariableName" />
         <module name="LocalVariableName" />
         <module name="MemberName" />
-        <module name="MethodName" />
-        <module name="PackageName" />
-        <module name="ParameterName" />
-        <module name="StaticVariableName" />
-        <module name="TypeName" />
-        <module name="AvoidStarImport" />
-        <module name="IllegalImport" />
-        <module name="RedundantImport" />
-        <module name="UnusedImports" />
         <module name="MethodLength" />
-        <module name="EmptyForIteratorPad" />
+        <module name="MethodName" />
         <module name="MethodParamPad" />
+        <module name="MissingSwitchDefault" />
+        <module name="ModifierOrder" />
+        <module name="NeedBraces" />
         <module name="NoWhitespaceAfter" />
         <module name="NoWhitespaceBefore" />
+        <module name="PackageName" />
+        <module name="ParameterName" />
         <module name="ParenPad" />
+        <module name="RedundantImport" />
+        <module name="RightCurly" />
+        <module name="SimplifyBooleanExpression" />
+        <module name="StaticVariableName" />
+        <module name="SuppressWarningsHolder"/>
         <module name="TypecastParenPad" />
+        <module name="TypeName" />
+        <module name="UnusedImports" />
+        <module name="UpperEll" />
         <module name="WhitespaceAfter" />
         <module name="WhitespaceAround" />
-        <module name="ModifierOrder" />
-        <module name="LeftCurly" />
-        <module name="NeedBraces" />
-        <module name="RightCurly" />
-        <module name="EmptyStatement" />
-        <module name="EqualsHashCode" />
-        <module name="IllegalInstantiation" />
-        <module name="MissingSwitchDefault" />
-        <module name="SimplifyBooleanExpression" />
-        <module name="ArrayTypeStyle" />
-        <module name="UpperEll" />
     </module>
 
     <module name="Header">

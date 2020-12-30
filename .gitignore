@@ -38,5 +38,5 @@ gradle-app.setting
 .settings
 .java-version
 
-# direnv config file
+# direnv config file - https://direnv.net/
 /.envrc

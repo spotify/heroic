@@ -134,6 +134,11 @@ public class Series implements Comparable<Series> {
         return hashCodeTagOnly;
     }
 
+    @JsonIgnore
+    public HashCode getHashCode() {
+        return hashCode;
+    }
+
     private HashCode generateHashTagOnly() {
         final Hasher hasher = HASH_FUNCTION.newHasher();
 
