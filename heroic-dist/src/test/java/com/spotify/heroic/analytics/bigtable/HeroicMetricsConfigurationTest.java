@@ -5,7 +5,7 @@ import static org.junit.Assert.assertEquals;
 import com.spotify.heroic.HeroicConfigurationTestUtils;
 import com.spotify.heroic.dagger.DaggerCoreComponent;
 import com.spotify.heroic.metric.LocalMetricManager;
-import com.spotify.heroic.metric.MetricsConnectionSettingsModule;
+import com.spotify.heroic.metric.MetricsConnectionSettings;
 import com.spotify.heroic.metric.bigtable.BigtableBackend;
 import com.spotify.heroic.metric.bigtable.BigtableMetricModule;
 import com.spotify.heroic.metric.bigtable.MetricsRowKeySerializer;
@@ -53,7 +53,7 @@ public class HeroicMetricsConfigurationTest {
         final ExecutorService executor = Executors.newSingleThreadExecutor();
         var serializer = TinySerializer.builder().build();
 
-        var connectionSettings = new MetricsConnectionSettingsModule(Optional.of(maxWriteBatchSize),
+        var connectionSettings = new MetricsConnectionSettings(Optional.of(maxWriteBatchSize),
         Optional.of(mutateRpcTimeoutMs), Optional.of(readRowsRpcTimeoutMs),
          Optional.of(shortRpcTimeoutMs), Optional.of(maxScanTimeoutRetries),
           Optional.of(maxElapsedBackoffMs));
@@ -123,17 +123,17 @@ public class HeroicMetricsConfigurationTest {
                     var bigtableBackend = (BigtableBackend) analyticsBackend.getBackend();
 
                     assertEquals(EXPECTED_MAX_WRITE_BATCH_SIZE,
-                            (long)bigtableBackend.metricsConnectionSettings().maxWriteBatchSize());
+                            (long)bigtableBackend.metricsConnectionSettings().getMaxWriteBatchSize());
                     assertEquals(EXPECTED_MUTATE_RPC_TIMEOUT_MS,
-                            (long)bigtableBackend.metricsConnectionSettings().mutateRpcTimeoutMs());
+                            (long)bigtableBackend.metricsConnectionSettings().getMutateRpcTimeoutMs());
                     assertEquals(EXPECTED_READ_ROWS_RPC_TIMEOUT_MS,
-                            (long)bigtableBackend.metricsConnectionSettings().readRowsRpcTimeoutMs());
+                            (long)bigtableBackend.metricsConnectionSettings().getReadRowsRpcTimeoutMs());
                     assertEquals(EXPECTED_SHORT_RPC_TIMEOUT_MS,
-                            (long)bigtableBackend.metricsConnectionSettings().shortRpcTimeoutMs());
+                            (long)bigtableBackend.metricsConnectionSettings().getShortRpcTimeoutMs());
                     assertEquals(EXPECTED_MAX_SCAN_RETRIES,
-                            (long)bigtableBackend.metricsConnectionSettings().maxScanTimeoutRetries());
+                            (long)bigtableBackend.metricsConnectionSettings().getMaxScanTimeoutRetries());
                     assertEquals(EXPECTED_MAX_ELAPSED_BACKOFF_MS,
-                            (long)bigtableBackend.metricsConnectionSettings().maxElapsedBackoffMs());
+                            (long)bigtableBackend.metricsConnectionSettings().getMaxElapsedBackoffMs());
 
                     return null;
                 });
@@ -146,21 +146,21 @@ public class HeroicMetricsConfigurationTest {
             var bigtableMetricModule = getBigtableMetricModule(tooBigBatchSize);
 
             assertEquals(BigtableMetricModule.MAX_MUTATION_BATCH_SIZE,
-                    bigtableMetricModule.getMetricsConnectionSettings().maxWriteBatchSize().intValue());
+                    bigtableMetricModule.getMetricsConnectionSettings().getMaxWriteBatchSize().intValue());
         }
         {
             final int tooSmallBatchSize = 1;
             var bigtableBackend = getBigtableMetricModule(tooSmallBatchSize);
 
             assertEquals(BigtableMetricModule.MIN_MUTATION_BATCH_SIZE,
-                    bigtableBackend.getMetricsConnectionSettings().maxWriteBatchSize().intValue());
+                    bigtableBackend.getMetricsConnectionSettings().getMaxWriteBatchSize().intValue());
         }
         {
             final int validSize = 100_000;
             var bigtableBackend = getBigtableMetricModule(validSize);
 
             assertEquals(validSize,
-                    bigtableBackend.getMetricsConnectionSettings().maxWriteBatchSize().intValue());
+                    bigtableBackend.getMetricsConnectionSettings().getMaxWriteBatchSize().intValue());
         }
     }
 }

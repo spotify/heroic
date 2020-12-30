@@ -26,7 +26,7 @@ import com.google.cloud.bigtable.config.BulkOptions;
 import com.google.cloud.bigtable.config.CallOptionsConfig;
 import com.google.cloud.bigtable.config.RetryOptions;
 import com.google.cloud.bigtable.grpc.BigtableSession;
-import com.spotify.heroic.metric.MetricsConnectionSettingsModule;
+import com.spotify.heroic.metric.MetricsConnectionSettings;
 import com.spotify.heroic.metric.bigtable.api.BigtableDataClientImpl;
 import com.spotify.heroic.metric.bigtable.api.BigtableMutatorImpl;
 import com.spotify.heroic.metric.bigtable.api.BigtableTableTableAdminClientImpl;
@@ -56,7 +56,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
     private final int flushIntervalSeconds;
 
     private final String emulatorEndpoint;
-    private final MetricsConnectionSettingsModule settings;
+    private final MetricsConnectionSettings settings;
 
     public BigtableConnectionBuilder(
         final String project,
@@ -67,7 +67,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
         final AsyncFramework async,
         final boolean disableBulkMutations,
         final int flushIntervalSeconds,
-        MetricsConnectionSettingsModule settings
+        MetricsConnectionSettings settings
     ) {
         this.project = project;
         this.instance = instance;
@@ -89,17 +89,17 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
             .addStatusToRetryOn(Status.Code.UNAVAILABLE)
             .setAllowRetriesWithoutTimestamp(true)
             .setEnableRetries(true)
-            .setMaxScanTimeoutRetries(settings.maxScanTimeoutRetries())
-            .setMaxElapsedBackoffMillis(settings.maxElapsedBackoffMs())
+            .setMaxScanTimeoutRetries(settings.getMaxScanTimeoutRetries())
+            .setMaxElapsedBackoffMillis(settings.getMaxElapsedBackoffMs())
             .build();
 
         final var bulkOptions =
-            BulkOptions.builder().setBulkMaxRowKeyCount(settings.maxWriteBatchSize()).build();
+            BulkOptions.builder().setBulkMaxRowKeyCount(settings.getMaxWriteBatchSize()).build();
 
         var callOptionsConfig = CallOptionsConfig.builder()
-                .setReadRowsRpcTimeoutMs(settings.readRowsRpcTimeoutMs())
-                .setMutateRpcTimeoutMs(settings.mutateRpcTimeoutMs())
-                .setShortRpcTimeoutMs(settings.shortRpcTimeoutMs())
+                .setReadRowsRpcTimeoutMs(settings.getReadRowsRpcTimeoutMs())
+                .setMutateRpcTimeoutMs(settings.getMutateRpcTimeoutMs())
+                .setShortRpcTimeoutMs(settings.getShortRpcTimeoutMs())
                 .setUseTimeout(true).build();
 
         var builder = BigtableOptions.builder()

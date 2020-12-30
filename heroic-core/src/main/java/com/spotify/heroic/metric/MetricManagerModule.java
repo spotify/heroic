@@ -270,7 +270,7 @@ public class MetricManagerModule {
     }
 
     public static class Builder {
-        private Optional<MetricsConnectionSettingsModule> connectionSettings = empty();
+        private Optional<MetricsConnectionSettings> connectionSettings = empty();
         private Optional<List<MetricModule>> backends = empty();
         private Optional<List<String>> defaultBackends = empty();
         private OptionalLimit groupLimit = OptionalLimit.empty();
