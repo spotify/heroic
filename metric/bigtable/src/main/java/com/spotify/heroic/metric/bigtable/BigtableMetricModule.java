@@ -36,7 +36,6 @@ import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.MetricsConnectionSettings;
-import com.spotify.heroic.metric.MetricsConnectionSettingsModule;
 import com.spotify.heroic.metric.bigtable.credentials.DefaultCredentialsBuilder;
 import dagger.Component;
 import dagger.Module;
