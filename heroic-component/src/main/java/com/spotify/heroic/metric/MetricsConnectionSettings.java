@@ -27,6 +27,7 @@ import static com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_MUTATE_RPC
 import static com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_READ_ROWS_RPC_TIMEOUT_MS;
 import static com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_SHORT_RPC_TIMEOUT_MS;
 
+import com.spotify.heroic.metric.consts.ApiQueryConsts;
 import java.util.Optional;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
@@ -41,11 +42,34 @@ public class MetricsConnectionSettings {
     /* minimum possible number of Cells supported for each batch mutation */
     public static final int MIN_MUTATION_BATCH_SIZE = 10;
 
+    /**
+     * See {@link com.spotify.heroic.metric.consts.ApiQueryConsts#DEFAULT_MUTATE_RPC_TIMEOUT_MS}
+     */
     protected Integer mutateRpcTimeoutMs;
+
+    /**
+     * See {@link com.spotify.heroic.metric.consts.ApiQueryConsts#DEFAULT_READ_ROWS_RPC_TIMEOUT_MS}
+     */
     protected Integer readRowsRpcTimeoutMs;
+
+    /**
+     * See {@link ApiQueryConsts#DEFAULT_SHORT_RPC_TIMEOUT_MS}
+     */
     protected Integer shortRpcTimeoutMs;
+
+    /**
+     * See {@link ApiQueryConsts#DEFAULT_MAX_SCAN_TIMEOUT_RETRIES}
+     */
     protected Integer maxScanTimeoutRetries;
+
+    /**
+     * See {@link ApiQueryConsts#DEFAULT_INITIAL_BACKOFF_MILLIS}
+     */
     protected Integer maxElapsedBackoffMs;
+
+    /**
+     * See {@link MetricsConnectionSettings#DEFAULT_MUTATION_BATCH_SIZE}
+     */
     protected Integer maxWriteBatchSize;
 
     protected MetricsConnectionSettings() {

@@ -30,8 +30,10 @@ import dagger.Provides;
 import java.util.Optional;
 import javax.inject.Named;
 
-// TODO probably move this to bigtable module since that's the only implementation...?
-// or maybe not, precisely for that very reason.
+/**
+ * Simple POD class that exposes MetricsConnectionSettings via Dagger's module
+ * functionality.
+ */
 @Module
 @ModuleId("bigtable")
 public class MetricsConnectionSettingsModule extends MetricsConnectionSettings {
