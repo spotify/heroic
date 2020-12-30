@@ -56,6 +56,10 @@ public class MetricsConnectionSettings {
                 Optional.of(DEFAULT_MAX_ELAPSED_BACKOFF_MILLIS));
     }
 
+    public static MetricsConnectionSettings createDefault() {
+        return new MetricsConnectionSettings();
+    }
+
     public MetricsConnectionSettings(
             Optional<Integer> maxWriteBatchSize,
             Optional<Integer> mutateRpcTimeoutMs,
@@ -80,27 +84,27 @@ public class MetricsConnectionSettings {
                 maxElapsedBackoffMs.orElse(DEFAULT_MAX_ELAPSED_BACKOFF_MILLIS);
     }
 
-    public Integer maxWriteBatchSizeImpl() {
+    public Integer getMaxWriteBatchSize() {
         return maxWriteBatchSize;
     }
 
-    public Integer mutateRpcTimeoutMsImpl() {
+    public Integer getMutateRpcTimeoutMs() {
         return mutateRpcTimeoutMs;
     }
 
-    public Integer readRowsRpcTimeoutMsImpl() {
+    public Integer getReadRowsRpcTimeoutMs() {
         return readRowsRpcTimeoutMs;
     }
 
-    public Integer shortRpcTimeoutMsImpl() {
+    public Integer getShortRpcTimeoutMs() {
         return shortRpcTimeoutMs;
     }
 
-    public Integer maxScanTimeoutRetriesImpl() {
+    public Integer getMaxScanTimeoutRetries() {
         return maxScanTimeoutRetries;
     }
 
-    public Integer maxElapsedBackoffMsImpl() {
+    public Integer getMaxElapsedBackoffMs() {
         return maxElapsedBackoffMs;
     }
 

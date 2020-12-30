@@ -49,7 +49,7 @@ import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricReadResult;
 import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.MetricsConnectionSettingsModule;
+import com.spotify.heroic.metric.MetricsConnectionSettings;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.QueryError;
 import com.spotify.heroic.metric.QueryTrace;
@@ -130,7 +130,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         };
 
     private final Meter written = new Meter();
-    private final MetricsConnectionSettingsModule metricsConnectionSettings;
+    private final MetricsConnectionSettings metricsConnectionSettings;
 
     @Inject
     public BigtableBackend(
@@ -142,7 +142,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         @Named("table") final String table,
         @Named("configure") final boolean configure,
         @Named("metricsConnectionSettings")
-        final MetricsConnectionSettingsModule metricsConnectionSettings,
+        final MetricsConnectionSettings metricsConnectionSettings,
         MetricBackendReporter reporter,
         @Named("application/json") ObjectMapper mapper
     ) {
@@ -400,7 +400,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
             builder.setCell(columnFamily, offsetBytes, valueBytes);
 
-            if (builder.size() >= metricsConnectionSettings.maxWriteBatchSizeImpl()) {
+            if (builder.size() >= metricsConnectionSettings.getMaxWriteBatchSize()) {
                 saved.add(Pair.of(rowKey, builder.build()));
                 building.put(rowKey, Mutations.builder());
             }
@@ -659,7 +659,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     /**
     * Do not use - public purely to enable unit testing
     */
-    public MetricsConnectionSettingsModule metricsConnectionSettings() {
+    public MetricsConnectionSettings metricsConnectionSettings() {
         return metricsConnectionSettings;
     }
 

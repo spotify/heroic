@@ -59,48 +59,43 @@ public class MetricsConnectionSettingsModule extends MetricsConnectionSettings {
 
     @Provides
     @Named("metricsConnectionSettings")
-    public MetricsConnectionSettingsModule metricsConnectionSettings() {
+    public MetricsConnectionSettings metricsConnectionSettingsProvides() {
         return this;
     }
 
     @Provides
     @Named("maxWriteBatchSize")
-    public Integer maxWriteBatchSize() {
-        return super.maxWriteBatchSizeImpl();
+    public Integer maxWriteBatchSizeProvides() {
+        return super.getMaxWriteBatchSize();
     }
 
     @Provides
     @Named("mutateRpcTimeoutMs")
-    public Integer mutateRpcTimeoutMs() {
-        return super.mutateRpcTimeoutMsImpl();
+    public Integer mutateRpcTimeoutMsProvides() {
+        return super.getMutateRpcTimeoutMs();
     }
 
     @Provides
     @Named("readRowsRpcTimeoutMs")
-    public Integer readRowsRpcTimeoutMs() {
-        return super.readRowsRpcTimeoutMsImpl();
+    public Integer readRowsRpcTimeoutMsProvides() {
+        return super.getReadRowsRpcTimeoutMs();
     }
 
     @Provides
     @Named("shortRpcTimeoutMs")
-    public Integer shortRpcTimeoutMs() {
-        return super.shortRpcTimeoutMsImpl();
+    public Integer shortRpcTimeoutMsProvides() {
+        return super.getShortRpcTimeoutMs();
     }
 
     @Provides
     @Named("maxScanTimeoutRetries")
-    public Integer maxScanTimeoutRetries() {
-        return super.maxScanTimeoutRetriesImpl();
+    public Integer maxScanTimeoutRetriesProvides() {
+        return super.getMaxScanTimeoutRetries();
     }
 
     @Provides
     @Named("maxElapsedBackoffMs")
-    public Integer maxElapsedBackoffMs() {
-        return super.maxElapsedBackoffMsImpl();
-    }
-
-    @Override
-    public String toString() {
-        return super.toString();
+    public Integer maxElapsedBackoffMsProvides() {
+        return super.getMaxElapsedBackoffMs();
     }
 }

@@ -35,6 +35,7 @@ import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
 import com.spotify.heroic.metric.MetricModule;
+import com.spotify.heroic.metric.MetricsConnectionSettings;
 import com.spotify.heroic.metric.MetricsConnectionSettingsModule;
 import com.spotify.heroic.metric.bigtable.credentials.DefaultCredentialsBuilder;
 import dagger.Component;
@@ -152,15 +153,15 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
     @Override
     public Exposed module(PrimaryComponent primary, Depends backend, String id) {
         return DaggerBigtableMetricModule_C
-            .builder()
-            .primaryComponent(primary)
-            .metricsConnectionSettingsModule(metricsConnectionSettings)
-            .depends(backend)
-            .m(new M())
-            .build();
+                .builder()
+                .primaryComponent(primary)
+                .metricsConnectionSettingsModule(metricsConnectionSettings)
+                .depends(backend)
+                .m(new M())
+                .build();
     }
 
-    public MetricsConnectionSettingsModule getMetricsConnectionSettings() {
+    public MetricsConnectionSettings getMetricsConnectionSettings() {
         return metricsConnectionSettings;
     }
 
