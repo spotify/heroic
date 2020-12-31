@@ -47,13 +47,15 @@ public class CoreQueryManagerTest {
     public void setup() {
         QueryReporter queryReporter = mock(QueryReporter.class);
         long smallQueryThreshold = 0;
+        boolean doSeriesArithmetic = true;
 
         QueryLogger queryLogger = mock(QueryLogger.class);
         QueryLoggerFactory queryLoggerFactory = mock(QueryLoggerFactory.class);
         when(queryLoggerFactory.create(any())).thenReturn(queryLogger);
 
         manager = new CoreQueryManager(Features.empty(), async, Clock.system(), cluster, parser,
-            queryCache, aggregations, OptionalLimit.empty(), smallQueryThreshold, queryReporter,
+            queryCache, aggregations, OptionalLimit.empty(),
+             smallQueryThreshold, doSeriesArithmetic, queryReporter,
             Optional.empty(), queryLoggerFactory);
     }
 

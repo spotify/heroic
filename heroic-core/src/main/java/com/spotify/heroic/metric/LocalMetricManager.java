@@ -60,9 +60,9 @@ import com.spotify.heroic.statistics.MetricBackendReporter;
 import com.spotify.heroic.tracing.EndSpanFutureReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.StreamCollector;
-import eu.toolchain.async.FutureDone;
 import io.opencensus.trace.Span;
 import io.opencensus.trace.Tracer;
 import java.util.ArrayList;
@@ -71,12 +71,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.inject.Inject;
@@ -100,6 +100,7 @@ public class LocalMetricManager implements MetricManager {
     private final int concurrentQueriesBackoff;
     private final int fetchParallelism;
     private final boolean failOnLimits;
+    private final boolean doSeriesArithmetic;
 
     private final AsyncFramework async;
     private final GroupSet<MetricBackend> groupSet;
@@ -127,6 +128,7 @@ public class LocalMetricManager implements MetricManager {
         @Named("concurrentQueriesBackoff") final OptionalLimit concurrentQueriesBackoff,
         @Named("fetchParallelism") final int fetchParallelism,
         @Named("failOnLimits") final boolean failOnLimits,
+        @Named("doSeriesArithmetic") final boolean doSeriesArithmetic,
         final AsyncFramework async,
         final GroupSet<MetricBackend> groupSet,
         final MetadataManager metadata,
@@ -140,6 +142,7 @@ public class LocalMetricManager implements MetricManager {
         this.concurrentQueriesBackoff = concurrentQueriesBackoff.asMaxInteger(Integer.MAX_VALUE);
         this.fetchParallelism = fetchParallelism;
         this.failOnLimits = failOnLimits;
+        this.doSeriesArithmetic = doSeriesArithmetic;
         this.async = async;
         this.groupSet = groupSet;
         this.metadata = metadata;
@@ -160,6 +163,11 @@ public class LocalMetricManager implements MetricManager {
 
     public String toString() {
         return "LocalMetricManager()";
+    }
+
+    // For internal unit tests only - do not use
+    public boolean doSeriesArithmetic() {
+        return doSeriesArithmetic;
     }
 
     private class Group extends AbstractMetricBackend implements MetricBackendGroup {

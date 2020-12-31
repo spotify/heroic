@@ -57,6 +57,7 @@ public class LocalMetricManagerTest {
         final OptionalLimit concurrentQueriesBackoff = OptionalLimit.empty();
         final int fetchParallelism = 20;
         final boolean failOnLimits = true;
+        final boolean doSeriesArithmetic = true;
         final Groups groups = new Groups("foo");
         doReturn(groups).when(metricBackend).groups();
         final GroupSet<MetricBackend> groupSet =
@@ -67,8 +68,8 @@ public class LocalMetricManagerTest {
         when(queryLoggerFactory.create(any())).thenReturn(queryLogger);
 
         manager = new LocalMetricManager(groupLimit, seriesLimit, aggregationLimit, dataLimit,
-            concurrentQueriesBackoff, fetchParallelism, failOnLimits, async, groupSet, metadata,
-            reporter, queryLoggerFactory);
+                concurrentQueriesBackoff, fetchParallelism, failOnLimits, doSeriesArithmetic, async,
+                groupSet, metadata, reporter, queryLoggerFactory);
     }
 
     @Test

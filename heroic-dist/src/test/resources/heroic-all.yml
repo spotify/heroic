@@ -17,6 +17,7 @@ suggest:
       backendType: kv
 
 metrics:
+  doSeriesArithmetic: "true"
   backends:
     - type: bigtable
       project: project

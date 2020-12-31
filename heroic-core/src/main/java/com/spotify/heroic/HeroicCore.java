@@ -575,7 +575,7 @@ public class HeroicCore implements HeroicConfiguration {
         final QueryComponent query = DaggerCoreQueryComponent
             .builder()
             .queryModule(new QueryModule(config.metric().groupLimit(),
-                config.metric().smallQueryThreshold()))
+                config.metric().smallQueryThreshold(), config.metric().doSeriesArithmetic()))
             .corePrimaryComponent(primary)
             .clusterComponent(cluster)
             .cacheComponent(cache)

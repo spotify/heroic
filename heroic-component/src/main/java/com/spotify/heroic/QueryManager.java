@@ -43,6 +43,7 @@ import java.util.List;
 
 public interface QueryManager extends UsableGroupManager<QueryManager.Group> {
     QueryBuilder newQueryFromString(String query);
+    boolean doSeriesArithmetic();
 
     interface Group {
 

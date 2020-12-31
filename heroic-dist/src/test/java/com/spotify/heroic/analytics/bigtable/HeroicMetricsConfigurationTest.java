@@ -28,6 +28,7 @@ import org.junit.Test;
 public class HeroicMetricsConfigurationTest {
 
     public static final int EXPECTED_MAX_WRITE_BATCH_SIZE = 250;
+    public static final boolean EXPECTED_DO_SERIES_ARITHMETIC = true;
 
     @NotNull
     private static BigtableBackend getBigtableBackend(int maxWriteBatchSize) {
@@ -67,6 +68,8 @@ public class HeroicMetricsConfigurationTest {
                 var bigtableBackend = (BigtableBackend) analyticsBackend.getBackend();
 
                 assertEquals(EXPECTED_MAX_WRITE_BATCH_SIZE, bigtableBackend.getMaxWriteBatchSize());
+
+                assertEquals(EXPECTED_DO_SERIES_ARITHMETIC, metricManager.doSeriesArithmetic());
 
                 return null;
             });

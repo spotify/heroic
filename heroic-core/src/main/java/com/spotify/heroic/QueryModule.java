@@ -32,10 +32,13 @@ import javax.inject.Named;
 public class QueryModule {
     private final OptionalLimit groupLimit;
     private final long smallQueryThreshold;
+    private final boolean doSeriesArithmetic;
 
-    public QueryModule(OptionalLimit groupLimit, long smallQueryThreshold) {
+    public QueryModule(OptionalLimit groupLimit, long smallQueryThreshold,
+     boolean doSeriesArithmetic) {
         this.groupLimit = groupLimit;
         this.smallQueryThreshold = smallQueryThreshold;
+        this.doSeriesArithmetic = doSeriesArithmetic;
     }
 
     @Provides
@@ -50,6 +53,13 @@ public class QueryModule {
     @Named("smallQueryThreshold")
     public long smallQueryThreshold() {
         return smallQueryThreshold;
+    }
+
+    @Provides
+    @QueryScope
+    @Named("doSeriesArithmetic")
+    public boolean doSeriesArithmetic() {
+        return doSeriesArithmetic;
     }
 
     @Provides

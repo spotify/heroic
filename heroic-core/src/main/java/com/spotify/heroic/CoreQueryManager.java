@@ -122,6 +122,7 @@ public class CoreQueryManager implements QueryManager {
     private final Optional<ConditionalFeatures> conditionalFeatures;
 
     private final long smallQueryThreshold;
+    private final boolean doSeriesArithmetic;
 
     @Inject
     public CoreQueryManager(
@@ -134,6 +135,7 @@ public class CoreQueryManager implements QueryManager {
         final AggregationFactory aggregations,
         @Named("groupLimit") final OptionalLimit groupLimit,
         @Named("smallQueryThreshold") final long smallQueryThreshold,
+        @Named("doSeriesArithmetic") final boolean doSeriesArithmetic,
         final QueryReporter reporter,
         final Optional<ConditionalFeatures> conditionalFeatures,
         final QueryLoggerFactory queryLoggerFactory
@@ -148,6 +150,7 @@ public class CoreQueryManager implements QueryManager {
         this.groupLimit = groupLimit;
         this.reporter = reporter;
         this.smallQueryThreshold = smallQueryThreshold;
+        this.doSeriesArithmetic = doSeriesArithmetic;
         this.conditionalFeatures = conditionalFeatures;
         this.queryLogger = queryLoggerFactory.create("CoreQueryManager");
     }
@@ -207,6 +210,11 @@ public class CoreQueryManager implements QueryManager {
                     .filter(filter);
             }
         });
+    }
+
+    @Override
+    public boolean doSeriesArithmetic() {
+        return doSeriesArithmetic;
     }
 
     public class Group implements QueryManager.Group {

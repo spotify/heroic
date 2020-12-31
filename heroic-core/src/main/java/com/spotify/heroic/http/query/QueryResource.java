@@ -89,8 +89,10 @@ public class QueryResource {
     @Path("metrics")
     @Consumes(MediaType.TEXT_PLAIN)
     public void metricsText(
-        @Suspended final AsyncResponse response, @QueryParam("group") String group,
-        @Context final HttpServletRequest servletReq, final String query
+        @Suspended final AsyncResponse response,
+        @QueryParam("group") String group,
+        @Context final HttpServletRequest servletReq,
+        final String query
     ) {
         final HttpContext httpContext = CoreHttpContextFactory.create(servletReq);
         final QueryContext queryContext = QueryContext.create(Optional.empty(), httpContext);
@@ -139,10 +141,12 @@ public class QueryResource {
         final var queryBatchResponseFuture =
             createQueryBatchResponseCompositeFuture(response, group, servletReq, batch);
 
-        // Add to that work, the work of transforming the resulting metrics with the arithmetic
+        // Then add the future work of transforming the resulting metrics with the arithmetic
         // operation(s).
         final var arithmeticFuture =
-            augmentFuturesWithArithmeticFutures(query, queryBatchResponseFuture);
+                this.manager.doSeriesArithmetic() ?
+                        augmentFuturesWithArithmeticFutures(query, queryBatchResponseFuture) :
+                        queryBatchResponseFuture;
 
         response.setTimeout(RESPONSE_TIMEOUT_SECS, TimeUnit.SECONDS);
 
@@ -152,7 +156,8 @@ public class QueryResource {
     }
 
     private static AsyncFuture<QueryBatchResponse> augmentFuturesWithArithmeticFutures(
-        QueryBatch query, AsyncFuture<QueryBatchResponse> queryBatchResponseFuture) {
+        QueryBatch query,
+        AsyncFuture<QueryBatchResponse> queryBatchResponseFuture) {
 
         var future = queryBatchResponseFuture;
 

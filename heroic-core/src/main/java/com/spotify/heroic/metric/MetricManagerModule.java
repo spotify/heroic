@@ -57,6 +57,7 @@ public class MetricManagerModule {
     public static final int DEFAULT_FETCH_PARALLELISM = 100;
     public static final boolean DEFAULT_FAIL_ON_LIMITS = false;
     public static final long DEFAULT_SMALL_QUERY_THRESHOLD = 200000;
+    public static final boolean DEFAULT_DO_SERIES_ARITHMETIC = true;
 
     public final List<MetricModule> backends;
     public final Optional<List<String>> defaultBackends;
@@ -101,6 +102,7 @@ public class MetricManagerModule {
      * Threshold for defining a "small" query, measured in pre-aggregation sample size
      */
     private final long smallQueryThreshold;
+    private final boolean doSeriesArithmetic;
 
     private MetricManagerModule(
         List<MetricModule> backends,
@@ -112,7 +114,8 @@ public class MetricManagerModule {
         OptionalLimit concurrentQueriesBackoff,
         int fetchParallelism,
         boolean failOnLimits,
-        long smallQueryThreshold
+        long smallQueryThreshold,
+        boolean doSeriesArithmetic
     ) {
         this.backends = backends;
         this.defaultBackends = defaultBackends;
@@ -124,6 +127,7 @@ public class MetricManagerModule {
         this.fetchParallelism = fetchParallelism;
         this.failOnLimits = failOnLimits;
         this.smallQueryThreshold = smallQueryThreshold;
+        this.doSeriesArithmetic = doSeriesArithmetic;
 
         log.info("Metric Manager Module: \n{}", toString());
     }
@@ -238,6 +242,13 @@ public class MetricManagerModule {
         return smallQueryThreshold;
     }
 
+    @Provides
+    @MetricScope
+    @Named("doSeriesArithmetic")
+    public boolean doSeriesArithmetic() {
+        return doSeriesArithmetic;
+    }
+
     @Override
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.MULTI_LINE_STYLE)
@@ -251,6 +262,7 @@ public class MetricManagerModule {
             .append("fetchParallelism", fetchParallelism)
             .append("failOnLimits", failOnLimits)
             .append("smallQueryThreshold", smallQueryThreshold)
+            .append("doSeriesArithmetic", doSeriesArithmetic)
             .toString();
     }
 
@@ -269,6 +281,7 @@ public class MetricManagerModule {
         private Optional<Integer> fetchParallelism = empty();
         private Optional<Boolean> failOnLimits = empty();
         private Optional<Long> smallQueryThreshold = empty();
+        private Optional<Boolean> doSeriesArithmetic = empty();
 
         private Builder() {
         }
@@ -284,7 +297,8 @@ public class MetricManagerModule {
             @JsonProperty("concurrentQueriesBackoff") OptionalLimit concurrentQueriesBackoff,
             @JsonProperty("fetchParallelism") Optional<Integer> fetchParallelism,
             @JsonProperty("failOnLimits") Optional<Boolean> failOnLimits,
-            @JsonProperty("smallQueryThreshold") Optional<Long> smallQueryThreshold
+            @JsonProperty("smallQueryThreshold") Optional<Long> smallQueryThreshold,
+            @JsonProperty("doSeriesArithmetic") Optional<Boolean> doSeriesArithmetic
         ) {
             this.backends = backends;
             this.defaultBackends = defaultBackends;
@@ -296,6 +310,7 @@ public class MetricManagerModule {
             this.fetchParallelism = fetchParallelism;
             this.failOnLimits = failOnLimits;
             this.smallQueryThreshold = smallQueryThreshold;
+            this.doSeriesArithmetic = doSeriesArithmetic;
         }
 
         public Builder backends(List<MetricModule> backends) {
@@ -348,6 +363,11 @@ public class MetricManagerModule {
             return this;
         }
 
+        public Builder doSeriesArithmetic(boolean doSeriesArithmetic) {
+            this.doSeriesArithmetic = of(doSeriesArithmetic);
+            return this;
+        }
+
         public Builder merge(final Builder o) {
             // @formatter:off
             return new Builder(
@@ -360,7 +380,8 @@ public class MetricManagerModule {
                 concurrentQueriesBackoff.orElse(o.concurrentQueriesBackoff),
                 pickOptional(fetchParallelism, o.fetchParallelism),
                 pickOptional(failOnLimits, o.failOnLimits),
-                pickOptional(smallQueryThreshold, o.smallQueryThreshold)
+                pickOptional(smallQueryThreshold, o.smallQueryThreshold),
+                pickOptional(doSeriesArithmetic, o.doSeriesArithmetic)
             );
             // @formatter:on
         }
@@ -377,7 +398,8 @@ public class MetricManagerModule {
                 concurrentQueriesBackoff,
                 fetchParallelism.orElse(DEFAULT_FETCH_PARALLELISM),
                 failOnLimits.orElse(DEFAULT_FAIL_ON_LIMITS),
-                smallQueryThreshold.orElse(DEFAULT_SMALL_QUERY_THRESHOLD)
+                smallQueryThreshold.orElse(DEFAULT_SMALL_QUERY_THRESHOLD),
+                doSeriesArithmetic.orElse(DEFAULT_DO_SERIES_ARITHMETIC)
             );
             // @formatter:on
         }
