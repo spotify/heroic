@@ -23,6 +23,11 @@ package com.spotify.heroic.metric
 
 import com.google.common.hash.Hasher
 
+/**
+ * A most essential POD class. Heroic's TSDB is built from Series' of these
+ * Point objects. Each Point object captures the value of a metric at a point
+ * in time.
+ */
 data class Point(
     override val timestamp: Long,
     val value: Double

@@ -26,19 +26,25 @@ import com.spotify.heroic.metric.QueryMetricsResponse;
 import java.util.Map;
 
 public interface ArithmeticEngine {
-
     /**
      * Apply the supplied operation to the supplied query responses.
      * <p>
      * NOTE that: 1. the operation must reference the names (keys) of the responses in
      * `queryResponses`. So, for example, if `operation` is 'A / B', then `queryResponses`' keys
-     * must be 'A' and 'B'. 2. every series within the supplied responses must be : - the same
-     * length - contain the exact same timestamps - be > 1 in length -
-     *
+     * must be 'A' and 'B'. 2. Every series within the supplied responses must be :
+     * <p>- the same length
+     * <p>- contain the exact same timestamps
+     * <p>- be > 1 in length
      * @param operation      e.g. 'A / B * 100' to get a ratio of A's to B's.
-     * @param queryResponses e.g. { "A" → { ... , [1.4,2.8,...]}, "B" → { ..., [0.8,0.1,...]}} where
-     *                       "A" and "B" are responses to queries named as such in Grafana.
-     * @return the resulting responses once the `operation` has been applied to the queryResponses.
+     * @param queryResponses e.g.
+     * <p>{
+     * <p>     "A" → { ... , [1.4,2.8,...]},
+     * <p>     "B" → { ..., [0.8,0.1,...]}
+     * <p>}
+     * <p> where "A" and "B" are responses to queries named as such in Grafana.
+     *
+     * @return the resulting responses once the `operation` has been applied to the
+     * queryResponses.
      */
     QueryMetricsResponse run(Arithmetic arithmetic,
         Map<String, QueryMetricsResponse> queryResponses);

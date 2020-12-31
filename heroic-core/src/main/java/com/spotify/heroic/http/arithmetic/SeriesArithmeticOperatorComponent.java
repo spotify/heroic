@@ -22,7 +22,6 @@
 package com.spotify.heroic.http.arithmetic;
 
 import dagger.Component;
-import javax.inject.Inject;
 
 /* PSK bridge between @Inject [target?] and @Module */
 @Component(modules = SeriesArithmeticOperatorModule.class)

@@ -38,7 +38,7 @@ public class SeriesArithmeticOperator {
     private final Map<String, QueryMetricsResponse> queryResponses;
     private final UUID uuid;
 
-    @SuppressWarnings("LongLine")
+    @SuppressWarnings("LineLength")
     public SeriesArithmeticOperator(
         Arithmetic arithmetic, Map<String, QueryMetricsResponse> queryResponses) {
 
@@ -62,8 +62,8 @@ public class SeriesArithmeticOperator {
     }
 
     private void validate(Arithmetic arithmetic) {
-        // TODO do we need to check for hostile/malformed arithmetic string e.g. escaped quotes, ...?
-
+        // TODO do we need to check for hostile/malformed arithmetic string e.g. escaped quotes,
+        //  ...?
     }
 
     @SuppressWarnings("MethodMayBeStatic")

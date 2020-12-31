@@ -65,9 +65,7 @@ public class ArithmeticEngineExp4J implements ArithmeticEngine {
     private Expression expressionEngine;
     private int numSeriesLimit = 10_000;
 
-    public ArithmeticEngineExp4J() {
-        // Required by Dagger 2
-    }
+    public ArithmeticEngineExp4J() { /* Required by Dagger 2*/ }
 
     private void initialize(Arithmetic arithmetic,
         Map<String, QueryMetricsResponse> queryResponses) {
@@ -313,12 +311,12 @@ public class ArithmeticEngineExp4J implements ArithmeticEngine {
         final Set<String> variableNames,
         final List<RequestError> errors) {
 
-//        if (!doNumOfSeriesAndVariablesMatch(
-//            query,
-//            variableNames,
-//            errors)) {
-//            return false;
-//        }
+        //        if (!doNumOfSeriesAndVariablesMatch(
+        //            query,
+        //            variableNames,
+        //            errors)) {
+        //            return false;
+        //        }
 
         if (!areResultSeriesOfEqualLength(query, errors)) {
             return false;
@@ -358,7 +356,6 @@ public class ArithmeticEngineExp4J implements ArithmeticEngine {
         final var queryNamesToMetricValues = queryResults.stream().map(entry -> {
             final String name = entry.getLeft();
             final ShardedResultGroup resultGroup = entry.getRight();
-
             return new SimpleEntry<>(name, resultGroup.getMetrics().getIthPointValue(i));
         });
 
@@ -415,19 +412,22 @@ public class ArithmeticEngineExp4J implements ArithmeticEngine {
                     double result = 0.0;
 
                     try {
-                        // plug the variables and their values into the engine and evaluate the result
+                        // plug the variables and their values into the engine and evaluate the
+                        // result
                         result = expressionEngine.setVariables(variableMap).evaluate();
                     } catch (ArithmeticException e) {
                         /** lookup java's message. this will be very expensive computationally.
-                         Should we attempt to parse/detect that it's division and the last param is 0?
-                         That's not easy and will almost certainly be hacky. A better option would be
-                         to fork exp4j, make a PR and add an:
+                         Should we attempt to parse/detect that it's division and the last param is
+                         0?
+                         That's not easy and will almost certainly be hacky. A better option would
+                         be to fork exp4j, make a PR and add an:
                          <pre>
                          enum DivByZeroPolicy { THROW, RETURN_ZERO, RETURN_ONE, RETURN_INFINITY }
                          </pre>
                          and then add a field of that type to net/objecthunter/exp4j/Expression.java
-                         which defaults to `THROW` and then respect that setting in Expression.evaluate().
-                         Then submit a PR so that it gets into master in exp4j.
+                         which defaults to `THROW` and then respect that setting in
+                         Expression.evaluate(). Then submit a PR so that it gets into master in
+                         exp4j.
 
                          TODO make call on if we need more efficient impl and if so, how to do it
                          **/
@@ -518,9 +518,7 @@ public class ArithmeticEngineExp4J implements ArithmeticEngine {
     }
 
     private Expression createExpression() {
-
         final var exp = arithmetic.getExpression();
-
         final var expression = new ExpressionBuilder(
             exp)
             .variables(queryResponses.keySet())
