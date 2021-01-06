@@ -81,6 +81,16 @@ abstract class BucketAggregationInstance<B : Bucket>(
                 { bucket, m -> bucket.updateSpread(key, m as Spread) })
         }
 
+
+        override fun updateTDigestPoints(
+                key: Map<String, String>, s: Set<Series>, values: List<TdigestPoint>
+        ) {
+            series.add(s)
+            feed(MetricType.TDIGEST_POINT, values,
+                    { bucket, m -> bucket.updateTDigestPoint(key, m as TdigestPoint) })
+
+        }
+
         override fun updateGroup(
             key: Map<String, String>, s: Set<Series>, values: List<MetricGroup>
         ) {
@@ -201,6 +211,6 @@ abstract class BucketAggregationInstance<B : Bucket>(
         @JvmField val EMPTY_KEY: Map<String, String> = ImmutableMap.of()
         @JvmField val ALL_TYPES: Set<MetricType> = ImmutableSet.of(
             MetricType.POINT, MetricType.SPREAD, MetricType.GROUP,
-            MetricType.CARDINALITY)
+            MetricType.CARDINALITY, MetricType.DISTRIBUTION_POINTS, MetricType.TDIGEST_POINT)
     }
 }

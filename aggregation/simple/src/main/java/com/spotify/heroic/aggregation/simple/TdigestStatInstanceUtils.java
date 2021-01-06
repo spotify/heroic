@@ -21,17 +21,9 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.metric.Metric;
-import com.spotify.heroic.metric.MetricCollection;
-import com.spotify.heroic.metric.MetricGroup;
-import com.spotify.heroic.metric.Point;
 import com.tdunning.math.stats.MergingDigest;
 import com.tdunning.math.stats.TDigest;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.UnaryOperator;
 
@@ -41,23 +33,6 @@ import java.util.function.UnaryOperator;
 public class TdigestStatInstanceUtils {
     public static final double TDIGEST_COMPRESSION_LEVEL = 100.0;
 
-    public static Metric computePercentile(final TDigest tDigest,
-                                           final long timestamp,
-                                           final double[] quantiles) {
-
-        if (tDigest.size() == 0) {
-            return Metric.invalid;
-        }
-
-        List<Point> values = new ArrayList<>();
-
-        Arrays.stream(quantiles).forEachOrdered(q -> values
-            .add(new Point(timestamp, tDigest.quantile(q))));
-        MetricCollection metricCollection = MetricCollection.points(values);
-
-        return new MetricGroup(timestamp, ImmutableList.of(metricCollection));
-    }
-
     public static AtomicReference<TDigest> buildAtomicReference() {
         final TDigest tDigest = TDigest.createDigest(TDIGEST_COMPRESSION_LEVEL);
         return new AtomicReference<>(tDigest);
@@ -65,6 +40,13 @@ public class TdigestStatInstanceUtils {
 
     public static UnaryOperator<TDigest> getOp(final ByteBuffer serializedTDigest) {
         TDigest input = MergingDigest.fromBytes(serializedTDigest);
+        return t -> {
+            t.add(input);
+            return t;
+        };
+    }
+
+    public static UnaryOperator<TDigest> getOp(final TDigest input) {
         return t -> {
             t.add(input);
             return t;

@@ -22,11 +22,24 @@
 package com.spotify.heroic.aggregation;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.metric.MetricCollection;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.ShardedResultGroup;
-
+import com.spotify.heroic.metric.TdigestPoint;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 
 public interface AggregationCombiner {
+    ImmutableList<MetricType> TDIGEST_TYPE = ImmutableList.of(MetricType.TDIGEST_POINT,
+        MetricType.DISTRIBUTION_POINTS);
     List<ShardedResultGroup> combine(List<List<ShardedResultGroup>> all);
 
     AggregationCombiner DEFAULT = new AggregationCombiner() {
@@ -48,4 +61,42 @@ public interface AggregationCombiner {
             return "DEFAULT";
         }
     };
+
+    default void compute(final ImmutableList.Builder<ShardedResultGroup> groups,
+                          final AggregationOutput out,
+                          final long cadence) {
+        final List<TdigestPoint> metrics = out.getMetrics().getDataAs(TdigestPoint.class);
+        final Map<ComputeDistributionStat.Percentile, List<Point>> resMap = new HashMap<>();
+        for (TdigestPoint tigestPoint : metrics) {
+            ComputeDistributionStat
+                .Percentile
+                .DEFAULT
+                .forEach(p -> compute(tigestPoint, resMap, p));
+        }
+        for (Map.Entry<ComputeDistributionStat.Percentile,
+            List<Point>> entry : resMap.entrySet()) {
+            Set<Series> newSet = new HashSet<>();
+            out.getSeries().forEach(s -> updateMetadata(s, entry.getKey(), newSet));
+            groups.add(new ShardedResultGroup(ImmutableMap.of(), out.getKey(), newSet,
+                MetricCollection.points(entry.getValue()), cadence));
+        }
+    }
+
+    private void updateMetadata(final Series s,
+                                final ComputeDistributionStat.Percentile percentile,
+                                final Set<Series> newSet) {
+        Map<String, String> tags = new HashMap<>(s.getTags());
+        tags.put("tdigestat", percentile.getName());
+        Series newSeries = Series.of(s.getKey(), tags, s.getResource());
+        newSet.add(newSeries);
+    }
+
+    private void compute(final TdigestPoint tigestPoint,
+                               final Map<ComputeDistributionStat.Percentile, List<Point>> resMap,
+                               final ComputeDistributionStat.Percentile percentile) {
+        Point point = ComputeDistributionStat.computePercentile(tigestPoint, percentile);
+        List<Point> points = resMap.getOrDefault(percentile, new ArrayList<>());
+        points.add(point);
+        resMap.put(percentile, points);
+    }
 }

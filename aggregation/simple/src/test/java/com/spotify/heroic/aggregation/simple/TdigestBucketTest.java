@@ -22,6 +22,22 @@ public class TdigestBucketTest {
 
 
 
+    @Test
+    public void testZeroValue(){
+        final TdigestMergingBucket b = new TdigestMergingBucket(timeStamp);
+        TDigest val = b.value();
+        Assert.assertEquals(0,val.size());
+    }
+
+    @Test
+    public void testCount() throws IOException {
+        final TdigestMergingBucket b = new TdigestMergingBucket(timeStamp);
+        b.updateDistributionPoint(TAGS, createDistributionPoint(data1) );
+        Assert.assertEquals(data1.length , b.value().size());
+        b.updateDistributionPoint(TAGS, createDistributionPoint(data2));
+        Assert.assertEquals(data1.length + data2.length , b.value().size());
+    }
+
     private DistributionPoint createDistributionPoint(double [] data){
         tDigest = TDigest.createDigest(100.0);
         Arrays.stream(data).forEach(d -> tDigest.add(d));
@@ -29,22 +45,5 @@ public class TdigestBucketTest {
         tDigest.asSmallBytes(byteBuffer);
         ByteString byteString = ByteString.copyFrom(byteBuffer.array());
         return DistributionPoint.create( HeroicDistribution.create(byteString), System.currentTimeMillis());
-    }
-
-     @Test
-     public void testZeroValue(){
-         final TdigestStatBucket b = new TdigestStatBucket(timeStamp);
-         TDigest val = b.value();
-         Assert.assertEquals(0,val.size());
-     }
-
-
-    @Test
-    public void testCount() throws IOException {
-        final TdigestStatBucket b = new TdigestStatBucket(timeStamp);
-        b.updateDistributionPoint(TAGS, createDistributionPoint(data1) );
-        Assert.assertEquals(data1.length , b.value().size());
-        b.updateDistributionPoint(TAGS, createDistributionPoint(data2));
-        Assert.assertEquals(data1.length + data2.length , b.value().size());
     }
 }

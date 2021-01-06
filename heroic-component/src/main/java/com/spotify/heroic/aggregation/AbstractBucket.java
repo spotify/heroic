@@ -27,6 +27,7 @@ import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
 
+import com.spotify.heroic.metric.TdigestPoint;
 import java.util.Map;
 
 public abstract class AbstractBucket implements Bucket {
@@ -48,5 +49,9 @@ public abstract class AbstractBucket implements Bucket {
 
     @Override
     public void updatePayload(Map<String, String> key, Payload sample) {
+    }
+
+    @Override
+    public void updateTDigestPoint(Map<String, String> key, TdigestPoint sample) {
     }
 }

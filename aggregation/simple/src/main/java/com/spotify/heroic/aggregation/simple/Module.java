@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.aggregation.simple;
 
+
 import com.spotify.heroic.HeroicModule;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationArguments;
@@ -97,6 +98,9 @@ public class Module implements HeroicModule {
             c.register(GroupUnique.NAME, GroupUnique.class, GroupUniqueInstance.class,
                 samplingBuilder(GroupUnique::new));
 
+            c.register(Tdigest.NAME, Tdigest.class, TdigestInstance.class,
+                samplingBuilder(Tdigest::new));
+
             c.register(Quantile.NAME, Quantile.class, QuantileInstance.class,
                 new SamplingAggregationDSL<Quantile>(factory) {
                     @Override
@@ -132,7 +136,7 @@ public class Module implements HeroicModule {
 
             c.register(BottomK.NAME, BottomK.class, BottomKInstance.class,
                 args -> new BottomK(fetchK(args, IntegerExpression.class).getValue(),
-                    Optional.empty()));
+                     Optional.empty()));
 
             c.register(AboveK.NAME, AboveK.class, AboveKInstance.class,
                 args -> new AboveK(fetchK(args, DoubleExpression.class).getValue(),

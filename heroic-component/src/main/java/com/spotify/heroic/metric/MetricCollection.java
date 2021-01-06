@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+
 /**
  * A collection of metrics.
  * <p>
@@ -73,6 +74,7 @@ import java.util.Set;
     @JsonSubTypes.Type(MetricCollection.GroupCollection.class),
     @JsonSubTypes.Type(MetricCollection.CardinalityCollection.class),
     @JsonSubTypes.Type(MetricCollection.DistributionPointCollection.class),
+    @JsonSubTypes.Type(MetricCollection.TDigestPointCollection.class),
 })
 public interface MetricCollection {
     /**
@@ -210,6 +212,8 @@ public interface MetricCollection {
                 return PointCollection.create((List<Point>) metrics);
             case DISTRIBUTION_POINTS:
                 return DistributionPointCollection.create((List<DistributionPoint>) metrics);
+            case TDIGEST_POINT:
+                return TDigestPointCollection.create((List<TdigestPoint>) metrics);
             default:
                 throw new RuntimeException("unsupported metric collection");
         }
@@ -280,6 +284,33 @@ public interface MetricCollection {
             session.updateDistributionPoints(key, series, data());
         }
     }
+
+
+    @AutoValue
+    @JsonTypeName("tdigestPoints")
+    abstract class TDigestPointCollection implements MetricCollection {
+        @JsonCreator
+        public static TDigestPointCollection create(
+            @JsonProperty("data") final List<TdigestPoint> data) {
+            return new AutoValue_MetricCollection_TDigestPointCollection(data);
+        }
+
+        @JsonProperty
+        public abstract  List<TdigestPoint> data();
+
+        @Override
+        public MetricType getType() {
+            return MetricType.TDIGEST_POINT;
+        }
+
+        @Override
+        public void updateAggregation(
+            AggregationSession session, Map<String, String> key, Set<Series> series
+        ) {
+            session.updateTDigestPoints(key, series, data());
+        }
+    }
+
 
     @AutoValue
     @JsonTypeName("spreads")

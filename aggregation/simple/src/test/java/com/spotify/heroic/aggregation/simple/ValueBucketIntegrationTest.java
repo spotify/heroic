@@ -39,7 +39,7 @@ public abstract class ValueBucketIntegrationTest {
     private ExecutorService service;
 
     @java.beans.ConstructorProperties({ "initial", "fn", "threadCount", "count", "range",
-                                        "iterations" })
+        "iterations" })
     public ValueBucketIntegrationTest(final double initial, final DoubleBinaryOperator fn,
                                       final int threadCount, final long count, final double range,
                                       final int iterations) {

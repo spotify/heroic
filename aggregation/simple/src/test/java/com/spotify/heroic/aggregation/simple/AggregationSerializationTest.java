@@ -2,6 +2,8 @@ package com.spotify.heroic.aggregation.simple;
 
 import static org.junit.Assert.assertEquals;
 
+
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationInstance;
@@ -16,6 +18,14 @@ public class AggregationSerializationTest {
     private void assertSerializes(String json, AggregationInstance aggregation) throws Exception {
         assertEquals(json, mapper.writeValueAsString(aggregation));
         assertEquals(aggregation, mapper.readValue(json, AggregationInstance.class));
+    }
+
+    @Test
+    public void testTDigestInstance() throws Exception {
+        final String json = "{\"type\":\"tdigest\",\"size\":1,\"extent\":2}";
+        AggregationInstance aggregationInstance = new TdigestInstance(1, 2);
+        assertEquals(json, mapper.writeValueAsString(aggregationInstance));
+        assertEquals(aggregationInstance, mapper.readValue(json, TdigestInstance.class));
     }
 
     @Test

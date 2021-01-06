@@ -25,4 +25,9 @@ public class Data {
     public static Points points() {
         return new Points();
     }
+
+    public static DistributionPoints distributionPoints(){
+        return new DistributionPoints();
+    }
+
 }

@@ -27,7 +27,7 @@ import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
-
+import com.spotify.heroic.metric.TdigestPoint;
 import java.util.Map;
 
 public interface AnyBucket extends Bucket {
@@ -54,6 +54,11 @@ public interface AnyBucket extends Bucket {
     @Override
     default void updateDistributionPoint(Map<String, String> key, DistributionPoint sample) {
         update(key, sample); }
+
+    @Override
+    default void updateTDigestPoint(Map<String, String> key, TdigestPoint sample) {
+        update(key, sample);
+    }
 
     void update(Map<String, String> key, Metric sample);
 }
