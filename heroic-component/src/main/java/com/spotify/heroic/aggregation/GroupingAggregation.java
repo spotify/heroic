@@ -34,6 +34,7 @@ import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
+import com.spotify.heroic.metric.TdigestPoint;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -170,6 +171,14 @@ public abstract class GroupingAggregation implements AggregationInstance {
         ) {
             final Map<String, String> key = key(group);
             session(key).updateDistributionPoints(key, series, values);
+        }
+
+        @Override
+        public void updateTDigestPoints(
+            Map<String, String> group, Set<Series> series, List<TdigestPoint> values
+        ) {
+            final Map<String, String> key = key(group);
+            session(key).updateTDigestPoints(key, series, values);
         }
 
         private AggregationSession session(final Map<String, String> key) {

@@ -73,6 +73,15 @@ abstract class BucketAggregationInstance<B : Bucket>(
                     { bucket, m -> bucket.updateDistributionPoint(key, m as DistributionPoint) })
         }
 
+        override fun updateTDigestPoints(
+                key: Map<String, String>, s: Set<Series>, values: List<TdigestPoint>
+        ) {
+            series.add(s)
+            feed(MetricType.TDIGEST_POINT, values,
+                    { bucket, m -> bucket.updateTDigestPoint(key, m as TdigestPoint) })
+
+        }
+
         override fun updateSpreads(
             key: Map<String, String>, s: Set<Series>, values: List<Spread>
         ) {

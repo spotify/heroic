@@ -108,6 +108,12 @@ abstract class FilterAggregation(
             childSession.updateDistributionPoints(key, series, values)
         }
 
+        override fun updateTDigestPoints(
+                key: Map<String, String>, series: Set<Series>, values: List<TdigestPoint>
+        ) {
+            childSession.updateTDigestPoints(key, series, values)
+        }
+
         override fun result(): AggregationResult {
             val result = childSession.result()
 

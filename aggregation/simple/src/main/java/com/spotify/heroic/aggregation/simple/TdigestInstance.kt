@@ -22,38 +22,31 @@
 package com.spotify.heroic.aggregation.simple
 
 import com.google.common.collect.ImmutableSet
-import com.spotify.heroic.ObjectHasher
 import com.spotify.heroic.aggregation.BucketAggregationInstance
 import com.spotify.heroic.aggregation.TDigestBucket
 import com.spotify.heroic.metric.Metric
 import com.spotify.heroic.metric.MetricType
-import java.util.*
+import com.spotify.heroic.metric.TdigestPoint
 
 /**
  *  Creates Tdigest buckets and computes distribution stats.
+ *  @author adeleo
  */
-data class TdigestStatInstance (
-override val size: Long,
-override val extent: Long,
-val quantiles : DoubleArray?
+data class TdigestInstance (
+        override val size: Long,
+        override val extent: Long
 ) : BucketAggregationInstance<TDigestBucket>(
         size,
         extent,
-        ImmutableSet.of(MetricType.DISTRIBUTION_POINTS),
-        MetricType.GROUP) {
+        ImmutableSet.of(MetricType.DISTRIBUTION_POINTS, MetricType.TDIGEST_POINT),
+        MetricType.TDIGEST_POINT) {
 
-    override fun buildBucket(timestamp: Long): TdigestStatBucket {
-        return TdigestStatBucket(timestamp)
+    override fun buildBucket(timestamp: Long): TdigestMergingBucket {
+        return TdigestMergingBucket(timestamp)
     }
 
     override fun build(bucket: TDigestBucket): Metric {
-        return  TdigestStatInstanceUtils.computePercentile(bucket.value(),
-                bucket.timestamp,
-                quantiles)
+        if ( bucket.value().size() == 0L ) return Metric.invalid
+        else return TdigestPoint.create(bucket.value(), bucket.timestamp)
     }
-    override fun bucketHashTo(hasher: ObjectHasher) {
-        Arrays.sort(quantiles);
-        hasher.putField("quantiles", Arrays.toString(quantiles), hasher.string())
-    }
-    }
-
+}
