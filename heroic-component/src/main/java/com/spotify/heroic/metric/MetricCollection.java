@@ -73,6 +73,7 @@ import java.util.Set;
     @JsonSubTypes.Type(MetricCollection.GroupCollection.class),
     @JsonSubTypes.Type(MetricCollection.CardinalityCollection.class),
     @JsonSubTypes.Type(MetricCollection.DistributionPointCollection.class),
+    @JsonSubTypes.Type(MetricCollection.TDigestPointCollection.class)
 })
 public interface MetricCollection {
     /**
