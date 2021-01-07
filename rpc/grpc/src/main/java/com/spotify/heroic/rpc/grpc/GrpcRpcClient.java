@@ -105,7 +105,6 @@ public class GrpcRpcClient {
                     try {
                         response = mapper.readValue(message, endpoint.responseType());
                     } catch (IOException e) {
-                        e.printStackTrace();
                         future.fail(e);
                         return;
                     }

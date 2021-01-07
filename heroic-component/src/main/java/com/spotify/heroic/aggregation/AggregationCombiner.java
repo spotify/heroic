@@ -87,15 +87,15 @@ public interface AggregationCombiner {
                                 final ComputeDistributionStat.Percentile percentile,
                                 final Set<Series> newSet) {
         Map<String, String> tags = new HashMap<>(s.getTags());
-        tags.put("tdigestat", percentile.getName());
+        tags.put("tdigeststat", percentile.getName());
         Series newSeries = Series.of(s.getKey(), tags, s.getResource());
         newSet.add(newSeries);
     }
 
-    private void compute(final TdigestPoint tigestPoint,
+    private void compute(final TdigestPoint tdigestPoint,
                          final Map<ComputeDistributionStat.Percentile, List<Point>> resMap,
                          final ComputeDistributionStat.Percentile percentile) {
-        Point point = ComputeDistributionStat.computePercentile(tigestPoint, percentile);
+        Point point = ComputeDistributionStat.computePercentile(tdigestPoint, percentile);
         List<Point> points = resMap.getOrDefault(percentile, new ArrayList<>());
         points.add(point);
         resMap.put(percentile, points);

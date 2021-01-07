@@ -17,9 +17,6 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
-
-
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
@@ -226,7 +223,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         final int datapointCount = 2;
         final long expectedCadence = 10L;
 
-        assertEquals(expectedGroupCount,result.getGroups().size());  //
+        assertEquals(expectedGroupCount,result.getGroups().size());
 
         for (ShardedResultGroup shardedResultGroup : result.getGroups()) {
             assertEquals(numberSeries, shardedResultGroup.getSeries().size());
@@ -488,8 +485,8 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
 
     @Test
     public void seriesLimitFailure() throws Exception {
-        testSerieLimitFailure(MetricType.DISTRIBUTION_POINTS);
-        testSerieLimitFailure(MetricType.POINT);
+        testSeriesLimitFailure(MetricType.DISTRIBUTION_POINTS);
+        testSeriesLimitFailure(MetricType.POINT);
     }
 
 
@@ -517,7 +514,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         assertEquals(ResultLimits.of(ResultLimit.QUOTA), result.getLimits());
     }
 
-    private void testSerieLimitFailure(final MetricType metricType ) throws Exception {
+    private void testSeriesLimitFailure(final MetricType metricType ) throws Exception {
         final QueryResult result = query("*", builder -> {
             builder.options(
                 Optional.of(QueryOptions.builder().seriesLimit(0L).failOnLimits(true).build()));
@@ -588,7 +585,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         for(ShardedResultGroup shardedGrpRes : shardedResultGroups){
             Set<String> pTags = new HashSet<>();
             shardedGrpRes.getSeries().forEach(s->s.getTags().entrySet().stream()
-                .filter(t->t.getKey().contentEquals("tdigestat"))
+                .filter(t->t.getKey().contentEquals("tdigeststat"))
                 .forEach(ss->pTags.add(ss.getValue())));
             assertEquals(1, pTags.size());  // Each group represents one stat
             if ( !pTags.contains(percentile.getName())) continue;
