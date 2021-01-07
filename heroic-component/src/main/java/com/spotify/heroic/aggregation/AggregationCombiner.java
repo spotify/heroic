@@ -68,11 +68,11 @@ public interface AggregationCombiner {
                          final long cadence) {
         final List<TdigestPoint> metrics = out.getMetrics().getDataAs(TdigestPoint.class);
         final Map<ComputeDistributionStat.Percentile, List<Point>> resMap = new HashMap<>();
-        for (TdigestPoint tigestPoint : metrics) {
+        for (TdigestPoint tdigestPoint : metrics) {
             ComputeDistributionStat
                 .Percentile
                 .DEFAULT
-                .forEach(p -> compute(tigestPoint, resMap, p));
+                .forEach(p -> compute(tdigestPoint, resMap, p));
         }
         for (Map.Entry<ComputeDistributionStat.Percentile,
             List<Point>> entry : resMap.entrySet()) {
