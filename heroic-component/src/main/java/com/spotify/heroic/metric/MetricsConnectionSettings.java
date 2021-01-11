@@ -63,7 +63,7 @@ public class MetricsConnectionSettings {
     protected Integer maxScanTimeoutRetries;
 
     /**
-     * See {@link ApiQueryConsts#DEFAULT_INITIAL_BACKOFF_MILLIS}
+     * See {@link ApiQueryConsts#DEFAULT_MAX_ELAPSED_BACKOFF_MILLIS}
      */
     protected Integer maxElapsedBackoffMs;
 
