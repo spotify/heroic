@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.consumer.schemas;
 
+import static io.opencensus.trace.AttributeValue.stringAttributeValue;
+
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.consumer.ConsumerSchema;
@@ -41,6 +43,10 @@ import com.spotify.proto.Spotify100;
 import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import io.opencensus.trace.AttributeValue;
+import io.opencensus.trace.Status;
+import io.opencensus.trace.Tracer;
+import io.opencensus.trace.Tracing;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -63,6 +69,7 @@ public class Spotify100Proto implements ConsumerSchema {
         private final IngestionGroup ingestion;
         private final ConsumerReporter reporter;
         private final AsyncFramework async;
+        private static final Tracer tracer = Tracing.getTracer();
 
         @Inject
         public Consumer(
@@ -79,10 +86,16 @@ public class Spotify100Proto implements ConsumerSchema {
 
         @Override
         public AsyncFuture<Void> consume(final byte[] message) throws ConsumerSchemaException {
+            var scope = tracer.spanBuilder("ConsumerSchema.consume").startScopedSpan();
+            var span = tracer.getCurrentSpan();
+            span.putAttribute("schema", stringAttributeValue("Spotify100Proto"));
+
             final List<Spotify100.Metric> metrics;
             try {
                 metrics = Spotify100.Batch.parseFrom(Snappy.uncompress(message)).getMetricList();
             } catch (IOException e) {
+                span.setStatus(Status.INVALID_ARGUMENT.withDescription(e.getMessage()));
+                scope.close();
                 throw new ConsumerSchemaValidationException("Invalid batch of metrics", e);
             }
 
@@ -90,24 +103,27 @@ public class Spotify100Proto implements ConsumerSchema {
             for (Spotify100.Metric metric : metrics) {
 
                 if (metric.getTime() <= 0) {
+                    span.setStatus(Status.INVALID_ARGUMENT.withDescription("Negative time set"));
+                    scope.close();
                     throw new ConsumerSchemaValidationException(
                         "time: field must be a positive number: " + metric.toString());
                 }
                 reporter.reportMessageDrift(clock.currentTimeMillis() - metric.getTime());
 
-                final Series s = Series.of(metric.getKey(), metric.getTagsMap(),
+                final Series series = Series.of(metric.getKey(), metric.getTagsMap(),
                     metric.getResourceMap());
-
 
                 Spotify100.Value distributionTypeValue = metric.getDistributionTypeValue();
                 Point point = null;
                 if (!metric.hasDistributionTypeValue()) {
                     point = new Point(metric.getTime(), metric.getValue());
                 } else if (distributionTypeValue.getValueCase()
-                    .equals(Spotify100.Value.ValueCase.DOUBLE_VALUE)) {
+                    .equals(Spotify100.Value.ValueCase.DOUBLE_VALUE)
+                ) {
                     point = new Point(metric.getTime(), distributionTypeValue.getDoubleValue());
                 } else if (distributionTypeValue.getValueCase()
-                    .equals(Spotify100.Value.ValueCase.DISTRIBUTION_VALUE)) {
+                    .equals(Spotify100.Value.ValueCase.DISTRIBUTION_VALUE)
+                ) {
                     Distribution distribution = HeroicDistribution.
                         create(distributionTypeValue.getDistributionValue());
                     DistributionPoint distributionPoint =
@@ -115,17 +131,19 @@ public class Spotify100Proto implements ConsumerSchema {
                     final List<DistributionPoint> distributionPoints =
                         ImmutableList.of(distributionPoint);
                     ingestions
-                        .add(ingestion.write(new Request(s,
+                        .add(ingestion.write(new Request(series,
                             MetricCollection.distributionPoints(distributionPoints))));
                 }
                 if (point != null) {
                     List<Point> points = ImmutableList.of(point);
                     ingestions
-                        .add(ingestion.write(new Request(s, MetricCollection.points(points))));
+                        .add(ingestion.write(new Request(series, MetricCollection.points(points))));
                 }
 
             }
-            reporter.reportMetricsIn(metrics.size());
+            var metricsSize = metrics.size();
+            reporter.reportMetricsIn(metricsSize);
+            span.putAttribute("metrics", AttributeValue.longAttributeValue(metricsSize));
             // Return Void future, to not leak unnecessary information from the backend but just
             // allow monitoring of when the consumption is done.
             return async.collectAndDiscard(ingestions);

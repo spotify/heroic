@@ -47,9 +47,12 @@ public class PubSubConsumer implements Consumer, LifeCycles {
 
     @Inject
     PubSubConsumer(
-        AsyncFramework async, Managed<Connection> connection,
-        @Named("consuming") AtomicInteger consuming, @Named("total") AtomicInteger total,
-        @Named("errors") AtomicLong errors, @Named("consumed") LongAdder consumed
+        AsyncFramework async,
+        Managed<Connection> connection,
+        @Named("consuming") AtomicInteger consuming,
+        @Named("total") AtomicInteger total,
+        @Named("errors") AtomicLong errors,
+        @Named("consumed") LongAdder consumed
     ) {
         this.async = async;
         this.connection = connection;

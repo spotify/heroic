@@ -23,7 +23,6 @@ package com.spotify.heroic.consumer.schemas;
 
 import static io.opencensus.trace.AttributeValue.stringAttributeValue;
 
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
@@ -51,8 +50,6 @@ import com.spotify.heroic.statistics.ConsumerReporter;
 import com.spotify.heroic.time.Clock;
 import dagger.Component;
 import eu.toolchain.async.AsyncFuture;
-import io.opencensus.common.Scope;
-import io.opencensus.trace.Span;
 import io.opencensus.trace.Status;
 import io.opencensus.trace.Tracer;
 import io.opencensus.trace.Tracing;
@@ -87,59 +84,59 @@ public class Spotify100 implements ConsumerSchema {
         @Override
         public AsyncFuture<Void> consume(final byte[] message) throws ConsumerSchemaException {
             final JsonNode tree;
-            final Span span = tracer.spanBuilder("ConsumerSchema.consume").startSpan();
+            var scope = tracer.spanBuilder("ConsumerSchema.consume").startScopedSpan();
+            var span = tracer.getCurrentSpan();
             span.putAttribute("schema", stringAttributeValue("Spotify100"));
 
-            try (Scope ws = tracer.withSpan(span)) {
-                try {
-                    tree = mapper.readTree(message);
-                } catch (final Exception e) {
-                    span.setStatus(Status.INVALID_ARGUMENT.withDescription(e.toString()));
-                    span.end();
-                    throw new ConsumerSchemaValidationException("Invalid metric", e);
-                }
-
-                if (tree.getNodeType() != JsonNodeType.OBJECT) {
-                    span.setStatus(
-                        Status.INVALID_ARGUMENT.withDescription("Metric is not an object"));
-                    span.end();
-                    throw new ConsumerSchemaValidationException(
-                        "Expected object, but got: " + tree.getNodeType());
-                }
-
-                final ObjectNode object = (ObjectNode) tree;
-
-                final JsonNode versionNode = object.remove("version");
-
-                if (versionNode == null) {
-                    span.setStatus(Status.INVALID_ARGUMENT.withDescription("Missing version"));
-                    span.end();
-                    throw new ConsumerSchemaValidationException(
-                        "Missing version in received object");
-                }
-
-                final Version version;
-
-                try {
-                    version = Version.parse(versionNode.asText());
-                } catch (final Exception e) {
-                    span.setStatus(Status.INVALID_ARGUMENT.withDescription("Bad version"));
-                    span.end();
-                    throw new ConsumerSchemaValidationException("Bad version: " + versionNode);
-                }
-
-                int major = version.getMajor();
-
-                if (major == 1) {
-                    return handleVersion1(tree).onFinished(span::end);
-                } else if (major == 2) {
-                    return handleVersion2(tree).onFinished(span::end);
-                }
-
-                span.setStatus(Status.INVALID_ARGUMENT.withDescription("Unsupported version"));
-                span.end();
-                throw new ConsumerSchemaValidationException("Unsupported version: " + version);
+            try {
+                tree = mapper.readTree(message);
+            } catch (final Exception e) {
+                span.setStatus(Status.INVALID_ARGUMENT.withDescription(e.toString()));
+                scope.close();
+                throw new ConsumerSchemaValidationException("Invalid metric", e);
             }
+
+            if (tree.getNodeType() != JsonNodeType.OBJECT) {
+                span.setStatus(
+                    Status.INVALID_ARGUMENT.withDescription("Metric is not an object"));
+                scope.close();
+                throw new ConsumerSchemaValidationException(
+                    "Expected object, but got: " + tree.getNodeType());
+            }
+
+            final ObjectNode object = (ObjectNode) tree;
+
+            final JsonNode versionNode = object.remove("version");
+
+            if (versionNode == null) {
+                span.setStatus(Status.INVALID_ARGUMENT.withDescription("Missing version"));
+                scope.close();
+                throw new ConsumerSchemaValidationException(
+                    "Missing version in received object");
+            }
+
+            final Version version;
+
+            try {
+                version = Version.parse(versionNode.asText());
+            } catch (final Exception e) {
+                span.setStatus(Status.INVALID_ARGUMENT.withDescription("Bad version"));
+                scope.close();
+                throw new ConsumerSchemaValidationException("Bad version: " + versionNode);
+            }
+
+            span.putAttribute("metric.version", stringAttributeValue(version.toString()));
+            int major = version.getMajor();
+
+            if (major == 1) {
+                return handleVersion1(tree).onFinished(scope::close);
+            } else if (major == 2) {
+                return handleVersion2(tree).onFinished(scope::close);
+            }
+
+            span.setStatus(Status.INVALID_ARGUMENT.withDescription("Unsupported version"));
+            scope.close();
+            throw new ConsumerSchemaValidationException("Unsupported version: " + version);
         }
 
         private AsyncFuture<Void> handleVersion1(final JsonNode tree)

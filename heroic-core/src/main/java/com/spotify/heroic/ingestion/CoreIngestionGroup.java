@@ -51,7 +51,7 @@ import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Supplier;
 
 public class CoreIngestionGroup implements IngestionGroup {
-    private final Tracer tracer = Tracing.getTracer();
+    private static final Tracer tracer = Tracing.getTracer();
 
     private final AsyncFramework async;
     private final Supplier<Filter> filter;
@@ -127,7 +127,7 @@ public class CoreIngestionGroup implements IngestionGroup {
         reporter.incrementConcurrentWrites();
 
         try (Scope ws = tracer.withSpan(span)) {
-            return doWrite(request).onFinished(() -> {
+            return doWrite(request, span).onFinished(() -> {
                 writePermits.release();
                 reporter.decrementConcurrentWrites();
                 span.end();
@@ -135,8 +135,7 @@ public class CoreIngestionGroup implements IngestionGroup {
         }
     }
 
-    protected AsyncFuture<Ingestion> doWrite(final Request request) {
-        final Span span = tracer.spanBuilder("CoreIngestionGroup.doWrite").startSpan();
+    protected AsyncFuture<Ingestion> doWrite(final Request request, final Span span) {
         final List<AsyncFuture<Ingestion>> futures = new ArrayList<>();
 
         final Supplier<DateRange> range = rangeSupplier(request);
@@ -146,7 +145,7 @@ public class CoreIngestionGroup implements IngestionGroup {
             .ifPresent(futures::add);
         suggest.map(s -> doSuggestWrite(s, request, range.get(), span)).ifPresent(futures::add);
 
-        return async.collect(futures, Ingestion.reduce()).onFinished(span::end);
+        return async.collect(futures, Ingestion.reduce());
     }
 
     protected AsyncFuture<Ingestion> doMetricWrite(

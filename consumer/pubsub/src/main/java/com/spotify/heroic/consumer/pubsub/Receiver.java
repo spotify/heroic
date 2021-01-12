@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.consumer.pubsub;
 
+import static io.opencensus.trace.AttributeValue.longAttributeValue;
 import static io.opencensus.trace.AttributeValue.stringAttributeValue;
 
 import com.google.cloud.pubsub.v1.AckReplyConsumer;
@@ -71,6 +72,7 @@ class Receiver implements MessageReceiver {
 
         Span span = tracer.spanBuilder("PubSub.receiveMessage").startSpan();
         span.putAttribute("id", stringAttributeValue(messageId));
+        span.putAttribute("message.size", longAttributeValue(bytes.length));
 
         final FutureReporter.Context consumptionContext = reporter.reportConsumption();
 
@@ -79,24 +81,23 @@ class Receiver implements MessageReceiver {
             consumer.consume(bytes).onDone(consumptionContext).onFinished(() -> {
                 reporter.reportMessageSize(bytes.length);
                 replyConsumer.ack();
-                span.end();
             });
         } catch (ConsumerSchemaValidationException e) {
             reporter.reportConsumerSchemaError();
             log.error("ID:{} - {}", messageId, e.getMessage(), e);
+            span.setStatus(Status.INVALID_ARGUMENT.withDescription(e.toString()));
 
             // The message will never be processable, ack it to make it go away
             replyConsumer.ack();
-            span.end();
         } catch (Exception e) {
             errors.incrementAndGet();
             log.error("ID:{} - Failed to consume", messageId, e);
             span.setStatus(Status.INTERNAL.withDescription(e.toString()));
             reporter.reportMessageError();
             replyConsumer.nack();
-            span.end();
         } finally {
             consumed.increment();
+            span.end();
         }
   }
 
