@@ -40,12 +40,12 @@ import java.util.Optional;
 
 public class ElasticsearchMetadataProfile extends HeroicProfileBase {
     private static final Splitter splitter = Splitter.on(',').trimResults();
-
     @Override
     public HeroicConfig.Builder build(final ExtraParameters params) {
         final RotatingIndexMapping.Builder index = RotatingIndexMapping.builder();
 
         params.get("pattern").map(index::pattern);
+        params.getDuration("interval").map(index::interval);
 
         final ConnectionModule.Builder connection = ConnectionModule.builder().index(index.build());
 
@@ -81,6 +81,9 @@ public class ElasticsearchMetadataProfile extends HeroicProfileBase {
     public List<ParameterSpecification> options() {
         // @formatter:off
         return ImmutableList.of(
+            parameter("interval",
+                "Rotating index interval duration (examples: 7d, 24h)",
+                "<Duration>"),
             parameter("pattern", "Index pattern to use (example: heroic-%s)",
                     "<pattern>"),
             parameter("clusterName", "Cluster name to connect to", "<string>"),
