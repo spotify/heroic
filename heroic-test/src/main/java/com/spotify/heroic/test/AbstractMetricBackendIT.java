@@ -22,6 +22,7 @@
 package com.spotify.heroic.test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeNotNull;
 import static org.junit.Assume.assumeTrue;
 
 import com.google.common.collect.ImmutableList;
@@ -82,7 +83,7 @@ public abstract class AbstractMetricBackendIT {
      * See: https://github.com/spotify/heroic/pull/208 */
     protected boolean brokenSegmentsPr208 = false;
     protected boolean eventSupport = false;
-    protected Optional<Integer> maxBatchSize = Optional.empty();
+    protected Integer maxBatchSize = null;
     protected boolean hugeRowKey = true;
 
     @Rule
@@ -165,8 +166,7 @@ public abstract class AbstractMetricBackendIT {
      */
     @Test
     public void testMaxBatchSize() throws Exception {
-        assumeTrue("max batch size", maxBatchSize.isPresent());
-        final int maxBatchSize = this.maxBatchSize.get();
+        assumeNotNull("max batch size", maxBatchSize);
         DateRange range = new DateRange(99L, 100L + (maxBatchSize * 4));
 
         new TestCase()

@@ -52,6 +52,8 @@ dependencies {
     implementation 'com.typesafe:config:1.3.2'
     implementation 'net.jodah:expiringmap:0.5.1'
 
+    implementation 'com.tdunning:t-digest'
+
     // Default usage tracking module. Normally different module dependencies are handled in
     // heroic-dist, but defaults need to be accessible in heroic-core.
     implementation project(':heroic-usage-tracking-google-analytics')

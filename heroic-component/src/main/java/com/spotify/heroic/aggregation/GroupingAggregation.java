@@ -29,10 +29,12 @@ import com.spotify.heroic.ObjectHasher;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.metric.DistributionPoint;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
+import com.spotify.heroic.metric.TdigestPoint;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -161,6 +163,22 @@ public abstract class GroupingAggregation implements AggregationInstance {
         ) {
             final Map<String, String> key = key(group);
             session(key).updatePayload(key, series, values);
+        }
+
+        @Override
+        public void updateDistributionPoints(
+            Map<String, String> group, Set<Series> series, List<DistributionPoint> values
+        ) {
+            final Map<String, String> key = key(group);
+            session(key).updateDistributionPoints(key, series, values);
+        }
+
+        @Override
+        public void updateTDigestPoints(
+            Map<String, String> group, Set<Series> series, List<TdigestPoint> values
+        ) {
+            final Map<String, String> key = key(group);
+            session(key).updateTDigestPoints(key, series, values);
         }
 
         private AggregationSession session(final Map<String, String> key) {

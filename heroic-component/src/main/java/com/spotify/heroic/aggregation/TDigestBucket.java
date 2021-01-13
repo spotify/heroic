@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2020 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,14 +19,10 @@
  * under the License.
  */
 
-package com.spotify.heroic.test;
+package com.spotify.heroic.aggregation;
 
-public class Data {
-    public static Points points() {
-        return new Points();
-    }
+import com.tdunning.math.stats.TDigest;
 
-    public static DistributionPoints distributionPoints(){
-        return new DistributionPoints();
-    }
+public interface TDigestBucket extends Bucket {
+    TDigest value();
 }

@@ -1,5 +1,7 @@
 package com.spotify.heroic.aggregation.simple;
 
+import static org.junit.Assert.assertEquals;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.aggregation.AggregationInstance;
@@ -12,17 +14,14 @@ import com.spotify.heroic.aggregation.GroupingAggregation;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.Point;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.runners.MockitoJUnitRunner;
-
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-
-import static org.junit.Assert.assertEquals;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.runners.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
 public class FilterKAreaAggregationTest {
@@ -56,13 +55,16 @@ public class FilterKAreaAggregationTest {
         session.updatePoints(s3.getTags(), series,
             ImmutableList.of(new Point(1, 3.0), new Point(2, 3.0)));
         session.updatePoints(s4.getTags(), series,
-            ImmutableList.of(new Point(1, 4.0), new Point(2, 4.0)));
+            ImmutableList.of(new Point(1, 4.0), new Point(2, 4.0)
+                , new Point(2, 4.0)));
 
         final List<AggregationOutput> result = session.result().getResult();
 
         assertEquals(1, result.size());
 
+
         AggregationOutput first = result.get(0);
+
 
         if (first.getKey().equals(ImmutableMap.of("site", "lon"))) {
             assertEquals(ImmutableList.of(new Point(1, 3.0), new Point(2, 3.0)),

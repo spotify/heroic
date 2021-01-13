@@ -21,10 +21,7 @@
 
 package com.spotify.heroic.aggregation
 
-import com.spotify.heroic.metric.MetricGroup
-import com.spotify.heroic.metric.Payload
-import com.spotify.heroic.metric.Point
-import com.spotify.heroic.metric.Spread
+import com.spotify.heroic.metric.*
 
 interface Bucket {
     fun updatePoint(key: Map<String, String>, sample: Point)
@@ -34,6 +31,10 @@ interface Bucket {
     fun updateGroup(key: Map<String, String>, sample: MetricGroup)
 
     fun updatePayload(key: Map<String, String>, sample: Payload)
+
+    fun updateDistributionPoint(key: Map<String,String>, sample: DistributionPoint)
+
+    fun updateTDigestPoint(key: Map<String,String>, sample: TdigestPoint)
 
     /**
      * Get the timestamp for the bucket.

@@ -103,7 +103,7 @@ public class BigtableDataClientImpl implements BigtableDataClient {
             final ResultScanner<com.google.bigtable.v2.Row> s =
                 session.getDataClient().readRows(request.toPb(Table.toURI(clusterUri, tableName)));
 
-            final ResultScanner<Row> scanner = new ResultScanner<Row>() {
+            final ResultScanner<Row> scanner = new ResultScanner<>() {
                 @Override
                 public void close() throws IOException {
                     s.close();
@@ -158,7 +158,7 @@ public class BigtableDataClientImpl implements BigtableDataClient {
         while (true) {
             final T n;
 
-                /* this will unfortunately block once in a while */
+            /* this will unfortunately block once in a while */
             try {
                 n = scanner.next();
             } catch (final Exception e) {

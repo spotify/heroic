@@ -32,10 +32,6 @@ import com.google.protobuf.ByteString;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
-import io.opencensus.common.Scope;
-import io.opencensus.trace.AttributeValue;
-import io.opencensus.trace.Span;
-import io.opencensus.trace.Status;
 import io.opencensus.trace.Tracer;
 import io.opencensus.trace.Tracing;
 import java.util.HashMap;
@@ -110,55 +106,37 @@ public class BigtableMutatorImpl implements BigtableMutator {
     private AsyncFuture<Void> mutateSingleRow(
         String tableName, ByteString rowKey, Mutations mutations
     ) {
-        final Span span = tracer.spanBuilder("BigtableMutator.mutateSingleRow").startSpan();
-        try (Scope ws = tracer.withSpan(span)) {
-            return convertVoid(
-                session
-                    .getDataClient()
-                    .mutateRowAsync(toMutateRowRequest(tableName, rowKey, mutations)))
-                .onFinished(span::end);
-        }
+        return convertVoid(
+            session
+                .getDataClient()
+                .mutateRowAsync(toMutateRowRequest(tableName, rowKey, mutations)));
     }
 
     private AsyncFuture<Void> mutateBatchRow(
         String tableName, ByteString rowKey, Mutations mutations
     ) {
-        final Span span = tracer.spanBuilder("BigtableMutator.mutateBatchRow").startSpan();
-        try (Scope ws = tracer.withSpan(span)) {
-            span.putAttribute("table", AttributeValue.stringAttributeValue(tableName));
-
-            final BulkMutation bulkMutation = getOrAddBulkMutation(tableName);
-
-            span.addAnnotation("Adding rows to bulk mutation");
-            return convertVoid(bulkMutation.add(toMutateRowRequest(tableName, rowKey, mutations)))
-                .onFinished(span::end);
-        }
+        final BulkMutation bulkMutation = getOrAddBulkMutation(tableName);
+        return convertVoid(bulkMutation.add(toMutateRowRequest(tableName, rowKey, mutations)));
     }
 
     private BulkMutation getOrAddBulkMutation(String tableName) {
-        final Span span = tracer.spanBuilder("BigtableMutator.getOrAddBulkMutation").startSpan();
-        try (Scope ws = tracer.withSpan(span)) {
-            span.addAnnotation("Acquiring lock");
-            synchronized (tableAccessLock) {
-                span.addAnnotation("Lock acquired");
-
-                if (tableToBulkMutation.containsKey(tableName)) {
-                    span.setStatus(Status.ALREADY_EXISTS.withDescription("Mutation exists in map"));
-                    span.end();
-                    return tableToBulkMutation.get(tableName);
-                }
-
-                final BulkMutation bulkMutation = session.createBulkMutation(
-                    session
-                        .getOptions()
-                        .getInstanceName()
-                        .toTableName(tableName));
-
-                tableToBulkMutation.put(tableName, bulkMutation);
-
-                span.end();
-                return bulkMutation;
+        var span = tracer.getCurrentSpan();
+        synchronized (tableAccessLock) {
+            if (tableToBulkMutation.containsKey(tableName)) {
+                span.addAnnotation("Mutation exists in map");
+                return tableToBulkMutation.get(tableName);
             }
+
+            final BulkMutation bulkMutation = session.createBulkMutation(
+                session
+                    .getOptions()
+                    .getInstanceName()
+                    .toTableName(tableName));
+
+            tableToBulkMutation.put(tableName, bulkMutation);
+            span.addAnnotation("Created new mutation");
+
+            return bulkMutation;
         }
     }
 
@@ -178,7 +156,7 @@ public class BigtableMutatorImpl implements BigtableMutator {
     private <T> AsyncFuture<Void> convertVoid(final ListenableFuture<T> request) {
         final ResolvableFuture<Void> future = async.future();
 
-        Futures.addCallback(request, new FutureCallback<T>() {
+        Futures.addCallback(request, new FutureCallback<>() {
             @Override
             public void onSuccess(T result) {
                 future.resolve(null);

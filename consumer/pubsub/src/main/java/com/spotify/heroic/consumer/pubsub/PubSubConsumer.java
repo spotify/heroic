@@ -21,11 +21,11 @@
 
 package com.spotify.heroic.consumer.pubsub;
 
+import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
-import com.google.common.collect.ImmutableMap;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
@@ -47,9 +47,12 @@ public class PubSubConsumer implements Consumer, LifeCycles {
 
     @Inject
     PubSubConsumer(
-        AsyncFramework async, Managed<Connection> connection,
-        @Named("consuming") AtomicInteger consuming, @Named("total") AtomicInteger total,
-        @Named("errors") AtomicLong errors, @Named("consumed") LongAdder consumed
+        AsyncFramework async,
+        Managed<Connection> connection,
+        @Named("consuming") AtomicInteger consuming,
+        @Named("total") AtomicInteger total,
+        @Named("errors") AtomicLong errors,
+        @Named("consumed") LongAdder consumed
     ) {
         this.async = async;
         this.connection = connection;

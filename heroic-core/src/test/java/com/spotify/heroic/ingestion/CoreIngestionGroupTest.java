@@ -24,8 +24,8 @@ import com.spotify.heroic.statistics.IngestionManagerReporter;
 import com.spotify.heroic.suggest.SuggestBackend;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.FutureFinished;
+import io.opencensus.trace.BlankSpan;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Semaphore;
@@ -64,10 +64,6 @@ public class CoreIngestionGroupTest {
     @Mock
     private AsyncFuture<Ingestion> expected;
     @Mock
-    private AsyncFuture<Ingestion> resolved;
-    @Mock
-    private AsyncFuture<Ingestion> failed;
-    @Mock
     private AsyncFuture<Ingestion> other;
     @Mock
     private Series series;
@@ -87,15 +83,14 @@ public class CoreIngestionGroupTest {
     }
 
     private CoreIngestionGroup setupIngestionGroup(
-        final Optional<MetricBackend> metric, final Optional<MetadataBackend> metadata,
+        final Optional<MetricBackend> metric,
+        final Optional<MetadataBackend> metadata,
         final Optional<SuggestBackend> suggest
     ) {
-        // @formatter:off
         final CoreIngestionGroup group = new CoreIngestionGroup(
             async, filterSupplier, writePermits, reporter, ingested,
             metric, metadata, suggest
         );
-        // @formatter:on
 
         return spy(group);
     }
@@ -121,7 +116,7 @@ public class CoreIngestionGroupTest {
         doReturn(true).when(filter).apply(series);
         doNothing().when(writePermits).acquire();
         doNothing().when(writePermits).release();
-        doReturn(expected).when(group).doWrite(request);
+        doReturn(expected).when(group).doWrite(eq(request), any());
 
         assertEquals(expected, group.syncWrite(request));
 
@@ -131,7 +126,7 @@ public class CoreIngestionGroupTest {
         verify(writePermits).release();
         verify(reporter).incrementConcurrentWrites();
         verify(reporter).decrementConcurrentWrites();
-        verify(group).doWrite(request);
+        verify(group).doWrite(eq(request), any());
         verify(expected).onFinished(any(FutureFinished.class));
     }
 
@@ -152,7 +147,7 @@ public class CoreIngestionGroupTest {
         verify(reporter, never()).incrementConcurrentWrites();
         verify(reporter, never()).decrementConcurrentWrites();
         verify(reporter).reportDroppedByFilter();
-        verify(group, never()).doWrite(request);
+        verify(group, never()).doWrite(eq(request), any());
         verify(other, never()).onFinished(any(FutureFinished.class));
     }
 
@@ -175,7 +170,7 @@ public class CoreIngestionGroupTest {
         verify(writePermits, never()).release();
         verify(reporter, never()).incrementConcurrentWrites();
         verify(reporter, never()).decrementConcurrentWrites();
-        verify(group, never()).doWrite(request);
+        verify(group, never()).doWrite(eq(request), any());
         verify(other, never()).onFinished(any(FutureFinished.class));
     }
 
@@ -192,7 +187,7 @@ public class CoreIngestionGroupTest {
         doReturn(other).when(group).doMetadataWrite(eq(metadata), eq(request), eq(range), any());
         doReturn(other).when(group).doSuggestWrite(eq(suggest), eq(request), eq(range), any());
 
-        assertEquals(expected, group.doWrite(request));
+        assertEquals(expected, group.doWrite(request, BlankSpan.INSTANCE));
 
         verify(group).rangeSupplier(request);
         verify(group).doMetricWrite(eq(metric), eq(request), any());
@@ -213,7 +208,7 @@ public class CoreIngestionGroupTest {
         doReturn(other).when(group).doMetricWrite(eq(metric), eq(request), any());
         doReturn(other).when(group).doSuggestWrite(eq(suggest), eq(request), eq(range), any());
 
-        assertEquals(expected, group.doWrite(request));
+        assertEquals(expected, group.doWrite(request, BlankSpan.INSTANCE));
 
         verify(group).rangeSupplier(request);
         verify(group).doMetricWrite(eq(metric), eq(request), any());

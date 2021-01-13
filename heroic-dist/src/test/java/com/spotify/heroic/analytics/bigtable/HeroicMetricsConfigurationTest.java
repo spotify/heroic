@@ -3,7 +3,6 @@ package com.spotify.heroic.analytics.bigtable;
 import static com.spotify.heroic.HeroicConfigurationTestUtils.testConfiguration;
 import static org.junit.Assert.assertEquals;
 
-import com.spotify.heroic.dagger.DaggerCoreComponent;
 import com.spotify.heroic.metric.LocalMetricManager;
 import com.spotify.heroic.metric.bigtable.BigtableBackend;
 import com.spotify.heroic.metric.bigtable.BigtableMetricModule;
@@ -47,7 +46,7 @@ public class HeroicMetricsConfigurationTest {
         instance.inject(
             coreComponent -> {
                 var metricManager =
-                    (LocalMetricManager) ((DaggerCoreComponent) coreComponent).metricManager();
+                    (LocalMetricManager) coreComponent.metricManager();
                 var analyticsBackend =
                     metricManager
                         .groupSet()

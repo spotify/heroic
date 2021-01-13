@@ -23,11 +23,11 @@ package com.spotify.heroic.aggregation;
 
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.DistributionPoint;
-import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.MetricGroup;
+import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
-
+import com.spotify.heroic.metric.TdigestPoint;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -41,10 +41,11 @@ public interface AggregationSession {
 
     void updatePayload(Map<String, String> key, Set<Series> series, List<Payload> values);
 
-    default void updateDistributionPoints(Map<String, String> key,
-                                          Set<Series> series, List<DistributionPoint> points) {
-           throw new RuntimeException("Not yet implemented");
-    }
+    void updateDistributionPoints(Map<String, String> key, Set<Series> series,
+                                  List<DistributionPoint> points);
+
+    void updateTDigestPoints(Map<String, String> key, Set<Series> series,
+                             List<TdigestPoint> points);
 
     /**
      * Get the result of this aggregator.

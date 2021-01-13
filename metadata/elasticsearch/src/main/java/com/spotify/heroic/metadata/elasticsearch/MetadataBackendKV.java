@@ -22,6 +22,7 @@
 package com.spotify.heroic.metadata.elasticsearch;
 
 import static com.spotify.heroic.elasticsearch.ResourceLoader.loadJson;
+import static io.opencensus.trace.AttributeValue.booleanAttributeValue;
 import static java.util.Optional.ofNullable;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 import static org.elasticsearch.index.query.QueryBuilders.prefixQuery;
@@ -117,11 +118,14 @@ import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.FieldSortBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @ElasticsearchScope
 public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     implements MetadataBackend, LifeCycles {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(MetadataBackendKV.class);
     private static final Tracer tracer = Tracing.getTracer();
     private static final String WRITE_CACHE_SIZE = "write-cache-size";
 
@@ -236,13 +240,21 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                 try (Scope ignored = tracer.withSpan(span)) {
                     span.putAttribute("index", AttributeValue.stringAttributeValue(index));
 
-                    if (!writeCache.acquire(Pair.of(index, series.getHashCodeTagOnly()),
+                    HashCode hc =
+                        indexResourceIdentifiers ?
+                            series.getHashCode() :
+                            series.getHashCodeTagOnly();
+
+                    if (!writeCache.acquire(Pair.of(index, hc),
                         reporter::reportWriteDroppedByCacheHit)) {
                         span.setStatus(
-                            Status.ALREADY_EXISTS.withDescription("Write dropped by cache hit"));
+                            Status
+                                .ALREADY_EXISTS
+                                .withDescription("Write dropped by cache hit"));
                         span.end();
                         continue;
                     }
+
                     indexSpans.add(span);
 
                     final XContentBuilder source = XContentFactory.jsonBuilder();
@@ -284,7 +296,12 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                         .catchFailed(handleVersionConflict(WriteMetadata::new,
                             reporter::reportWriteDroppedByDuplicate))
                         .onDone(writeContext)
-                        .onFinished(writeSpan::end);
+                        .onFinished(writeSpan::end)
+                        .onFailed(error -> {
+                            LOGGER.error("Metadata write failed: ", error);
+                            writeSpan.putAttribute("error", booleanAttributeValue(true));
+                            writeSpan.addAnnotation(error.getMessage());
+                        });
 
                     writes.add(writeMetadataAsyncFuture);
 

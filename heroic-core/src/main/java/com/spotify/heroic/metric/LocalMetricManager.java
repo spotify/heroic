@@ -482,7 +482,7 @@ public class LocalMetricManager implements MetricManager {
 
         @Override
         public AsyncFuture<WriteMetric> write(final WriteMetric.Request request) {
-            return write(request, io.opencensus.trace.Tracing.getTracer().getCurrentSpan());
+            return write(request);
         }
 
         @Override

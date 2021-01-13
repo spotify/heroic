@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.consumer.schemas;
 
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -44,7 +44,6 @@ import com.spotify.proto.Spotify100.Batch;
 import com.spotify.proto.Spotify100.Metric;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import io.opencensus.metrics.export.Value;
 import java.util.List;
 import org.junit.Before;
 import org.junit.Rule;
@@ -52,7 +51,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.MockitoJUnitRunner;
 import org.xerial.snappy.Snappy;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -73,6 +72,9 @@ public class Spotify100ProtoTest {
   @Mock
   private AsyncFuture<Ingestion> resolved;
 
+  @Mock
+  private AsyncFuture<Void> discardedFuture;
+
   private Spotify100Proto.Consumer consumer;
 
   @Rule
@@ -81,6 +83,7 @@ public class Spotify100ProtoTest {
   @Before
   public void setup() {
     when(clock.currentTimeMillis()).thenReturn(1542830485000L);
+    when(async.collectAndDiscard(any())).thenReturn(discardedFuture);
     when(ingestion.write(any(Request.class))).thenReturn(resolved);
     consumer = new Spotify100Proto.Consumer(clock, ingestion, reporter, async);
   }
