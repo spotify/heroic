@@ -138,13 +138,10 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         @Named("anonymousRequestSeverity") final String anonymousRequestSeverity,
         MetricBackendReporter reporter,
         @Named("application/json") ObjectMapper mapper
-        MetricBackendReporter reporter
     ) {
         super(async);
         this.async = async;
         this.rowKeySerializer = rowKeySerializer;
-        this.sortedMapSerializer =
-            serializer.sortedMap(serializer.string(), serializer.string());
         this.connection = connection;
         this.maxWriteBatchSize = maxWriteBatchSize;
         this.anonymousRequestSeverity =
