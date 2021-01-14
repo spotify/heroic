@@ -44,8 +44,10 @@ public class ElasticsearchMetadataProfile extends HeroicProfileBase {
     public HeroicConfig.Builder build(final ExtraParameters params) {
         final RotatingIndexMapping.Builder index = RotatingIndexMapping.builder();
 
-        params.get("pattern").map(index::pattern);
-        params.getDuration("interval").map(index::interval);
+        params.get("pattern")
+            .map(index::pattern);
+        params.getDuration("interval")
+            .map(index::interval);
 
         final ConnectionModule.Builder connection = ConnectionModule.builder().index(index.build());
 
