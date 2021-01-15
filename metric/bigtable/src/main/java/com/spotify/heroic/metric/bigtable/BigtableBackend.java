@@ -34,8 +34,6 @@ import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
-import com.spotify.heroic.common.MandatoryClientIdUtil;
-import com.spotify.heroic.common.MandatoryClientIdUtil.RequestInfractionSeverity;
 import com.spotify.heroic.common.RequestTimer;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
@@ -124,7 +122,6 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     private final Meter written = new Meter();
     private final int maxWriteBatchSize;
 
-    private final RequestInfractionSeverity anonymousRequestSeverity;
 
     @Inject
     public BigtableBackend(
@@ -135,7 +132,6 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         @Named("table") final String table,
         @Named("configure") final boolean configure,
         @Named("maxWriteBatchSize") final int maxWriteBatchSize,
-        @Named("anonymousRequestSeverity") final String anonymousRequestSeverity,
         MetricBackendReporter reporter,
         @Named("application/json") ObjectMapper mapper
     ) {
@@ -144,8 +140,6 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         this.rowKeySerializer = rowKeySerializer;
         this.connection = connection;
         this.maxWriteBatchSize = maxWriteBatchSize;
-        this.anonymousRequestSeverity =
-            MandatoryClientIdUtil.parseAnonymousRequestSeverityConfig(anonymousRequestSeverity);
         this.groups = groups;
         this.table = table;
         this.configure = configure;
@@ -664,10 +658,6 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
     public int getMaxWriteBatchSize() {
         return maxWriteBatchSize;
-    }
-
-    public RequestInfractionSeverity getAnonymousRequestSeverity() {
-        return anonymousRequestSeverity;
     }
 
     private static final class PreparedQuery {

@@ -1,6 +1,5 @@
 package com.spotify.heroic.servlet;
 
-import com.spotify.heroic.common.MandatoryClientIdUtil.RequestInfractionSeverity;
 import java.io.IOException;
 import java.util.Optional;
 import javax.servlet.FilterChain;
@@ -27,7 +26,7 @@ public class MandatoryClientIdFilterTest {
 
     @Before
     public void setUp() throws Exception {
-        filter = new MandatoryClientIdFilter(RequestInfractionSeverity.PERMIT, Optional.empty());
+        filter = new MandatoryClientIdFilter();
         MockitoAnnotations.initMocks(this);
     }
 

@@ -44,7 +44,6 @@ import com.spotify.heroic.common.GoAwayException;
 import com.spotify.heroic.common.GroupSet;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.Histogram;
-import com.spotify.heroic.common.MandatoryClientIdUtil.RequestInfractionSeverity;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.common.QuotaViolationException;
 import com.spotify.heroic.common.SelectedGroup;
@@ -111,12 +110,6 @@ public class LocalMetricManager implements MetricManager {
     private static final ConcurrentMap<QuotaWatcher, QuotaWatcher> quotaWatchers =
         new ConcurrentHashMap<>();
 
-    // TODO keep this one or the HttpServer one
-    // We default to REJECT as that provides the best protection for
-    // Heroic.
-    private RequestInfractionSeverity anonymousRequestInfractionSeverity =
-        RequestInfractionSeverity.REJECT;
-
     /**
      * @param groupLimit The maximum amount of groups this manager will allow to be generated.
      * @param seriesLimit The maximum amount of series in total an entire query may use.
@@ -134,8 +127,6 @@ public class LocalMetricManager implements MetricManager {
         @Named("concurrentQueriesBackoff") final OptionalLimit concurrentQueriesBackoff,
         @Named("fetchParallelism") final int fetchParallelism,
         @Named("failOnLimits") final boolean failOnLimits,
-        @Named("anonymousRequestInfractionSeverity")
-        final RequestInfractionSeverity anonymousRequestInfractionSeverity,
         final AsyncFramework async,
         final GroupSet<MetricBackend> groupSet,
         final MetadataManager metadata,
@@ -149,7 +140,6 @@ public class LocalMetricManager implements MetricManager {
         this.concurrentQueriesBackoff = concurrentQueriesBackoff.asMaxInteger(Integer.MAX_VALUE);
         this.fetchParallelism = fetchParallelism;
         this.failOnLimits = failOnLimits;
-        this.anonymousRequestInfractionSeverity = anonymousRequestInfractionSeverity;
         this.async = async;
         this.groupSet = groupSet;
         this.metadata = metadata;

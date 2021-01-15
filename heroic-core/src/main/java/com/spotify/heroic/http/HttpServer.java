@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicCoreInstance;
-import com.spotify.heroic.common.MandatoryClientIdUtil.RequestInfractionSeverity;
 import com.spotify.heroic.common.ServiceInfo;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.http.tracing.OpenCensusFeature;
@@ -75,12 +74,6 @@ public class HttpServer implements LifeCycles {
     private final AsyncFramework async;
     private final boolean enableCors;
     private final Optional<String> corsAllowOrigin;
-
-    // We default to REJECT as that provides the best protection for
-    // Heroic.
-    private RequestInfractionSeverity anonymousRequestInfractionSeverity =
-        RequestInfractionSeverity.REJECT;
-
     private final List<JettyServerConnector> connectors;
     private final Supplier<Boolean> stopping;
     private final ServiceInfo service;
@@ -98,8 +91,6 @@ public class HttpServer implements LifeCycles {
         final AsyncFramework async,
         @Named("enableCors") final boolean enableCors,
         @Named("corsAllowOrigin") final Optional<String> corsAllowOrigin,
-        @Named("anonymousRequestInfractionSeverity")
-        final RequestInfractionSeverity anonymousRequestInfractionSeverity,
         final List<JettyServerConnector> connectors,
         @Named("stopping") final Supplier<Boolean> stopping,
         final ServiceInfo service,
@@ -112,7 +103,6 @@ public class HttpServer implements LifeCycles {
         this.async = async;
         this.enableCors = enableCors;
         this.corsAllowOrigin = corsAllowOrigin;
-        this.anonymousRequestInfractionSeverity = anonymousRequestInfractionSeverity;
         this.connectors = connectors;
         this.stopping = stopping;
         this.service = service;
@@ -223,6 +213,7 @@ public class HttpServer implements LifeCycles {
 
         context.addServlet(jerseyServlet, "/*");
         context.addFilter(new FilterHolder(new ShutdownFilter(stopping, mapper)), "/*", null);
+        context.addFilter(new FilterHolder(new MandatoryClientIdFilter()), "/*", null);
         context.setErrorHandler(new JettyJSONErrorHandler(mapper));
 
         final RequestLogHandler requestLogHandler = new RequestLogHandler();
@@ -232,11 +223,6 @@ public class HttpServer implements LifeCycles {
         final RewriteHandler rewrite = new RewriteHandler();
         makeRewriteRules(rewrite);
 
-        // TODO pass the correct RequestInfractionSeverity from config
-        context.addFilter(new FilterHolder(
-            new MandatoryClientIdFilter(
-                RequestInfractionSeverity.PERMIT,
-                Optional.of(log))), "/*", null);
 
         final HandlerCollection handlers = new HandlerCollection();
         handlers.setHandlers(new Handler[]{rewrite, context, requestLogHandler});

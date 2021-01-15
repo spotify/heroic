@@ -21,7 +21,6 @@ metrics:
     - type: bigtable
       project: project
       maxWriteBatchSize: 250
-      anonymousRequestSeverity: Warning
     - type: datastax
     - type: memory
 
