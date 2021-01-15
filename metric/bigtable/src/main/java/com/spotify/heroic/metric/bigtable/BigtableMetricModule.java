@@ -141,11 +141,11 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
     }
 
     @Override
-    public Exposed module(PrimaryComponent primary, Depends depends, String id) {
+    public Exposed module(PrimaryComponent primary, Depends backend, String id) {
         return DaggerBigtableMetricModule_C
             .builder()
             .primaryComponent(primary)
-            .depends(depends)
+            .depends(backend)
             .m(new M())
             .build();
     }
@@ -179,9 +179,9 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
                 }
 
                 @Override
-                public AsyncFuture<Void> destruct(final BigtableConnection value) {
+                public AsyncFuture<Void> destruct(final BigtableConnection t) {
                     return async.call(() -> {
-                        value.close();
+                        t.close();
                         return null;
                     });
                 }
