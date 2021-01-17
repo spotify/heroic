@@ -42,8 +42,11 @@ import javax.ws.rs.core.Response.Status;
 @SuppressWarnings("checkstyle:LineLength")
 public class MandatoryClientIdFilter implements Filter {
 
+    public static final String X_CLIENT_ID_HEADER_NAME = "X-Client-Id";
+
     @Override
-    public void init(FilterConfig filterConfig) throws ServletException { /* intentionally empty */}
+    public void init(FilterConfig filterConfig) throws ServletException { /* intentionally empty
+    */ }
 
     /**
      * Reject (with a 400) the request, if the X-Client-Id HTTP header is not present
@@ -65,7 +68,7 @@ public class MandatoryClientIdFilter implements Filter {
         if (passesFilter(request)) {
             chain.doFilter(request, response);
         } else {
-            var httpResponse = (HttpServletResponse) response;
+            var httpResponse = HttpServletResponse.class.cast(response);
             httpResponse.setStatus(Status.BAD_REQUEST.getStatusCode());
         }
     }
@@ -76,12 +79,10 @@ public class MandatoryClientIdFilter implements Filter {
      * @return see above
      */
     public static boolean passesFilter(ServletRequest request) {
-        // TODO don't think this test is necessary but keep it around until testing proves as amuch
-        //        if (request.getClass().isAssignableFrom(HttpServletRequest.class)) {
         var req = HttpServletRequest.class.cast(request);
-        return !Strings.isNullOrEmpty(req.getHeader("X-Client-Id"));
+        return !Strings.isNullOrEmpty(req.getHeader(X_CLIENT_ID_HEADER_NAME));
     }
 
     @Override
-    public void destroy() { /* intentionally empty */}
+    public void destroy() { /* intentionally empty */ }
 };
