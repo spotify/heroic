@@ -35,10 +35,6 @@ enableCors: <bool> default = true
 # Allowed CORS origin for the HTTP API. Has no effect unless enableCors is true.
 corsAllowOrigin: <string> default = "*"
 
-# How to treat API requests without the X-Client-Id HTTP Header. Options are:
-# warn, reject, permit
-anonymousApiRequestSeverity: <string> default = reject
-
 # Flags used to enable/disable features.
 features:
   - <feature>

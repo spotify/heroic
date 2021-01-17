@@ -63,6 +63,7 @@ public class HeroicDistributionGenerator {
         static List<Double> getRandomData(int count) {
             ParetoDistribution pareto = new ParetoDistribution(5, 1);
             List<Double> list = new ArrayList<>();
+            //noinspection AssignmentToMethodParameter
             while (count-- > 0) {
                 list.add(pareto.sample());
             }
