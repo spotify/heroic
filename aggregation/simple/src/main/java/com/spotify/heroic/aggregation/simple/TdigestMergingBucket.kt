@@ -26,8 +26,9 @@ import com.spotify.heroic.aggregation.TDigestBucket
 import com.spotify.heroic.metric.DistributionPoint
 import com.spotify.heroic.metric.HeroicDistribution
 import com.spotify.heroic.metric.TdigestPoint
+import com.tdunning.math.stats.MergingDigest
 import com.tdunning.math.stats.TDigest;
-import java.util.concurrent.atomic.AtomicReference
+
 
 /**
  *
@@ -36,20 +37,36 @@ import java.util.concurrent.atomic.AtomicReference
  *
  */
 data class TdigestMergingBucket(override val timestamp: Long) : AbstractBucket(), TDigestBucket {
-    private val datasketch : AtomicReference<TDigest> = TdigestInstanceUtils.buildAtomicReference()
-
+    private val datasketch : TDigest = TdigestInstanceUtils.inital()
 
     override fun updateDistributionPoint(key: Map<String, String>, sample : DistributionPoint) {
         val heroicDistribution : HeroicDistribution = HeroicDistribution.create(sample.value().value)
         val serializedDatasketch = heroicDistribution.toByteBuffer()
-        datasketch.getAndUpdate(TdigestInstanceUtils.getOp(serializedDatasketch))
+        val input: TDigest = MergingDigest.fromBytes(serializedDatasketch)
+        if ( input.size() > 0) {
+            update(input)
+        }
     }
+
+    @Synchronized fun update(input : TDigest) {
+        //This is a temp fix to handle corrupted datapoint.
+        try {
+            datasketch.add(input)
+        }catch(ignore: Exception) {
+
+        }
+
+    }
+
 
     override fun updateTDigestPoint(key: Map<String, String>, sample : TdigestPoint) {
-        datasketch.getAndUpdate(TdigestInstanceUtils.getOp(sample.value()))
+        val input: TDigest = sample.value()
+        if ( input.size() > 0) {
+            update(input)
+        }
     }
 
-    override fun value(): TDigest {
-        return datasketch.get()
+    @Synchronized override fun value(): TDigest {
+        return datasketch
     }
 }

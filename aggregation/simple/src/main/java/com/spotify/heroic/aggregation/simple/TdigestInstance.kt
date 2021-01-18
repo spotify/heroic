@@ -46,7 +46,9 @@ data class TdigestInstance (
     }
 
     override fun build(bucket: TDigestBucket): Metric {
-        if ( bucket.value().size() == 0L ) return Metric.invalid
-        else return TdigestPoint.create(bucket.value(), bucket.timestamp)
+        if ( bucket.value().size() == 0L ) {
+            return Metric.invalid
+        }
+        return TdigestPoint.create(bucket.value(), bucket.timestamp)
     }
 }
