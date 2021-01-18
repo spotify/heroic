@@ -9,12 +9,6 @@ conditionalFeatures:
         clientId: foobar
     - type: match
       features:
-        - com.spotify.heroic.bananas_pineapples
-      condition:
-          type: anonymousClientIdSeverity
-          anonymousClientIdSeverity: Warning
-    - type: match
-      features:
         - com.spotify.heroic.cache_query
       condition:
         type: any
