@@ -40,10 +40,12 @@ def api_session(session_scoped_container_getter):
 
     api_url = 'http://127.0.0.1:{}/'.format(container.network_info[0].host_port)
     request_session = HeroicSession(api_url)
+    request_session.headers.update({'x-client-id': 'Heroic--System-Tests'})
     retries = Retry(total=5,
                     backoff_factor=0.1,
                     status_forcelist=[500, 502, 503, 504])
     request_session.mount('http://', HTTPAdapter(max_retries=retries))
+
     return request_session
 
 
