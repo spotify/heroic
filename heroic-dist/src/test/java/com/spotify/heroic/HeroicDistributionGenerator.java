@@ -13,6 +13,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import org.apache.commons.math3.distribution.ParetoDistribution;
 
 
@@ -63,15 +64,23 @@ public class HeroicDistributionGenerator {
 
 
     public static class Data {
-        static List<Double> getRandomData(int count) {
+        static List<Long> getParetoData(int count) {
             ParetoDistribution pareto = new ParetoDistribution(5, 1);
-            List<Double> list = new ArrayList<>();
+            List<Long> list = new ArrayList<>();
             while (count-- > 0) {
-                list.add(pareto.sample());
+                list.add((long)pareto.sample());
             }
             return list;
         }
+
+       static List<Double> getRandomData( int size){
+            final Random rand = new Random();
+            List<Double> list = new ArrayList<>();
+            while (size-- > 0) {
+                double val = rand.nextDouble() ;
+                list.add(Math.abs(val));
+            }
+            return  list;
+        }
     }
-
-
 }

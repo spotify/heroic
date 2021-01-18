@@ -25,6 +25,7 @@ import static io.opencensus.trace.AttributeValue.booleanAttributeValue;
 import static io.opencensus.trace.AttributeValue.longAttributeValue;
 import static io.opencensus.trace.AttributeValue.stringAttributeValue;
 
+
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableSortedSet;
 import com.spotify.heroic.aggregation.Aggregation;
@@ -35,6 +36,7 @@ import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.BucketStrategy;
 import com.spotify.heroic.aggregation.DistributedAggregationCombiner;
 import com.spotify.heroic.aggregation.Empty;
+import com.spotify.heroic.aggregation.TDigestAggregationCombiner;
 import com.spotify.heroic.cache.QueryCache;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.ClusterNode;
@@ -239,12 +241,14 @@ public class CoreQueryManager implements QueryManager {
             final MetricType source = q.getSource().orElse(MetricType.POINT);
 
             final Aggregation aggregation = q.getAggregation().orElse(Empty.INSTANCE);
+
             final DateRange rawRange = buildRange(q);
 
             final Filter filter = q.getFilter().orElseGet(TrueFilter::get);
 
             final AggregationContext context =
                 AggregationContext.defaultInstance(cadenceFromRange(rawRange));
+
             final AggregationInstance root = aggregation.apply(context);
 
             final AggregationInstance aggregationInstance;
@@ -277,10 +281,14 @@ public class CoreQueryManager implements QueryManager {
 
             final AggregationCombiner combiner;
 
+
             if (isDistributed) {
-                combiner = DistributedAggregationCombiner.create(root, range, bucketStrategy);
+                combiner = (source.equals(MetricType.POINT)) ?
+                    DistributedAggregationCombiner.create(root, range, bucketStrategy) :
+                    TDigestAggregationCombiner.create(root, range, bucketStrategy);
             } else {
-                combiner = AggregationCombiner.DEFAULT;
+                combiner = (source.equals(MetricType.DISTRIBUTION_POINTS)) ?
+                    AggregationCombiner.TDIGEST_DEFAULT : AggregationCombiner.DEFAULT;
             }
 
             final FullQuery.Request request =
