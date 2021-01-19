@@ -62,6 +62,7 @@ def test_loading(api_session):
     assert status['cluster']['ok']
 
 def test_loading_no_client_id(api_session):
+    api_session.headers.update({'x-client-id': ''})
     resp = api_session.get('/status', timeout=10)
     assert resp.status_code == requests.codes['bad_request']
 
