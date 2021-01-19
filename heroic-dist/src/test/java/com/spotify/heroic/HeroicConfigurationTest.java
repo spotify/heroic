@@ -142,7 +142,6 @@ public class HeroicConfigurationTest {
             assertEquals(FeatureSet.of(Feature.CACHE_QUERY),
                 conditional.match(queryContextClientIdBar));
             assertEquals(FeatureSet.empty(), conditional.match(queryContextAnonymous));
-            assertEquals(Feature.END_BUCKET, conditional.match(queryContextAnonymous));
 
             return null;
         });
