@@ -1,6 +1,5 @@
 package com.spotify.heroic.test;
 
-
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import com.spotify.heroic.metric.DistributionPoint;
@@ -9,8 +8,6 @@ import com.spotify.heroic.metric.MetricCollection;
 import com.tdunning.math.stats.TDigest;
 import java.nio.ByteBuffer;
 import java.util.List;
-
-;
 
 public class DistributionPoints {
     private final ImmutableList.Builder<DistributionPoint> points = ImmutableList.builder();

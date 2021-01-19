@@ -25,7 +25,6 @@ import static io.opencensus.trace.AttributeValue.booleanAttributeValue;
 import static io.opencensus.trace.AttributeValue.longAttributeValue;
 import static io.opencensus.trace.AttributeValue.stringAttributeValue;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.cloud.bigtable.grpc.scanner.FlatRow;
 import com.google.cloud.bigtable.util.RowKeyUtil;
 import com.google.common.base.Function;
@@ -132,8 +131,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         @Named("table") final String table,
         @Named("configure") final boolean configure,
         @Named("maxWriteBatchSize") final int maxWriteBatchSize,
-        MetricBackendReporter reporter,
-        @Named("application/json") ObjectMapper mapper
+        MetricBackendReporter reporter
     ) {
         super(async);
         this.async = async;

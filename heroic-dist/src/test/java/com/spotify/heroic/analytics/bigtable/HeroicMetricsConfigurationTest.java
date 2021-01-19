@@ -31,12 +31,6 @@ public class HeroicMetricsConfigurationTest {
     }
 
     @Test
-    public void testMandatoryClientIdWarning() throws Exception {
-        final var instance = testConfiguration("heroic-all.yml");
-        // TODO ...
-    }
-
-    @Test
     public void testMaxWriteBatchSizeConfig() throws Exception {
 
         final var instance = testConfiguration("heroic-all.yml");
