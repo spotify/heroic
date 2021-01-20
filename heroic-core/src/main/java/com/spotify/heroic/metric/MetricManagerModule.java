@@ -101,7 +101,8 @@ public class MetricManagerModule {
     /**
      * Threshold for defining a "small" query, measured in pre-aggregation sample size
      */
-    private final long smallQueryThreshold;    private final MetricsConnectionSettings connectionSettings;
+    private final long smallQueryThreshold;
+    private final MetricsConnectionSettings connectionSettings;
 
     private MetricManagerModule(
         List<MetricModule> backends,
@@ -133,7 +134,7 @@ public class MetricManagerModule {
 
     @Provides
     @MetricScope
-    public MetricBackendReporter reporter(HeroicReporter reporter) {
+    public static MetricBackendReporter reporter(HeroicReporter reporter) {
         return reporter.newMetricBackend();
     }
 
@@ -168,8 +169,8 @@ public class MetricManagerModule {
 
     @Provides
     @MetricScope
-    public Set<MetricBackend> backends(
-        List<MetricModule.Exposed> components, MetricBackendReporter reporter
+    public static Set<MetricBackend> backends(
+            List<MetricModule.Exposed> components, MetricBackendReporter reporter
     ) {
         return ImmutableSet.copyOf(components
             .stream()
@@ -181,7 +182,7 @@ public class MetricManagerModule {
     @Provides
     @MetricScope
     @Named("metric")
-    public LifeCycle metricLife(List<MetricModule.Exposed> components) {
+    public static LifeCycle metricLife(List<MetricModule.Exposed> components) {
         return LifeCycle.combined(components.stream().map(MetricModule.Exposed::life));
     }
 
@@ -270,7 +271,7 @@ public class MetricManagerModule {
     }
 
     public static class Builder {
-        private Optional<MetricsConnectionSettings> connectionSettings = empty();
+        private MetricsConnectionSettings connectionSettings;
         private Optional<List<MetricModule>> backends = empty();
         private Optional<List<String>> defaultBackends = empty();
         private OptionalLimit groupLimit = OptionalLimit.empty();
@@ -314,11 +315,11 @@ public class MetricManagerModule {
             this.failOnLimits = failOnLimits;
             this.smallQueryThreshold = smallQueryThreshold;
 
-            this.connectionSettings = Optional.of(new MetricsConnectionSettings(
+            this.connectionSettings = new MetricsConnectionSettings(
                     Optional.ofNullable(null),
                     mutateRpcTimeoutMs, readRowsRpcTimeoutMs, shortRpcTimeoutMs,
                     maxScanTimeoutRetries,
-                    maxElapsedBackoffMs));
+                    maxElapsedBackoffMs);
         }
 
         public Builder backends(List<MetricModule> backends) {
@@ -372,13 +373,6 @@ public class MetricManagerModule {
         }
 
         public Builder merge(final Builder o) {
-
-            var connSettings =
-                    connectionSettings.
-                            orElse(
-                                    o.connectionSettings.
-                                            orElse(MetricsConnectionSettings.createDefault()));
-
             return new Builder(
                     mergeOptionalList(o.backends, backends),
                     mergeOptionalList(o.defaultBackends, defaultBackends),
@@ -390,11 +384,11 @@ public class MetricManagerModule {
                     pickOptional(fetchParallelism, o.fetchParallelism),
                     pickOptional(failOnLimits, o.failOnLimits),
                     pickOptional(smallQueryThreshold, o.smallQueryThreshold),
-                    Optional.of(connSettings.mutateRpcTimeoutMs),
-                    Optional.of(connSettings.readRowsRpcTimeoutMs),
-                    Optional.of(connSettings.shortRpcTimeoutMs),
-                    Optional.of(connSettings.maxScanTimeoutRetries),
-                    Optional.of(connSettings.maxElapsedBackoffMs)
+                    Optional.of(connectionSettings.mutateRpcTimeoutMs),
+                    Optional.of(connectionSettings.readRowsRpcTimeoutMs),
+                    Optional.of(connectionSettings.shortRpcTimeoutMs),
+                    Optional.of(connectionSettings.maxScanTimeoutRetries),
+                    Optional.of(connectionSettings.maxElapsedBackoffMs)
             );
         }
 
@@ -411,7 +405,7 @@ public class MetricManagerModule {
                 fetchParallelism.orElse(DEFAULT_FETCH_PARALLELISM),
                 failOnLimits.orElse(DEFAULT_FAIL_ON_LIMITS),
                 smallQueryThreshold.orElse(DEFAULT_SMALL_QUERY_THRESHOLD),
-                connectionSettings.orElse(MetricsConnectionSettings.createDefault())
+                connectionSettings
             );
             // @formatter:on
         }

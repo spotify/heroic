@@ -109,58 +109,62 @@ public class HeroicMetricsConfigurationTest {
 
         // Check that the BigTableBackend's maxWriteBatchSize was picked up
         // from the heroic-all.yml config file
-        instance.inject(
-                coreComponent -> {
-                    var metricManager =
-                            (LocalMetricManager) ((DaggerCoreComponent) coreComponent)
-                                    .metricManager();
-                    var analyticsBackend =
-                            metricManager
-                                    .groupSet()
-                                    .useGroup("bigtable")
-                                    .getMembers()
-                                    .toArray(new BigtableAnalyticsMetricBackend[0])[0];
-                    var bigtableBackend = (BigtableBackend) analyticsBackend.getBackend();
+        // @formatter:off
+        instance.inject(coreComponent -> {
+            var metricManager =
+                    (LocalMetricManager) ((DaggerCoreComponent) coreComponent)
+                            .metricManager();
+            var analyticsBackend =
+                    metricManager
+                            .groupSet()
+                            .useGroup("bigtable")
+                            .getMembers()
+                            .toArray(new BigtableAnalyticsMetricBackend[0])[0];
+            var bigtableBackend = (BigtableBackend) analyticsBackend.getBackend();
 
-                    assertEquals(EXPECTED_MAX_WRITE_BATCH_SIZE,
-                            (long)bigtableBackend.metricsConnectionSettings().getMaxWriteBatchSize());
-                    assertEquals(EXPECTED_MUTATE_RPC_TIMEOUT_MS,
-                            (long)bigtableBackend.metricsConnectionSettings().getMutateRpcTimeoutMs());
-                    assertEquals(EXPECTED_READ_ROWS_RPC_TIMEOUT_MS,
-                            (long)bigtableBackend.metricsConnectionSettings().getReadRowsRpcTimeoutMs());
-                    assertEquals(EXPECTED_SHORT_RPC_TIMEOUT_MS,
-                            (long)bigtableBackend.metricsConnectionSettings().getShortRpcTimeoutMs());
-                    assertEquals(EXPECTED_MAX_SCAN_RETRIES,
-                            (long)bigtableBackend.metricsConnectionSettings().getMaxScanTimeoutRetries());
-                    assertEquals(EXPECTED_MAX_ELAPSED_BACKOFF_MS,
-                            (long)bigtableBackend.metricsConnectionSettings().getMaxElapsedBackoffMs());
+            // These (int) casts are needed to guide the compiler to pick the correct method
+            // call.
+            var mcs = bigtableBackend.metricsConnectionSettings();
+            assertEquals(EXPECTED_MAX_WRITE_BATCH_SIZE, (int) mcs.getMaxWriteBatchSize());
+            assertEquals(EXPECTED_MUTATE_RPC_TIMEOUT_MS, (int) mcs.getMutateRpcTimeoutMs());
+            assertEquals(EXPECTED_READ_ROWS_RPC_TIMEOUT_MS, (int) mcs.getReadRowsRpcTimeoutMs());
+            assertEquals(EXPECTED_SHORT_RPC_TIMEOUT_MS, (int) mcs.getShortRpcTimeoutMs());
+            assertEquals(EXPECTED_MAX_SCAN_RETRIES, (int) mcs.getMaxScanTimeoutRetries());
+            assertEquals(EXPECTED_MAX_ELAPSED_BACKOFF_MS, (int) mcs.getMaxElapsedBackoffMs());
 
-                    return null;
-                });
+            return null;
+        });
+        // @formatter:on
     }
 
     @Test
     public void testMaxWriteBatchSizeLimitsAreEnforced() {
         {
             final int tooBigBatchSize = 5_000_000;
-            var bigtableMetricModule = getBigtableMetricModule(tooBigBatchSize);
 
             assertEquals(BigtableMetricModule.MAX_MUTATION_BATCH_SIZE,
-                    bigtableMetricModule.getMetricsConnectionSettings().getMaxWriteBatchSize().intValue());
+                    getBigtableMetricModule(tooBigBatchSize).
+                            getMetricsConnectionSettings().
+                            getMaxWriteBatchSize().
+                            intValue());
         }
         {
             final int tooSmallBatchSize = 1;
-            var bigtableBackend = getBigtableMetricModule(tooSmallBatchSize);
 
             assertEquals(BigtableMetricModule.MIN_MUTATION_BATCH_SIZE,
-                    bigtableBackend.getMetricsConnectionSettings().getMaxWriteBatchSize().intValue());
+                    getBigtableMetricModule(tooSmallBatchSize).
+                            getMetricsConnectionSettings().
+                            getMaxWriteBatchSize().
+                            intValue());
         }
         {
             final int validSize = 100_000;
-            var bigtableBackend = getBigtableMetricModule(validSize);
 
             assertEquals(validSize,
-                    bigtableBackend.getMetricsConnectionSettings().getMaxWriteBatchSize().intValue());
+                    getBigtableMetricModule(validSize).
+                            getMetricsConnectionSettings().
+                            getMaxWriteBatchSize().
+                            intValue());
         }
     }
 }

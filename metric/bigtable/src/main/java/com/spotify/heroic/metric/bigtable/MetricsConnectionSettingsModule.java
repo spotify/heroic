@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.metric.bigtable;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.common.ModuleId;
 import com.spotify.heroic.metric.MetricsConnectionSettings;
 import dagger.Module;
@@ -37,25 +35,22 @@ import javax.inject.Named;
 @Module
 @ModuleId("bigtable")
 public class MetricsConnectionSettingsModule extends MetricsConnectionSettings {
-    @JsonCreator
     public MetricsConnectionSettingsModule(
-            @JsonProperty("maxWriteBatchSize") Optional<Integer> maxWriteBatchSize,
-            @JsonProperty("mutateRpcTimeoutMs") Optional<Integer> mutateRpcTimeoutMs,
-            @JsonProperty("readRowsRpcTimeoutMs") Optional<Integer> readRowsRpcTimeoutMs,
-            @JsonProperty("shortRpcTimeoutMs") Optional<Integer> shortRpcTimeoutMs,
-            @JsonProperty("maxScanTimeoutRetries") Optional<Integer> maxScanTimeoutRetries,
-            @JsonProperty("maxElapsedBackoffMs") Optional<Integer> maxElapsedBackoffMs
+            Optional<Integer> maxWriteBatchSize,
+            Optional<Integer> mutateRpcTimeoutMs,
+            Optional<Integer> readRowsRpcTimeoutMs,
+            Optional<Integer> shortRpcTimeoutMs,
+            Optional<Integer> maxScanTimeoutRetries,
+            Optional<Integer> maxElapsedBackoffMs
     ) {
         super(maxWriteBatchSize, mutateRpcTimeoutMs, readRowsRpcTimeoutMs, shortRpcTimeoutMs,
                 maxScanTimeoutRetries, maxElapsedBackoffMs);
     }
 
-    @JsonCreator
     public MetricsConnectionSettingsModule() {
         super();
     }
 
-    @JsonCreator
     public static MetricsConnectionSettingsModule createDefault() {
         return new MetricsConnectionSettingsModule();
     }
