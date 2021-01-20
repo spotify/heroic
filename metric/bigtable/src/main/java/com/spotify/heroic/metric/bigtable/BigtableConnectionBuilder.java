@@ -89,17 +89,17 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
             .addStatusToRetryOn(Status.Code.UNAVAILABLE)
             .setAllowRetriesWithoutTimestamp(true)
             .setEnableRetries(true)
-            .setMaxScanTimeoutRetries(settings.getMaxScanTimeoutRetries())
-            .setMaxElapsedBackoffMillis(settings.getMaxElapsedBackoffMs())
+            .setMaxScanTimeoutRetries(settings.maxScanTimeoutRetries)
+            .setMaxElapsedBackoffMillis(settings.maxElapsedBackoffMs)
             .build();
 
         final var bulkOptions =
             BulkOptions.builder().setBulkMaxRowKeyCount(settings.getMaxWriteBatchSize()).build();
 
         var callOptionsConfig = CallOptionsConfig.builder()
-                .setReadRowsRpcTimeoutMs(settings.getReadRowsRpcTimeoutMs())
-                .setMutateRpcTimeoutMs(settings.getMutateRpcTimeoutMs())
-                .setShortRpcTimeoutMs(settings.getShortRpcTimeoutMs())
+                .setReadRowsRpcTimeoutMs(settings.readRowsRpcTimeoutMs)
+                .setMutateRpcTimeoutMs(settings.mutateRpcTimeoutMs)
+                .setShortRpcTimeoutMs(settings.shortRpcTimeoutMs)
                 .setUseTimeout(true).build();
 
         var builder = BigtableOptions.builder()
