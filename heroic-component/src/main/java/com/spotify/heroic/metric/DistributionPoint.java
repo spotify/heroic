@@ -21,11 +21,14 @@
 
 package com.spotify.heroic.metric;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.auto.value.AutoValue;
 import com.google.common.hash.Hasher;
 import org.jetbrains.annotations.NotNull;
 
-
+@JsonSerialize(using = DistributionPointSerializer.class)
+@JsonDeserialize(using = DistributionPointDeserialize.class)
 @AutoValue
 public abstract class DistributionPoint implements Metric {
 

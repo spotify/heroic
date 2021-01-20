@@ -26,6 +26,14 @@ public class TdigestBucketTest {
          Assert.assertEquals(0,val.size());
      }
 
+    @Test(expected = java.nio.BufferUnderflowException.class)
+     public void testNullValue(){
+         final TdigestMergingBucket b = new TdigestMergingBucket(timeStamp);
+         DistributionPoint dp = DistributionPoint.create(HeroicDistribution.create(ByteString.EMPTY),
+             System.currentTimeMillis());
+         b.updateDistributionPoint(TAGS, dp);
+     }
+
 
     @Test
     public void testCount()  {

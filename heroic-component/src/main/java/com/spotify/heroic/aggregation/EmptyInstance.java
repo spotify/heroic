@@ -179,6 +179,11 @@ public class EmptyInstance implements AggregationInstance {
                         MetricCollection::distributionPoints));
                 }
 
+                if (!sub.tDigestPoints.isEmpty()) {
+                    groups.add(collectGroup(group, sub.tDigestPoints,
+                        MetricCollection::tdigestPoints));
+                }
+
                 if (!sub.spreads.isEmpty()) {
                     groups.add(collectGroup(group, sub.spreads, MetricCollection::spreads));
                 }
