@@ -18,130 +18,110 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package com.spotify.heroic.metric
 
-package com.spotify.heroic.metric;
+import com.spotify.heroic.metric.MetricsConnectionSettings
+import com.spotify.heroic.metric.consts.ApiQueryConsts
+import org.apache.commons.lang3.builder.ToStringBuilder
+import org.apache.commons.lang3.builder.ToStringStyle
+import java.util.*
 
-import static com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_MAX_ELAPSED_BACKOFF_MILLIS;
-import static com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_MAX_SCAN_TIMEOUT_RETRIES;
-import static com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_MUTATE_RPC_TIMEOUT_MS;
-import static com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_READ_ROWS_RPC_TIMEOUT_MS;
-import static com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_SHORT_RPC_TIMEOUT_MS;
-
-import com.spotify.heroic.metric.consts.ApiQueryConsts;
-import java.util.Optional;
-import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.apache.commons.lang3.builder.ToStringStyle;
-
-public class MetricsConnectionSettings {
-    /* default number of Cells for each batch mutation */
-    public static final int DEFAULT_MUTATION_BATCH_SIZE = 1_000;
-
-    /* maximum possible number of Cells for each batch mutation */
-    public static final int MAX_MUTATION_BATCH_SIZE = 100_000;
-
-    /* minimum possible number of Cells supported for each batch mutation */
-    public static final int MIN_MUTATION_BATCH_SIZE = 10;
+open class MetricsConnectionSettings(
+    maxWriteBatchSize: Optional<Int>,
+    mutateRpcTimeoutMs: Optional<Int>,
+    readRowsRpcTimeoutMs: Optional<Int>,
+    shortRpcTimeoutMs: Optional<Int>,
+    maxScanTimeoutRetries: Optional<Int>,
+    maxElapsedBackoffMs: Optional<Int>
+) {
+    /**
+     * See [com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_MUTATE_RPC_TIMEOUT_MS]
+     */
+    @JvmField
+    var mutateRpcTimeoutMs: Int
 
     /**
-     * See {@link com.spotify.heroic.metric.consts.ApiQueryConsts#DEFAULT_MUTATE_RPC_TIMEOUT_MS}
+     * See [com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_READ_ROWS_RPC_TIMEOUT_MS]
      */
-    protected int mutateRpcTimeoutMs;
+    @JvmField
+    var readRowsRpcTimeoutMs: Int
 
     /**
-     * See {@link com.spotify.heroic.metric.consts.ApiQueryConsts#DEFAULT_READ_ROWS_RPC_TIMEOUT_MS}
+     * See [ApiQueryConsts.DEFAULT_SHORT_RPC_TIMEOUT_MS]
      */
-    protected int readRowsRpcTimeoutMs;
+    @JvmField
+    var shortRpcTimeoutMs: Int
 
     /**
-     * See {@link ApiQueryConsts#DEFAULT_SHORT_RPC_TIMEOUT_MS}
+     * See [ApiQueryConsts.DEFAULT_MAX_SCAN_TIMEOUT_RETRIES]
      */
-    protected int shortRpcTimeoutMs;
+    @JvmField
+    var maxScanTimeoutRetries: Int
 
     /**
-     * See {@link ApiQueryConsts#DEFAULT_MAX_SCAN_TIMEOUT_RETRIES}
+     * See [ApiQueryConsts.DEFAULT_MAX_ELAPSED_BACKOFF_MILLIS]
      */
-    protected int maxScanTimeoutRetries;
+    @JvmField
+    var maxElapsedBackoffMs: Int
 
     /**
-     * See {@link ApiQueryConsts#DEFAULT_MAX_ELAPSED_BACKOFF_MILLIS}
+     * See [MetricsConnectionSettings.DEFAULT_MUTATION_BATCH_SIZE]
      */
-    protected int maxElapsedBackoffMs;
+    var maxWriteBatchSize: Int
+        protected set
 
-    /**
-     * See {@link MetricsConnectionSettings#DEFAULT_MUTATION_BATCH_SIZE}
-     */
-    protected int maxWriteBatchSize;
-
-    protected MetricsConnectionSettings() {
-        this(Optional.of(MAX_MUTATION_BATCH_SIZE), Optional.of(DEFAULT_MUTATE_RPC_TIMEOUT_MS),
-                Optional.of(DEFAULT_READ_ROWS_RPC_TIMEOUT_MS),
-                Optional.of(DEFAULT_SHORT_RPC_TIMEOUT_MS),
-                Optional.of(DEFAULT_MAX_SCAN_TIMEOUT_RETRIES),
-                Optional.of(DEFAULT_MAX_ELAPSED_BACKOFF_MILLIS));
+    protected constructor() : this(
+        Optional.of<Int>(MAX_MUTATION_BATCH_SIZE),
+        Optional.of<Int>(ApiQueryConsts.DEFAULT_MUTATE_RPC_TIMEOUT_MS),
+        Optional.of<Int>(ApiQueryConsts.DEFAULT_READ_ROWS_RPC_TIMEOUT_MS),
+        Optional.of<Int>(ApiQueryConsts.DEFAULT_SHORT_RPC_TIMEOUT_MS),
+        Optional.of<Int>(ApiQueryConsts.DEFAULT_MAX_SCAN_TIMEOUT_RETRIES),
+        Optional.of<Int>(ApiQueryConsts.DEFAULT_MAX_ELAPSED_BACKOFF_MILLIS)
+    ) {
     }
 
-    public static MetricsConnectionSettings createDefault() {
-        return new MetricsConnectionSettings();
+    override fun toString(): String {
+        return ToStringBuilder(this, ToStringStyle.MULTI_LINE_STYLE)
+            .append("maxWriteBatchSize", maxWriteBatchSize)
+            .append("mutateRpcTimeoutMs", mutateRpcTimeoutMs)
+            .append("readRowsRpcTimeoutMs", readRowsRpcTimeoutMs)
+            .append("shortRpcTimeoutMs", shortRpcTimeoutMs)
+            .append("maxScanTimeoutRetries", maxScanTimeoutRetries)
+            .append("maxElapsedBackoffMs", maxElapsedBackoffMs)
+            .toString()
     }
 
-    public MetricsConnectionSettings(
-            Optional<Integer> maxWriteBatchSize,
-            Optional<Integer> mutateRpcTimeoutMs,
-            Optional<Integer> readRowsRpcTimeoutMs,
-            Optional<Integer> shortRpcTimeoutMs,
-            Optional<Integer> maxScanTimeoutRetries,
-            Optional<Integer> maxElapsedBackoffMs) {
+    companion object {
+        /* default number of Cells for each batch mutation */
+        const val DEFAULT_MUTATION_BATCH_SIZE = 1000
 
+        /* maximum possible number of Cells for each batch mutation */
+        const val MAX_MUTATION_BATCH_SIZE = 100000
+
+        /* minimum possible number of Cells supported for each batch mutation */
+        const val MIN_MUTATION_BATCH_SIZE = 10
+        @JvmStatic
+        fun createDefault(): MetricsConnectionSettings {
+            return MetricsConnectionSettings()
+        }
+    }
+
+    init {
         // Basically make sure that maxWriteBatchSize, if set, is sane
-        int maxWriteBatch = maxWriteBatchSize.orElse(DEFAULT_MUTATION_BATCH_SIZE);
-        maxWriteBatch = Math.max(MIN_MUTATION_BATCH_SIZE, maxWriteBatch);
-        maxWriteBatch = Math.min(MAX_MUTATION_BATCH_SIZE, maxWriteBatch);
+        var maxWriteBatch = maxWriteBatchSize.orElse(DEFAULT_MUTATION_BATCH_SIZE)
+        maxWriteBatch = maxWriteBatch.coerceAtLeast(MIN_MUTATION_BATCH_SIZE)
+        maxWriteBatch = maxWriteBatch.coerceAtMost(MAX_MUTATION_BATCH_SIZE)
+        this.maxWriteBatchSize = maxWriteBatch
 
-        this.maxWriteBatchSize = maxWriteBatch;
-
-        this.mutateRpcTimeoutMs = mutateRpcTimeoutMs.orElse(DEFAULT_MUTATE_RPC_TIMEOUT_MS);
-        this.readRowsRpcTimeoutMs = readRowsRpcTimeoutMs.
-                orElse(DEFAULT_READ_ROWS_RPC_TIMEOUT_MS);
-        this.shortRpcTimeoutMs = shortRpcTimeoutMs.orElse(DEFAULT_SHORT_RPC_TIMEOUT_MS);
-        this.maxScanTimeoutRetries = maxScanTimeoutRetries.
-                orElse(DEFAULT_MAX_SCAN_TIMEOUT_RETRIES);
+        this.mutateRpcTimeoutMs =
+            mutateRpcTimeoutMs.orElse(ApiQueryConsts.DEFAULT_MUTATE_RPC_TIMEOUT_MS)
+        this.readRowsRpcTimeoutMs =
+            readRowsRpcTimeoutMs.orElse(ApiQueryConsts.DEFAULT_READ_ROWS_RPC_TIMEOUT_MS)
+        this.shortRpcTimeoutMs =
+            shortRpcTimeoutMs.orElse(ApiQueryConsts.DEFAULT_SHORT_RPC_TIMEOUT_MS)
+        this.maxScanTimeoutRetries =
+            maxScanTimeoutRetries.orElse(ApiQueryConsts.DEFAULT_MAX_SCAN_TIMEOUT_RETRIES)
         this.maxElapsedBackoffMs =
-                maxElapsedBackoffMs.orElse(DEFAULT_MAX_ELAPSED_BACKOFF_MILLIS);
-    }
-
-    public Integer getMaxWriteBatchSize() {
-        return maxWriteBatchSize;
-    }
-
-    public Integer getMutateRpcTimeoutMs() {
-        return mutateRpcTimeoutMs;
-    }
-
-    public Integer getReadRowsRpcTimeoutMs() {
-        return readRowsRpcTimeoutMs;
-    }
-
-    public Integer getShortRpcTimeoutMs() {
-        return shortRpcTimeoutMs;
-    }
-
-    public Integer getMaxScanTimeoutRetries() {
-        return maxScanTimeoutRetries;
-    }
-
-    public Integer getMaxElapsedBackoffMs() {
-        return maxElapsedBackoffMs;
-    }
-
-    @Override
-    public String toString() {
-        return new ToStringBuilder(this, ToStringStyle.MULTI_LINE_STYLE)
-                .append("maxWriteBatchSize", maxWriteBatchSize)
-                .append("mutateRpcTimeoutMs", mutateRpcTimeoutMs)
-                .append("readRowsRpcTimeoutMs", readRowsRpcTimeoutMs)
-                .append("shortRpcTimeoutMs", shortRpcTimeoutMs)
-                .append("maxScanTimeoutRetries", maxScanTimeoutRetries)
-                .append("maxElapsedBackoffMs", maxElapsedBackoffMs)
-                .toString();
+            maxElapsedBackoffMs.orElse(ApiQueryConsts.DEFAULT_MAX_ELAPSED_BACKOFF_MILLIS)
     }
 }

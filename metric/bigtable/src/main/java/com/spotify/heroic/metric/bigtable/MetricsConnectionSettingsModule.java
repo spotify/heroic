@@ -51,10 +51,6 @@ public class MetricsConnectionSettingsModule extends MetricsConnectionSettings {
         super();
     }
 
-    public static MetricsConnectionSettingsModule createDefault() {
-        return new MetricsConnectionSettingsModule();
-    }
-
     @Provides
     @Named("metricsConnectionSettings")
     public MetricsConnectionSettings metricsConnectionSettingsProvides() {
@@ -70,30 +66,30 @@ public class MetricsConnectionSettingsModule extends MetricsConnectionSettings {
     @Provides
     @Named("mutateRpcTimeoutMs")
     public Integer mutateRpcTimeoutMsProvides() {
-        return super.getMutateRpcTimeoutMs();
+        return super.mutateRpcTimeoutMs;
     }
 
     @Provides
     @Named("readRowsRpcTimeoutMs")
     public Integer readRowsRpcTimeoutMsProvides() {
-        return super.getReadRowsRpcTimeoutMs();
+        return super.readRowsRpcTimeoutMs;
     }
 
     @Provides
     @Named("shortRpcTimeoutMs")
     public Integer shortRpcTimeoutMsProvides() {
-        return super.getShortRpcTimeoutMs();
+        return super.shortRpcTimeoutMs;
     }
 
     @Provides
     @Named("maxScanTimeoutRetries")
     public Integer maxScanTimeoutRetriesProvides() {
-        return super.getMaxScanTimeoutRetries();
+        return super.maxScanTimeoutRetries;
     }
 
     @Provides
     @Named("maxElapsedBackoffMs")
     public Integer maxElapsedBackoffMsProvides() {
-        return super.getMaxElapsedBackoffMs();
+        return super.maxElapsedBackoffMs;
     }
 }

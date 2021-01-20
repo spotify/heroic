@@ -126,11 +126,11 @@ public class HeroicMetricsConfigurationTest {
             // call.
             var mcs = bigtableBackend.metricsConnectionSettings();
             assertEquals(EXPECTED_MAX_WRITE_BATCH_SIZE, (int) mcs.getMaxWriteBatchSize());
-            assertEquals(EXPECTED_MUTATE_RPC_TIMEOUT_MS, (int) mcs.getMutateRpcTimeoutMs());
-            assertEquals(EXPECTED_READ_ROWS_RPC_TIMEOUT_MS, (int) mcs.getReadRowsRpcTimeoutMs());
-            assertEquals(EXPECTED_SHORT_RPC_TIMEOUT_MS, (int) mcs.getShortRpcTimeoutMs());
-            assertEquals(EXPECTED_MAX_SCAN_RETRIES, (int) mcs.getMaxScanTimeoutRetries());
-            assertEquals(EXPECTED_MAX_ELAPSED_BACKOFF_MS, (int) mcs.getMaxElapsedBackoffMs());
+            assertEquals(EXPECTED_MUTATE_RPC_TIMEOUT_MS, (int) mcs.mutateRpcTimeoutMs);
+            assertEquals(EXPECTED_READ_ROWS_RPC_TIMEOUT_MS, (int) mcs.readRowsRpcTimeoutMs);
+            assertEquals(EXPECTED_SHORT_RPC_TIMEOUT_MS, (int) mcs.shortRpcTimeoutMs);
+            assertEquals(EXPECTED_MAX_SCAN_RETRIES, (int) mcs.maxScanTimeoutRetries);
+            assertEquals(EXPECTED_MAX_ELAPSED_BACKOFF_MS, (int) mcs.maxElapsedBackoffMs);
 
             return null;
         });
@@ -145,8 +145,7 @@ public class HeroicMetricsConfigurationTest {
             assertEquals(BigtableMetricModule.MAX_MUTATION_BATCH_SIZE,
                     getBigtableMetricModule(tooBigBatchSize).
                             getMetricsConnectionSettings().
-                            getMaxWriteBatchSize().
-                            intValue());
+                            getMaxWriteBatchSize());
         }
         {
             final int tooSmallBatchSize = 1;
@@ -154,8 +153,7 @@ public class HeroicMetricsConfigurationTest {
             assertEquals(BigtableMetricModule.MIN_MUTATION_BATCH_SIZE,
                     getBigtableMetricModule(tooSmallBatchSize).
                             getMetricsConnectionSettings().
-                            getMaxWriteBatchSize().
-                            intValue());
+                            getMaxWriteBatchSize());
         }
         {
             final int validSize = 100_000;
@@ -163,8 +161,7 @@ public class HeroicMetricsConfigurationTest {
             assertEquals(validSize,
                     getBigtableMetricModule(validSize).
                             getMetricsConnectionSettings().
-                            getMaxWriteBatchSize().
-                            intValue());
+                            getMaxWriteBatchSize());
         }
     }
 }
