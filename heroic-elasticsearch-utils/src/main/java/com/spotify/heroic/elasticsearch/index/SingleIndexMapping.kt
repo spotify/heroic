@@ -42,12 +42,24 @@ data class SingleIndexMapping(
         return arrayOf(getFullIndexName(type))
     }
 
+    override fun readIndicesInRange(type: String, endRange: Long): Array<String> {
+        TODO("Not yet implemented")
+    }
+
+    override fun searchInRange(type: String, endRange: Long): SearchRequest {
+        TODO("Not yet implemented")
+    }
+
     override fun search(type: String): SearchRequest {
         return SearchRequest(getFullIndexName(type))
     }
 
     override fun count(type: String): SearchRequest {
         return search(type).source(SearchSourceBuilder().size(0))
+    }
+
+    override fun countInRange(type: String, endRange: Long): SearchRequest {
+        TODO("Not yet implemented")
     }
 
     override fun delete(type: String, id: String): List<DeleteRequest> {

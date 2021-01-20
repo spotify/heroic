@@ -39,13 +39,22 @@ interface IndexMapping {
     fun readIndices(type: String): Array<String>
 
     @Throws(NoIndexSelectedException::class)
+    fun readIndicesInRange(type: String, endRange: Long): Array<String>
+
+    @Throws(NoIndexSelectedException::class)
     fun writeIndices(type: String): Array<String>
 
     @Throws(NoIndexSelectedException::class)
     fun search(type: String): SearchRequest
 
     @Throws(NoIndexSelectedException::class)
+    fun searchInRange(type: String, endRange: Long): SearchRequest
+
+    @Throws(NoIndexSelectedException::class)
     fun count(type: String): SearchRequest
+
+    @Throws(NoIndexSelectedException::class)
+    fun countInRange(type:String, endRange: Long): SearchRequest
 
     /**
      * Create a delete request.

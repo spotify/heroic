@@ -149,6 +149,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     private final int deleteParallelism;
     private final int scrollSize;
     private final boolean indexResourceIdentifiers;
+    private final boolean dynamicMaxReadIndices;
 
     @Inject
     public MetadataBackendKV(
@@ -160,7 +161,8 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         @Named("configure") boolean configure,
         @Named("deleteParallelism") int deleteParallelism,
         @Named("scrollSize") int scrollSize,
-        @Named("indexResourceIdentifiers") boolean indexResourceIdentifiers
+        @Named("indexResourceIdentifiers") boolean indexResourceIdentifiers,
+        @Named("dynamicMaxReadIndices") boolean dynamicMaxReadIndices
     ) {
         super(async, METADATA_TYPE, reporter);
         this.groups = groups;
@@ -172,6 +174,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         this.deleteParallelism = deleteParallelism;
         this.scrollSize = scrollSize;
         this.indexResourceIdentifiers = indexResourceIdentifiers;
+        this.dynamicMaxReadIndices = dynamicMaxReadIndices;
     }
 
     @Override
@@ -327,7 +330,14 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
             final QueryBuilder f = filter(filter.getFilter());
 
-            SearchRequest request = c.getIndex().count(METADATA_TYPE);
+            SearchRequest request;
+            if (dynamicMaxReadIndices) {
+                final long e = filter.getRange().getStart();
+                request = c.getIndex().countInRange(METADATA_TYPE, e);
+            } else {
+                request = c.getIndex().count(METADATA_TYPE);
+            }
+
             SearchSourceBuilder sourceBuilder = request.source();
             limit.asInteger().ifPresent(sourceBuilder::terminateAfter);
             sourceBuilder.query(new BoolQueryBuilder().must(f));
@@ -414,20 +424,31 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
     @Override
     public AsyncFuture<FindKeys> findKeys(final FindKeys.Request request) {
-        return doto(c -> {
-            final QueryBuilder f = filter(request.getFilter());
-            SearchRequest searchRequest = c.getIndex().search(METADATA_TYPE);
-            searchRequest.source().query(new BoolQueryBuilder().must(f));
 
-            {
-                final AggregationBuilder terms = AggregationBuilders.terms("terms").field(KEY);
-                searchRequest.source().aggregation(terms);
-            }
+    return doto(
+        c -> {
+          final QueryBuilder f = filter(request.getFilter());
 
-            final ResolvableFuture<SearchResponse> future = async.future();
-            future.resolve(c.execute(searchRequest));
+          SearchRequest searchRequest;
+          if (dynamicMaxReadIndices) {
+              final long e = request.getRange().getStart();
+              searchRequest = c.getIndex().searchInRange(METADATA_TYPE, e);
+          } else {
+              searchRequest = c.getIndex().search(METADATA_TYPE);
+          }
 
-            return future.directTransform(response -> {
+          searchRequest.source().query(new BoolQueryBuilder().must(f));
+
+          {
+            final AggregationBuilder terms = AggregationBuilders.terms("terms").field(KEY);
+            searchRequest.source().aggregation(terms);
+          }
+
+          final ResolvableFuture<SearchResponse> future = async.future();
+          future.resolve(c.execute(searchRequest));
+
+          return future.directTransform(
+              response -> {
                 final Terms terms = response.getAggregations().get("terms");
 
                 final Set<String> keys = new HashSet<>();
@@ -436,13 +457,13 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                 int duplicates = 0;
 
                 for (final Terms.Bucket bucket : terms.getBuckets()) {
-                    if (keys.add(bucket.getKeyAsString())) {
-                        duplicates += 1;
-                    }
+                  if (keys.add(bucket.getKeyAsString())) {
+                    duplicates += 1;
+                  }
                 }
 
                 return new FindKeys(keys, size, duplicates);
-            });
+              });
         });
     }
 
@@ -481,8 +502,14 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         OptionalLimit limit = seriesRequest.getLimit();
 
         return doto(c -> {
-            SearchRequest request =
-                c.getIndex().search(METADATA_TYPE).allowPartialSearchResults(false);
+            SearchRequest request;
+            if (dynamicMaxReadIndices) {
+                final long e = seriesRequest.getRange().getStart();
+                request = c.getIndex().searchInRange(METADATA_TYPE, e);
+            } else {
+                request =
+                    c.getIndex().search(METADATA_TYPE).allowPartialSearchResults(false);
+            }
 
             request.source()
                 .size(limit.asMaxInteger(scrollSize))
@@ -551,7 +578,14 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         OptionalLimit limit = findRequest.getLimit();
 
         return observer -> connection.doto(c -> {
-            SearchRequest request = c.getIndex().search(METADATA_TYPE).scroll(SCROLL_TIME);
+            SearchRequest request;
+            if (dynamicMaxReadIndices) {
+                final long e = findRequest.getRange().getStart();
+                request = c.getIndex().searchInRange(METADATA_TYPE, e);
+            } else {
+                request = c.getIndex().search(METADATA_TYPE).scroll(SCROLL_TIME);
+            }
+
             request.source()
                 .size(limit.asMaxInteger(scrollSize))
                 .query(new BoolQueryBuilder().must(filter));

@@ -27,6 +27,7 @@ import org.elasticsearch.action.delete.DeleteRequest
 import org.elasticsearch.action.search.SearchRequest
 import org.elasticsearch.action.support.IndicesOptions
 import org.elasticsearch.search.builder.SearchSourceBuilder
+//import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 
 private val DEFAULT_INTERVAL = Duration.of(7, TimeUnit.DAYS)
@@ -47,15 +48,33 @@ data class RotatingIndexMapping(
     private val interval = intervalDuration.convert(TimeUnit.MILLISECONDS)
     override val template = pattern.format("*")
 
+//    private val logger = LoggerFactory.getLogger(RotatingIndexMapping::class.java)
+
     private fun indices(maxIndices: Int, now: Long, type: String): Array<String> {
         val curr = now - (now % interval)
         val indexPattern = pattern.replace("%s", "$type-%s")
+
+//        logger.info("ATTENTION!! Querying {} Metadata Indices", maxIndices.toString())
 
         return (0 until maxIndices)
             .map { curr - (interval * it) }
             .takeWhile { it >= 0 }
             .map { indexPattern.format(it) }
             .toTypedArray()
+    }
+
+    @Throws(NoIndexSelectedException::class)
+    fun readIndicesInRange(now: Long, type: String, then: Long): Array<String> {
+        val r = now - then
+        val maxIndicesInRange = ((r / interval) + 1).toInt()
+
+        val indices = indices(maxIndicesInRange, now, type)
+
+        if(indices.isEmpty()) {
+            throw NoIndexSelectedException()
+        }
+
+        return indices
     }
 
     @Throws(NoIndexSelectedException::class)
@@ -72,6 +91,11 @@ data class RotatingIndexMapping(
         return readIndices(System.currentTimeMillis(), type)
     }
 
+    @Throws(NoIndexSelectedException::class)
+    override fun readIndicesInRange(type: String, endRange: Long): Array<String> {
+        return readIndicesInRange(System.currentTimeMillis(), type, endRange)
+    }
+
     fun writeIndices(now: Long, type: String): Array<String> {
         return indices(maxWriteIndices, now, type)
     }
@@ -86,8 +110,18 @@ data class RotatingIndexMapping(
     }
 
     @Throws(NoIndexSelectedException::class)
+    override fun searchInRange(type: String, endRange: Long): SearchRequest {
+        return SearchRequest(*readIndicesInRange(type, endRange)).indicesOptions(OPTIONS)
+    }
+
+    @Throws(NoIndexSelectedException::class)
     override fun count(type: String): SearchRequest {
         return search(type).source(SearchSourceBuilder().size(0))
+    }
+
+    @Throws(NoIndexSelectedException::class)
+    override fun countInRange(type: String, endRange: Long): SearchRequest {
+        return searchInRange(type, endRange).source(SearchSourceBuilder().size(0))
     }
 
     @Throws(NoIndexSelectedException::class)

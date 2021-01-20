@@ -99,6 +99,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
     private final boolean configure;
     private final int scrollSize;
     private final boolean indexResourceIdentifiers;
+    private final boolean dynamicMaxReadIndices;
 
     private static Supplier<BackendType> defaultSetup = MetadataBackendKV::backendType;
 
@@ -131,7 +132,8 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
         @JsonProperty("backendType") Optional<String> backendType,
         @JsonProperty("configure") Optional<Boolean> configure,
         @JsonProperty("scrollSize") Optional<Integer> scrollSize,
-        @JsonProperty("indexResourceIdentifiers") Optional<Boolean> indexResourceIdentifiers
+        @JsonProperty("indexResourceIdentifiers") Optional<Boolean> indexResourceIdentifiers,
+        @JsonProperty("dynamicMaxReadIndices") Optional<Boolean> dynamicMaxReadIndices
     ) {
         this.id = id;
         this.groups = groups.orElseGet(Groups::empty).or(DEFAULT_GROUP);
@@ -155,6 +157,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
             backendType.flatMap(bt -> ofNullable(backendTypes.get(bt))).orElse(defaultSetup);
         this.configure = configure.orElse(false);
         this.indexResourceIdentifiers = indexResourceIdentifiers.orElse(false);
+        this.dynamicMaxReadIndices = dynamicMaxReadIndices.orElse(false);
     }
 
     @Override
@@ -256,6 +259,13 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
 
         @Provides
         @ElasticsearchScope
+        @Named("dynamicMaxReadIndices")
+        public boolean dynamicMaxReadIndices() {
+            return dynamicMaxReadIndices;
+        }
+
+        @Provides
+        @ElasticsearchScope
         public RateLimitedCache<Pair<String, HashCode>> writeCache(HeroicReporter reporter) {
             final Cache<Pair<String, HashCode>, Boolean> cache = CacheBuilder
                 .newBuilder()
@@ -317,6 +327,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
         private Optional<Boolean> configure = empty();
         private Optional<Integer> scrollSize = empty();
         private Optional<Boolean> indexResourceIdentifiers = empty();
+        private Optional<Boolean> dynamicMaxReadIndices = empty();
 
         public Builder id(final String id) {
             checkNotNull(id, "id");
@@ -400,6 +411,11 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
             return this;
         }
 
+        public Builder dynamicMaxReadIndices(final boolean dynamicMaxReadIndices) {
+            this.dynamicMaxReadIndices = of(dynamicMaxReadIndices);
+            return this;
+        }
+
         public ElasticsearchMetadataModule build() {
             return new ElasticsearchMetadataModule(
                 id,
@@ -416,7 +432,8 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
                 backendType,
                 configure,
                 scrollSize,
-                indexResourceIdentifiers
+                indexResourceIdentifiers,
+                dynamicMaxReadIndices
             );
         }
     }
