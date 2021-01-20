@@ -45,32 +45,32 @@ public class MetricsConnectionSettings {
     /**
      * See {@link com.spotify.heroic.metric.consts.ApiQueryConsts#DEFAULT_MUTATE_RPC_TIMEOUT_MS}
      */
-    protected Integer mutateRpcTimeoutMs;
+    protected int mutateRpcTimeoutMs;
 
     /**
      * See {@link com.spotify.heroic.metric.consts.ApiQueryConsts#DEFAULT_READ_ROWS_RPC_TIMEOUT_MS}
      */
-    protected Integer readRowsRpcTimeoutMs;
+    protected int readRowsRpcTimeoutMs;
 
     /**
      * See {@link ApiQueryConsts#DEFAULT_SHORT_RPC_TIMEOUT_MS}
      */
-    protected Integer shortRpcTimeoutMs;
+    protected int shortRpcTimeoutMs;
 
     /**
      * See {@link ApiQueryConsts#DEFAULT_MAX_SCAN_TIMEOUT_RETRIES}
      */
-    protected Integer maxScanTimeoutRetries;
+    protected int maxScanTimeoutRetries;
 
     /**
      * See {@link ApiQueryConsts#DEFAULT_MAX_ELAPSED_BACKOFF_MILLIS}
      */
-    protected Integer maxElapsedBackoffMs;
+    protected int maxElapsedBackoffMs;
 
     /**
      * See {@link MetricsConnectionSettings#DEFAULT_MUTATION_BATCH_SIZE}
      */
-    protected Integer maxWriteBatchSize;
+    protected int maxWriteBatchSize;
 
     protected MetricsConnectionSettings() {
         this(Optional.of(MAX_MUTATION_BATCH_SIZE), Optional.of(DEFAULT_MUTATE_RPC_TIMEOUT_MS),
@@ -91,6 +91,7 @@ public class MetricsConnectionSettings {
             Optional<Integer> shortRpcTimeoutMs,
             Optional<Integer> maxScanTimeoutRetries,
             Optional<Integer> maxElapsedBackoffMs) {
+
         // Basically make sure that maxWriteBatchSize, if set, is sane
         int maxWriteBatch = maxWriteBatchSize.orElse(DEFAULT_MUTATION_BATCH_SIZE);
         maxWriteBatch = Math.max(MIN_MUTATION_BATCH_SIZE, maxWriteBatch);
