@@ -171,6 +171,16 @@ public interface MetricCollection {
     }
 
     /**
+     * Create a new TdigestPoint collection
+     *
+     * @param metric TdigestPoint
+     * @return a new collection of TdigestPoint
+     */
+    static MetricCollection tdigestPoints(List<TdigestPoint> metric) {
+        return TDigestPointCollection.create(metric);
+    }
+
+    /**
      * Build a new spreads collection.
      *
      * @param metrics spreads to include in the collection

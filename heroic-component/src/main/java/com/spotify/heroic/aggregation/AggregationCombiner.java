@@ -61,7 +61,7 @@ public interface AggregationCombiner {
 
         @Override
         public String toString() {
-            return "TDIGESGT_DEFAULT";
+            return "TDIGEST_DEFAULT";
         }
     };
 }
