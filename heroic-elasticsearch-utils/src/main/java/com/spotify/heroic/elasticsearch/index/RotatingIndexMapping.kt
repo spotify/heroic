@@ -27,19 +27,21 @@ import org.elasticsearch.action.delete.DeleteRequest
 import org.elasticsearch.action.search.SearchRequest
 import org.elasticsearch.action.support.IndicesOptions
 import org.elasticsearch.search.builder.SearchSourceBuilder
-//import org.slf4j.LoggerFactory
+import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 
 private val DEFAULT_INTERVAL = Duration.of(7, TimeUnit.DAYS)
 private const val DEFAULT_MAX_READ_INDICES = 2
 private const val DEFAULT_MAX_WRITE_INDICES = 1
 private const val DEFAULT_PATTERN = "heroic-%s"
+private const val DEFAULT_DYNAMIC_MAX_READ_INDICES = false
 
 private val OPTIONS = IndicesOptions.fromOptions(
     true, true, false, false)
 
 data class RotatingIndexMapping(
     @JsonProperty("interval") private val intervalDuration: Duration = DEFAULT_INTERVAL,
+    @JsonProperty("supportDynamicReadIndices") private val supportDynamicReadIndices: Boolean = DEFAULT_DYNAMIC_MAX_READ_INDICES,
     private val maxReadIndices: Int = DEFAULT_MAX_READ_INDICES,
     private val maxWriteIndices: Int = DEFAULT_MAX_WRITE_INDICES,
     private val pattern: String = DEFAULT_PATTERN,
@@ -47,14 +49,15 @@ data class RotatingIndexMapping(
 ): IndexMapping {
     private val interval = intervalDuration.convert(TimeUnit.MILLISECONDS)
     override val template = pattern.format("*")
+    override val dynamicMaxReadIndices = supportDynamicReadIndices
 
-//    private val logger = LoggerFactory.getLogger(RotatingIndexMapping::class.java)
+    private val logger = LoggerFactory.getLogger(RotatingIndexMapping::class.java)
 
     private fun indices(maxIndices: Int, now: Long, type: String): Array<String> {
         val curr = now - (now % interval)
         val indexPattern = pattern.replace("%s", "$type-%s")
 
-//        logger.info("ATTENTION!! Querying {} Metadata Indices", maxIndices.toString())
+        logger.info("ATTENTION!! Querying {} Metadata Indices", maxIndices.toString())
 
         return (0 until maxIndices)
             .map { curr - (interval * it) }
@@ -64,8 +67,15 @@ data class RotatingIndexMapping(
     }
 
     @Throws(NoIndexSelectedException::class)
-    fun readIndicesInRange(now: Long, type: String, then: Long): Array<String> {
-        val r = now - then
+    fun readIndicesInRange(now: Long, type: String, start: Long): Array<String> {
+
+        logger.info("ATTENTION!! Now: {}", now)
+        logger.info("ATTENTION!! Start: {}", start)
+        val r = now - start
+
+        logger.info("ATTENTION!! Range: {}", r)
+
+        // Query indices within range + 1 to account for caching edge cases.
         val maxIndicesInRange = ((r / interval) + 1).toInt()
 
         val indices = indices(maxIndicesInRange, now, type)
@@ -92,8 +102,8 @@ data class RotatingIndexMapping(
     }
 
     @Throws(NoIndexSelectedException::class)
-    override fun readIndicesInRange(type: String, endRange: Long): Array<String> {
-        return readIndicesInRange(System.currentTimeMillis(), type, endRange)
+    fun readIndicesInRange(type: String, start: Long): Array<String> {
+        return readIndicesInRange(System.currentTimeMillis(), type, start)
     }
 
     fun writeIndices(now: Long, type: String): Array<String> {
@@ -110,8 +120,8 @@ data class RotatingIndexMapping(
     }
 
     @Throws(NoIndexSelectedException::class)
-    override fun searchInRange(type: String, endRange: Long): SearchRequest {
-        return SearchRequest(*readIndicesInRange(type, endRange)).indicesOptions(OPTIONS)
+    fun searchInRange(type: String, start: Long): SearchRequest {
+        return SearchRequest(*readIndicesInRange(type, start)).indicesOptions(OPTIONS)
     }
 
     @Throws(NoIndexSelectedException::class)
@@ -120,8 +130,8 @@ data class RotatingIndexMapping(
     }
 
     @Throws(NoIndexSelectedException::class)
-    override fun countInRange(type: String, endRange: Long): SearchRequest {
-        return searchInRange(type, endRange).source(SearchSourceBuilder().size(0))
+    fun countInRange(type: String, start: Long): SearchRequest {
+        return searchInRange(type, start).source(SearchSourceBuilder().size(0))
     }
 
     @Throws(NoIndexSelectedException::class)
@@ -131,6 +141,7 @@ data class RotatingIndexMapping(
 
     class Builder {
         var interval: Duration = DEFAULT_INTERVAL
+        var dynamicMaxReadIndices: Boolean = DEFAULT_DYNAMIC_MAX_READ_INDICES
         var maxReadIndices: Int = DEFAULT_MAX_READ_INDICES
         var maxWriteIndices: Int = DEFAULT_MAX_WRITE_INDICES
         var pattern: String = DEFAULT_PATTERN
@@ -138,6 +149,11 @@ data class RotatingIndexMapping(
 
         fun interval(interval: Duration): Builder {
             this.interval = interval
+            return this
+        }
+
+        fun dynamicMaxReadIndices(dynamicMaxReadIndices: Boolean): Builder {
+            this.dynamicMaxReadIndices = dynamicMaxReadIndices
             return this
         }
 
@@ -164,6 +180,7 @@ data class RotatingIndexMapping(
         fun build(): RotatingIndexMapping {
             return RotatingIndexMapping(
                 interval,
+                dynamicMaxReadIndices,
                 maxReadIndices,
                 maxWriteIndices,
                 pattern,

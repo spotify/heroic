@@ -44,6 +44,7 @@ import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
 import com.spotify.heroic.elasticsearch.SearchTransformResult;
 import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
+import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
 import com.spotify.heroic.filter.AndFilter;
 import com.spotify.heroic.filter.FalseFilter;
 import com.spotify.heroic.filter.Filter;
@@ -149,7 +150,6 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     private final int deleteParallelism;
     private final int scrollSize;
     private final boolean indexResourceIdentifiers;
-    private final boolean dynamicMaxReadIndices;
 
     @Inject
     public MetadataBackendKV(
@@ -161,8 +161,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         @Named("configure") boolean configure,
         @Named("deleteParallelism") int deleteParallelism,
         @Named("scrollSize") int scrollSize,
-        @Named("indexResourceIdentifiers") boolean indexResourceIdentifiers,
-        @Named("dynamicMaxReadIndices") boolean dynamicMaxReadIndices
+        @Named("indexResourceIdentifiers") boolean indexResourceIdentifiers
     ) {
         super(async, METADATA_TYPE, reporter);
         this.groups = groups;
@@ -174,7 +173,6 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         this.deleteParallelism = deleteParallelism;
         this.scrollSize = scrollSize;
         this.indexResourceIdentifiers = indexResourceIdentifiers;
-        this.dynamicMaxReadIndices = dynamicMaxReadIndices;
     }
 
     @Override
@@ -331,9 +329,11 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
             final QueryBuilder f = filter(filter.getFilter());
 
             SearchRequest request;
-            if (dynamicMaxReadIndices) {
-                final long e = filter.getRange().getStart();
-                request = c.getIndex().countInRange(METADATA_TYPE, e);
+
+            if(c.getIndex() instanceof RotatingIndexMapping && c.getIndex().getDynamicMaxReadIndices()) {
+                final long start = filter.getRange().getStart();
+                RotatingIndexMapping i = (RotatingIndexMapping) c.getIndex();
+                request = i.countInRange(METADATA_TYPE, start);
             } else {
                 request = c.getIndex().count(METADATA_TYPE);
             }
@@ -430,9 +430,10 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
           final QueryBuilder f = filter(request.getFilter());
 
           SearchRequest searchRequest;
-          if (dynamicMaxReadIndices) {
-              final long e = request.getRange().getStart();
-              searchRequest = c.getIndex().searchInRange(METADATA_TYPE, e);
+          if(c.getIndex() instanceof RotatingIndexMapping && c.getIndex().getDynamicMaxReadIndices()) {
+              final long start = request.getRange().getStart();
+              RotatingIndexMapping ri = (RotatingIndexMapping) c.getIndex();
+              searchRequest = ri.searchInRange(METADATA_TYPE, start);
           } else {
               searchRequest = c.getIndex().search(METADATA_TYPE);
           }
@@ -503,9 +504,10 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
         return doto(c -> {
             SearchRequest request;
-            if (dynamicMaxReadIndices) {
-                final long e = seriesRequest.getRange().getStart();
-                request = c.getIndex().searchInRange(METADATA_TYPE, e);
+            if(c.getIndex() instanceof RotatingIndexMapping && c.getIndex().getDynamicMaxReadIndices()) {
+                final long start = seriesRequest.getRange().getStart();
+                RotatingIndexMapping ri = (RotatingIndexMapping) c.getIndex();
+                request = ri.searchInRange(METADATA_TYPE, start);
             } else {
                 request =
                     c.getIndex().search(METADATA_TYPE).allowPartialSearchResults(false);
@@ -579,9 +581,10 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
         return observer -> connection.doto(c -> {
             SearchRequest request;
-            if (dynamicMaxReadIndices) {
-                final long e = findRequest.getRange().getStart();
-                request = c.getIndex().searchInRange(METADATA_TYPE, e);
+            if(c.getIndex() instanceof RotatingIndexMapping && c.getIndex().getDynamicMaxReadIndices()) {
+                final long start = findRequest.getRange().getStart();
+                RotatingIndexMapping ri = (RotatingIndexMapping) c.getIndex();
+                request = ri.searchInRange(METADATA_TYPE, start);
             } else {
                 request = c.getIndex().search(METADATA_TYPE).scroll(SCROLL_TIME);
             }
