@@ -18,7 +18,7 @@ public class RotatingIndexMappingTest {
 
     @Before
     public void setup() {
-        rotating = new RotatingIndexMapping(interval, maxReadIndices, maxWriteIndices, pattern,
+        rotating = new RotatingIndexMapping(interval, true, maxReadIndices, maxWriteIndices, pattern,
             new HashMap<>());
     }
 
@@ -26,6 +26,12 @@ public class RotatingIndexMappingTest {
     public void testReadIndex() throws NoIndexSelectedException {
         final String[] indices = rotating.readIndices(8000, "typeA");
         assertArrayEquals(new String[]{"index-typeA-8000", "index-typeA-7000"}, indices);
+    }
+
+    @Test
+    public void testReadIndexInRange() throws NoIndexSelectedException {
+        final String[] indices = rotating.readIndicesInRange(5000, "typeA", 1000);
+        assertArrayEquals(new String[]{"index-typeA-5000", "index-typeA-4000", "index-typeA-3000", "index-typeA-2000", "index-typeA-1000"}, indices);
     }
 
     @Test

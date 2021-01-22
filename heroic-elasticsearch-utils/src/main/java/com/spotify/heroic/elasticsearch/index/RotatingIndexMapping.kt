@@ -27,7 +27,6 @@ import org.elasticsearch.action.delete.DeleteRequest
 import org.elasticsearch.action.search.SearchRequest
 import org.elasticsearch.action.support.IndicesOptions
 import org.elasticsearch.search.builder.SearchSourceBuilder
-import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 
 private val DEFAULT_INTERVAL = Duration.of(7, TimeUnit.DAYS)
@@ -51,13 +50,9 @@ data class RotatingIndexMapping(
     override val template = pattern.format("*")
     override val dynamicMaxReadIndices = supportDynamicReadIndices
 
-    private val logger = LoggerFactory.getLogger(RotatingIndexMapping::class.java)
-
     private fun indices(maxIndices: Int, now: Long, type: String): Array<String> {
         val curr = now - (now % interval)
         val indexPattern = pattern.replace("%s", "$type-%s")
-
-        logger.info("ATTENTION!! Querying {} Metadata Indices", maxIndices.toString())
 
         return (0 until maxIndices)
             .map { curr - (interval * it) }
@@ -68,23 +63,23 @@ data class RotatingIndexMapping(
 
     @Throws(NoIndexSelectedException::class)
     fun readIndicesInRange(now: Long, type: String, start: Long): Array<String> {
+        // Query indices within range + 1 to account for caching edge cases
+        val maxIndicesInRange = dynamicMaxIndicesCount(now, start)
 
-        logger.info("ATTENTION!! Now: {}", now)
-        logger.info("ATTENTION!! Start: {}", start)
-        val r = now - start
-
-        logger.info("ATTENTION!! Range: {}", r)
-
-        // Query indices within range + 1 to account for caching edge cases.
-        val maxIndicesInRange = ((r / interval) + 1).toInt()
-
-        val indices = indices(maxIndicesInRange, now, type)
+        val indices = indices(maxIndicesInRange.toInt(), now, type)
 
         if(indices.isEmpty()) {
             throw NoIndexSelectedException()
         }
 
         return indices
+    }
+
+    private fun dynamicMaxIndicesCount(now: Long, start: Long): Long {
+        val r = now - start
+
+        // Query indices within range + 1 to account for caching edge cases
+        return (r / interval) + 1
     }
 
     @Throws(NoIndexSelectedException::class)
