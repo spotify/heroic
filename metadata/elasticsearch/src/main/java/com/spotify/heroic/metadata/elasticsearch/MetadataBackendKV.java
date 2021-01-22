@@ -330,10 +330,11 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
             SearchRequest request;
 
-            if(c.getIndex() instanceof RotatingIndexMapping && c.getIndex().getDynamicMaxReadIndices()) {
-                final long start = filter.getRange().getStart();
-                RotatingIndexMapping i = (RotatingIndexMapping) c.getIndex();
-                request = i.countInRange(METADATA_TYPE, start);
+            if (c.getIndex() instanceof RotatingIndexMapping &&
+                ((RotatingIndexMapping) c.getIndex()).getDynamicMaxReadIndicesSupport()) {
+                    final long start = filter.getRange().getStart();
+                    RotatingIndexMapping i = (RotatingIndexMapping) c.getIndex();
+                    request = i.countInRange(METADATA_TYPE, start);
             } else {
                 request = c.getIndex().count(METADATA_TYPE);
             }
@@ -430,10 +431,11 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
           final QueryBuilder f = filter(request.getFilter());
 
           SearchRequest searchRequest;
-          if(c.getIndex() instanceof RotatingIndexMapping && c.getIndex().getDynamicMaxReadIndices()) {
-              final long start = request.getRange().getStart();
-              RotatingIndexMapping ri = (RotatingIndexMapping) c.getIndex();
-              searchRequest = ri.searchInRange(METADATA_TYPE, start);
+          if (c.getIndex() instanceof RotatingIndexMapping &&
+              ((RotatingIndexMapping) c.getIndex()).getDynamicMaxReadIndicesSupport()) {
+                final long start = request.getRange().getStart();
+                RotatingIndexMapping ri = (RotatingIndexMapping) c.getIndex();
+                searchRequest = ri.searchInRange(METADATA_TYPE, start);
           } else {
               searchRequest = c.getIndex().search(METADATA_TYPE);
           }
@@ -504,10 +506,11 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
         return doto(c -> {
             SearchRequest request;
-            if(c.getIndex() instanceof RotatingIndexMapping && c.getIndex().getDynamicMaxReadIndices()) {
-                final long start = seriesRequest.getRange().getStart();
-                RotatingIndexMapping ri = (RotatingIndexMapping) c.getIndex();
-                request = ri.searchInRange(METADATA_TYPE, start);
+            if (c.getIndex() instanceof RotatingIndexMapping &&
+                ((RotatingIndexMapping) c.getIndex()).getDynamicMaxReadIndicesSupport()) {
+                    final long start = seriesRequest.getRange().getStart();
+                    RotatingIndexMapping ri = (RotatingIndexMapping) c.getIndex();
+                    request = ri.searchInRange(METADATA_TYPE, start);
             } else {
                 request =
                     c.getIndex().search(METADATA_TYPE).allowPartialSearchResults(false);
@@ -581,10 +584,11 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
         return observer -> connection.doto(c -> {
             SearchRequest request;
-            if(c.getIndex() instanceof RotatingIndexMapping && c.getIndex().getDynamicMaxReadIndices()) {
-                final long start = findRequest.getRange().getStart();
-                RotatingIndexMapping ri = (RotatingIndexMapping) c.getIndex();
-                request = ri.searchInRange(METADATA_TYPE, start);
+            if (c.getIndex() instanceof RotatingIndexMapping &&
+                ((RotatingIndexMapping) c.getIndex()).getDynamicMaxReadIndicesSupport()) {
+                    final long start = findRequest.getRange().getStart();
+                    RotatingIndexMapping ri = (RotatingIndexMapping) c.getIndex();
+                    request = ri.searchInRange(METADATA_TYPE, start);
             } else {
                 request = c.getIndex().search(METADATA_TYPE).scroll(SCROLL_TIME);
             }

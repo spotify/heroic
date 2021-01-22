@@ -34,7 +34,6 @@ import org.elasticsearch.action.search.SearchRequest
 interface IndexMapping {
     val settings: Map<String, Any>
     val template: String
-    val dynamicMaxReadIndices: Boolean
 
     @Throws(NoIndexSelectedException::class)
     fun readIndices(type: String): Array<String>

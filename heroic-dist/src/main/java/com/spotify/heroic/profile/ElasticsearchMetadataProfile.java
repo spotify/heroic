@@ -48,8 +48,10 @@ public class ElasticsearchMetadataProfile extends HeroicProfileBase {
             .map(index::pattern);
         params.getDuration("interval")
             .map(index::interval);
-        params.getBoolean("supportDynamicReadIndices")
+        params.getBoolean("supportDynamicMaxReadIndices")
             .map(index::dynamicMaxReadIndices);
+        params.getInteger("maxReadIndices")
+            .map(index::maxReadIndices);
 
         final ConnectionModule.Builder connection = ConnectionModule.builder().index(index.build());
 

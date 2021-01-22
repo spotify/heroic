@@ -40,15 +40,15 @@ private val OPTIONS = IndicesOptions.fromOptions(
 
 data class RotatingIndexMapping(
     @JsonProperty("interval") private val intervalDuration: Duration = DEFAULT_INTERVAL,
-    @JsonProperty("supportDynamicReadIndices") private val supportDynamicReadIndices: Boolean = DEFAULT_DYNAMIC_MAX_READ_INDICES,
-    private val maxReadIndices: Int = DEFAULT_MAX_READ_INDICES,
+    @JsonProperty("supportDynamicMaxReadIndices") private val supportDynamicMaxReadIndices: Boolean = DEFAULT_DYNAMIC_MAX_READ_INDICES,
+    @JsonProperty("maxReadIndices") private val maxReadIndices: Int = DEFAULT_MAX_READ_INDICES,
     private val maxWriteIndices: Int = DEFAULT_MAX_WRITE_INDICES,
     private val pattern: String = DEFAULT_PATTERN,
     override val settings: Map<String, Any> = emptyMap()
 ): IndexMapping {
     private val interval = intervalDuration.convert(TimeUnit.MILLISECONDS)
     override val template = pattern.format("*")
-    override val dynamicMaxReadIndices = supportDynamicReadIndices
+    val dynamicMaxReadIndicesSupport = supportDynamicMaxReadIndices
 
     private fun indices(maxIndices: Int, now: Long, type: String): Array<String> {
         val curr = now - (now % interval)
