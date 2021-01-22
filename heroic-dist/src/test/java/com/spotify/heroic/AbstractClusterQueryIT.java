@@ -1,7 +1,7 @@
 package com.spotify.heroic;
 
-import static com.spotify.heroic.test.Data.distributionPoints;
-import static com.spotify.heroic.test.Data.points;
+
+
 import static com.spotify.heroic.test.Matchers.containsChild;
 import static com.spotify.heroic.test.Matchers.hasIdentifier;
 import static com.spotify.heroic.test.Matchers.identifierContains;
@@ -41,6 +41,7 @@ import com.spotify.heroic.metric.ResultLimits;
 import com.spotify.heroic.metric.ShardedResultGroup;
 import com.spotify.heroic.querylogging.QueryContext;
 import com.spotify.heroic.querylogging.QueryLogger;
+import com.spotify.heroic.test.Data;
 import eu.toolchain.async.AsyncFuture;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -139,20 +140,20 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
 
         writes.add(m1
             .useDefaultGroup()
-            .write(new Request(s1, points().p(10, 1D).p(30, 2D).build())));
+            .write(new Request(s1, Data.points().p(10, 1D).p(30, 2D).build())));
         writes.add(m2
             .useDefaultGroup()
-            .write(new Request(s2, points().p(10, 1D).p(20, 4D).build())));
+            .write(new Request(s2, Data.points().p(10, 1D).p(20, 4D).build())));
         writes.add(m1
             .useDefaultGroup()
-            .write(new Request(s2, distributionPoints()
+            .write(new Request(s2, Data.distributionPoints()
                 .p(10, randDataset1.getRandomData())
                 .p(30, randDataset3.getRandomData())
                 .build())));
 
         writes.add(m2
             .useDefaultGroup()
-            .write(new Request(s1, distributionPoints()
+            .write(new Request(s1, Data.distributionPoints()
                 .p(10, randDataset1.getRandomData())
                 .p(20, randDataset2.getRandomData())
                 .build())));
@@ -312,7 +313,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
 
         assertEquals(ImmutableList.of(10L), cadences);
 
-        assertEquals(ImmutableSet.of(points().p(10, 2D).p(20, 4D).p(30, 2D).build()), m);
+        assertEquals(ImmutableSet.of(Data.points().p(10, 2D).p(20, 4D).p(30, 2D).build()), m);
     }
 
     @Test
@@ -324,7 +325,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
 
         assertEquals(ImmutableList.of(10L), cadences);
 
-        assertEquals(ImmutableSet.of(points().p(10, 2D).p(20, 4D).p(30, 2D).build()), m);
+        assertEquals(ImmutableSet.of(Data.points().p(10, 2D).p(20, 4D).p(30, 2D).build()), m);
     }
 
     @Test
@@ -362,8 +363,8 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         final List<Long> cadences = getCadences(result);
 
         assertEquals(ImmutableList.of(10L, 10L), cadences);
-        assertEquals(ImmutableSet.of(points().p(10, 1D).p(30, 2D).build(),
-            points().p(10, 1D).p(20, 4D).build()), m);
+        assertEquals(ImmutableSet.of(Data.points().p(10, 1D).p(30, 2D).build(),
+            Data.points().p(10, 1D).p(20, 4D).build()), m);
     }
 
 
@@ -375,7 +376,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         final List<Long> cadences = getCadences(result);
 
         assertEquals(ImmutableList.of(10L), cadences);
-        assertEquals(ImmutableSet.of(points().p(10, 1D).p(20, 4D).build()), m);
+        assertEquals(ImmutableSet.of(Data.points().p(10, 1D).p(20, 4D).build()), m);
     }
 
     @Test
@@ -389,8 +390,8 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         final List<Long> cadences = getCadences(result);
 
         assertEquals(ImmutableList.of(10L, 10L), cadences);
-        assertEquals(ImmutableSet.of(points().p(10, 1D).p(20, 4D).build(),
-            points().p(10, 1D).p(30, 2D).build()), m);
+        assertEquals(ImmutableSet.of(Data.points().p(10, 1D).p(20, 4D).build(),
+            Data.points().p(10, 1D).p(30, 2D).build()), m);
     }
 
     @Test
@@ -403,7 +404,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         final List<Long> cadences = getCadences(result);
 
         assertEquals(ImmutableList.of(0L), cadences);
-        assertEquals(ImmutableSet.of(points().p(20, 4D).build()), m);
+        assertEquals(ImmutableSet.of(Data.points().p(20, 4D).build()), m);
     }
 
     @Test
@@ -417,7 +418,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
 
         assertEquals(ImmutableList.of(0L, 0L), cadences);
         assertEquals(
-            ImmutableSet.of(points().p(10, 1D).build(), points().p(10, 1D).p(30, 2.0D).build()), m);
+            ImmutableSet.of(Data.points().p(10, 1D).build(), Data.points().p(10, 1D).p(30, 2.0D).build()), m);
     }
 
     @Test
@@ -430,7 +431,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         final List<Long> cadences = getCadences(result);
 
         assertEquals(ImmutableList.of(-1L, -1L), cadences);
-        assertEquals(ImmutableSet.of(points().p(30, 1D).build(), points().p(20, 3D).build()), m);
+        assertEquals(ImmutableSet.of(Data.points().p(30, 1D).build(), Data.points().p(20, 3D).build()), m);
     }
 
     @Test
@@ -441,7 +442,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         final List<Long> cadences = getCadences(result);
 
         assertEquals(ImmutableList.of(1L), cadences);
-        assertEquals(ImmutableSet.of(points().p(20, 3D).p(30, -2D).build()), m);
+        assertEquals(ImmutableSet.of(Data.points().p(20, 3D).p(30, -2D).build()), m);
     }
 
     @Test
@@ -454,7 +455,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         final List<Long> cadences = getCadences(result);
 
         assertEquals(ImmutableList.of(-1L, -1L), cadences);
-        assertEquals(ImmutableSet.of(points().p(30, 50D).build(), points().p(20, 300D).build()), m);
+        assertEquals(ImmutableSet.of(Data.points().p(30, 50D).build(), Data.points().p(20, 300D).build()), m);
     }
 
     @Test
@@ -465,7 +466,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         final List<Long> cadences = getCadences(result);
 
         assertEquals(ImmutableList.of(1L), cadences);
-        assertEquals(ImmutableSet.of(points().p(20, 300D).p(30, -200D).build()), m);
+        assertEquals(ImmutableSet.of(Data.points().p(20, 300D).p(30, -200D).build()), m);
     }
 
     @Test
@@ -476,7 +477,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         final List<Long> cadences = getCadences(result);
 
         assertEquals(ImmutableList.of(1L), cadences);
-        assertEquals(ImmutableSet.of(points().p(20, 300D).build()), m);
+        assertEquals(ImmutableSet.of(Data.points().p(20, 300D).build()), m);
     }
 
 
@@ -488,7 +489,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         final List<Long> cadences = getCadences(result);
 
         assertEquals(ImmutableList.of(10L), cadences);
-        assertEquals(ImmutableSet.of(points().p(10, 1D).p(20, 4D).build()), m);
+        assertEquals(ImmutableSet.of(Data.points().p(10, 1D).p(20, 4D).build()), m);
     }
 
     @Test
@@ -501,7 +502,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         final List<Long> cadences = getCadences(result);
 
         assertEquals(ImmutableList.of(10L), cadences);
-        assertEquals(ImmutableSet.of(points().p(10, 1D).p(20, 1D).p(30, 1D).p(40, 0D).build()), m);
+        assertEquals(ImmutableSet.of(Data.points().p(10, 1D).p(20, 1D).p(30, 1D).p(40, 0D).build()), m);
     }
 
     @Test
@@ -515,7 +516,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         final List<Long> cadences = getCadences(result);
 
         assertEquals(ImmutableList.of(10L), cadences);
-        assertEquals(ImmutableSet.of(points().p(10, 2D).p(20, 1D).p(30, 1D).p(40, 0D).build()), m);
+        assertEquals(ImmutableSet.of(Data.points().p(10, 2D).p(20, 1D).p(30, 1D).p(40, 0D).build()), m);
     }
 
     @Test
