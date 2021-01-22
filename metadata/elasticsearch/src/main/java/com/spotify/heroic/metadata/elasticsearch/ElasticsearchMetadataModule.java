@@ -136,7 +136,6 @@ public final class ElasticsearchMetadataModule implements MetadataModule, Dynami
         this.id = id;
         this.groups = groups.orElseGet(Groups::empty).or(DEFAULT_GROUP);
         this.connection = connection.orElseGet(ConnectionModule::buildDefault);
-
         this.writesPerSecond = writesPerSecond.orElse(DEFAULT_WRITES_PER_SECOND);
         this.rateLimitSlowStartSeconds =
             rateLimitSlowStartSeconds.orElse(DEFAULT_RATE_LIMIT_SLOW_START_SECONDS);
