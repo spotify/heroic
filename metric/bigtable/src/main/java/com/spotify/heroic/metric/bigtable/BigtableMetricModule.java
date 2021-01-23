@@ -83,7 +83,13 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
     private final CredentialsBuilder credentials;
     private final boolean configure;
     private final boolean disableBulkMutations;
-    private final MetricsConnectionSettingsModule metricsConnectionSettings;
+    private final int maxWriteBatchSize;
+    private final Optional<Integer> mutateRpcTimeoutMs;
+    private final Optional<Integer> readRowsRpcTimeoutMs;
+    private final Optional<Integer> shortRpcTimeoutMs;
+    private final Optional<Integer> maxScanTimeoutRetries;
+    private final Optional<Integer> maxElapsedBackoffMs;
+    private final MetricsConnectionSettings metricsConnectionSettings;
 
     private final int flushIntervalSeconds;
 
@@ -129,22 +135,27 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         this.configure = configure.orElse(DEFAULT_CONFIGURE);
         this.disableBulkMutations = disableBulkMutations.orElse(DEFAULT_DISABLE_BULK_MUTATIONS);
 
-        // Basically make sure that maxWriteBatchSize, if set, is sane
-        int maxWriteBatch = maxWriteBatchSize.orElse(DEFAULT_MUTATION_BATCH_SIZE);
-        maxWriteBatch = Math.max(MIN_MUTATION_BATCH_SIZE, maxWriteBatch);
-        maxWriteBatch = Math.min(MAX_MUTATION_BATCH_SIZE, maxWriteBatch);
+        // This batch of fields ends up in a BigtableMetricsConnectionSettings object
+        this.mutateRpcTimeoutMs = mutateRpcTimeoutMs;
+        this.readRowsRpcTimeoutMs = readRowsRpcTimeoutMs;
+        this.shortRpcTimeoutMs = shortRpcTimeoutMs;
+        this.maxScanTimeoutRetries = maxScanTimeoutRetries;
+        this.maxElapsedBackoffMs = maxElapsedBackoffMs;
 
-        this.metricsConnectionSettings = new MetricsConnectionSettingsModule(
-                maxWriteBatchSize,
-                mutateRpcTimeoutMs,
-                readRowsRpcTimeoutMs,
-                shortRpcTimeoutMs,
-                maxScanTimeoutRetries,
-                maxElapsedBackoffMs);
+        // Basically make sure that maxWriteBatchSize, if set, is sane
+        int maxWriteBatchBounded = maxWriteBatchSize.orElse(DEFAULT_MUTATION_BATCH_SIZE);
+        maxWriteBatchBounded = Math.max(MIN_MUTATION_BATCH_SIZE, maxWriteBatchBounded);
+        maxWriteBatchBounded = Math.min(MAX_MUTATION_BATCH_SIZE, maxWriteBatchBounded);
+
+        this.maxWriteBatchSize = maxWriteBatchBounded;
 
         this.flushIntervalSeconds = flushIntervalSeconds.orElse(DEFAULT_FLUSH_INTERVAL_SECONDS);
         this.batchSize = batchSize;
         this.emulatorEndpoint = emulatorEndpoint.orElse(null);
+
+        this.metricsConnectionSettings = new BigtableMetricsConnectionSettings(maxWriteBatchSize,
+            mutateRpcTimeoutMs, readRowsRpcTimeoutMs, shortRpcTimeoutMs,
+            maxScanTimeoutRetries, maxElapsedBackoffMs);
 
         log.info("BigTable Metric Module: \n{}", toString());
     }
@@ -154,20 +165,13 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         return DaggerBigtableMetricModule_C
                 .builder()
                 .primaryComponent(primary)
-                .metricsConnectionSettingsModule(metricsConnectionSettings)
                 .depends(backend)
                 .m(new M())
                 .build();
     }
 
-    public MetricsConnectionSettings getMetricsConnectionSettings() {
-        return metricsConnectionSettings;
-    }
-
-
     @BigtableScope
-    @Component(modules = {M.class, MetricsConnectionSettingsModule.class}, dependencies =
-     {PrimaryComponent.class, Depends.class})
+    @Component(modules = {M.class}, dependencies = {PrimaryComponent.class, Depends.class})
     interface C extends Exposed {
         @Override
         BigtableBackend backend();
@@ -185,11 +189,11 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
                 @Override
                 public AsyncFuture<BigtableConnection> construct() {
                     return async.call(
-                        new BigtableConnectionBuilder(
-                            project, instance, profile, credentials, emulatorEndpoint,
-                            async, disableBulkMutations, flushIntervalSeconds,
-                                metricsConnectionSettings
-                        ));
+                            new BigtableConnectionBuilder(
+                                    project, instance, profile, credentials, emulatorEndpoint,
+                                    async, disableBulkMutations, flushIntervalSeconds,
+                                    metricsConnectionSettings
+                            ));
                 }
 
                 @Override
@@ -221,6 +225,12 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         @BigtableScope
         public RowKeySerializer rowKeySerializer() {
             return new MetricsRowKeySerializer();
+        }
+
+        @Provides
+        @BigtableScope
+        public MetricsConnectionSettings metricsConnectionSettings() {
+            return metricsConnectionSettings;
         }
 
         @Provides
@@ -390,10 +400,10 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
             .append("credentials", credentials)
             .append("configure", configure)
             .append("disableBulkMutations", disableBulkMutations)
-            .append("connectionSettings", metricsConnectionSettings)
             .append("flushIntervalSeconds", flushIntervalSeconds)
             .append("batchSize", batchSize)
             .append("emulatorEndpoint", emulatorEndpoint)
+            .append("connectionSettings", metricsConnectionSettings)
             .toString();
     }
 }
