@@ -20,7 +20,6 @@
  */
 package com.spotify.heroic.metric
 
-import com.spotify.heroic.metric.MetricsConnectionSettings
 import com.spotify.heroic.metric.consts.ApiQueryConsts
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
@@ -67,8 +66,8 @@ open class MetricsConnectionSettings(
     /**
      * See [MetricsConnectionSettings.DEFAULT_MUTATION_BATCH_SIZE]
      */
+    @JvmField
     var maxWriteBatchSize: Int
-        protected set
 
     protected constructor() : this(
         Optional.of<Int>(MAX_MUTATION_BATCH_SIZE),

@@ -141,7 +141,6 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         final Groups groups,
         @Named("table") final String table,
         @Named("configure") final boolean configure,
-        @Named("metricsConnectionSettings")
         final MetricsConnectionSettings metricsConnectionSettings,
         MetricBackendReporter reporter,
         @Named("application/json") ObjectMapper mapper
@@ -400,7 +399,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
             builder.setCell(columnFamily, offsetBytes, valueBytes);
 
-            if (builder.size() >= metricsConnectionSettings.getMaxWriteBatchSize()) {
+            if (builder.size() >= metricsConnectionSettings.maxWriteBatchSize) {
                 saved.add(Pair.of(rowKey, builder.build()));
                 building.put(rowKey, Mutations.builder());
             }
@@ -422,8 +421,8 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
             if (rowKeyBytes.size() >= MAX_KEY_ROW_SIZE) {
                 reporter.reportWritesDroppedBySize();
-                log.error("Row key length greater than 4096 bytes (2): " + rowKeyBytes.size()
-                    + " " + rowKeyBytes);
+                log.error("Row key length greater than 4096 bytes (2): {} {}", rowKeyBytes.size(),
+                        rowKeyBytes);
                 continue;
             }
 
@@ -459,8 +458,8 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
         if (rowKeyBytes.size() >= MAX_KEY_ROW_SIZE) {
             reporter.reportWritesDroppedBySize();
-            log.error("Row key length greater than 4096 bytes (1): " +
-                rowKeyBytes.size() + " " + rowKey);
+            log.error("Row key length greater than 4096 bytes (1): {} {}", rowKeyBytes.size(),
+                    rowKey);
             return async.resolved().directTransform(result -> timer.end());
         }
 
@@ -605,7 +604,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         return bases;
     }
 
-    ByteString serializeValue(double value) {
+    static ByteString serializeValue(double value) {
         final ByteBuffer buffer =
             ByteBuffer.allocate(Double.BYTES).putLong(Double.doubleToLongBits(value));
         return ByteString.copyFrom(buffer.array());

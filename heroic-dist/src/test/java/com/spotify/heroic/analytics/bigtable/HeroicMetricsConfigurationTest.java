@@ -54,9 +54,9 @@ public class HeroicMetricsConfigurationTest {
         var serializer = TinySerializer.builder().build();
 
         var connectionSettings = new MetricsConnectionSettings(Optional.of(maxWriteBatchSize),
-        Optional.of(mutateRpcTimeoutMs), Optional.of(readRowsRpcTimeoutMs),
-         Optional.of(shortRpcTimeoutMs), Optional.of(maxScanTimeoutRetries),
-          Optional.of(maxElapsedBackoffMs));
+                Optional.of(mutateRpcTimeoutMs), Optional.of(readRowsRpcTimeoutMs),
+                Optional.of(shortRpcTimeoutMs), Optional.of(maxScanTimeoutRetries),
+                Optional.of(maxElapsedBackoffMs));
 
         var bigtableBackend = new BigtableBackend(null,
                 serializer,
@@ -107,7 +107,7 @@ public class HeroicMetricsConfigurationTest {
 
         final var instance = HeroicConfigurationTestUtils.testConfiguration("heroic-all.yml");
 
-        // Check that the BigTableBackend's maxWriteBatchSize was picked up
+        // Check that the BigTableBackend's maxWriteBatchSize et al were picked up
         // from the heroic-all.yml config file
         // @formatter:off
         instance.inject(coreComponent -> {
@@ -125,7 +125,7 @@ public class HeroicMetricsConfigurationTest {
             // These (int) casts are needed to guide the compiler to pick the correct method
             // call.
             var mcs = bigtableBackend.metricsConnectionSettings();
-            assertEquals(EXPECTED_MAX_WRITE_BATCH_SIZE, (int) mcs.getMaxWriteBatchSize());
+            assertEquals(EXPECTED_MAX_WRITE_BATCH_SIZE, (int) mcs.maxWriteBatchSize);
             assertEquals(EXPECTED_MUTATE_RPC_TIMEOUT_MS, (int) mcs.mutateRpcTimeoutMs);
             assertEquals(EXPECTED_READ_ROWS_RPC_TIMEOUT_MS, (int) mcs.readRowsRpcTimeoutMs);
             assertEquals(EXPECTED_SHORT_RPC_TIMEOUT_MS, (int) mcs.shortRpcTimeoutMs);
@@ -142,26 +142,22 @@ public class HeroicMetricsConfigurationTest {
         {
             final int tooBigBatchSize = 5_000_000;
 
+            var backend = getBigtableBackend(tooBigBatchSize);
             assertEquals(BigtableMetricModule.MAX_MUTATION_BATCH_SIZE,
-                    getBigtableMetricModule(tooBigBatchSize).
-                            getMetricsConnectionSettings().
-                            getMaxWriteBatchSize());
+                    backend.metricsConnectionSettings().maxWriteBatchSize);
         }
         {
             final int tooSmallBatchSize = 1;
 
             assertEquals(BigtableMetricModule.MIN_MUTATION_BATCH_SIZE,
-                    getBigtableMetricModule(tooSmallBatchSize).
-                            getMetricsConnectionSettings().
-                            getMaxWriteBatchSize());
+                    getBigtableBackend(tooSmallBatchSize)
+                            .metricsConnectionSettings().maxWriteBatchSize);
         }
         {
             final int validSize = 100_000;
 
             assertEquals(validSize,
-                    getBigtableMetricModule(validSize).
-                            getMetricsConnectionSettings().
-                            getMaxWriteBatchSize());
+                    getBigtableBackend(validSize).metricsConnectionSettings().maxWriteBatchSize);
         }
     }
 }

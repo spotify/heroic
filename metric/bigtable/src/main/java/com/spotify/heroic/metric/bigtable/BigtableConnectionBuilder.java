@@ -56,7 +56,8 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
     private final int flushIntervalSeconds;
 
     private final String emulatorEndpoint;
-    private final MetricsConnectionSettings settings;
+
+    private final MetricsConnectionSettings metricsConnectionSettings;
 
     public BigtableConnectionBuilder(
         final String project,
@@ -67,7 +68,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
         final AsyncFramework async,
         final boolean disableBulkMutations,
         final int flushIntervalSeconds,
-        MetricsConnectionSettings settings
+        final MetricsConnectionSettings metricsConnectionSettings
     ) {
         this.project = project;
         this.instance = instance;
@@ -77,7 +78,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
         this.async = async;
         this.disableBulkMutations = disableBulkMutations;
         this.flushIntervalSeconds = flushIntervalSeconds;
-        this.settings = settings;
+        this.metricsConnectionSettings = metricsConnectionSettings;
     }
 
     @Override
@@ -89,17 +90,18 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
             .addStatusToRetryOn(Status.Code.UNAVAILABLE)
             .setAllowRetriesWithoutTimestamp(true)
             .setEnableRetries(true)
-            .setMaxScanTimeoutRetries(settings.maxScanTimeoutRetries)
-            .setMaxElapsedBackoffMillis(settings.maxElapsedBackoffMs)
+            .setMaxScanTimeoutRetries(metricsConnectionSettings.maxScanTimeoutRetries)
+            .setMaxElapsedBackoffMillis(metricsConnectionSettings.maxElapsedBackoffMs)
             .build();
 
         final var bulkOptions =
-            BulkOptions.builder().setBulkMaxRowKeyCount(settings.getMaxWriteBatchSize()).build();
+                BulkOptions.builder()
+                        .setBulkMaxRowKeyCount(metricsConnectionSettings.maxWriteBatchSize).build();
 
         var callOptionsConfig = CallOptionsConfig.builder()
-                .setReadRowsRpcTimeoutMs(settings.readRowsRpcTimeoutMs)
-                .setMutateRpcTimeoutMs(settings.mutateRpcTimeoutMs)
-                .setShortRpcTimeoutMs(settings.shortRpcTimeoutMs)
+                .setReadRowsRpcTimeoutMs(metricsConnectionSettings.readRowsRpcTimeoutMs)
+                .setMutateRpcTimeoutMs(metricsConnectionSettings.mutateRpcTimeoutMs)
+                .setShortRpcTimeoutMs(metricsConnectionSettings.shortRpcTimeoutMs)
                 .setUseTimeout(true).build();
 
         var builder = BigtableOptions.builder()
@@ -153,7 +155,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
             .append("disableBulkMutations", disableBulkMutations)
             .append("flushIntervalSeconds", flushIntervalSeconds)
             .append("emulatorEndpoint", emulatorEndpoint)
-            .append("settings", settings)
+            .append("settings", metricsConnectionSettings)
             .toString();
     }
 }
