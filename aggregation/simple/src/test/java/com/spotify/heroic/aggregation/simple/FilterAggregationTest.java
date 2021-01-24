@@ -1,13 +1,14 @@
 package com.spotify.heroic.aggregation.simple;
 
-import static org.junit.Assert.assertEquals;
-
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.test.FakeModuleLoader;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
 
 public class FilterAggregationTest {
     private ObjectMapper mapper;
