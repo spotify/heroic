@@ -69,11 +69,13 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     private final Series s3 = new Series("key1", ImmutableSortedMap.of("shared", "a", "diff", "c"),
         ImmutableSortedMap.of("resource", "c"));
 
-    private final RandomData randDataset1 = HeroicDistributionGenerator.generateRandomDataset(10000);
-    private final RandomData randDataset2 = HeroicDistributionGenerator.generateRandomDataset(1000);
-    private final RandomData randDataset3 = HeroicDistributionGenerator.generateRandomDataset(100000);
+    private final static int RECORD_COUNT = 100_000; // Number of datapoint recorded in each tdigest
 
-    private static double EXPECTED_ERROR_RATE = 0.03d;
+    private final RandomData randDataset1 = HeroicDistributionGenerator.generateRandomDataset(RECORD_COUNT);
+    private final RandomData randDataset2 = HeroicDistributionGenerator.generateRandomDataset(RECORD_COUNT);
+    private final RandomData randDataset3 = HeroicDistributionGenerator.generateRandomDataset(RECORD_COUNT);
+
+    private static double EXPECTED_ERROR_RATE = 0.01d;
 
     /* the number of queries run */
     private int queryCount = 0;
@@ -159,26 +161,35 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         return async.collectAndDiscard(writes);
     }
 
-    public QueryResult query(final String queryString, final MetricType metricType) throws Exception {
+    public QueryResult query(final String queryString) throws Exception {
         return query(query.newQueryFromString(queryString), builder -> {
-        }, metricType);
+        }, MetricType.POINT, true);
     }
 
     public QueryResult query(final String queryString,
-                             final Consumer<QueryBuilder> modifier, final MetricType metricType)
+                             final Consumer<QueryBuilder> modifier)
         throws Exception {
-        return query(query.newQueryFromString(queryString), modifier, metricType);
+        return query(query.newQueryFromString(queryString),
+            modifier,
+            MetricType.POINT,
+            true);
     }
 
     public QueryResult query(final QueryBuilder builder,
-                             final Consumer<QueryBuilder> modifier, final MetricType metricType)
+                             final Consumer<QueryBuilder> modifier,
+                             final MetricType metricType,
+                             final boolean isDistributed)
         throws Exception {
         queryCount += 1;
 
         builder
-            .features(Optional.of(FeatureSet.of(Feature.DISTRIBUTED_AGGREGATIONS)))
             .source(Optional.of(metricType))
             .rangeIfAbsent(Optional.of(new QueryDateRange.Absolute(0, 40)));
+
+        if ( isDistributed) {
+            builder
+                .features(Optional.of(FeatureSet.of(Feature.DISTRIBUTED_AGGREGATIONS)));
+        }
 
         modifier.accept(builder);
         return query.useDefaultGroup().query(builder.build(), queryContext).get();
@@ -192,7 +203,12 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
      */
     @Test
     public void testSimpleTdigestAggregation() throws Exception {
-        final QueryResult result = query("tdigest(10ms)", MetricType.DISTRIBUTION_POINTS);
+        final QueryResult result =
+            query(query.newQueryFromString("tdigest(10ms)"),
+                builder -> {
+                },
+                MetricType.DISTRIBUTION_POINTS,
+                true);
         final int numberSeries = 2; // s1 and s2
         final int datapointCount = 3;
         final long expectedCadence = 10L;
@@ -218,7 +234,12 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
 
     @Test
     public void testDistributedTdigestAggregation() throws Exception {
-        final QueryResult result = query("tdigest(10ms) by diff", MetricType.DISTRIBUTION_POINTS);
+        final QueryResult result =
+            query(query.newQueryFromString("tdigest(10ms) by diff"),
+                builder -> {
+                },
+                MetricType.DISTRIBUTION_POINTS,
+                true);
         final int expectedGroupCount = 6;
         final int numberSeries = 1;
         final int datapointCount = 2;
@@ -242,11 +263,43 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         validateStatAccuracy(mapRes);
     }
 
+    @Test
+    public void testDistributionWithNoAggregation() throws Exception {
+        final int expectedGroupCount = 2; // m1 and m2
+        final QueryResult result =
+            query(query.newQueryFromString("empty"),
+                builder -> {
+                },
+                MetricType.DISTRIBUTION_POINTS,
+                false);
+
+        assertEquals(expectedGroupCount,result.getGroups().size());
+
+        //Validate record count
+        for(ShardedResultGroup group : result.getGroups()) {
+            List<Point> metrics = group.getMetrics().getDataAs(Point.class);
+            metrics.forEach(p-> assertEquals(RECORD_COUNT, p.getValue(),0));
+        }
+    }
+
+    @Test
+    public void testbasicWithNoDistribution() throws Exception {
+        final int expectedGroupCount = 2; // m1 and m2
+        final QueryResult result =
+            query(query.newQueryFromString("empty"),
+                builder -> {
+                },
+                MetricType.POINT,
+                false);
+
+        assertEquals(expectedGroupCount,result.getGroups().size());
+    }
+
 
 
     @Test
     public void basicQueryTest() throws Exception {
-        final QueryResult result = query("sum(10ms)", MetricType.POINT);
+        final QueryResult result = query("sum(10ms)");
 
         // check the number of ShardedResultGroup
         assertEquals(1,result.getGroups().size());
@@ -265,7 +318,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
 
     @Test
     public void distributedQueryTest() throws Exception {
-        final QueryResult result = query("sum(10ms) by shared", MetricType.POINT);
+        final QueryResult result = query("sum(10ms) by shared");
 
         final Set<MetricCollection> m = getResults(result);
         final List<Long> cadences = getCadences(result);
@@ -277,7 +330,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
 
     @Test
     public void distributedQueryTraceTest() throws Exception {
-        final QueryResult result = query("sum(10ms) by shared", MetricType.POINT);
+        final QueryResult result = query("sum(10ms) by shared");
 
         // Verify that the top level QueryTrace is for CoreQueryManager
         assertThat(result.getTrace(), hasIdentifier(equalTo(CoreQueryManager.QUERY)));
@@ -297,7 +350,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
 
     @Test
     public void distributedDifferentQueryTest() throws Exception {
-        final QueryResult result = query("sum(10ms) by diff", MetricType.POINT);
+        final QueryResult result = query("sum(10ms) by diff");
 
         // check the number of ShardedResultGroup
         assertEquals(2,result.getGroups().size());
@@ -317,7 +370,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
 
     @Test
     public void distributedFilterQueryTest() throws Exception {
-        final QueryResult result = query("average(10ms) by * | topk(2) | bottomk(1) | sum(10ms)", MetricType.POINT);
+        final QueryResult result = query("average(10ms) by * | topk(2) | bottomk(1) | sum(10ms)");
 
         final Set<MetricCollection> m = getResults(result);
         final List<Long> cadences = getCadences(result);
@@ -331,7 +384,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         final QueryResult result =
             query("average(10ms) by * | topk(2) | bottomk(1) | sum(10ms)", builder -> {
                 builder.features(Optional.empty());
-            }, MetricType.POINT);
+            });
 
         final Set<MetricCollection> m = getResults(result);
         final List<Long> cadences = getCadences(result);
@@ -345,7 +398,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     public void pointsAboveTest() throws Exception {
         final QueryResult result = query("pointsabove(2) by *", builder -> {
             builder.features(Optional.empty());
-        }, MetricType.POINT);
+        });
 
         final Set<MetricCollection> m = getResults(result);
         final List<Long> cadences = getCadences(result);
@@ -358,7 +411,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     public void pointsBelowTest() throws Exception {
         final QueryResult result = query("pointsbelow(3) by *", builder -> {
             builder.features(Optional.empty());
-        }, MetricType.POINT);
+        });
 
         final Set<MetricCollection> m = getResults(result);
         final List<Long> cadences = getCadences(result);
@@ -372,7 +425,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     public void deltaQueryTest() throws Exception {
         final QueryResult result = query("delta", builder -> {
             builder.features(Optional.empty());
-        }, MetricType.POINT);
+        });
 
         final Set<MetricCollection> m = getResults(result);
         final List<Long> cadences = getCadences(result);
@@ -383,7 +436,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
 
     @Test
     public void distributedDeltaQueryTest() throws Exception {
-        final QueryResult result = query("max | delta", MetricType.POINT);
+        final QueryResult result = query("max | delta");
 
         final Set<MetricCollection> m = getResults(result);
         final List<Long> cadences = getCadences(result);
@@ -396,7 +449,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     public void deltaPerSecondQueryTest() throws Exception {
         final QueryResult result = query("deltaPerSecond", builder -> {
             builder.features(Optional.empty());
-        }, MetricType.POINT);
+        });
 
         final Set<MetricCollection> m = getResults(result);
         final List<Long> cadences = getCadences(result);
@@ -407,7 +460,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
 
     @Test
     public void distributedDeltaPerSecondQueryTest() throws Exception {
-        final QueryResult result = query("max | deltaPerSecond", MetricType.POINT);
+        final QueryResult result = query("max | deltaPerSecond");
 
         final Set<MetricCollection> m = getResults(result);
         final List<Long> cadences = getCadences(result);
@@ -418,7 +471,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
 
     @Test
     public void distributedDeltaPerSecondWithNoNegativeQueryTest() throws Exception {
-        final QueryResult result = query("max | deltaPerSecond | notNegative ", MetricType.POINT);
+        final QueryResult result = query("max | deltaPerSecond | notNegative ");
 
         final Set<MetricCollection> m = getResults(result);
         final List<Long> cadences = getCadences(result);
@@ -430,7 +483,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
 
     @Test
     public void filterLastQueryTest() throws Exception {
-        final QueryResult result = query("average(10ms) by * | topk(2) | bottomk(1)", MetricType.POINT);
+        final QueryResult result = query("average(10ms) by * | topk(2) | bottomk(1)");
 
         final Set<MetricCollection> m = getResults(result);
         final List<Long> cadences = getCadences(result);
@@ -443,7 +496,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     public void cardinalityTest() throws Exception {
         assumeTrue(cardinalitySupport);
 
-        final QueryResult result = query("cardinality(10ms)", MetricType.POINT);
+        final QueryResult result = query("cardinality(10ms)");
 
         final Set<MetricCollection> m = getResults(result);
         final List<Long> cadences = getCadences(result);
@@ -457,7 +510,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         assumeTrue(cardinalitySupport);
 
         // TODO: support native booleans in expressions
-        final QueryResult result = query("cardinality(10ms, method=hllp(includeKey=\"true\"))", MetricType.POINT);
+        final QueryResult result = query("cardinality(10ms, method=hllp(includeKey=\"true\"))");
 
         final Set<MetricCollection> m = getResults(result);
         final List<Long> cadences = getCadences(result);
@@ -476,7 +529,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     public  void testGroupLimit() throws Exception {
         final QueryResult result = query("*", builder -> {
             builder.options(Optional.of(QueryOptions.builder().groupLimit(1L).build()));
-        }, MetricType.POINT);
+        });
 
         assertEquals(0, result.getErrors().size());
         assertEquals(ResultLimits.of(ResultLimit.GROUP), result.getLimits());
@@ -500,7 +553,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     private void testDataLimit(final MetricType metricType) throws Exception {
         final QueryResult result = query("*", builder -> {
             builder.options(Optional.of(QueryOptions.builder().dataLimit(1L).build()));
-        }, metricType);
+        });
 
         // quota limits are always errors
         assertEquals(2, result.getErrors().size());
@@ -519,7 +572,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         final QueryResult result = query("*", builder -> {
             builder.options(
                 Optional.of(QueryOptions.builder().seriesLimit(0L).failOnLimits(true).build()));
-        }, metricType);
+        });
 
         assertEquals(2, result.getErrors().size());
 
@@ -537,7 +590,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         final QueryResult result = query("*", builder -> {
             builder.options(
                 Optional.of(QueryOptions.builder().groupLimit(0L).failOnLimits(true).build()));
-        }, metricType);
+        });
 
         assertEquals(2, result.getErrors().size());
 
@@ -555,7 +608,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
     private void testAggregationLimit(final MetricType metricType, final String query) throws Exception {
         final QueryResult result = query(query, builder -> {
             builder.options(Optional.of(QueryOptions.builder().aggregationLimit(1L).build()));
-        }, metricType);
+        });
 
         // quota limits are always errors
         assertEquals(2, result.getErrors().size());
@@ -600,7 +653,7 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
 
 
     private void validateStatAccuracy(final Map<Long,Double> resMap){
-        // validate that error rate is less than 2/100 for each datapoint.
+
         double expected = randDataset1.getDataStat().get(99);
         double actual = resMap.get(10L);
         assertTrue( errorRate(expected, actual) <= EXPECTED_ERROR_RATE);

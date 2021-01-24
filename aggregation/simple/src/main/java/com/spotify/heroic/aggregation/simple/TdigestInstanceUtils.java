@@ -38,6 +38,10 @@ public class TdigestInstanceUtils {
         return new AtomicReference<>(tDigest);
     }
 
+    public static TDigest inital() {
+        return MergingDigest.createDigest(TDIGEST_COMPRESSION_LEVEL);
+    }
+
     public static UnaryOperator<TDigest> getOp(final ByteBuffer serializedTDigest) {
         TDigest input = MergingDigest.fromBytes(serializedTDigest);
         return t -> {

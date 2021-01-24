@@ -78,14 +78,9 @@ public class DistributedAggregationCombiner implements AggregationCombiner {
         final AggregationResult result = session.result();
 
         for (final AggregationOutput out : result.getResult()) {
-            if (TDIGEST_TYPE.contains(out.getMetrics().getType())) {
-                compute(groups, out, cadence);
-            } else {
-                groups.add(new ShardedResultGroup(ImmutableMap.of(), out.getKey(), out.getSeries(),
-                    out.getMetrics(), cadence));
-            }
+            groups.add(new ShardedResultGroup(ImmutableMap.of(), out.getKey(), out.getSeries(),
+                out.getMetrics(), cadence));
         }
-
         return groups.build();
     }
 }
