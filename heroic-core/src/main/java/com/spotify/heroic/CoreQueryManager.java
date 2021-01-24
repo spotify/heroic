@@ -25,7 +25,6 @@ import static io.opencensus.trace.AttributeValue.booleanAttributeValue;
 import static io.opencensus.trace.AttributeValue.longAttributeValue;
 import static io.opencensus.trace.AttributeValue.stringAttributeValue;
 
-
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableSortedSet;
 import com.spotify.heroic.aggregation.Aggregation;
