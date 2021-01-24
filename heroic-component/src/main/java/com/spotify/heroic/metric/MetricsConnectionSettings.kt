@@ -34,13 +34,13 @@ open class MetricsConnectionSettings(
     maxElapsedBackoffMs: Optional<Int>
 ) {
     /**
-     * See [com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_MUTATE_RPC_TIMEOUT_MS]
+     * See [ApiQueryConsts.DEFAULT_MUTATE_RPC_TIMEOUT_MS]
      */
     @JvmField
     var mutateRpcTimeoutMs: Int
 
     /**
-     * See [com.spotify.heroic.metric.consts.ApiQueryConsts.DEFAULT_READ_ROWS_RPC_TIMEOUT_MS]
+     * See [ApiQueryConsts.DEFAULT_READ_ROWS_RPC_TIMEOUT_MS]
      */
     @JvmField
     var readRowsRpcTimeoutMs: Int
@@ -91,13 +91,19 @@ open class MetricsConnectionSettings(
     }
 
     companion object {
-        /* default number of Cells for each batch mutation */
+        /**
+         * default number of Cells for each batch mutation
+         */
         const val DEFAULT_MUTATION_BATCH_SIZE = 1000
 
-        /* maximum possible number of Cells for each batch mutation */
+        /**
+         * maximum possible number of Cells for each batch mutation
+         */
         const val MAX_MUTATION_BATCH_SIZE = 100000
 
-        /* minimum possible number of Cells supported for each batch mutation */
+        /**
+         * minimum possible number of Cells supported for each batch mutation
+         */
         const val MIN_MUTATION_BATCH_SIZE = 10
         @JvmStatic
         fun createDefault(): MetricsConnectionSettings {
