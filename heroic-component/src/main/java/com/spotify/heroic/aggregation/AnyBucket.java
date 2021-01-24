@@ -27,6 +27,7 @@ import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
+
 import com.spotify.heroic.metric.TdigestPoint;
 import java.util.Map;
 
