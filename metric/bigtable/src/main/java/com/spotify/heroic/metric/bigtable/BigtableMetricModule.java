@@ -153,7 +153,7 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
         this.batchSize = batchSize;
         this.emulatorEndpoint = emulatorEndpoint.orElse(null);
 
-        this.metricsConnectionSettings = new BigtableMetricsConnectionSettings(maxWriteBatchSize,
+        this.metricsConnectionSettings = new MetricsConnectionSettings(maxWriteBatchSize,
             mutateRpcTimeoutMs, readRowsRpcTimeoutMs, shortRpcTimeoutMs,
             maxScanTimeoutRetries, maxElapsedBackoffMs);
 
