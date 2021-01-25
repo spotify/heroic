@@ -44,6 +44,7 @@ import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
 import com.spotify.heroic.elasticsearch.SearchTransformResult;
 import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
+import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
 import com.spotify.heroic.filter.AndFilter;
 import com.spotify.heroic.filter.FalseFilter;
 import com.spotify.heroic.filter.Filter;
@@ -327,7 +328,17 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
             final QueryBuilder f = filter(filter.getFilter());
 
-            SearchRequest request = c.getIndex().count(METADATA_TYPE);
+            SearchRequest request;
+
+            if (c.getIndex() instanceof RotatingIndexMapping &&
+                ((RotatingIndexMapping) c.getIndex()).getDynamicMaxReadIndicesSupport()) {
+                    final long start = filter.getRange().getStart();
+                    RotatingIndexMapping i = (RotatingIndexMapping) c.getIndex();
+                    request = i.countInRange(METADATA_TYPE, start);
+            } else {
+                request = c.getIndex().count(METADATA_TYPE);
+            }
+
             SearchSourceBuilder sourceBuilder = request.source();
             limit.asInteger().ifPresent(sourceBuilder::terminateAfter);
             sourceBuilder.query(new BoolQueryBuilder().must(f));
@@ -414,20 +425,33 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
     @Override
     public AsyncFuture<FindKeys> findKeys(final FindKeys.Request request) {
-        return doto(c -> {
-            final QueryBuilder f = filter(request.getFilter());
-            SearchRequest searchRequest = c.getIndex().search(METADATA_TYPE);
-            searchRequest.source().query(new BoolQueryBuilder().must(f));
 
-            {
-                final AggregationBuilder terms = AggregationBuilders.terms("terms").field(KEY);
-                searchRequest.source().aggregation(terms);
-            }
+    return doto(
+        c -> {
+          final QueryBuilder f = filter(request.getFilter());
 
-            final ResolvableFuture<SearchResponse> future = async.future();
-            future.resolve(c.execute(searchRequest));
+          SearchRequest searchRequest;
+          if (c.getIndex() instanceof RotatingIndexMapping &&
+              ((RotatingIndexMapping) c.getIndex()).getDynamicMaxReadIndicesSupport()) {
+                final long start = request.getRange().getStart();
+                RotatingIndexMapping ri = (RotatingIndexMapping) c.getIndex();
+                searchRequest = ri.searchInRange(METADATA_TYPE, start);
+          } else {
+              searchRequest = c.getIndex().search(METADATA_TYPE);
+          }
 
-            return future.directTransform(response -> {
+          searchRequest.source().query(new BoolQueryBuilder().must(f));
+
+          {
+            final AggregationBuilder terms = AggregationBuilders.terms("terms").field(KEY);
+            searchRequest.source().aggregation(terms);
+          }
+
+          final ResolvableFuture<SearchResponse> future = async.future();
+          future.resolve(c.execute(searchRequest));
+
+          return future.directTransform(
+              response -> {
                 final Terms terms = response.getAggregations().get("terms");
 
                 final Set<String> keys = new HashSet<>();
@@ -436,13 +460,13 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                 int duplicates = 0;
 
                 for (final Terms.Bucket bucket : terms.getBuckets()) {
-                    if (keys.add(bucket.getKeyAsString())) {
-                        duplicates += 1;
-                    }
+                  if (keys.add(bucket.getKeyAsString())) {
+                    duplicates += 1;
+                  }
                 }
 
                 return new FindKeys(keys, size, duplicates);
-            });
+              });
         });
     }
 
@@ -481,8 +505,16 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         OptionalLimit limit = seriesRequest.getLimit();
 
         return doto(c -> {
-            SearchRequest request =
-                c.getIndex().search(METADATA_TYPE).allowPartialSearchResults(false);
+            SearchRequest request;
+            if (c.getIndex() instanceof RotatingIndexMapping &&
+                ((RotatingIndexMapping) c.getIndex()).getDynamicMaxReadIndicesSupport()) {
+                    final long start = seriesRequest.getRange().getStart();
+                    RotatingIndexMapping ri = (RotatingIndexMapping) c.getIndex();
+                    request = ri.searchInRange(METADATA_TYPE, start);
+            } else {
+                request =
+                    c.getIndex().search(METADATA_TYPE).allowPartialSearchResults(false);
+            }
 
             request.source()
                 .size(limit.asMaxInteger(scrollSize))
@@ -551,7 +583,16 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         OptionalLimit limit = findRequest.getLimit();
 
         return observer -> connection.doto(c -> {
-            SearchRequest request = c.getIndex().search(METADATA_TYPE).scroll(SCROLL_TIME);
+            SearchRequest request;
+            if (c.getIndex() instanceof RotatingIndexMapping &&
+                ((RotatingIndexMapping) c.getIndex()).getDynamicMaxReadIndicesSupport()) {
+                    final long start = findRequest.getRange().getStart();
+                    RotatingIndexMapping ri = (RotatingIndexMapping) c.getIndex();
+                    request = ri.searchInRange(METADATA_TYPE, start);
+            } else {
+                request = c.getIndex().search(METADATA_TYPE).scroll(SCROLL_TIME);
+            }
+
             request.source()
                 .size(limit.asMaxInteger(scrollSize))
                 .query(new BoolQueryBuilder().must(filter));

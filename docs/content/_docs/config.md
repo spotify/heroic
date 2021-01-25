@@ -655,6 +655,9 @@ maxReadIndices: <int> default = 2
 # Maximum indices to write to at a time. Minumum of 1.
 maxWriteIndices: <int> default = 1
 
+# Support dynamically determining number of indices to read based upon the range of a query
+supportDynamicMaxReadIndices: <boolean> default = false
+
 # Pattern to use when creating an index. The pattern must contain a single '%s' that will be
 # replaced with the base time stamp of the index.
 pattern: <string> default = heroic-%s
