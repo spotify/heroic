@@ -22,7 +22,6 @@
 package com.spotify.heroic.metric;
 
 import com.google.common.collect.ImmutableMap;
-
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;

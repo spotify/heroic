@@ -121,6 +121,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     private final Meter written = new Meter();
     private final int maxWriteBatchSize;
 
+
     @Inject
     public BigtableBackend(
         final AsyncFramework async,

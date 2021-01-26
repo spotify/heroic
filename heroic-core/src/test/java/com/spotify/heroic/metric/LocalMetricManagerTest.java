@@ -66,9 +66,19 @@ public class LocalMetricManagerTest {
         final QueryLoggerFactory queryLoggerFactory = mock(QueryLoggerFactory.class);
         when(queryLoggerFactory.create(any())).thenReturn(queryLogger);
 
-        manager = new LocalMetricManager(groupLimit, seriesLimit, aggregationLimit, dataLimit,
-            concurrentQueriesBackoff, fetchParallelism, failOnLimits, async, groupSet, metadata,
-            reporter, queryLoggerFactory);
+        manager = new LocalMetricManager(
+            groupLimit,
+            seriesLimit,
+            aggregationLimit,
+            dataLimit,
+            concurrentQueriesBackoff,
+            fetchParallelism,
+            failOnLimits,
+            async,
+            groupSet,
+            metadata,
+            reporter,
+            queryLoggerFactory);
     }
 
     @Test

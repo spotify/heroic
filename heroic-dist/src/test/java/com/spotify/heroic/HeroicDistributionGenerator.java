@@ -1,8 +1,5 @@
 package com.spotify.heroic;
 
-import static com.google.common.math.Quantiles.percentiles;
-
-
 import com.google.protobuf.ByteString;
 import com.spotify.heroic.metric.HeroicDistribution;
 import com.tdunning.math.stats.MergingDigest;
@@ -67,6 +64,7 @@ public class HeroicDistributionGenerator {
         static List<Long> getParetoData(int count) {
             ParetoDistribution pareto = new ParetoDistribution(5, 1);
             List<Long> list = new ArrayList<>();
+            //noinspection AssignmentToMethodParameter
             while (count-- > 0) {
                 list.add((long)pareto.sample());
             }

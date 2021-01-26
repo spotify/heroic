@@ -35,10 +35,9 @@ import com.spotify.heroic.grammar.Expression;
 import com.spotify.heroic.grammar.IntegerExpression;
 import dagger.Component;
 import eu.toolchain.serializer.SerializerFramework;
-
+import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Named;
-import java.util.Optional;
 
 public class Module implements HeroicModule {
     @Override
