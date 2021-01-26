@@ -29,10 +29,9 @@ import java.util.*
 
 data class Query(
     val aggregation: Optional<Aggregation>,
-    val source: Optional<MetricType>,
+    val metricType: Optional<MetricType>, // points or distribution points for testing
     val range: Optional<QueryDateRange>,
     val filter: Optional<Filter>,
     val options: Optional<QueryOptions>,
-    // set of experimental features to enable
-    val features: Optional<FeatureSet>
+    val features: Optional<FeatureSet> // set of experimental features to enable
 )

@@ -1,7 +1,5 @@
 package com.spotify.heroic;
 
-
-
 import static com.spotify.heroic.test.Matchers.containsChild;
 import static com.spotify.heroic.test.Matchers.hasIdentifier;
 import static com.spotify.heroic.test.Matchers.identifierContains;
@@ -164,7 +162,9 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
 
     public QueryResult query(final String queryString) throws Exception {
         return query(query.newQueryFromString(queryString), builder -> {
-        }, MetricType.POINT, true);
+        },
+        MetricType.POINT,
+        true);
     }
 
     public QueryResult query(final String queryString,
@@ -184,10 +184,10 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
         queryCount += 1;
 
         builder
-            .source(Optional.of(metricType))
+            .metricType(Optional.of(metricType))
             .rangeIfAbsent(Optional.of(new QueryDateRange.Absolute(0, 40)));
 
-        if ( isDistributed) {
+        if (isDistributed) {
             builder
                 .features(Optional.of(FeatureSet.of(Feature.DISTRIBUTED_AGGREGATIONS)));
         }

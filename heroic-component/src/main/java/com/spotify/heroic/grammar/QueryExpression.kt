@@ -29,7 +29,7 @@ import java.util.*
 data class QueryExpression(
     @JvmField val context: Context,
     val select: Optional<Expression>,
-    val source: Optional<MetricType>,
+    val metricType: Optional<MetricType>,
     val range: Optional<RangeExpression>,
     val filter: Optional<Filter>,
     val with: Map<String, Expression>,
@@ -41,7 +41,7 @@ data class QueryExpression(
         QueryExpression(
             context,
             select.map { it.eval(scope) },
-            source,
+            metricType,
             range.map { it.eval(scope) },
             filter,
             Expression.evalMap(with, scope),
@@ -52,6 +52,6 @@ data class QueryExpression(
         return visitor.visitQuery(this)
     }
 
-    override fun toRepr() = """{select: $select source: $source, 
+    override fun toRepr() = """{select: $select metricType: $metricType, 
         range: $range, filter: $filter, with: $with, as: $asExpression}""".trimIndent()
 }
