@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.rpc.grpc;
 
-import static io.grpc.stub.ServerCalls.asyncUnaryCall;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.cluster.NodeMetadataProvider;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
@@ -46,19 +44,21 @@ import io.grpc.Status;
 import io.grpc.StatusException;
 import io.grpc.internal.ServerImpl;
 import io.grpc.netty.NettyServerBuilder;
-import io.netty.channel.Channel;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.inject.Named;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
-import javax.inject.Inject;
-import javax.inject.Named;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import static io.grpc.stub.ServerCalls.asyncUnaryCall;
 
 public class GrpcRpcProtocolServer implements LifeCycles {
     public static final GrpcRpcEmptyBody EMPTY = new GrpcRpcEmptyBody();
@@ -175,6 +175,7 @@ public class GrpcRpcProtocolServer implements LifeCycles {
             .maxInboundMessageSize(maxFrameSize)
             .bossEventLoopGroup(bossGroup)
             .workerEventLoopGroup(workerGroup)
+            .channelType(NioServerSocketChannel.class)
             .build();
 
         return async.call(() -> {
@@ -182,34 +183,11 @@ public class GrpcRpcProtocolServer implements LifeCycles {
             this.server.set(server);
             return null;
         }).directTransform(v -> {
-            final InetSocketAddress localAddress = extractInetSocketAddress(server);
+            final ServerImpl impl = (ServerImpl) server;
+            final InetSocketAddress localAddress = new InetSocketAddress(impl.getPort());
             bindFuture.resolve(localAddress);
             return null;
         });
-    }
-
-    /**
-     * Extract the local address from the current server.
-     * <p>
-     * Because no api is available to accomplish this, it currently uses a very ugly reflexive
-     * approach.
-     *
-     * @param server Server to extract local address from.
-     * @return an InetSocketAddress
-     * @throws Exception if something goes wrong (which it should).
-     */
-    private InetSocketAddress extractInetSocketAddress(final Server server) throws Exception {
-        final ServerImpl impl = (ServerImpl) server;
-
-        final Field transportServerField = ServerImpl.class.getDeclaredField("transportServer");
-        transportServerField.setAccessible(true);
-        final Object transportServer = transportServerField.get(impl);
-
-        final Field channelField = transportServer.getClass().getDeclaredField("channel");
-        channelField.setAccessible(true);
-        final Channel channel = (Channel) channelField.get(transportServer);
-
-        return (InetSocketAddress) channel.localAddress();
     }
 
     private ServerServiceDefinition bindService() {

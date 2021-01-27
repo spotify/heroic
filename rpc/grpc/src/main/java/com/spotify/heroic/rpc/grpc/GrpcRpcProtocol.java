@@ -114,7 +114,6 @@ public class GrpcRpcProtocol implements RpcProtocol {
                     .forAddress(address.getHostName(), address.getPort())
                     .usePlaintext()
                     .executor(workerGroup)
-                    .eventLoopGroup(workerGroup)
                     .maxInboundMessageSize(maxFrameSize)
                     .build();
 

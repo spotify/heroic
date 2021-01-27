@@ -60,6 +60,12 @@ The project is built using Gradle:
 
 # build a single module
 ./gradlew heroic-metric-bigtable:build
+
+# run through all tests even with errors
+clear; date; ./gradlew clean ; clear; date ; ./gradlew check --continue 2>&1 | tee ./logs/build-check.log ; date
+
+# to run individual tests example
+./gradlew :heroic-metric-bigtable:integrationTest --tests "com.spotify.heroic.metric.bigtable.BigtableBackendIT.testInterval"
 ```
 
 The `heroic-dist` module can be used to produce a shaded jar that contains all required dependencies:
