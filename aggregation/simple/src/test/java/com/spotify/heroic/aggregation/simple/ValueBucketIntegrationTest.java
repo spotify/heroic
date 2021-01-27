@@ -6,11 +6,8 @@ import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.aggregation.TDigestBucket;
 import com.spotify.heroic.metric.DistributionPoint;
-import com.spotify.heroic.metric.HeroicDistribution;
 import com.spotify.heroic.metric.Point;
-import com.tdunning.math.stats.MergingDigest;
 import com.tdunning.math.stats.TDigest;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -25,7 +22,6 @@ import java.util.function.DoubleBinaryOperator;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import com.google.protobuf.ByteString;
 
 public abstract class ValueBucketIntegrationTest {
     private static final int NCPU = Runtime.getRuntime().availableProcessors();
