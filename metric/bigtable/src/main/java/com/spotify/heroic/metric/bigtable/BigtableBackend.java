@@ -23,8 +23,9 @@ package com.spotify.heroic.metric.bigtable;
 
 import static io.opencensus.trace.AttributeValue.booleanAttributeValue;
 import static io.opencensus.trace.AttributeValue.longAttributeValue;
-import static io.opencensus.trace.AttributeValue.stringAttributeValue;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.cloud.bigtable.grpc.scanner.FlatRow;
 import com.google.cloud.bigtable.util.RowKeyUtil;
 import com.google.common.base.Function;
@@ -69,10 +70,11 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.RetryPolicy;
 import eu.toolchain.async.RetryResult;
+import eu.toolchain.serializer.Serializer;
+import eu.toolchain.serializer.SerializerFramework;
 import io.opencensus.common.Scope;
 import io.opencensus.trace.AttributeValue;
 import io.opencensus.trace.Span;
-import io.opencensus.trace.Status;
 import io.opencensus.trace.Tracer;
 import io.opencensus.trace.Tracing;
 import java.io.IOException;
@@ -99,33 +101,41 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     private static final Logger log = LoggerFactory.getLogger(BigtableBackend.class);
 
     /* maximum number of bytes of BigTable row key size allowed*/
-    private static final int MAX_KEY_ROW_SIZE = 4000;
-    private static final QueryTrace.Identifier FETCH_SEGMENT =
-        QueryTrace.identifier(BigtableBackend.class, "fetch_segment");
-    private static final QueryTrace.Identifier FETCH =
-        QueryTrace.identifier(BigtableBackend.class, "fetch");
-    private static final String POINTS = "points";
-    private static final String DISTRIBUTION_POINTS = "distributionPoints";
-    private static final String EVENTS = "events";
+    public static final int MAX_KEY_ROW_SIZE = 4000;
 
+    public static final QueryTrace.Identifier FETCH_SEGMENT =
+        QueryTrace.identifier(BigtableBackend.class, "fetch_segment");
+    public static final QueryTrace.Identifier FETCH =
+        QueryTrace.identifier(BigtableBackend.class, "fetch");
+
+    public static final String POINTS = "points";
+    public static final String DISTRIBUTION_POINTS = "distributionPoints";
+    public static final String EVENTS = "events";
     public static final long PERIOD = 0x100_000_000L;
 
     private final AsyncFramework async;
+    private final SerializerFramework serializer;
     private final RowKeySerializer rowKeySerializer;
+    private final Serializer<SortedMap<String, String>> sortedMapSerializer;
     private final Managed<BigtableConnection> connection;
     private final Groups groups;
     private final String table;
     private final boolean configure;
     private final MetricBackendReporter reporter;
+    private final ObjectMapper mapper;
     private final Tracer tracer = Tracing.getTracer();
+
+    private static final TypeReference<Map<String, String>> PAYLOAD_TYPE =
+        new TypeReference<Map<String, String>>() {
+        };
 
     private final Meter written = new Meter();
     private final MetricsConnectionSettings metricsConnectionSettings;
 
-
     @Inject
     public BigtableBackend(
         final AsyncFramework async,
+        @Named("common") final SerializerFramework serializer,
         final RowKeySerializer rowKeySerializer,
         final Managed<BigtableConnection> connection,
         final Groups groups,
@@ -137,13 +147,16 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     ) {
         super(async);
         this.async = async;
+        this.serializer = serializer;
         this.rowKeySerializer = rowKeySerializer;
+        this.sortedMapSerializer = serializer.sortedMap(serializer.string(), serializer.string());
         this.connection = connection;
         this.metricsConnectionSettings = metricsConnectionSettings;
         this.groups = groups;
         this.table = table;
         this.configure = configure;
         this.reporter = reporter;
+        this.mapper = mapper;
     }
 
     @Override
@@ -238,15 +251,17 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     }
 
     @Override
-    public AsyncFuture<WriteMetric> write(final WriteMetric.Request request, final Span span) {
-        return connection.doto(conn -> {
+    public AsyncFuture<WriteMetric> write(
+        final WriteMetric.Request request, final Span parentSpan
+    ) {
+        return connection.doto(c -> {
             final Series series = request.getSeries();
             final List<AsyncFuture<WriteMetric>> results = new ArrayList<>();
 
-            final BigtableDataClient client = conn.getDataClient();
+            final BigtableDataClient client = c.getDataClient();
 
-            final MetricCollection collection = request.getData();
-            results.add(writeTyped(series, client, collection, span));
+            final MetricCollection g = request.getData();
+            results.add(writeTyped(series, client, g, parentSpan));
             return async.collect(results, WriteMetric.reduce());
         });
     }
@@ -322,24 +337,20 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     private AsyncFuture<WriteMetric> writeTyped(
         final Series series,
         final BigtableDataClient client,
-        final MetricCollection collection,
-        final Span span
+        final MetricCollection g,
+        final Span parentSpan
     ) throws IOException {
-        var type = collection.getType();
-        span.putAttribute("metric_type", stringAttributeValue(type.toString()));
-        switch (type) {
+        switch (g.getType()) {
             case POINT:
-                return writeBatch(POINTS, series, client, collection.getDataAs(Point.class),
-                    d -> serializeValue(d.getValue()), span);
+                return writeBatch(POINTS, series, client, g.getDataAs(Point.class),
+                    d -> serializeValue(d.getValue()), parentSpan);
             case DISTRIBUTION_POINTS:
-                return writeBatch(DISTRIBUTION_POINTS, series, client, collection.getDataAs(
+                return writeBatch(DISTRIBUTION_POINTS, series, client, g.getDataAs(
                     DistributionPoint.class),
-                    d -> d.value().getValue(), span);
+                    d -> d.value().getValue(), parentSpan);
             default:
-                span.setStatus(
-                    Status.INVALID_ARGUMENT.withDescription("Unsupported metric type"));
                 return async.resolved(new WriteMetric(
-                    new QueryError("Unsupported metric type: " + collection.getType())));
+                    new QueryError("Unsupported metric type: " + g.getType())));
         }
     }
 
@@ -353,7 +364,6 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         final Scope scope = tracer.withSpan(span);
         span.putAttribute("type", AttributeValue.stringAttributeValue(columnFamily));
         span.putAttribute("batchSize", longAttributeValue(batch.size()));
-        span.putAttribute("table", stringAttributeValue(table));
 
         // common case for consumers
         if (batch.size() == 1) {
@@ -362,11 +372,6 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                     .onFinished(() -> {
                         written.mark();
                         span.end();
-                    })
-                    .onFailed(error -> {
-                        log.error("Bigtable writeOne failed: ", error);
-                        span.putAttribute("error", booleanAttributeValue(true));
-                        span.addAnnotation(error.getMessage());
                     });
             scope.close();
             return future;
@@ -411,8 +416,8 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
         final RequestTimer<WriteMetric> timer = WriteMetric.timer();
 
-        for (final Pair<RowKey, Mutations> mutationsPair : saved) {
-            final ByteString rowKeyBytes = rowKeySerializer.serializeFull(mutationsPair.getKey());
+        for (final Pair<RowKey, Mutations> e : saved) {
+            final ByteString rowKeyBytes = rowKeySerializer.serializeFull(e.getKey());
 
             if (rowKeyBytes.size() >= MAX_KEY_ROW_SIZE) {
                 reporter.reportWritesDroppedBySize();
@@ -422,18 +427,12 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             }
 
             writes.add(client
-                .mutateRow(table, rowKeyBytes, mutationsPair.getValue())
+                .mutateRow(table, rowKeyBytes, e.getValue())
                 .directTransform(result -> timer.end()));
         }
 
         scope.close();
-        return async.collect(writes.build(), WriteMetric.reduce())
-            .onFinished(span::end)
-            .onFailed(error -> {
-                log.error("Bigtable write batch failed: ", error);
-                span.putAttribute("error", booleanAttributeValue(true));
-                span.addAnnotation(error.getMessage());
-            });
+        return async.collect(writes.build(), WriteMetric.reduce()).onFinished(span::end);
     }
 
     private <T extends Metric> AsyncFuture<WriteMetric> writeOne(

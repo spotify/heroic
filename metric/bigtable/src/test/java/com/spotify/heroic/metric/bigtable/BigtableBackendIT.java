@@ -25,7 +25,7 @@ public class BigtableBackendIT extends AbstractMetricBackendIT {
         super.setupSupport();
 
         this.eventSupport = true;
-        this.maxBatchSize = BigtableMetricModule.DEFAULT_MUTATION_BATCH_SIZE;
+        this.maxBatchSize = Optional.of(BigtableMetricModule.DEFAULT_MUTATION_BATCH_SIZE);
         this.brokenSegmentsPr208 = true;
     }
 

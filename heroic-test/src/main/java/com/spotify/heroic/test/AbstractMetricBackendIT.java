@@ -83,7 +83,7 @@ public abstract class AbstractMetricBackendIT {
      * See: https://github.com/spotify/heroic/pull/208 */
     protected boolean brokenSegmentsPr208 = false;
     protected boolean eventSupport = false;
-    protected Integer maxBatchSize = null;
+    protected Optional<Integer> maxBatchSize = Optional.empty();
     protected boolean hugeRowKey = true;
 
     @Rule
