@@ -165,7 +165,7 @@ allprojects {
 
             dependency 'io.netty:netty-tcnative-boringssl-static:2.0.28.Final'
 
-            dependencySet(group: 'io.grpc', version: '1.16.1') {
+            dependencySet(group: 'io.grpc', version: '1.35.0') {
                 entry 'grpc-auth'
                 entry 'grpc-core'
                 entry 'grpc-netty'
@@ -200,7 +200,7 @@ allprojects {
                 entry 'google-cloud-core'
                 entry 'google-cloud-core-grpc'
             }
-            dependency 'com.google.cloud.bigtable:bigtable-client-core:1.12.1'
+            dependency 'com.google.cloud.bigtable:bigtable-client-core:1.19.0'
 
             dependency 'com.addthis:stream-lib:3.0.0'
             dependency 'org.xerial.snappy:snappy-java:1.1.7.2'

@@ -52,6 +52,7 @@ import io.grpc.ManagedChannel;
 import io.grpc.MethodDescriptor;
 import io.grpc.netty.NettyChannelBuilder;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import io.opencensus.common.Scope;
 import io.opencensus.trace.Span;
 import io.opencensus.trace.Tracer;
@@ -115,6 +116,7 @@ public class GrpcRpcProtocol implements RpcProtocol {
                     .usePlaintext()
                     .executor(workerGroup)
                     .eventLoopGroup(workerGroup)
+                    .channelType(NioSocketChannel.class)
                     .maxInboundMessageSize(maxFrameSize)
                     .build();
 
