@@ -22,13 +22,14 @@ class HeroicSession(requests.Session):
 
 @pytest.fixture(scope='session')
 def api_session(session_scoped_container_getter):
-    """Wait for the Heroic container to become available and return a requests session."""
+    """Wait for the Heroic container to become available and return a requests
+    session."""
 
     container = session_scoped_container_getter.get('heroic')
     assert container.is_running
 
     # Wait for Heroic to startup within 2 minutes
-    timeout = 120
+    timeout = 150
     max_time = time.time() + 120
     while time.time() < max_time:
         if 'Startup finished, hello' in container.logs().decode():
@@ -36,7 +37,8 @@ def api_session(session_scoped_container_getter):
         else:
             time.sleep(2)
     else:
-        raise TimeoutError('Heroic did not start within {} seconds'.format(timeout))
+        raise TimeoutError('Heroic did not start within {} seconds'
+                           .format(timeout))
 
     api_url = 'http://127.0.0.1:{}/'.format(container.network_info[0].host_port)
     request_session = HeroicSession(api_url)
