@@ -137,7 +137,7 @@ public class MemoryBackend extends AbstractMetricBackend {
         Span parentSpan
     ) {
         final QueryTrace.NamedWatch w = QueryTrace.watch(FETCH);
-        final MemoryKey key = new MemoryKey(request.getType(), request.getSeries().getTags());
+        final MemoryKey key = new MemoryKey(request.getMetricType(), request.getSeries().getTags());
         doFetch(key, request.getRange(), watcher, metricsConsumer);
         return async.resolved(new FetchData.Result(w.end()));
     }

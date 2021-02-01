@@ -45,13 +45,13 @@ public abstract class QueryMetrics {
     public static QueryMetrics create(
         Optional<String> query,
         Optional<Aggregation> aggregation,
-        Optional<String> source,
+        Optional<MetricType> metricType,
         Optional<QueryDateRange> range,
         Optional<Filter> filter,
         Optional<QueryOptions> options,
         Optional<JsonNode> clientContext
     ) {
-        return legacyCreate(query, aggregation, source, range, filter, options, clientContext,
+        return legacyCreate(query, aggregation, metricType, range, filter, options, clientContext,
              Optional.empty(), Optional.empty(), Optional.empty(),
             Optional.empty(), false);
     }
@@ -60,7 +60,7 @@ public abstract class QueryMetrics {
     public static QueryMetrics legacyCreate(
         @JsonProperty("query") Optional<String> query,
         @JsonProperty("aggregation") Optional<Aggregation> aggregation,
-        @JsonProperty("source") Optional<String> source,
+        @JsonProperty("metricType") Optional<MetricType> metricType,
         @JsonProperty("range") Optional<QueryDateRange> range,
         @JsonProperty("filter") Optional<Filter> filter,
         @JsonProperty("options") Optional<QueryOptions> options,
@@ -75,9 +75,8 @@ public abstract class QueryMetrics {
 
         final Optional<Aggregation> legitAggregation = firstPresent(aggregation,
             aggregators.filter(c -> !c.isEmpty()).map(Chain::fromList));
-        final Optional<MetricType> sourceMetric = source.flatMap(MetricType::fromIdentifier);
 
-        return new AutoValue_QueryMetrics(query, legitAggregation, sourceMetric, range, filter,
+        return new AutoValue_QueryMetrics(query, legitAggregation, metricType, range, filter,
             options, clientContext, key, tags, features);
     }
 
@@ -85,8 +84,8 @@ public abstract class QueryMetrics {
     public abstract Optional<String> query();
     @JsonProperty("aggregation")
     public abstract Optional<Aggregation> aggregation();
-    @JsonProperty("source")
-    public abstract Optional<MetricType> source();
+    @JsonProperty("metricType")
+    public abstract Optional<MetricType> metricType();
     @JsonProperty("range")
     public abstract Optional<QueryDateRange> range();
     @JsonProperty("filter")
@@ -111,7 +110,7 @@ public abstract class QueryMetrics {
             .filter(filter())
             .range(range())
             .aggregation(aggregation())
-            .source(source())
+            .metricType(metricType())
             .options(options())
             .clientContext(clientContext());
 

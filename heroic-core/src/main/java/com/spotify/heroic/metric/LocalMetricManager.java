@@ -191,6 +191,7 @@ public class LocalMetricManager implements MetricManager {
         private class Transform implements LazyTransform<FindSeries, FullQuery> {
 
             private final AggregationInstance aggregation;
+            private final MetricType metricType;
             private final boolean failOnLimits;
             private final OptionalLimit seriesLimit;
             private final OptionalLimit groupLimit;
@@ -201,7 +202,6 @@ public class LocalMetricManager implements MetricManager {
             private final QueryOptions options;
             private final DataInMemoryReporter dataInMemoryReporter;
             private final Span parentSpan;
-            private final MetricType source;
 
             private Transform(
                 final FullQuery.Request request,
@@ -213,9 +213,9 @@ public class LocalMetricManager implements MetricManager {
                 final Span parentSpan
             ) {
                 this.aggregation = request.aggregation();
+                this.metricType = request.metricType();
                 this.range = request.range();
                 this.options = request.options();
-                this.source = request.source();
 
                 this.failOnLimits = failOnLimits;
                 this.seriesLimit = seriesLimit;
@@ -322,7 +322,7 @@ public class LocalMetricManager implements MetricManager {
 
                         fetchSeries.addAnnotation(series.toString());
                         fetches.add(() -> metricBackend.fetch(
-                            new FetchData.Request(source, series, range, options),
+                            new FetchData.Request(metricType, series, range, options),
                             quotaWatcher,
                             mcr -> collector.acceptMetricsCollection(series, mcr),
                             fetchSeries

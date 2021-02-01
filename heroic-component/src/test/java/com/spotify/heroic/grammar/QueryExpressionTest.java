@@ -36,7 +36,7 @@ public class QueryExpressionTest extends AbstractExpressionTest<QueryExpression>
         final QueryExpression e = build();
 
         assertEquals(select, e.getSelect());
-        assertEquals(source, e.getSource());
+        assertEquals(source, e.getMetricType());
         assertEquals(range, e.getRange());
         assertEquals(filter, e.getFilter());
         assertEquals(with, e.getWith());
