@@ -21,32 +21,36 @@
 
 package com.spotify.heroic.servlet;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
+import com.spotify.heroic.ws.ErrorMessage;
+import com.spotify.heroic.ws.MandatoryClientIdErrorMessage;
 import java.io.IOException;
-import javax.servlet.Filter;
 import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response.Status;
 
 /**
  * Rejects anonymous requests. That is, requests to any API endpoint that are
- * missing a non-null X-Client-Id HTTP header.
+ * missing a non-null X-Client-Id HTTP header.<p></p>
+ * *Note* that this @SuppressWarnings has to go here even though it's just for the doFilter
+ * method, else the JavaDoc for it doesn't render. Weird.
  */
-// Note that this @Suppress has to go here even though it's just for the doFilter
-// method, else the JavaDoc for it doesn't render. Weird.
 @SuppressWarnings("checkstyle:LineLength")
-public class MandatoryClientIdFilter implements Filter {
+public class MandatoryClientIdFilter extends SimpleFilter {
 
     public static final String X_CLIENT_ID_HEADER_NAME = "X-Client-Id";
+    public static final String ERROR_MESSAGE_TEXT =
+            "This anonymous request has been rejected. Please add a 'x-client-id' " +
+                    "HTTP header to your request. Help can be found in the" +
+                    " #monitoring-users Slack channel.";
 
-    @Override
-    public void init(FilterConfig filterConfig) throws ServletException { /* intentionally empty
-    */ }
+    public MandatoryClientIdFilter(ObjectMapper mapper) {
+        super(mapper);
+    }
 
     /**
      * Reject (with a 400) the request, if the X-Client-Id HTTP header is not present
@@ -62,15 +66,17 @@ public class MandatoryClientIdFilter implements Filter {
      * to the client.
      */
     @Override
-    public void doFilter(
-        ServletRequest request, ServletResponse response, FilterChain chain
+    public ErrorMessage doFilterImpl(
+            HttpServletRequest request, HttpServletResponse response, FilterChain chain
     ) throws IOException, ServletException {
-        if (passesFilter(request)) {
-            chain.doFilter(request, response);
-        } else {
-            var httpResponse = HttpServletResponse.class.cast(response);
-            httpResponse.setStatus(Status.BAD_REQUEST.getStatusCode());
-        }
+
+        final var info =
+                new MandatoryClientIdErrorMessage("Anonymous requests are not permitted",
+                        Status.SERVICE_UNAVAILABLE);
+
+        response.setStatus(Status.BAD_REQUEST.getStatusCode());
+
+        return info;
     }
 
     /**
@@ -78,11 +84,10 @@ public class MandatoryClientIdFilter implements Filter {
      * @param request request to pluck X-Client-Id's value from
      * @return see above
      */
-    public static boolean passesFilter(ServletRequest request) {
+    @Override
+    public boolean passesFilter(ServletRequest request) {
         var req = HttpServletRequest.class.cast(request);
         return !Strings.isNullOrEmpty(req.getHeader(X_CLIENT_ID_HEADER_NAME));
     }
 
-    @Override
-    public void destroy() { /* intentionally empty */ }
 };

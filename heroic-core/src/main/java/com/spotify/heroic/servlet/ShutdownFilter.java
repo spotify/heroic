@@ -22,64 +22,39 @@
 package com.spotify.heroic.servlet;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
+import com.spotify.heroic.ws.ErrorMessage;
 import com.spotify.heroic.ws.InternalErrorMessage;
-
-import javax.servlet.Filter;
+import java.io.IOException;
+import java.util.function.Supplier;
 import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response.Status;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.util.function.Supplier;
 
-public class ShutdownFilter implements Filter {
-    private static final String CONTENT_TYPE = "application/json; charset=UTF-8";
-
+public class ShutdownFilter extends SimpleFilter {
     private final Supplier<Boolean> stopping;
-    private final ObjectMapper mapper;
 
     public ShutdownFilter(final Supplier<Boolean> stopping, final ObjectMapper mapper) {
+        super(mapper);
         this.stopping = stopping;
-        this.mapper = mapper;
     }
 
     @Override
-    public void init(FilterConfig filterConfig) throws ServletException {
+    public boolean passesFilter(ServletRequest request) {
+        return !stopping.get();
     }
 
     @Override
-    public void doFilter(
-        final ServletRequest request, final ServletResponse response, final FilterChain chain
+    public ErrorMessage doFilterImpl(
+            final HttpServletRequest request, final HttpServletResponse response,
+            final FilterChain chain
     ) throws IOException, ServletException {
-        if (!stopping.get()) {
-            chain.doFilter(request, response);
-            return;
-        }
+        final var info =
+                new InternalErrorMessage("Heroic is shutting down", Status.SERVICE_UNAVAILABLE);
 
-        final HttpServletResponse httpResponse = (HttpServletResponse) response;
-
-        final InternalErrorMessage info =
-            new InternalErrorMessage("Heroic is shutting down", Status.SERVICE_UNAVAILABLE);
-
-        httpResponse.setStatus(Status.SERVICE_UNAVAILABLE.getStatusCode());
-        httpResponse.setContentType(CONTENT_TYPE);
-
-        // intercept request
-        try (final ByteArrayOutputStream output = new ByteArrayOutputStream(4096)) {
-            final OutputStreamWriter writer = new OutputStreamWriter(output, Charsets.UTF_8);
-            mapper.writeValue(writer, info);
-            response.setContentLength(output.size());
-            output.writeTo(httpResponse.getOutputStream());
-        }
-    }
-
-    @Override
-    public void destroy() {
+        response.setStatus(Status.SERVICE_UNAVAILABLE.getStatusCode());
+        return info;
     }
 };
