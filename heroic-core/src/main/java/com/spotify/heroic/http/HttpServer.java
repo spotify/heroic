@@ -128,7 +128,7 @@ public class HttpServer implements LifeCycles {
             connectors.stream().map(c -> c.setup(server, address)).iterator());
     }
 
-    private ServerConnector findServerConnector(Server server) {
+    private static ServerConnector findServerConnector(Server server) {
         final Connector[] connectors = server.getConnectors();
 
         if (connectors.length == 0) {
@@ -213,7 +213,7 @@ public class HttpServer implements LifeCycles {
 
         context.addServlet(jerseyServlet, "/*");
         context.addFilter(new FilterHolder(new ShutdownFilter(stopping, mapper)), "/*", null);
-        context.addFilter(new FilterHolder(new MandatoryClientIdFilter()), "/*", null);
+        context.addFilter(new FilterHolder(new MandatoryClientIdFilter(mapper)), "/*", null);
         context.setErrorHandler(new JettyJSONErrorHandler(mapper));
 
         final RequestLogHandler requestLogHandler = new RequestLogHandler();
@@ -230,7 +230,7 @@ public class HttpServer implements LifeCycles {
         return handlers;
     }
 
-    private void makeRewriteRules(RewriteHandler rewrite) {
+    private static void makeRewriteRules(RewriteHandler rewrite) {
         {
             final RewritePatternRule rule = new RewritePatternRule();
             rule.setPattern("/metrics");
