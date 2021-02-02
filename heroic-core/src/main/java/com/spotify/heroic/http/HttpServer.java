@@ -213,7 +213,7 @@ public class HttpServer implements LifeCycles {
 
         context.addServlet(jerseyServlet, "/*");
         context.addFilter(new FilterHolder(new ShutdownFilter(stopping, mapper)), "/*", null);
-        context.addFilter(new FilterHolder(new MandatoryClientIdFilter(mapper)), "/*", null);
+        context.addFilter(new FilterHolder(new MandatoryClientIdFilter(mapper)), "/query/*", null);
         context.setErrorHandler(new JettyJSONErrorHandler(mapper));
 
         final RequestLogHandler requestLogHandler = new RequestLogHandler();

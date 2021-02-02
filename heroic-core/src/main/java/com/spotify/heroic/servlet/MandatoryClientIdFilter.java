@@ -45,8 +45,7 @@ public class MandatoryClientIdFilter extends SimpleFilter {
     public static final String X_CLIENT_ID_HEADER_NAME = "X-Client-Id";
     public static final String ERROR_MESSAGE_TEXT =
             "This anonymous request has been rejected. Please add a 'x-client-id' " +
-                    "HTTP header to your request. Help can be found in the" +
-                    " #monitoring-users Slack channel.";
+                    "HTTP header to your request.";
 
     public MandatoryClientIdFilter(ObjectMapper mapper) {
         super(mapper);
@@ -71,11 +70,9 @@ public class MandatoryClientIdFilter extends SimpleFilter {
     ) throws IOException, ServletException {
 
         final var info =
-                new MandatoryClientIdErrorMessage("Anonymous requests are not permitted",
-                        Status.SERVICE_UNAVAILABLE);
+                new MandatoryClientIdErrorMessage("Anonymous requests are not permitted");
 
         response.setStatus(Status.BAD_REQUEST.getStatusCode());
-
         return info;
     }
 

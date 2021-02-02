@@ -21,11 +21,11 @@
 
 package com.spotify.heroic.ws;
 
-import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 
 public class MandatoryClientIdErrorMessage extends ErrorMessage {
-    public MandatoryClientIdErrorMessage(final String message, final Response.Status status) {
-        super(message, status);
+    public MandatoryClientIdErrorMessage(final String message) {
+        super(message, Status.BAD_REQUEST);
     }
 
     public String getType() {
