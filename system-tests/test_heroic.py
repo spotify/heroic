@@ -49,7 +49,6 @@ def api_session(session_scoped_container_getter):
 
 
 def test_loading(api_session):
-    api_session.headers.update({'x-client-id': 'Heroic--System-Tests'})
     resp = api_session.get('/status', timeout=10)
 
     assert resp.ok
@@ -61,8 +60,15 @@ def test_loading(api_session):
     assert status['metadataBackend']['ok']
     assert status['cluster']['ok']
 
-def test_loading_no_client_id(api_session):
+# This should return a 400 because it's an anonymous request
+def test_query_no_client_id(api_session):
     api_session.headers.update({'x-client-id': ''})
-    resp = api_session.get('/status', timeout=10)
-    assert resp.status_code == requests.codes['bad_request']
+    resp = api_session.post('/query/metrics', timeout=5)
+    assert requests.codes['bad_request'] == resp.status_code
+
+# This should return a 500 because it's a malformed request
+def test_query_with_client_id(api_session):
+    api_session.headers.update({'x-client-id': 'test-heroic-system-test'})
+    resp = api_session.post('/query/metrics', timeout=5)
+    assert requests.codes['internal_server_error'] == resp.status_code
 
