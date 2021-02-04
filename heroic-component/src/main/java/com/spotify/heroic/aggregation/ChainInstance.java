@@ -33,6 +33,7 @@ import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
+import com.spotify.heroic.metric.TdigestPoint;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -280,6 +281,13 @@ public class ChainInstance implements AggregationInstance {
             Map<String, String> key, Set<Series> series, List<DistributionPoint> values
         ) {
             first.updateDistributionPoints(key, series, values);
+        }
+
+        @Override
+        public void updateTDigestPoints(
+            Map<String, String> key, Set<Series> series, List<TdigestPoint> values
+        ) {
+            first.updateTDigestPoints(key, series, values);
         }
 
         @Override

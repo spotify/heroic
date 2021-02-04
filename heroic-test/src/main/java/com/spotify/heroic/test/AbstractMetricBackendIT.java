@@ -22,6 +22,7 @@
 package com.spotify.heroic.test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeNotNull;
 import static org.junit.Assume.assumeTrue;
 
 import com.google.common.collect.ImmutableList;
@@ -82,7 +83,7 @@ public abstract class AbstractMetricBackendIT {
      * See: https://github.com/spotify/heroic/pull/208 */
     protected boolean brokenSegmentsPr208 = false;
     protected boolean eventSupport = false;
-    protected Optional<Integer> maxBatchSize = Optional.empty();
+    protected Integer maxBatchSize = null;
     protected boolean hugeRowKey = true;
 
     @Rule
@@ -165,8 +166,7 @@ public abstract class AbstractMetricBackendIT {
      */
     @Test
     public void testMaxBatchSize() throws Exception {
-        assumeTrue("max batch size", maxBatchSize.isPresent());
-        final int maxBatchSize = this.maxBatchSize.get();
+        assumeNotNull("max batch size", maxBatchSize);
         final int maxBatchMultiplier = 4;
         DateRange range = new DateRange(99L, 100L + (maxBatchSize * maxBatchMultiplier));
 
@@ -231,8 +231,8 @@ public abstract class AbstractMetricBackendIT {
 
     // Compare the metrics contained in the MetricCollections, ignoring if the data was split into
     // multiple MCs or not.
-    private void assertSortedMetricsEqual(
-        final Set<MetricCollection> expected, final Set<MetricCollection> actual
+    private static void assertSortedMetricsEqual(
+            final Set<MetricCollection> expected, final Set<MetricCollection> actual
     ) {
         final Comparator<Metric> comparator = Comparator.comparingLong(Metric::getTimestamp);
 

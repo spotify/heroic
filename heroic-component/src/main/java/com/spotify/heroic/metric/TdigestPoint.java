@@ -21,27 +21,32 @@
 
 package com.spotify.heroic.metric;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.auto.value.AutoValue;
 import com.google.common.hash.Hasher;
+import com.tdunning.math.stats.TDigest;
 import org.jetbrains.annotations.NotNull;
 
-@JsonSerialize(using = DistributionPointSerializer.class)
-@JsonDeserialize(using = DistributionPointDeserialize.class)
+@JsonSerialize(using = TdigestPointSerializer.class)
+@JsonDeserialize(using = TdigestPointDeserialize.class)
 @AutoValue
-public abstract class DistributionPoint implements Metric {
+public abstract class TdigestPoint implements Metric {
 
     public abstract long getTimestamp();
-    public abstract Distribution value();
+    public abstract TDigest value();
 
-    public static DistributionPoint create(final Distribution value, final long timestamp) {
-        return new AutoValue_DistributionPoint(timestamp, value);
+    @JsonCreator
+    public static TdigestPoint create(@JsonProperty("value")final TDigest value,
+                                      @JsonProperty("timestamp")final long timestamp) {
+        return new AutoValue_TdigestPoint(timestamp, value);
     }
 
     @Override
     public boolean valid() {
-        return value().getValue() != null &&  !value().getValue().isEmpty();
+        return true;
     }
 
     @Override
@@ -49,3 +54,4 @@ public abstract class DistributionPoint implements Metric {
         hasher.putInt(this.hashCode());
     }
 }
+

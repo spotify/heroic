@@ -2,10 +2,10 @@
 
 import pytest
 import requests
-from requests.adapters import HTTPAdapter
-import urllib.parse
-from urllib3.util.retry import Retry
 import time
+import urllib.parse
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 pytest_plugins = ['docker_compose']
 
@@ -46,16 +46,25 @@ def api_session(session_scoped_container_getter):
                     backoff_factor=0.1,
                     status_forcelist=[500, 502, 503, 504])
     request_session.mount('http://', HTTPAdapter(max_retries=retries))
+
     return request_session
 
 
 def test_loading(api_session):
+    api_session.headers.update({'x-client-id': 'Heroic--System-Tests'})
     resp = api_session.get('/status', timeout=10)
-    assert resp.ok
-    status = resp.json()
 
+    assert resp.ok
+
+    status = resp.json()
     assert status['ok']
     assert status['consumers']['ok']
     assert status['backends']['ok']
     assert status['metadataBackend']['ok']
     assert status['cluster']['ok']
+
+def test_loading_no_client_id(api_session):
+    api_session.headers.update({'x-client-id': ''})
+    resp = api_session.get('/status', timeout=10)
+    assert resp.status_code == requests.codes['bad_request']
+

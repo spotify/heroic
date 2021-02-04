@@ -34,6 +34,8 @@ interface Bucket {
 
     fun updateDistributionPoint(key: Map<String,String>, sample: DistributionPoint)
 
+    fun updateTDigestPoint(key: Map<String,String>, sample: TdigestPoint)
+
     /**
      * Get the timestamp for the bucket.
      *

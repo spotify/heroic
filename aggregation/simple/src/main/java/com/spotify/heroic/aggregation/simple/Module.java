@@ -35,10 +35,9 @@ import com.spotify.heroic.grammar.Expression;
 import com.spotify.heroic.grammar.IntegerExpression;
 import dagger.Component;
 import eu.toolchain.serializer.SerializerFramework;
-
+import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Named;
-import java.util.Optional;
 
 public class Module implements HeroicModule {
     @Override
@@ -96,6 +95,9 @@ public class Module implements HeroicModule {
 
             c.register(GroupUnique.NAME, GroupUnique.class, GroupUniqueInstance.class,
                 samplingBuilder(GroupUnique::new));
+
+            c.register(Tdigest.NAME, Tdigest.class, TdigestInstance.class,
+                samplingBuilder(Tdigest::new));
 
             c.register(Quantile.NAME, Quantile.class, QuantileInstance.class,
                 new SamplingAggregationDSL<Quantile>(factory) {

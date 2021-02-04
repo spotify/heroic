@@ -23,10 +23,11 @@ package com.spotify.heroic.aggregation;
 
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.metric.ShardedResultGroup;
-
 import java.util.List;
 
+
 public interface AggregationCombiner {
+
     List<ShardedResultGroup> combine(List<List<ShardedResultGroup>> all);
 
     AggregationCombiner DEFAULT = new AggregationCombiner() {
@@ -46,6 +47,21 @@ public interface AggregationCombiner {
         @Override
         public String toString() {
             return "DEFAULT";
+        }
+    };
+
+
+    AggregationCombiner TDIGEST_DEFAULT = new AggregationCombiner() {
+        @Override
+        public List<ShardedResultGroup> combine(
+            final List<List<ShardedResultGroup>> all
+        ) {
+            return TDigestAggregationCombiner.simpleCombine(all);
+        }
+
+        @Override
+        public String toString() {
+            return "TDIGEST_DEFAULT";
         }
     };
 }

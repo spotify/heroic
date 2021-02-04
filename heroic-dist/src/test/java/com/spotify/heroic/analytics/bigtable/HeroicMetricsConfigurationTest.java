@@ -9,6 +9,7 @@ import com.spotify.heroic.metric.MetricsConnectionSettings;
 import com.spotify.heroic.metric.bigtable.BigtableBackend;
 import com.spotify.heroic.metric.bigtable.BigtableMetricModule;
 import com.spotify.heroic.metric.bigtable.MetricsRowKeySerializer;
+import eu.toolchain.async.TinyAsync;
 import eu.toolchain.serializer.TinySerializer;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
@@ -59,14 +60,12 @@ public class HeroicMetricsConfigurationTest {
                 Optional.of(maxElapsedBackoffMs));
 
         var bigtableBackend = new BigtableBackend(null,
-                serializer,
                 new MetricsRowKeySerializer(),
                 null,
                 null,
                 "bananas",
                 false,
                 connectionSettings,
-                null,
                 null);
         return bigtableBackend;
     }
@@ -112,8 +111,7 @@ public class HeroicMetricsConfigurationTest {
         // @formatter:off
         instance.inject(coreComponent -> {
             var metricManager =
-                    (LocalMetricManager) ((DaggerCoreComponent) coreComponent)
-                            .metricManager();
+                    (LocalMetricManager) coreComponent.metricManager();
             var analyticsBackend =
                     metricManager
                             .groupSet()

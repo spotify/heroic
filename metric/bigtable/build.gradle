@@ -14,6 +14,8 @@ dependencies {
     implementation 'eu.toolchain.serializer:tiny-serializer-core'
     implementation 'org.apache.logging.log4j:log4j-core'
 
+    implementation 'com.tdunning:t-digest'
+
     // dropwizard is a runtime requirement for bigtable-client-core.
     // since its excluded above, we need to ensure it gets pulled in via semantic-metrics
     implementation 'com.spotify.metrics:semantic-metrics-core'

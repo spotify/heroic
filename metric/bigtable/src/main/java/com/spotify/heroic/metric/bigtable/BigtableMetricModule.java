@@ -197,9 +197,9 @@ public final class BigtableMetricModule implements MetricModule, DynamicModuleId
                 }
 
                 @Override
-                public AsyncFuture<Void> destruct(final BigtableConnection value) {
+                public AsyncFuture<Void> destruct(final BigtableConnection t) {
                     return async.call(() -> {
-                        value.close();
+                        t.close();
                         return null;
                     });
                 }

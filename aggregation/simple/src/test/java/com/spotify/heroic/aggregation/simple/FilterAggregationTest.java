@@ -1,14 +1,13 @@
 package com.spotify.heroic.aggregation.simple;
 
+import static org.junit.Assert.assertEquals;
+
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.test.FakeModuleLoader;
 import org.junit.Before;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
 
 public class FilterAggregationTest {
     private ObjectMapper mapper;
@@ -47,6 +46,13 @@ public class FilterAggregationTest {
         // TODO: support @JsonCreator
         // verifyClassBuilder(TopKInstance.class).checkGetters(false).verify();
         verifyRoundtrip("{\"type\":\"topk\",\"k\":0}", new TopKInstance(0), TopKInstance.class);
+    }
+
+    @Test
+    public void testTDigestInstance() throws Exception {
+        AggregationInstance aggregationInstance = new TdigestInstance(0, 0);
+        verifyRoundtrip("{\"type\":\"tdigest\",\"size\":0,\"extent\":0}",
+            aggregationInstance , AggregationInstance.class);
     }
 
     private <T> void verifyRoundtrip(

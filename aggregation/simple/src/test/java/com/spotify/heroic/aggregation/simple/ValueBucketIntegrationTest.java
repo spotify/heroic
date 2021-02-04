@@ -4,7 +4,10 @@ import static org.junit.Assert.assertEquals;
 
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.aggregation.DoubleBucket;
+import com.spotify.heroic.aggregation.TDigestBucket;
+import com.spotify.heroic.metric.DistributionPoint;
 import com.spotify.heroic.metric.Point;
+import com.tdunning.math.stats.TDigest;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -62,6 +65,62 @@ public abstract class ValueBucketIntegrationTest {
     }
 
     public abstract Collection<? extends DoubleBucket> buckets();
+
+    public Collection<? extends TDigestBucket> tDigestBuckets(){
+        return List.of();
+    }
+
+
+    @Test(timeout = 10000)
+    public void testTDigestBucket() throws InterruptedException, ExecutionException {
+        final Random rnd = new Random();
+
+
+
+        for (final TDigestBucket bucket : tDigestBuckets()) {
+            final List<Future<Void>> futures = new ArrayList<>();
+
+            TDigest expected = TDigest.createDigest(100.0);
+
+            for (int iteration = 0; iteration < iterations; iteration++) {
+                final List<DistributionPoint> updates = new ArrayList<>();
+                for (int i = 0; i< 10; i++) {
+                    int count = 5;
+                    double [] data = new double[count];
+                    while (count-- > 0) {
+                        double sample = rnd.nextDouble();
+                        data[count] = sample;
+                        expected.add(sample);
+                    }
+                    DistributionPoint dp =  DistributionPointUtils
+                        .createDistributionPoint(data, System.currentTimeMillis());
+                    updates.add(dp);
+                }
+
+                for (int thread = 0; thread < threadCount; thread++) {
+                    futures.add(service.submit(new Callable<Void>() {
+                        @Override
+                        public Void call() throws Exception {
+                            for (final DistributionPoint d : updates) {
+                                bucket.updateDistributionPoint(tags, d);
+                            }
+
+                            return null;
+                        }
+                    }));
+                }
+
+                for (final Future<Void> f : futures) {
+                    f.get();
+                }
+            }
+
+            assertEquals(bucket.getClass().getSimpleName(), expected.size()*threadCount,
+                bucket.value().size());
+
+        }
+    }
+
 
     @Test(timeout = 10000)
     public void testExpectedValue() throws InterruptedException, ExecutionException {

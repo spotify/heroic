@@ -22,6 +22,7 @@
 package com.spotify.heroic.suggest.elasticsearch;
 
 import static com.spotify.heroic.elasticsearch.ResourceLoader.loadJson;
+import static io.opencensus.trace.AttributeValue.booleanAttributeValue;
 import static org.elasticsearch.index.query.QueryBuilders.boolQuery;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 import static org.elasticsearch.index.query.QueryBuilders.prefixQuery;
@@ -120,13 +121,15 @@ import org.elasticsearch.search.aggregations.metrics.Cardinality;
 import org.elasticsearch.search.aggregations.metrics.CardinalityAggregationBuilder;
 import org.elasticsearch.search.aggregations.metrics.TopHitsAggregationBuilder;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @ElasticsearchScope
 public class SuggestBackendKV extends AbstractElasticsearchBackend
     implements SuggestBackend, Grouped, LifeCycles {
 
-    private NumSuggestionsLimit numSuggestionsLimit = NumSuggestionsLimit.of();
-    private final Tracer tracer = Tracing.getTracer();
+    private static final Logger LOGGER = LoggerFactory.getLogger(SuggestBackendKV.class);
+    private static final Tracer tracer = Tracing.getTracer();
     private static final String WRITE_CACHE_SIZE = "write-cache-size";
 
     private static final String TAG_TYPE = "tag";
@@ -154,6 +157,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
     private static final String[] KEY_SUGGEST_SOURCES = new String[] {KEY};
     private static final String[] TAG_SUGGEST_SOURCES = new String[] {TAG_SKEY, TAG_SVAL};
 
+    private final NumSuggestionsLimit numSuggestionsLimit;
     private final Managed<Connection> connection;
     private final SuggestBackendReporter reporter;
 
@@ -457,9 +461,9 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                                     errors.add(NodeError.internalError(r.getFailureMessage()));
 
                                     if (r.getFailure().getCause()
-                                        instanceof VersionConflictEngineException ||
+                                            instanceof VersionConflictEngineException ||
                                         r.getFailure().getMessage()
-                                        .contains("version_conflict_engine_exception")) {
+                                            .contains("version_conflict_engine_exception")) {
                                         reporter.reportWriteDroppedByDuplicate();
                                     } else if (addFailureAnnotation) {
                                         rootSpan.addAnnotation(r.getFailureMessage());
@@ -473,8 +477,13 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
                                 ImmutableList.of(response.getTook().getMillis()),
                                 ImmutableList.of());
                         })
-                        .onDone(writeContext)
-                        .onFinished(rootSpan::end);
+                    .onDone(writeContext)
+                    .onFinished(rootSpan::end)
+                    .onFailed(error -> {
+                        LOGGER.error("Metadata write failed: ", error);
+                        rootSpan.putAttribute("error", booleanAttributeValue(true));
+                        rootSpan.addAnnotation(error.getMessage());
+                    });
             });
     }
 

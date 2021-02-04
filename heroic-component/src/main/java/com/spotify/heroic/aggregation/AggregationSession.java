@@ -27,6 +27,7 @@ import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Payload;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
+import com.spotify.heroic.metric.TdigestPoint;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -42,6 +43,9 @@ public interface AggregationSession {
 
     void updateDistributionPoints(Map<String, String> key, Set<Series> series,
                                   List<DistributionPoint> points);
+
+    void updateTDigestPoints(Map<String, String> key, Set<Series> series,
+                             List<TdigestPoint> points);
 
     /**
      * Get the result of this aggregator.

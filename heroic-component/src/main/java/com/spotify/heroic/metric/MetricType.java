@@ -22,7 +22,6 @@
 package com.spotify.heroic.metric;
 
 import com.google.common.collect.ImmutableMap;
-
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
@@ -42,7 +41,8 @@ public enum MetricType {
     GROUP(MetricGroup.class, "groups"),
     // TODO: rename to PAYLOAD.
     CARDINALITY(Payload.class, "cardinality"),
-    DISTRIBUTION_POINTS(DistributionPoint.class, "distributionPoints");
+    DISTRIBUTION_POINTS(DistributionPoint.class, "distributionPoints"),
+    TDIGEST_POINT(TdigestPoint.class, "tdigestPoints");
     // @formatter:on
 
     private final Class<? extends Metric> type;

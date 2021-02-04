@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.metric;
 
-    import com.google.auto.value.AutoValue;
-    import com.google.protobuf.ByteString;
-    import java.nio.ByteBuffer;
+import com.google.auto.value.AutoValue;
+import com.google.protobuf.ByteString;
+import java.nio.ByteBuffer;
 
 @AutoValue
 public abstract class HeroicDistribution implements Distribution {
