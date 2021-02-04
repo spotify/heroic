@@ -33,3 +33,5 @@ response_fields:
   type_name: 'Statistics'
   purpose: 'Statistics about the current query. This field should be inspected for errors which will have caused the result to be inconsistent.'
 ---
+<em>Note that the <code>x-client-id: my_app_name</code> 
+header must be supplied since anonymous requests are not permitted.</em>

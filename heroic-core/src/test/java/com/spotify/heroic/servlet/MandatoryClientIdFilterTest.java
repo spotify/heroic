@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
@@ -53,7 +54,7 @@ public class MandatoryClientIdFilterTest {
 
     @BeforeClass
     public static void setUpClass() {
-        filter = new MandatoryClientIdFilter();
+        filter = new MandatoryClientIdFilter(new ObjectMapper());
     }
 
     @Before

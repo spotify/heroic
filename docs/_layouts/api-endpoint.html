@@ -44,7 +44,7 @@ layout: sidebar
       <h4>Example Curl</h4>
       <pre><code class="language-bash">
           {%- capture headers %}
-          {%- unless page.empty %}-H "X-Client-Id: my_app_name" -H "Content-Type: application/json"
+          {%- unless page.empty %}-H "Content-Type: application/json"
         {%
         endunless %}
           {%- endcapture %}
