@@ -40,11 +40,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class QueryBuilder {
-    private Optional<MetricType> source = Optional.empty();
     private Optional<Map<String, String>> tags = Optional.empty();
     private Optional<String> key = Optional.empty();
     private Optional<Filter> filter = Optional.empty();
     private Optional<QueryDateRange> range = Optional.empty();
+    private Optional<MetricType> metricType = Optional.empty();
     private Optional<Aggregation> aggregation = Optional.empty();
     private Optional<QueryOptions> options = Optional.empty();
     private Optional<JsonNode> clientContext = Optional.empty();
@@ -98,16 +98,20 @@ public class QueryBuilder {
     }
 
     /**
+     * Specify a metricType to use, if none are specified it will be determined in CoreQueryManager.
+     */
+    public QueryBuilder metricType(final Optional<MetricType> metricType) {
+        checkNotNull(metricType, "metricType must not be null");
+        this.metricType = pickOptional(this.metricType, metricType);
+        return this;
+    }
+
+    /**
      * Specify an aggregation to use.
      */
     public QueryBuilder aggregation(final Optional<Aggregation> aggregation) {
         checkNotNull(aggregation, "aggregation must not be null");
         this.aggregation = pickOptional(this.aggregation, aggregation);
-        return this;
-    }
-
-    public QueryBuilder source(Optional<MetricType> source) {
-        this.source = source;
         return this;
     }
 
@@ -146,7 +150,7 @@ public class QueryBuilder {
     }
 
     public Query build() {
-        return new Query(aggregation, source, range, legacyFilter(), options, features);
+        return new Query(aggregation, metricType, range, legacyFilter(), options, features);
     }
 
 

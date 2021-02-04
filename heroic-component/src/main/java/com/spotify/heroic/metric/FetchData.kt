@@ -47,7 +47,7 @@ data class FetchData(
     }
 
     data class Request(
-        val type: MetricType,
+        val metricType: MetricType,
         val series: Series,
         val range: DateRange,
         val options: QueryOptions

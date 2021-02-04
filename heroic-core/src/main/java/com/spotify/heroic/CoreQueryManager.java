@@ -35,7 +35,9 @@ import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.BucketStrategy;
 import com.spotify.heroic.aggregation.DistributedAggregationCombiner;
 import com.spotify.heroic.aggregation.Empty;
+import com.spotify.heroic.aggregation.GroupInstance;
 import com.spotify.heroic.aggregation.TDigestAggregationCombiner;
+import com.spotify.heroic.aggregation.simple.TdigestInstance;
 import com.spotify.heroic.cache.QueryCache;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.ClusterNode;
@@ -100,6 +102,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class CoreQueryManager implements QueryManager {
+
     private static final Logger log = LoggerFactory.getLogger(CoreQueryManager.class);
     public static final long SHIFT_TOLERANCE = TimeUnit.MILLISECONDS.convert(10, TimeUnit.SECONDS);
     public static final QueryTrace.Identifier QUERY_SHARD =
@@ -172,7 +175,7 @@ public class CoreQueryManager implements QueryManager {
         return expressions.get(0).eval(scope).visit(new Expression.Visitor<QueryBuilder>() {
             @Override
             public QueryBuilder visitQuery(final QueryExpression e) {
-                final Optional<MetricType> source = e.getSource();
+                final Optional<MetricType> metricType = e.getMetricType();
 
                 final Optional<QueryDateRange> range =
                     e.getRange().map(expr -> expr.visit(new Expression.Visitor<QueryDateRange>() {
@@ -203,9 +206,9 @@ public class CoreQueryManager implements QueryManager {
                 final Optional<Filter> filter = e.getFilter();
 
                 return new QueryBuilder()
-                    .source(source)
                     .range(range)
                     .aggregation(aggregation)
+                    .metricType(metricType)
                     .filter(filter);
             }
         });
@@ -238,9 +241,9 @@ public class CoreQueryManager implements QueryManager {
 
             final List<AsyncFuture<QueryResultPart>> futures = new ArrayList<>();
 
-            final MetricType source = q.getSource().orElse(MetricType.POINT);
-
             final Aggregation aggregation = q.getAggregation().orElse(Empty.INSTANCE);
+
+            MetricType metricType = q.getMetricType().orElse(MetricType.POINT);
 
             final DateRange rawRange = buildRange(q);
 
@@ -252,6 +255,8 @@ public class CoreQueryManager implements QueryManager {
             final AggregationInstance root = aggregation.apply(context);
 
             final AggregationInstance aggregationInstance;
+
+            final AggregationCombiner combiner;
 
             final Features features = requestFeatures(q, queryContext);
 
@@ -279,20 +284,23 @@ public class CoreQueryManager implements QueryManager {
                 .orElseGet(() -> features.withFeature(Feature.END_BUCKET, () -> BucketStrategy.END,
                     () -> BucketStrategy.START));
 
-            final AggregationCombiner combiner;
-
+            if (aggregationInstance instanceof GroupInstance) {
+                if (((GroupInstance) aggregationInstance).getEach() instanceof TdigestInstance) {
+                    metricType = MetricType.DISTRIBUTION_POINTS;
+                }
+            }
 
             if (isDistributed) {
-                combiner = (source.equals(MetricType.POINT)) ?
+                combiner = (metricType.equals(MetricType.POINT)) ?
                     DistributedAggregationCombiner.create(root, range, bucketStrategy) :
-                    TDigestAggregationCombiner.create(root, range, bucketStrategy);
+                      TDigestAggregationCombiner.create(root, range, bucketStrategy);
             } else {
-                combiner = (source.equals(MetricType.DISTRIBUTION_POINTS)) ?
+                combiner = (metricType.equals(MetricType.DISTRIBUTION_POINTS)) ?
                     AggregationCombiner.TDIGEST_DEFAULT : AggregationCombiner.DEFAULT;
             }
 
             final FullQuery.Request request =
-                FullQuery.Request.create(source, filter, range, aggregationInstance, options,
+                FullQuery.Request.create(filter, range, aggregationInstance, metricType, options,
                     queryContext, features);
 
             queryLogger.logOutgoingRequestToShards(queryContext, request);
@@ -335,21 +343,20 @@ public class CoreQueryManager implements QueryManager {
                     QueryResult.collectParts(QUERY, range, combiner, limit));
             });
 
+            return query
+                .directTransform(result -> {
+                    reportCompletedQuery(result, fullQueryWatch);
+                    if (result.getErrors().size() > 0) {
+                        queryManagerSpan.addAnnotation(result.getErrors().toString());
+                        queryManagerSpan.putAttribute("error", booleanAttributeValue(true));
+                    }
+                    queryManagerSpan.putAttribute("preAggregationSampleSize",
+                        longAttributeValue(result.getPreAggregationSampleSize()));
 
-          return query
-              .directTransform(result -> {
-                  reportCompletedQuery(result, fullQueryWatch);
-                  if (result.getErrors().size() > 0) {
-                      queryManagerSpan.addAnnotation(result.getErrors().toString());
-                      queryManagerSpan.putAttribute("error", booleanAttributeValue(true));
-                  }
-                  queryManagerSpan.putAttribute("preAggregationSampleSize",
-                      longAttributeValue(result.getPreAggregationSampleSize()));
-
-                  return result;
-              })
-              .onDone(reporter.reportQuery())
-              .onDone(new EndSpanFutureReporter(queryManagerSpan));
+                    return result;
+                })
+                .onDone(reporter.reportQuery())
+                .onDone(new EndSpanFutureReporter(queryManagerSpan));
         }
 
         private void reportCompletedQuery(
@@ -479,8 +486,7 @@ public class CoreQueryManager implements QueryManager {
             return (fullQuery, queryTraces) -> {
                 /* We want to store the current QT + queryTraces list of QT's.
                  * Create new QT with queryTraces + current QT as a children */
-                final List<QueryTrace> traces = new ArrayList<>();
-                traces.addAll(queryTraces);
+                final List<QueryTrace> traces = new ArrayList<>(queryTraces);
                 traces.add(fullQuery.trace());
                 final QueryTrace newTrace = shardLocalWatch.end(traces);
                 return fullQuery.withTrace(newTrace);
@@ -501,7 +507,7 @@ public class CoreQueryManager implements QueryManager {
                 hasWarnedSlicedDataFetch = true;
                 log.warn(
                     "The mandatory feature 'com.spotify.heroic.sliced_data_fetch' can't be " +
-                        "disabled!");
+                    "disabled!");
             }
         }
 
@@ -543,7 +549,7 @@ public class CoreQueryManager implements QueryManager {
 
     public static final long INTERVAL_GOAL = 240;
 
-    private Duration cadenceFromRange(final DateRange range) {
+    private static Duration cadenceFromRange(final DateRange range) {
         final long diff = range.diff();
         final long nominal = diff / INTERVAL_GOAL;
 
@@ -561,6 +567,7 @@ public class CoreQueryManager implements QueryManager {
      * too close or after 'now'. This is useful to avoid querying non-complete buckets.
      *
      * @param rawRange Original range.
+     *
      * @return A possibly shifted range.
      */
     DateRange buildShiftedRange(DateRange rawRange, long cadence, long now) {
@@ -585,10 +592,11 @@ public class CoreQueryManager implements QueryManager {
      * Calculate a tolerance shift period that corresponds to the given difference that needs to be
      * applied to the range to honor the tolerance shift period.
      *
-     * @param diff The time difference to apply.
+     * @param diff    The time difference to apply.
      * @param cadence The cadence period.
+     *
      * @return The number of milliseconds that the query should be shifted to get within 'now' and
-     * maintain the given cadence.
+     *     maintain the given cadence.
      */
     private long toleranceShiftPeriod(final long diff, final long cadence) {
         // raw query, only shift so that we are within now.

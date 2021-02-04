@@ -5,7 +5,6 @@ import static org.junit.Assert.assertFalse;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.protobuf.ByteString;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.consumer.schemas.spotify100.Version;
@@ -70,7 +69,8 @@ public abstract class AbstractConsumerIT extends AbstractSingleNodeIT {
 
             instance.inject(coreComponent -> {
                 FetchData.Request fetchDataRequest =
-                    new FetchData.Request(MetricType.DISTRIBUTION_POINTS, s1, new DateRange(0, 100),
+                    new FetchData.Request(MetricType.DISTRIBUTION_POINTS, s1, new DateRange(0,
+                     100),
                         QueryOptions.defaults());
                 return coreComponent
                     .metricManager()
@@ -247,7 +247,7 @@ public abstract class AbstractConsumerIT extends AbstractSingleNodeIT {
     }
 
 
-    Object createJsonMetric(final TMetric metric, final Series series){
+    static Object createJsonMetric(final TMetric metric, final Series series){
         Object jsonMetric;
         if (metric.getValue() instanceof  Value.DoubleValue){
             jsonMetric =
@@ -263,7 +263,7 @@ public abstract class AbstractConsumerIT extends AbstractSingleNodeIT {
         return jsonMetric;
     }
 
-    private void tryUntil(Callable<Void> callable) throws Exception {
+    private static void tryUntil(Callable<Void> callable) throws Exception {
         RetryPolicy.Instance instance = RETRY_POLICY.apply(ClockSource.SYSTEM);
         List<Throwable> supressed = new ArrayList<>();
 
