@@ -14,3 +14,6 @@ response_fields:
   purpose: Responses to each query run.
 ---
 This accepts a JSON document where all keys are expected to map up to a Query.
+<p></p>
+<em>Note that the <code>x-client-id: my_app_name</code> 
+header must be supplied since anonymous requests are not permitted.</em>
