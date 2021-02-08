@@ -1,0 +1,110 @@
+name: JavaCI
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up JDK 11
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v2
+        with:
+          path: |
+            - .gradle/
+            - ~/.gradle/
+          key: gradle-cache-{{ checksum "build.gradle" }}
+          restore-keys: |
+            - gradle-cache-{{ checksum "build.gradle" }}
+            - gradle-cache
+
+      - run: ./gradlew assemble
+
+      - run: ls
+
+      - run: ls .
+
+      - name: Upload for test
+        uses: actions/upload-artifact@v2
+        with:
+          name: artifact
+          path: |
+            */build
+            */*/build
+            */out
+            */*/out
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    container:
+      image: spotify/heroic:latest
+      ports:
+        - 8080:8080
+        - 9091:9091
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up JDK 11
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+
+      - run: sudo mkdir -p /usr/lib/jvm
+
+      - run: curl -s https://download.java.net/openjdk/jdk11/ri/openjdk-11+28_linux-x64_bin.tar.gz | sudo tar xfz - --directory /usr/lib/jvm
+
+      - run: sudo sh -c 'for bin in /usr/lib/jvm/jdk-11/bin/*; do update-alternatives --install /usr/bin/$(basename $bin) $(basename $bin) $bin 100; done'
+
+      - run: sudo sh -c 'for bin in /usr/lib/jvm/jdk-11/bin/*; do update-alternatives --set $(basename $bin) $bin; done'
+
+      - name: Restore Gradle Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            - .gradle/
+            - ~/.gradle/
+          key: gradle-cache-{{ checksum "build.gradle" }}
+          restore-keys: gradle-cache
+
+      - name: Download from build
+        uses: actions/download-artifact@v2
+        with:
+          name: artifact
+
+      - run: curl localhost:8080
+
+      - run: curl jvm://a
+
+      - run: ./gradlew --info check jacocoRootReport
+
+      - run: 'bash <(curl -s https://codecov.io/bash)'
+
+  system_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8.2
+
+      - run: pip install -r system-tests/requirements.txt
+
+      - run: docker build -t spotify/heroic .
+
+      - run: cd system-tests && pytest

@@ -1,8 +1,11 @@
 dependencies {
     implementation project(':heroic-component')
     implementation project(':heroic-core')
-    
+
+    api group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.25'
+
     implementation 'junit:junit'
+    implementation 'org.apache.logging.log4j:log4j-core'
     implementation 'org.mockito:mockito-core'
     implementation 'org.testcontainers:testcontainers'
     implementation "org.testcontainers:elasticsearch"

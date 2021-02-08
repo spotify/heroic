@@ -4,6 +4,7 @@ dependencies {
     implementation project(':heroic-component')
     testImplementation project(':heroic-test')
     kapt 'com.google.dagger:dagger-compiler'
+    implementation 'org.apache.logging.log4j:log4j-core'
 }
 
 group = 'com.spotify.heroic.metric'

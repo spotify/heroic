@@ -12,6 +12,7 @@ dependencies {
     implementation 'com.google.guava:guava'
     implementation project(':heroic-component')
     implementation 'eu.toolchain.serializer:tiny-serializer-core'
+    implementation 'org.apache.logging.log4j:log4j-core'
 
     implementation 'com.tdunning:t-digest'
 
