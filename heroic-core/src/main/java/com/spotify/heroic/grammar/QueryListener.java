@@ -330,11 +330,11 @@ class QueryListener extends HeroicQueryBaseListener {
     public void exitFrom(HeroicQueryParser.FromContext ctx) {
         final Context context = context(ctx);
 
-        final String sourceText = ctx.getChild(1).getText();
+        final String metricTypeText = ctx.getChild(1).getText();
 
-        final MetricType source = MetricType
-            .fromIdentifier(sourceText)
-            .orElseThrow(() -> context.error("Invalid source (" + sourceText +
+        final MetricType metricType = MetricType
+            .fromIdentifier(metricTypeText)
+            .orElseThrow(() -> context.error("Invalid metricType (" + metricTypeText +
                 "), must be one of " + MetricType.values()));
 
         final Optional<RangeExpression> range;
@@ -346,7 +346,7 @@ class QueryListener extends HeroicQueryBaseListener {
         }
 
         pushOptional(range);
-        push(source);
+        push(metricType);
         push(QueryMark.FROM);
     }
 

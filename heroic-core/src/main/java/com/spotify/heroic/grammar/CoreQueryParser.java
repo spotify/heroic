@@ -56,9 +56,9 @@ public class CoreQueryParser implements QueryParser {
     FromDSL parseFrom(final String input) {
         final QueryListener listener = parse(HeroicQueryParser::from, input);
         listener.popMark(QueryListener.QueryMark.FROM);
-        final MetricType source = listener.pop(MetricType.class);
+        final MetricType metricType = listener.pop(MetricType.class);
         final Optional<RangeExpression> range = listener.popOptional(RangeExpression.class);
-        return new FromDSL(source, range);
+        return new FromDSL(metricType, range);
     }
 
     QueryExpression parseQuery(final String input) {

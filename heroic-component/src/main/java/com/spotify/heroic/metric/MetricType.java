@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
  * Represents which type of metric to operate on.
  * <p>
  * All metric types implement TimeData, but various sources (metadata, metrics, suggestions) can
- * behave differently depending on which source is being operated on.
+ * behave differently depending on which metricType is being operated on.
  */
 public enum MetricType {
     // @formatter:off

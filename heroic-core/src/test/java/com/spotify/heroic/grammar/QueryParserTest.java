@@ -287,9 +287,9 @@ public class QueryParserTest {
     }
 
     void checkFrom(
-        MetricType source, Optional<Expression> range, FromDSL result
+        MetricType metricType, Optional<Expression> range, FromDSL result
     ) {
-        assertEquals(source, result.getSource());
+        assertEquals(metricType, result.getMetricType());
         assertEquals(range, result.getRange());
     }
 
@@ -305,7 +305,7 @@ public class QueryParserTest {
         private final Context context;
 
         private Optional<Expression> select = Optional.empty();
-        private Optional<MetricType> source = Optional.empty();
+        private Optional<MetricType> metricType = Optional.empty();
         private Optional<RangeExpression> range = Optional.empty();
         private Optional<Filter> filter = Optional.empty();
         private Map<String, Expression> with = ImmutableMap.of();
@@ -321,8 +321,8 @@ public class QueryParserTest {
             return this;
         }
 
-        public QueryBuilder source(final MetricType source) {
-            this.source = Optional.of(source);
+        public QueryBuilder source(final MetricType metricType) {
+            this.metricType = Optional.of(metricType);
             return this;
         }
 
@@ -347,7 +347,7 @@ public class QueryParserTest {
         }
 
         public QueryExpression build() {
-            return new QueryExpression(context, select, source, range, filter, with, as);
+            return new QueryExpression(context, select, metricType, range, filter, with, as);
         }
     }
 }

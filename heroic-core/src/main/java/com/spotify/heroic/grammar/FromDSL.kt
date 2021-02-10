@@ -24,8 +24,8 @@ package com.spotify.heroic.grammar
 import com.spotify.heroic.metric.MetricType
 import java.util.*
 
-data class FromDSL(val source: MetricType, val range: Optional<RangeExpression>) {
+data class FromDSL(val metricType: MetricType, val range: Optional<RangeExpression>) {
     fun eval(scope: Expression.Scope): FromDSL {
-        return FromDSL(source, range.map { it.eval(scope) })
+        return FromDSL(metricType, range.map { it.eval(scope) })
     }
 }
