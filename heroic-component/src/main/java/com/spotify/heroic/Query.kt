@@ -29,7 +29,7 @@ import java.util.*
 
 data class Query(
     val aggregation: Optional<Aggregation>,
-    val metricType: Optional<MetricType>, // points or distribution points for testing
+    val source: Optional<MetricType>, // points or distribution points for testing
     val range: Optional<QueryDateRange>,
     val filter: Optional<Filter>,
     val options: Optional<QueryOptions>,

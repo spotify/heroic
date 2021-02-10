@@ -271,7 +271,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         final Span parentSpan
     ) {
         return connection.doto(c -> {
-            final MetricType type = request.getMetricType();
+            final MetricType type = request.getType();
 
             if (!watcher.mayReadData()) {
                 throw new IllegalArgumentException("query violated data limit");
@@ -286,7 +286,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                         consumer, parentSpan);
                 default:
                     return async.resolved(new FetchData.Result(QueryTrace.of(FETCH),
-                        new QueryError("unsupported source: " + request.getMetricType())));
+                        new QueryError("unsupported source: " + request.getType())));
             }
         });
     }
