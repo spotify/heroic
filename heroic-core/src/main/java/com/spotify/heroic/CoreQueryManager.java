@@ -174,7 +174,7 @@ public class CoreQueryManager implements QueryManager {
         return expressions.get(0).eval(scope).visit(new Expression.Visitor<QueryBuilder>() {
             @Override
             public QueryBuilder visitQuery(final QueryExpression e) {
-                final Optional<MetricType> metricType = e.getMetricType();
+                final Optional<MetricType> source = e.getSource();
 
                 final Optional<QueryDateRange> range =
                     e.getRange().map(expr -> expr.visit(new Expression.Visitor<QueryDateRange>() {
@@ -207,7 +207,7 @@ public class CoreQueryManager implements QueryManager {
                 return new QueryBuilder()
                     .range(range)
                     .aggregation(aggregation)
-                    .metricType(metricType)
+                    .source(source)
                     .filter(filter);
             }
         });
@@ -242,7 +242,7 @@ public class CoreQueryManager implements QueryManager {
 
             final Aggregation aggregation = q.getAggregation().orElse(Empty.INSTANCE);
 
-            MetricType metricType = q.getMetricType().orElse(MetricType.POINT);
+            MetricType source = q.getSource().orElse(MetricType.POINT);
 
             final DateRange rawRange = buildRange(q);
 
@@ -285,21 +285,21 @@ public class CoreQueryManager implements QueryManager {
 
             if (aggregationInstance instanceof GroupInstance) {
                 if (((GroupInstance) aggregationInstance).getEach() instanceof TdigestInstance) {
-                    metricType = MetricType.DISTRIBUTION_POINTS;
+                    source = MetricType.DISTRIBUTION_POINTS;
                 }
             }
 
             if (isDistributed) {
-                combiner = (metricType.equals(MetricType.POINT)) ?
+                combiner = (source.equals(MetricType.POINT)) ?
                     DistributedAggregationCombiner.create(root, range, bucketStrategy) :
                       TDigestAggregationCombiner.create(root, range, bucketStrategy);
             } else {
-                combiner = (metricType.equals(MetricType.DISTRIBUTION_POINTS)) ?
+                combiner = (source.equals(MetricType.DISTRIBUTION_POINTS)) ?
                     AggregationCombiner.TDIGEST_DEFAULT : AggregationCombiner.DEFAULT;
             }
 
             final FullQuery.Request request =
-                FullQuery.Request.create(filter, range, aggregationInstance, metricType, options,
+                FullQuery.Request.create(source, filter, range, aggregationInstance, options,
                     queryContext, features);
 
             queryLogger.logOutgoingRequestToShards(queryContext, request);

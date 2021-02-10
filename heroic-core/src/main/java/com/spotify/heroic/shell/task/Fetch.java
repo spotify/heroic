@@ -101,7 +101,7 @@ public class Fetch implements ShellTask {
 
         final MetricBackendGroup readGroup = metrics.useOptionalGroup(params.group);
 
-        final MetricType metricType = params.metricType.orElse(MetricType.POINT);
+        final MetricType source = params.source.orElse(MetricType.POINT);
 
         final QueryOptions.Builder optionsBuilder =
             QueryOptions.builder().tracing(Tracing.fromBoolean(params.tracing));
@@ -136,7 +136,7 @@ public class Fetch implements ShellTask {
         };
 
         return readGroup
-            .fetch(new FetchData.Request(metricType, series, range, options),
+            .fetch(new FetchData.Request(source, series, range, options),
                 FetchQuotaWatcher.NO_QUOTA, printMetricsCollection, BlankSpan.INSTANCE)
             .lazyTransform(handleResult);
     }
@@ -173,9 +173,9 @@ public class Fetch implements ShellTask {
         @Option(name = "-s", aliases = {"--series"}, usage = "Series to fetch", metaVar = "<json>")
         private Optional<String> series = Optional.empty();
 
-        @Option(name = "--metricType", aliases = {"--metricType"}, usage = "MetricType to fetch",
+        @Option(name = "--source", aliases = {"--source"}, usage = "MetricType to fetch",
             metaVar = "<MetricType.POINT|MetricType.DISTRIBUTION_POINTS>")
-        private Optional<MetricType> metricType = Optional.empty();
+        private Optional<MetricType> source = Optional.empty();
 
         @Option(name = "--start", usage = "Start date", metaVar = "<datetime>")
         private Optional<String> start = Optional.empty();
