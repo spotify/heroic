@@ -25,6 +25,9 @@ shadowJar {
     append 'META-INF/services/org.apache.lucene.analysis.util.CharFilterFactory'
     append 'META-INF/services/org.apache.lucene.analysis.util.TokenFilterFactory'
     append 'META-INF/services/org.apache.lucene.analysis.util.TokenizerFactory'
+
+    // required for gRPC v1.35.0
+    append 'META-INF/services/io.grpc.LoadBalancerProvider'
 }
 
 dependencies {
