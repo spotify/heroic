@@ -36,7 +36,7 @@ public class EndSpanFutureReporter implements FutureReporter.Context {
   }
 
   @Override
-  public void failed(final Throwable cause) throws Exception {
+  public void failed(final Throwable cause) {
     span.putAttribute("error", booleanAttributeValue(true));
     Optional.ofNullable(cause.getMessage()).ifPresent(span::addAnnotation);
     span.setStatus(Status.INTERNAL);
@@ -44,12 +44,12 @@ public class EndSpanFutureReporter implements FutureReporter.Context {
   }
 
   @Override
-  public void resolved(final Object result) throws Exception {
+  public void resolved(final Object result) {
     span.end();
   }
 
   @Override
-  public void cancelled() throws Exception {
+  public void cancelled() {
     span.putAttribute("error", booleanAttributeValue(true));
     span.setStatus(Status.CANCELLED);
     span.end();
