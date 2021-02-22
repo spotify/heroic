@@ -21,9 +21,14 @@
 
 package com.spotify.heroic.statistics;
 
+import com.spotify.heroic.common.FailureType;
 import com.spotify.heroic.metric.MetricBackend;
 
 public interface MetricBackendReporter {
+    void reportClientIdSuccessCount(String clientId);
+
+    void reportClientIdFailure(String clientId, FailureType failureType);
+
     MetricBackend decorate(MetricBackend backend);
 
     DataInMemoryReporter newDataInMemoryReporter();

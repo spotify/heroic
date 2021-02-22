@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.statistics.noop;
 
+import com.spotify.heroic.common.FailureType;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.statistics.DataInMemoryReporter;
 import com.spotify.heroic.statistics.FutureReporter;
@@ -55,6 +56,16 @@ public class NoopMetricBackendReporter implements MetricBackendReporter {
     };
 
     private NoopMetricBackendReporter() {
+    }
+
+    @Override
+    public void reportClientIdSuccessCount(String clientId) {
+
+    }
+
+    @Override
+    public void reportClientIdFailure(String clientId, FailureType failureType) {
+
     }
 
     @Override

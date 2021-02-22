@@ -27,6 +27,7 @@ import com.codahale.metrics.Histogram;
 import com.google.common.base.Stopwatch;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.async.AsyncObservable;
+import com.spotify.heroic.common.FailureType;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.BackendEntry;
@@ -83,16 +84,21 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
     private final Histogram queryRowDensity;
     // Counter of dropped writes due to row key size
     private final Counter writesDroppedBySize;
-    // Gauge of all read data points currently in memory across all queries
+    // Gauge
+    // of all read data points currently in memory across all queries
     private final Gauge<Long> globalDataPointsGauge;
     final AtomicLong globalReadDataPoints = new AtomicLong();
     // Gauge of all retained data points currently in memory across all queries
     private final Gauge<Long> globalRetainedDataPointsGauge;
     final AtomicLong globalRetainedDataPoints = new AtomicLong();
-
+    private final SemanticMetricRegistry registry;
+    private final MetricId base;
 
     public SemanticMetricBackendReporter(SemanticMetricRegistry registry) {
         final MetricId base = MetricId.build().tagged("component", COMPONENT);
+
+        this.registry = registry;
+        this.base = base;
 
         this.write =
             new SemanticFutureReporter(registry, base.tagged("what", "write", "unit", Units.WRITE));
@@ -137,6 +143,16 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
         globalRetainedDataPointsGauge = registry.register(
             base.tagged("what", "retained-data-points"),
             (Gauge<Long>) () -> (long) globalRetainedDataPoints.get());
+    }
+
+    @Override
+    public void reportClientIdSuccessCount(String clientId) {
+        getClientCounter("query-metrics-client-id-count-no-timeout", clientId).inc();
+    }
+
+    @Override
+    public void reportClientIdFailure(String clientId, FailureType failureType) {
+        getClientCounter("query-metrics-client-id-count-", clientId, failureType).inc();
     }
 
     @Override
@@ -232,6 +248,17 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
 
     public String toString() {
         return "SemanticMetricBackendReporter()";
+    }
+
+    private Counter getClientCounter(String what, String clientId) {
+        return registry.counter(
+            base.tagged("what", what, "x-client-id", clientId,  "unit", Units.QUERY));
+    }
+
+    private Counter getClientCounter(String what, String clientId, FailureType failureType) {
+        return registry.counter(
+                base.tagged("what", what, "x-client-id", clientId, "failure-type",
+                        failureType.toString(), "unit", Units.QUERY));
     }
 
     private class InstrumentedMetricBackend implements MetricBackend {

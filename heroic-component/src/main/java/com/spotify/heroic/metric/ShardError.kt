@@ -26,7 +26,7 @@ import com.spotify.heroic.cluster.ClusterShard
 data class ShardError(
     val nodes: List<String>,
     val shard: Map<String, String>,
-    val error: String
+    private val error: String
 ): RequestError {
     companion object {
         @JvmStatic
@@ -41,5 +41,9 @@ data class ShardError(
 
             return "$message, caused by ${errorMessage(cause)}"
         }
+    }
+
+    override fun getError(): String {
+        return error;
     }
 }

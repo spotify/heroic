@@ -25,6 +25,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.Query;
 import com.spotify.heroic.metric.FullQuery;
+import com.spotify.heroic.metric.FullQuery.Request;
 import com.spotify.heroic.metric.QueryMetrics;
 import com.spotify.heroic.metric.QueryMetricsResponse;
 import com.spotify.heroic.querylogging.format.LogFormat;
@@ -71,38 +72,42 @@ public class Slf4jQueryLogger implements QueryLogger {
     public void logOutgoingRequestToShards(
         final QueryContext context, final FullQuery.Request request
     ) {
-        performAndCatch(() -> {
-            final FullQuery.Request.Summary summary = request.summarize();
-            serializeAndLog(context, "outgoing-request-to-shards", summary);
-        });
+        logRequest(context, request, "outgoing-request-to-shards");
     }
 
     @Override
     public void logIncomingRequestAtNode(
         final QueryContext context, final FullQuery.Request request
     ) {
-        performAndCatch(() -> {
-            final FullQuery.Request.Summary summary = request.summarize();
-            serializeAndLog(context, "incoming-request-at-node", summary);
-        });
+        logRequest(context, request, "incoming-request-at-node");
+    }
+
+    @Override
+    public void logBigtableQueryTimeout(
+        final QueryContext context, final FullQuery.Request request
+    ) {
+        logRequest(context, request, "bigtable-query-timeout");
+    }
+
+    // TODO PSK see if this is necessary
+    @Override
+    public void logBigtableQuerySuccess(
+        final QueryContext context, final FullQuery.Request request
+    ) {
+        logRequest(context, request, "bigtable-query-success");
     }
 
     @Override
     public void logOutgoingResponseAtNode(final QueryContext context, final FullQuery response) {
-        performAndCatch(() -> {
-            final FullQuery.Summary summary = response.summarize();
-            serializeAndLog(context, "outgoing-response-at-node", summary);
-        });
+        logQuery(context, response, "outgoing-response-at-node");
     }
+
 
     @Override
     public void logIncomingResponseFromShard(
         final QueryContext context, final FullQuery response
     ) {
-        performAndCatch(() -> {
-            final FullQuery.Summary summary = response.summarize();
-            serializeAndLog(context, "incoming-response-from-shard", summary);
-        });
+        logQuery(context, response, "incoming-response-from-shard");
     }
 
     @Override
@@ -112,6 +117,20 @@ public class Slf4jQueryLogger implements QueryLogger {
         performAndCatch(() -> {
             final QueryMetricsResponse.Summary summary = queryMetricsResponse.summarize();
             serializeAndLog(context, "final-response", summary);
+        });
+    }
+
+    private void logQuery(QueryContext context, FullQuery response, String s) {
+        performAndCatch(() -> {
+            final FullQuery.Summary summary = response.summarize();
+            serializeAndLog(context, s, summary);
+        });
+    }
+
+    private void logRequest(QueryContext context, Request request, String s) {
+        performAndCatch(() -> {
+            final Request.Summary summary = request.summarize();
+            serializeAndLog(context, s, summary);
         });
     }
 
@@ -133,7 +152,7 @@ public class Slf4jQueryLogger implements QueryLogger {
         });
     }
 
-    private void performAndCatch(Runnable toRun) {
+    private static void performAndCatch(Runnable toRun) {
         try {
             toRun.run();
         } catch (Exception e) {
