@@ -89,7 +89,7 @@ public class BigtableBackendIT extends AbstractMetricBackendIT {
             assertEquals(primaryCause.getClass(), io.grpc.StatusRuntimeException.class);
 
             assertTrue("The primary cause: " + primaryCause.getMessage(), primaryCause.getMessage()
-                    .contains("DEADLINE_EXCEEDED: deadline exceeded after"));
+                    .contains("DEADLINE_EXCEEDED: deadline exceeded"));
         } finally {
             core.shutdown().get();
         }
