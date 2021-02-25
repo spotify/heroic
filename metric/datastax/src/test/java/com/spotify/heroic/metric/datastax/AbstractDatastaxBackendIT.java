@@ -13,7 +13,7 @@ public abstract class AbstractDatastaxBackendIT extends AbstractMetricBackendIT 
     public static CassandraContainer container = new CassandraContainer();
 
     @Override
-    protected MetricModule setupModule() {
+    protected MetricModule setupModule(BackendModuleMode mode) {
         final String keyspace = "heroic_it_" + UUID.randomUUID().toString().replace('-', '_');
         final String seed = container.getContainerIpAddress() + ":" + container.getFirstMappedPort();
 

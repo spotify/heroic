@@ -61,6 +61,7 @@ import java.util.TreeSet;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nonnull;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -77,9 +78,21 @@ public abstract class AbstractMetricBackendIT {
 
     public static final Map<String, String> EVENT = ImmutableMap.of();
 
+    /**
+     * Switch that determines how the metrics backend (typically the system under test)
+     * behaves.
+     */
+    protected enum BackendModuleMode {
+        NORMAL,             // behave "normally" i.e. as per default configuration
+        VERY_SHORT_TIMEOUTS // impose VERY_SHORT_WAIT_TIME_MS read* timeouts
+    }
+
     protected MetricBackend backend;
 
-    /* For backends which  currently does not implement period edge cases correctly,
+    // https://en.wikipedia.org/wiki/Phrases_from_The_Hitchhiker%27s_Guide_to_the_Galaxy
+    public static final double MEANING_OF_LIFE_HHGTTG = 42D;
+
+    /** For backends which  currently does not implement period edge cases correctly,
      * See: https://github.com/spotify/heroic/pull/208 */
     protected boolean brokenSegmentsPr208 = false;
     protected boolean eventSupport = false;
@@ -90,13 +103,24 @@ public abstract class AbstractMetricBackendIT {
     public TestRule setupBackend = (base, description) -> new Statement() {
         @Override
         public void evaluate() throws Throwable {
-            MetricModule module = setupModule();
-            final MetricManagerModule.Builder metric =
+            final HeroicCoreInstance core = getHeroicCoreInstance(
+                    BackendModuleMode.NORMAL);
+            backend = createBackend(core);
+            base.evaluate();
+            core.shutdown().get();
+        }
+    };
+
+    @Nonnull
+    protected HeroicCoreInstance getHeroicCoreInstance(BackendModuleMode mode) throws Exception {
+        MetricModule module = setupModule(mode);
+
+        final MetricManagerModule.Builder metric =
                 MetricManagerModule.builder().backends(ImmutableList.of(module));
 
-            final HeroicConfig.Builder fragment = HeroicConfig.builder().metrics(metric);
+        final HeroicConfig.Builder fragment = HeroicConfig.builder().metrics(metric);
 
-            final HeroicCoreInstance core = HeroicCore
+        final HeroicCoreInstance core = HeroicCore
                 .builder()
                 .setupShellServer(false)
                 .setupService(false)
@@ -104,28 +128,29 @@ public abstract class AbstractMetricBackendIT {
                 .build()
                 .newInstance();
 
-            core.start().get();
+        core.start().get();
 
-            backend = core
+        return core;
+    }
+
+    protected static MetricBackend createBackend(HeroicCoreInstance core) {
+        return core
                 .inject(c -> c
-                    .metricManager()
-                    .groupSet()
-                    .inspectAll()
-                    .stream()
-                    .map(GroupMember::getMember)
-                    .findFirst())
+                        .metricManager()
+                        .groupSet()
+                        .inspectAll()
+                        .stream()
+                        .map(GroupMember::getMember)
+                        .findFirst())
                 .orElseThrow(() -> new IllegalStateException("Failed to find backend"));
-            base.evaluate();
-            core.shutdown().get();
-        }
-    };
+    }
 
     @Before
     public void setup() {
         setupSupport();
     }
 
-    protected abstract MetricModule setupModule();
+    protected abstract MetricModule setupModule(BackendModuleMode mode);
 
     protected Optional<Long> period() {
         return Optional.empty();
@@ -249,7 +274,6 @@ public abstract class AbstractMetricBackendIT {
     private class TestCase {
 
         // https://en.wikipedia.org/wiki/Phrases_from_The_Hitchhiker%27s_Guide_to_the_Galaxy
-        public static final double MEANING_OF_LIFE_HHGTTG = 42D;
         private Optional<Integer> denseStart = Optional.empty();
         private Optional<Integer> dense = Optional.empty();
         private final List<Long> input = new ArrayList<>();
@@ -386,9 +410,9 @@ public abstract class AbstractMetricBackendIT {
     }
 
     @Test
-    public void testWriteHugeMetric() throws Exception {
+    public void testWriteThenFetchSeriesWithManyTags() throws Exception {
         assumeTrue("Test huge row key write", hugeRowKey);
-        final MetricCollection points = new Points().p(100000L, 42D).build();
+        var points = new Points().p(100000L, 42D, 1).build();
         Map<String, String> tags = new HashMap<>();
         for (int i = 0; i < 110; i++) {
             tags.put("VeryLongTagName" + i, "VeryLongValueName" + i);
@@ -398,14 +422,15 @@ public abstract class AbstractMetricBackendIT {
             ImmutableSortedMap.of("resource", "a"));
         backend.write(new WriteMetric.Request(hugeSeries, points)).get();
 
-        FetchData.Request request =
-            new FetchData.Request(MetricType.POINT, hugeSeries, new DateRange(10000L, 200000L),
-                QueryOptions.builder().build());
+        var request =
+           new FetchData.Request(MetricType.POINT, hugeSeries, new DateRange(100000L, 200000L),
+               QueryOptions.builder().build());
 
-        assertEquals(Collections.emptyList(), fetchMetrics(request, true));
+        var metrics = fetchMetrics(request, true);
+        assertEquals(Collections.emptyList(), metrics);
     }
 
-    private List<MetricCollection> fetchMetrics(FetchData.Request request, boolean slicedFetch)
+    protected List<MetricCollection> fetchMetrics(FetchData.Request request, boolean slicedFetch)
         throws Exception {
         if (slicedFetch) {
             List<MetricCollection> fetchedMetrics = Collections.synchronizedList(new ArrayList<>());
@@ -422,7 +447,7 @@ public abstract class AbstractMetricBackendIT {
         }
     }
 
-    private static void assertEqualMetrics(
+    protected static void assertEqualMetrics(
         MetricCollection expected, List<MetricCollection> actual
     ) {
         Stream<MetricType> types = actual.stream().map(MetricCollection::getType);

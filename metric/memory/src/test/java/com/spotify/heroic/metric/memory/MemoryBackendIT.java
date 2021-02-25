@@ -3,8 +3,6 @@ package com.spotify.heroic.metric.memory;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.test.AbstractMetricBackendIT;
 
-import java.util.Optional;
-
 public class MemoryBackendIT extends AbstractMetricBackendIT {
     @Override
     protected void setupSupport() {
@@ -15,7 +13,7 @@ public class MemoryBackendIT extends AbstractMetricBackendIT {
     }
 
     @Override
-    protected MetricModule setupModule() {
+    protected MetricModule setupModule(BackendModuleMode mode) {
         return MemoryMetricModule.builder().build();
     }
 }
