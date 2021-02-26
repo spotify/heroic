@@ -42,10 +42,6 @@ public interface QueryLogger {
             QueryContext context, FullQuery.Request request
     );
 
-    void logBigtableQuerySuccess(
-            QueryContext context, FullQuery.Request request
-    );
-
     void logOutgoingResponseAtNode(QueryContext context, FullQuery response);
 
     void logIncomingResponseFromShard(QueryContext context, FullQuery response);

@@ -89,14 +89,6 @@ public class Slf4jQueryLogger implements QueryLogger {
         logRequest(context, request, "bigtable-query-timeout");
     }
 
-    // TODO PSK see if this is necessary
-    @Override
-    public void logBigtableQuerySuccess(
-        final QueryContext context, final FullQuery.Request request
-    ) {
-        logRequest(context, request, "bigtable-query-success");
-    }
-
     @Override
     public void logOutgoingResponseAtNode(final QueryContext context, final FullQuery response) {
         logQuery(context, response, "outgoing-response-at-node");
@@ -152,6 +144,20 @@ public class Slf4jQueryLogger implements QueryLogger {
         });
     }
 
+    /**
+     * PSK: I have serious reservations about this approach. It _appears_ to try to
+     * spin up a new thread per log message, which in theory could prevent the calling thread
+     * from blocking and speed processing up overall. However it would create and destroy
+     * a *lot* of Thread objects and hardware/OS-level threads and potentially slow processing
+     * down overall.
+     *
+     * However these thoughts are moot - notice that no Thread object is created and no
+     * `start()` method is called, which means that all callers of performAndCatch write the log
+     * message _in the calling thread_, thus defeating the whole point of performAndCatch it would
+     * seem - to me at least.
+     *
+     * @param toRun Runnable to run in the calling thread
+     */
     private static void performAndCatch(Runnable toRun) {
         try {
             toRun.run();

@@ -76,11 +76,6 @@ public class NoopQueryLogger implements QueryLogger {
     }
 
     @Override
-    public void logBigtableQuerySuccess(QueryContext context, Request request) {
-
-    }
-
-    @Override
     public void logOutgoingResponseAtNode(final QueryContext context, final FullQuery response) {
     }
 

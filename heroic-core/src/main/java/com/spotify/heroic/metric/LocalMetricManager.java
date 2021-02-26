@@ -204,6 +204,7 @@ public class LocalMetricManager implements MetricManager {
                    + ")";
         }
 
+        @SuppressWarnings("checkstyle:LineLength")
         private class Transform implements LazyTransform<FindSeries, FullQuery> {
 
             private final AggregationInstance aggregation;
@@ -275,7 +276,7 @@ public class LocalMetricManager implements MetricManager {
 
                 if (result.getLimited()) {
                     if (failOnLimits) {
-                        return buildFullQueryError(fetchSpan);
+                        return buildFullQueryLimitsErrorFuture(fetchSpan);
                     }
 
                     limits = ResultLimits.of(ResultLimit.SERIES);
@@ -298,7 +299,7 @@ public class LocalMetricManager implements MetricManager {
                 var collector = createResultCollector(session, limits);
 
                 final List<Callable<AsyncFuture<Result>>>
-                        fetches = buildMetricsBackendFetches(result, fetchSpan, collector);
+                        fetches = buildMetricsBackendFetchFutures(result, fetchSpan, collector);
 
                 return async
                     .eventuallyCollect(fetches, collector, fetchParallelism)
@@ -324,6 +325,10 @@ public class LocalMetricManager implements MetricManager {
                     });
             }
 
+            /**
+             * Simple helper method that enables decomposition of
+             * {@link com.spotify.heroic.metric.LocalMetricManager.Group.Transform#transform(com.spotify.heroic.metadata.FindSeries)}
+             */
             private AsyncFuture<FullQuery> createQuotaViolationQueryFuture(Span fetchSpan) {
                 String error = format(
                     "aggregation needs to retain more data then what is allowed: %d",
@@ -336,6 +341,11 @@ public class LocalMetricManager implements MetricManager {
                     ResultLimits.of(ResultLimit.AGGREGATION)));
             }
 
+            /**
+             * Helper method that enables decomposition of
+             * {@link com.spotify.heroic.metric.LocalMetricManager.Group.Transform#transform(com.spotify.heroic.metadata.FindSeries)}
+             * It takes tracing into consideration and returns an appropriate ResultCollector.
+             */
             private ResultCollector createResultCollector(
                     AggregationSession session, ResultLimits limits) {
                 /* setup collector */
@@ -373,7 +383,12 @@ public class LocalMetricManager implements MetricManager {
                 return collector;
             }
 
-            private AsyncFuture<FullQuery> buildFullQueryError(Span fetchSpan) {
+            /**
+             * Simple helper method that enables decomposition of
+             * {@link com.spotify.heroic.metric.LocalMetricManager.Group.Transform#transform(com.spotify.heroic.metadata.FindSeries)}
+             * It constructs a resolved future that contains a limits error.
+             */
+            private AsyncFuture<FullQuery> buildFullQueryLimitsErrorFuture(Span fetchSpan) {
                 final RequestError error = new QueryError(
                     "The number of series requested is more than the allowed limit of " +
                         seriesLimit);
@@ -386,28 +401,34 @@ public class LocalMetricManager implements MetricManager {
                     ResultLimits.of(ResultLimit.SERIES)));
             }
 
+            /**
+             * Helper method that enables decomposition of
+             * {@link com.spotify.heroic.metric.LocalMetricManager.Group.Transform#transform(com.spotify.heroic.metadata.FindSeries)}
+             * Builds a List of fetch operation futures, one for each Series (of the Result), for
+             * each backend. A span is also created to track the fetch operations created.
+             */
+
             @NotNull
-            private List<Callable<AsyncFuture<Result>>> buildMetricsBackendFetches(
-                                                                     FindSeries result,
-                                                                     Span fetchSpan,
-                                                                     ResultCollector collector) {
+            private List<Callable<AsyncFuture<Result>>> buildMetricsBackendFetchFutures(
+                    FindSeries result, Span fetchSpan, ResultCollector collector) {
+
                 final List<Callable<AsyncFuture<Result>>> fetches = new ArrayList<>();
 
                 // Requires the squashing exporter otherwise too many spans are produced.
                 backends.stream().forEach(((Consumer<MetricBackend>) metricBackend -> {
                     for (final Series series : result.getSeries()) {
                         // Requires the squashing exporter otherwise too many spans are produced.
-                        final Span fetchSeries =
+                        final Span fetchSeriesSpan =
                                 tracer.spanBuilderWithExplicitParent(
                                         "localMetricsManager.fetchSeries", fetchSpan).startSpan();
 
-                        fetchSeries.addAnnotation(series.toString());
+                        fetchSeriesSpan.addAnnotation(series.toString());
                         fetches.add(() -> metricBackend.fetch(
                             new FetchData.Request(source, series, range, options),
                                 quotaWatcher,
                                 mcr -> collector.acceptMetricsCollection(series, mcr),
-                                fetchSeries
-                        ).onDone(new EndSpanFutureReporter(fetchSeries)));
+                                fetchSeriesSpan
+                        ).onDone(new EndSpanFutureReporter(fetchSeriesSpan)));
                     }
                 })::accept);
 

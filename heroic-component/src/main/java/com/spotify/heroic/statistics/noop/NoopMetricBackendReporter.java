@@ -59,14 +59,11 @@ public class NoopMetricBackendReporter implements MetricBackendReporter {
     }
 
     @Override
-    public void reportClientIdSuccessCount(String clientId) {
-
-    }
+    public void reportClientIdSuccessCount(String clientId) { /* intentionally blank */ }
 
     @Override
     public void reportClientIdFailure(String clientId, FailureType failureType) {
-
-    }
+        /* intentionally blank */ }
 
     @Override
     public MetricBackend decorate(final MetricBackend backend) {
