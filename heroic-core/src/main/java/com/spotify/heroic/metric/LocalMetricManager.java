@@ -276,7 +276,10 @@ public class LocalMetricManager implements MetricManager {
 
                 if (result.getLimited()) {
                     if (failOnLimits) {
-                        return buildFullQueryLimitsErrorFuture(fetchSpan);
+                        return createQuotaViolationQueryFuture(fetchSpan,
+                                "The number of series requested is " +
+                                        "more than the allowed limit of " +
+                                        seriesLimit, ResultLimit.SERIES);
                     }
 
                     limits = ResultLimits.of(ResultLimit.SERIES);
@@ -293,7 +296,9 @@ public class LocalMetricManager implements MetricManager {
                 try {
                     session = aggregation.session(range, quotaWatcher, bucketStrategy);
                 } catch (QuotaViolationException e) {
-                    return createQuotaViolationQueryFuture(fetchSpan);
+                    return createQuotaViolationQueryFuture(fetchSpan, format(
+                            "aggregation needs to retain more data then what is allowed: %d",
+                            aggregationLimit.asLong().get()), ResultLimit.AGGREGATION);
                 }
 
                 var collector = createResultCollector(session, limits);
@@ -325,21 +330,6 @@ public class LocalMetricManager implements MetricManager {
                     });
             }
 
-            /**
-             * Simple helper method that enables decomposition of
-             * {@link com.spotify.heroic.metric.LocalMetricManager.Group.Transform#transform(com.spotify.heroic.metadata.FindSeries)}
-             */
-            private AsyncFuture<FullQuery> createQuotaViolationQueryFuture(Span fetchSpan) {
-                String error = format(
-                    "aggregation needs to retain more data then what is allowed: %d",
-                    aggregationLimit.asLong().get());
-                fetchSpan.addAnnotation(error);
-                fetchSpan.putAttribute("quotaViolation", booleanAttributeValue(true));
-                fetchSpan.end();
-                return async.resolved(FullQuery.limitsError(namedWatch.end(),
-                    new QueryError(error),
-                    ResultLimits.of(ResultLimit.AGGREGATION)));
-            }
 
             /**
              * Helper method that enables decomposition of
@@ -382,23 +372,24 @@ public class LocalMetricManager implements MetricManager {
 
                 return collector;
             }
-
             /**
              * Simple helper method that enables decomposition of
-             * {@link com.spotify.heroic.metric.LocalMetricManager.Group.Transform#transform(com.spotify.heroic.metadata.FindSeries)}
-             * It constructs a resolved future that contains a limits error.
+             *
+             * {@link com.spotify.heroic.metric.LocalMetricManager.Group.Transform#transform(com.spotify.heroic.metadata.FindSeries)},
+             * that creates a resolved FullQuery.limitsError.
              */
-            private AsyncFuture<FullQuery> buildFullQueryLimitsErrorFuture(Span fetchSpan) {
-                final RequestError error = new QueryError(
-                    "The number of series requested is more than the allowed limit of " +
-                        seriesLimit);
+            private AsyncFuture<FullQuery> createQuotaViolationQueryFuture(Span fetchSpan,
+                                                                           String errorText,
+                                                                           ResultLimit limit) {
+                var error = new QueryError(errorText);
 
                 fetchSpan.addAnnotation(error.toString());
                 fetchSpan.putAttribute("quotaViolation", booleanAttributeValue(true));
                 fetchSpan.end();
 
-                return async.resolved(FullQuery.limitsError(namedWatch.end(), error,
-                    ResultLimits.of(ResultLimit.SERIES)));
+                return async.resolved(FullQuery.limitsError(namedWatch.end(),
+                    error,
+                    ResultLimits.of(limit)));
             }
 
             /**
@@ -407,7 +398,6 @@ public class LocalMetricManager implements MetricManager {
              * Builds a List of fetch operation futures, one for each Series (of the Result), for
              * each backend. A span is also created to track the fetch operations created.
              */
-
             @NotNull
             private List<Callable<AsyncFuture<Result>>> buildMetricsBackendFetchFutures(
                     FindSeries result, Span fetchSpan, ResultCollector collector) {

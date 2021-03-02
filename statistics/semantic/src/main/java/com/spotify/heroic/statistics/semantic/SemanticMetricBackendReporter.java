@@ -84,8 +84,7 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
     private final Histogram queryRowDensity;
     // Counter of dropped writes due to row key size
     private final Counter writesDroppedBySize;
-    // Gauge
-    // of all read data points currently in memory across all queries
+    // Gauge of all read data points currently in memory across all queries
     private final Gauge<Long> globalDataPointsGauge;
     final AtomicLong globalReadDataPoints = new AtomicLong();
     // Gauge of all retained data points currently in memory across all queries
@@ -143,11 +142,6 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
         globalRetainedDataPointsGauge = registry.register(
             base.tagged("what", "retained-data-points"),
             (Gauge<Long>) () -> (long) globalRetainedDataPoints.get());
-    }
-
-    @Override
-    public void reportClientIdSuccessCount(String clientId) {
-        getClientCounter("query-metrics-client-id-count-no-timeout", clientId).inc();
     }
 
     @Override
