@@ -145,17 +145,11 @@ public class Slf4jQueryLogger implements QueryLogger {
     }
 
     /**
-     * PSK: I have serious reservations about this approach. It _appears_ to try to
-     * spin up a new thread per log message, which in theory could prevent the calling thread
-     * from blocking and speed processing up overall. However it would create and destroy
-     * a *lot* of Thread objects and hardware/OS-level threads and potentially slow processing
-     * down overall.
-     *
-     * However these thoughts are moot - notice that no Thread object is created and no
-     * `start()` method is called, which means that all callers of performAndCatch write the log
-     * message _in the calling thread_, thus defeating the whole point of performAndCatch it would
-     * seem - to me at least.
-     *
+     * Notice that no Thread object is created and no `start()` method is called, which means
+     * that all callers of performAndCatch write to the log files in the same thread. Hence the
+     * sole purpose of this idiom is to avoid writing the try...catch statements several times.
+     * Personally I find that this benefit does not outweigh the confusion it can (and has!) cause
+     * (PSK).
      * @param toRun Runnable to run in the calling thread
      */
     private static void performAndCatch(Runnable toRun) {

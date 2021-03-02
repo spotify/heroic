@@ -244,11 +244,6 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
         return "SemanticMetricBackendReporter()";
     }
 
-    private Counter getClientCounter(String what, String clientId) {
-        return registry.counter(
-            base.tagged("what", what, "x-client-id", clientId,  "unit", Units.QUERY));
-    }
-
     private Counter getClientCounter(String what, String clientId, FailureType failureType) {
         return registry.counter(
                 base.tagged("what", what, "x-client-id", clientId, "failure-type",
