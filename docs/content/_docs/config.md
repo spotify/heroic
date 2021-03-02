@@ -501,34 +501,35 @@ emulatorEndpoint: <string>
 
 # Reference: https://cloud.google.com/bigtable/docs/hbase-client/javadoc/com/google/cloud/bigtable/config/CallOptionsConfig.Builder
 # The amount of milliseconds to wait before issuing a client side timeout for mutation remote
- procedure calls.
-# AKA
-# If timeouts are set, how many milliseconds should pass before a DEADLINE_EXCEEDED for a long mutation.
+# procedure calls.
+# In other words, If timeouts are set, how many milliseconds should pass before a 
+# DEADLINE_EXCEEDED is thrown. The Google default is 600_000 ms (10 minutes).
 # Currently, this feature is experimental.
 mutateRpcTimeoutMs: int
 
 # ReadRowsRpcTimeoutMs
 # The amount of milliseconds to wait before issuing a client side timeout for readRows streaming remote procedure calls.
-# AKA
-# from https://github.com/hegemonic/cloud-bigtable-client/blob/master/bigtable-client-core-parent/bigtable-client-core/src/main/java/com/google/cloud/bigtable/config/CallOptionsConfig.java :
-# The default duration to wait before timing out read stream RPC (default value: 12 hour).
+# In other words, from https://github.com/hegemonic/cloud-bigtable-client/blob/master/bigtable-client-core-parent/bigtable-client-core/src/main/java/com/google/cloud/bigtable/config/CallOptionsConfig.java :
+# The default duration to wait before timing out read stream RPC (default value: 12 hours).
 
 readRowsRpcTimeoutMs: int
 
 # ShortRpcTimeoutMs - The amount of milliseconds to wait before issuing a client side timeout for short remote procedure calls.
-# AKA
-# The default duration to wait before timing out RPCs (default value: 60 seconds) : https://cloud.google.com/bigtable/docs/hbase-client/javadoc/com/google/cloud/bigtable/config/CallOptionsConfig#SHORT_TIMEOUT_MS_DEFAULT
+# In other words, the default duration to wait before timing out RPCs (default 
+# value: 60 seconds)
+# from https://cloud.google.com/bigtable/docs/hbase-client/javadoc/com/google/cloud/bigtable /config/CallOptionsConfig#SHORT_TIMEOUT_MS_DEFAULT
 shortRpcTimeoutMs: int
 
 # MaxScanTimeoutRetries
 # The maximum number of times to retry after a scan timeout.
 # https://cloud.google.com/bigtable/docs/hbase-client/javadoc/com/google/cloud/bigtable/config/RetryOptions.html#getmaxscantimeoutretries
+# Default is 3.
 maxScanTimeoutRetries: int
 
 # maxElapsedBackoffMs
 # Maximum amount of time we will retry an operation that is failing.
-# So if this is 5,000ms and we retry every 2,000ms, we would do 2 
-# retries.
+# So if this is 5,000ms and we retry every 2,000ms, we would do 2 retries.
+# Default is 60 seconds
 maxElapsedBackoffMs: int
 ```
 

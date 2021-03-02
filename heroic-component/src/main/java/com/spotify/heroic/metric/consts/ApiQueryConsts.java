@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.metric.consts;
 
+import java.util.concurrent.TimeUnit;
+
 @SuppressWarnings({"LineLength"})
 public class ApiQueryConsts {
     /**
@@ -37,7 +39,7 @@ public class ApiQueryConsts {
      *
      * @see <a href="https://github.com/googleapis/java-bigtable-hbase/blob/534288cfebf4732b7998c369a6e278581a64f758/bigtable-client-core-parent/bigtable-client-core/src/main/java/com/google/cloud/bigtable/config/CallOptionsConfig.java#L45">CallOptionsConfig.Builder#MutateRpcTimeoutMs</a>
      */
-    public static final int DEFAULT_MUTATE_RPC_TIMEOUT_MS = 4_000;
+    public static final int DEFAULT_MUTATE_RPC_TIMEOUT_MS = 600_000;
 
     /**
      * ReadRowsRpcTimeoutMs
@@ -50,7 +52,7 @@ public class ApiQueryConsts {
      * (default value: 12 hour).
      * @see <a href="https://github.com/googleapis/java-bigtable-hbase/blob/534288cfebf4732b7998c369a6e278581a64f758/bigtable-client-core-parent/bigtable-client-core/src/main/java/com/google/cloud/bigtable/config/CallOptionsConfig.java#L48">ReadRowsRpcTimeoutMs</a>
      */
-    public static final int DEFAULT_READ_ROWS_RPC_TIMEOUT_MS = 4_000;
+    public static final int DEFAULT_READ_ROWS_RPC_TIMEOUT_MS = (int) TimeUnit.HOURS.toMillis(12);
 
     /**
      * ShortRpcTimeoutMs
@@ -66,7 +68,7 @@ public class ApiQueryConsts {
      * calls readRows()), this setting will have no effect. Note that
      * MutateRpcTimeoutMs governs all write timeouts.
      */
-    public static final int DEFAULT_SHORT_RPC_TIMEOUT_MS = 4_000;
+    public static final int DEFAULT_SHORT_RPC_TIMEOUT_MS = 60_000;
 
     /**
      * Maximum number of times to retry after a scan timeout (Google default value: 10 retries).
@@ -74,7 +76,7 @@ public class ApiQueryConsts {
      * that that repo specifies "max-attempts" so we want 3-1 = 2.
      *  @see <a href=https://github.com/googleapis/java-bigtable-hbase/blob/534288cfebf4732b7998c369a6e278581a64f758/bigtable-client-core-parent/bigtable-client-core/src/main/java/com/google/cloud/bigtable/config/RetryOptions.java#L92>RetryOptions.DEFAULT_MAX_SCAN_TIMEOUT_RETRIES</a>
      */
-    public static final int DEFAULT_MAX_SCAN_TIMEOUT_RETRIES = 2;
+    public static final int DEFAULT_MAX_SCAN_TIMEOUT_RETRIES = 10;
 
     /**
     * Copy of <a href=https://github.com/googleapis/java-bigtable-hbase/blob/534288cfebf4732b7998c369a6e278581a64f758/bigtable-client-core-parent/bigtable-client-core/src/main/java/com/google/cloud/bigtable/config/RetryOptions.java#L71>RetryOptions#DEFAULT_INITIAL_BACKOFF_MILLIS</a>
@@ -91,7 +93,7 @@ public class ApiQueryConsts {
     * <p>
     * Multiplier to apply to wait times after failed retries (default value: 2.0).
     * */
-    public static final double DEFAULT_BACKOFF_MULTIPLIER = 1.5;
+    public static final double DEFAULT_BACKOFF_MULTIPLIER = 2.0;
 
     /**
      * A little "safety buffer" to err on the side of caution (against ceasing

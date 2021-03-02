@@ -61,7 +61,6 @@ import java.util.TreeSet;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.annotation.Nonnull;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -111,7 +110,6 @@ public abstract class AbstractMetricBackendIT {
         }
     };
 
-    @Nonnull
     protected HeroicCoreInstance getHeroicCoreInstance(BackendModuleMode mode) throws Exception {
         MetricModule module = setupModule(mode);
 
@@ -273,7 +271,6 @@ public abstract class AbstractMetricBackendIT {
 
     private class TestCase {
 
-        // https://en.wikipedia.org/wiki/Phrases_from_The_Hitchhiker%27s_Guide_to_the_Galaxy
         private Optional<Integer> denseStart = Optional.empty();
         private Optional<Integer> dense = Optional.empty();
         private final List<Long> input = new ArrayList<>();
