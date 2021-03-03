@@ -173,13 +173,13 @@ public abstract class AbstractClusterQueryIT extends AbstractLocalClusterIT {
 
     public QueryResult query(final QueryBuilder builder,
                              final Consumer<QueryBuilder> modifier,
-                             final MetricType metricType,
+                             final MetricType source,
                              final boolean isDistributed)
             throws Exception {
         queryCount += 1;
 
         builder
-                .metricType(Optional.of(metricType))
+            .source(Optional.of(source))
                 .rangeIfAbsent(Optional.of(new QueryDateRange.Absolute(0, 40)));
 
         if (isDistributed) {

@@ -151,7 +151,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
             final List<PreparedFetch> prepared =
                 c.schema.ranges(request.getSeries(), request.getRange());
 
-            if (request.getMetricType() == MetricType.POINT) {
+            if (request.getType() == MetricType.POINT) {
                 final List<AsyncFuture<FetchData>> fetches =
                     fetchDataPoints(w, limit, request.getOptions(), prepared, c);
 
@@ -166,7 +166,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycles
             }
 
             return async.resolved(new FetchData.Result(w.end(FETCH),
-                new QueryError("unsupported source: " + request.getMetricType())));
+                new QueryError("unsupported source: " + request.getType())));
         });
     }
 

@@ -158,27 +158,26 @@ public abstract class FullQuery {
     public abstract static class Request {
         @JsonCreator
         public static Request create(
+            @JsonProperty("source") MetricType source,
             @JsonProperty("filter") Filter filter,
             @JsonProperty("range") DateRange range,
             @JsonProperty("aggregation") AggregationInstance aggregation,
-            @JsonProperty("metricType") MetricType metricType,
             @JsonProperty("options") QueryOptions options,
             @JsonProperty("context") QueryContext context,
             @JsonProperty("features") Features features
         ) {
             return new AutoValue_FullQuery_Request(
-              filter, range, aggregation, metricType, options, context, features);
+              source, filter, range, aggregation, options, context, features);
         }
 
-
+        @JsonProperty
+        public abstract MetricType source();
         @JsonProperty
         public abstract Filter filter();
         @JsonProperty
         public abstract DateRange range();
         @JsonProperty
         public abstract AggregationInstance aggregation();
-        @JsonProperty
-        public abstract MetricType metricType();
         @JsonProperty
         public abstract QueryOptions options();
         @JsonProperty
@@ -187,16 +186,16 @@ public abstract class FullQuery {
         public abstract Features features();
 
         public Summary summarize() {
-            return Summary.create(filter(), range(), aggregation(), metricType(), options());
+            return Summary.create(source(), filter(), range(), aggregation(), options());
         }
 
         public void hashTo(final ObjectHasher hasher) {
             hasher.putObject(getClass(), () -> {
+                hasher.putField("source", source(), hasher.enumValue());
                 hasher.putField("filter", filter(), hasher.with(Filter::hashTo));
                 hasher.putField("range", range(), hasher.with(DateRange::hashTo));
                 hasher.putField("aggregation", aggregation(),
                     hasher.with(AggregationInstance::hashTo));
-                hasher.putField("metricType", metricType(), hasher.enumValue());
                 hasher.putField("options", options(), hasher.with(QueryOptions::hashTo));
                 hasher.putField("features", features(), hasher.with(Features::hashTo));
             });
@@ -206,24 +205,24 @@ public abstract class FullQuery {
         public abstract static class Summary {
             @JsonCreator
             public static Summary create(
+                @JsonProperty("source") MetricType source,
                 @JsonProperty("filter") Filter filter,
                 @JsonProperty("range") DateRange range,
                 @JsonProperty("aggregation") AggregationInstance aggregation,
-                @JsonProperty("metricType") MetricType metricType,
                 @JsonProperty("options") QueryOptions options
             ) {
                 return new AutoValue_FullQuery_Request_Summary(
-                    filter, range, aggregation, metricType, options);
+                    source, filter, range, aggregation, options);
             }
 
+            @JsonProperty
+            abstract MetricType source();
             @JsonProperty
             abstract Filter filter();
             @JsonProperty
             abstract DateRange range();
             @JsonProperty
             abstract AggregationInstance aggregation();
-            @JsonProperty
-            abstract MetricType metricType();
             @JsonProperty
             abstract QueryOptions options();
         }
