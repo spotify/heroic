@@ -48,6 +48,7 @@ import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricReadResult;
 import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.MetricsConnectionSettings;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.QueryError;
 import com.spotify.heroic.metric.QueryTrace;
@@ -119,7 +120,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     private final Tracer tracer = Tracing.getTracer();
 
     private final Meter written = new Meter();
-    private final int maxWriteBatchSize;
+    private final MetricsConnectionSettings metricsConnectionSettings;
 
 
     @Inject
@@ -130,14 +131,14 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         final Groups groups,
         @Named("table") final String table,
         @Named("configure") final boolean configure,
-        @Named("maxWriteBatchSize") final int maxWriteBatchSize,
+        final MetricsConnectionSettings metricsConnectionSettings,
         MetricBackendReporter reporter
     ) {
         super(async);
         this.async = async;
         this.rowKeySerializer = rowKeySerializer;
         this.connection = connection;
-        this.maxWriteBatchSize = maxWriteBatchSize;
+        this.metricsConnectionSettings = metricsConnectionSettings;
         this.groups = groups;
         this.table = table;
         this.configure = configure;
@@ -267,7 +268,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     public AsyncFuture<FetchData.Result> fetch(
         final FetchData.Request request,
         final FetchQuotaWatcher watcher,
-        final Consumer<MetricReadResult> consumer,
+        final Consumer<MetricReadResult> metricsConsumer,
         final Span parentSpan
     ) {
         return connection.doto(c -> {
@@ -280,10 +281,10 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             switch (type) {
                 case POINT:
                     return fetchBatch(
-                        watcher, type, pointsRanges(request), c, consumer, parentSpan);
+                        watcher, type, pointsRanges(request), c, metricsConsumer, parentSpan);
                 case DISTRIBUTION_POINTS:
                     return fetchBatch(watcher, type, distributionPointsRanges(request), c,
-                        consumer, parentSpan);
+                        metricsConsumer, parentSpan);
                 default:
                     return async.resolved(new FetchData.Result(QueryTrace.of(FETCH),
                         new QueryError("unsupported source: " + request.getType())));
@@ -392,7 +393,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
             builder.setCell(columnFamily, offsetBytes, valueBytes);
 
-            if (builder.size() >= maxWriteBatchSize) {
+            if (builder.size() >= metricsConnectionSettings.maxWriteBatchSize) {
                 saved.add(Pair.of(rowKey, builder.build()));
                 building.put(rowKey, Mutations.builder());
             }
@@ -414,8 +415,8 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
             if (rowKeyBytes.size() >= MAX_KEY_ROW_SIZE) {
                 reporter.reportWritesDroppedBySize();
-                log.error("Row key length greater than 4096 bytes (2): " + rowKeyBytes.size()
-                    + " " + rowKeyBytes);
+                log.error("Row key length greater than 4096 bytes (2): {} {}", rowKeyBytes.size(),
+                        rowKeyBytes);
                 continue;
             }
 
@@ -457,8 +458,8 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
         if (rowKeyBytes.size() >= MAX_KEY_ROW_SIZE) {
             reporter.reportWritesDroppedBySize();
-            log.error("Row key length greater than 4096 bytes (1): " +
-                rowKeyBytes.size() + " " + rowKey);
+            log.error("Row key length greater than 4096 bytes (1): {} {}", rowKeyBytes.size(),
+                    rowKey);
             return async.resolved().directTransform(result -> timer.end());
         }
 
@@ -603,7 +604,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         return bases;
     }
 
-    ByteString serializeValue(double value) {
+    static ByteString serializeValue(double value) {
         final ByteBuffer buffer =
             ByteBuffer.allocate(Double.BYTES).putLong(Double.doubleToLongBits(value));
         return ByteString.copyFrom(buffer.array());
@@ -654,8 +655,11 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         return "BigtableBackend(connection=" + this.connection + ")";
     }
 
-    public int getMaxWriteBatchSize() {
-        return maxWriteBatchSize;
+    /**
+    * Do not use - public purely to enable unit testing
+    */
+    public MetricsConnectionSettings metricsConnectionSettings() {
+        return metricsConnectionSettings;
     }
 
     private static final class PreparedQuery {

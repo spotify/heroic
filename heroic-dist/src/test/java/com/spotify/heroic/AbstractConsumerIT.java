@@ -247,7 +247,7 @@ public abstract class AbstractConsumerIT extends AbstractSingleNodeIT {
     }
 
 
-    Object createJsonMetric(final TMetric metric, final Series series){
+    static Object createJsonMetric(final TMetric metric, final Series series){
         Object jsonMetric;
         if (metric.getValue() instanceof  Value.DoubleValue){
             jsonMetric =
@@ -263,7 +263,7 @@ public abstract class AbstractConsumerIT extends AbstractSingleNodeIT {
         return jsonMetric;
     }
 
-    private void tryUntil(Callable<Void> callable) throws Exception {
+    private static void tryUntil(Callable<Void> callable) throws Exception {
         RetryPolicy.Instance instance = RETRY_POLICY.apply(ClockSource.SYSTEM);
         List<Throwable> supressed = new ArrayList<>();
 

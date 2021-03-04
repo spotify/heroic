@@ -51,6 +51,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Module
+@SuppressWarnings({"LineLength"})
 public class MetricManagerModule {
     private static final Logger log = LoggerFactory.getLogger(MetricManagerModule.class);
 
@@ -101,6 +102,7 @@ public class MetricManagerModule {
      * Threshold for defining a "small" query, measured in pre-aggregation sample size
      */
     private final long smallQueryThreshold;
+    private final MetricsConnectionSettings connectionSettings;
 
     private MetricManagerModule(
         List<MetricModule> backends,
@@ -112,7 +114,8 @@ public class MetricManagerModule {
         OptionalLimit concurrentQueriesBackoff,
         int fetchParallelism,
         boolean failOnLimits,
-        long smallQueryThreshold
+        long smallQueryThreshold,
+        MetricsConnectionSettings connectionSettings
     ) {
         this.backends = backends;
         this.defaultBackends = defaultBackends;
@@ -124,13 +127,14 @@ public class MetricManagerModule {
         this.fetchParallelism = fetchParallelism;
         this.failOnLimits = failOnLimits;
         this.smallQueryThreshold = smallQueryThreshold;
+        this.connectionSettings = connectionSettings;
 
         log.info("Metric Manager Module: \n{}", toString());
     }
 
     @Provides
     @MetricScope
-    public MetricBackendReporter reporter(HeroicReporter reporter) {
+    public static MetricBackendReporter reporter(HeroicReporter reporter) {
         return reporter.newMetricBackend();
     }
 
@@ -165,8 +169,8 @@ public class MetricManagerModule {
 
     @Provides
     @MetricScope
-    public Set<MetricBackend> backends(
-        List<MetricModule.Exposed> components, MetricBackendReporter reporter
+    public static Set<MetricBackend> backends(
+            List<MetricModule.Exposed> components, MetricBackendReporter reporter
     ) {
         return ImmutableSet.copyOf(components
             .stream()
@@ -178,7 +182,7 @@ public class MetricManagerModule {
     @Provides
     @MetricScope
     @Named("metric")
-    public LifeCycle metricLife(List<MetricModule.Exposed> components) {
+    public static LifeCycle metricLife(List<MetricModule.Exposed> components) {
         return LifeCycle.combined(components.stream().map(MetricModule.Exposed::life));
     }
 
@@ -238,6 +242,13 @@ public class MetricManagerModule {
         return smallQueryThreshold;
     }
 
+    @Provides
+    @MetricScope
+    @Named("connectionSettings")
+    public MetricsConnectionSettings connectionSettings() {
+        return connectionSettings;
+    }
+
     @Override
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.MULTI_LINE_STYLE)
@@ -251,6 +262,7 @@ public class MetricManagerModule {
             .append("fetchParallelism", fetchParallelism)
             .append("failOnLimits", failOnLimits)
             .append("smallQueryThreshold", smallQueryThreshold)
+            .append("connectionSettings", connectionSettings)
             .toString();
     }
 
@@ -259,6 +271,7 @@ public class MetricManagerModule {
     }
 
     public static class Builder {
+        private MetricsConnectionSettings connectionSettings;
         private Optional<List<MetricModule>> backends = empty();
         private Optional<List<String>> defaultBackends = empty();
         private OptionalLimit groupLimit = OptionalLimit.empty();
@@ -284,7 +297,12 @@ public class MetricManagerModule {
             @JsonProperty("concurrentQueriesBackoff") OptionalLimit concurrentQueriesBackoff,
             @JsonProperty("fetchParallelism") Optional<Integer> fetchParallelism,
             @JsonProperty("failOnLimits") Optional<Boolean> failOnLimits,
-            @JsonProperty("smallQueryThreshold") Optional<Long> smallQueryThreshold
+            @JsonProperty("smallQueryThreshold") Optional<Long> smallQueryThreshold,
+            @JsonProperty("mutateRpcTimeoutMs") Optional<Integer> mutateRpcTimeoutMs,
+            @JsonProperty("readRowsRpcTimeoutMs") Optional<Integer> readRowsRpcTimeoutMs,
+            @JsonProperty("shortRpcTimeoutMs") Optional<Integer> shortRpcTimeoutMs,
+            @JsonProperty("maxScanTimeoutRetries") Optional<Integer> maxScanTimeoutRetries,
+            @JsonProperty("maxElapsedBackoffMs") Optional<Integer> maxElapsedBackoffMs
         ) {
             this.backends = backends;
             this.defaultBackends = defaultBackends;
@@ -296,6 +314,12 @@ public class MetricManagerModule {
             this.fetchParallelism = fetchParallelism;
             this.failOnLimits = failOnLimits;
             this.smallQueryThreshold = smallQueryThreshold;
+
+            this.connectionSettings = new MetricsConnectionSettings(
+                    Optional.ofNullable(null),
+                    mutateRpcTimeoutMs, readRowsRpcTimeoutMs, shortRpcTimeoutMs,
+                    maxScanTimeoutRetries,
+                    maxElapsedBackoffMs);
         }
 
         public Builder backends(List<MetricModule> backends) {
@@ -349,20 +373,23 @@ public class MetricManagerModule {
         }
 
         public Builder merge(final Builder o) {
-            // @formatter:off
             return new Builder(
-                mergeOptionalList(o.backends, backends),
-                mergeOptionalList(o.defaultBackends, defaultBackends),
-                groupLimit.orElse(o.groupLimit),
-                seriesLimit.orElse(o.seriesLimit),
-                aggregationLimit.orElse(o.aggregationLimit),
-                dataLimit.orElse(o.dataLimit),
-                concurrentQueriesBackoff.orElse(o.concurrentQueriesBackoff),
-                pickOptional(fetchParallelism, o.fetchParallelism),
-                pickOptional(failOnLimits, o.failOnLimits),
-                pickOptional(smallQueryThreshold, o.smallQueryThreshold)
+                    mergeOptionalList(o.backends, backends),
+                    mergeOptionalList(o.defaultBackends, defaultBackends),
+                    groupLimit.orElse(o.groupLimit),
+                    seriesLimit.orElse(o.seriesLimit),
+                    aggregationLimit.orElse(o.aggregationLimit),
+                    dataLimit.orElse(o.dataLimit),
+                    concurrentQueriesBackoff.orElse(o.concurrentQueriesBackoff),
+                    pickOptional(fetchParallelism, o.fetchParallelism),
+                    pickOptional(failOnLimits, o.failOnLimits),
+                    pickOptional(smallQueryThreshold, o.smallQueryThreshold),
+                    Optional.of(connectionSettings.mutateRpcTimeoutMs),
+                    Optional.of(connectionSettings.readRowsRpcTimeoutMs),
+                    Optional.of(connectionSettings.shortRpcTimeoutMs),
+                    Optional.of(connectionSettings.maxScanTimeoutRetries),
+                    Optional.of(connectionSettings.maxElapsedBackoffMs)
             );
-            // @formatter:on
         }
 
         public MetricManagerModule build() {
@@ -377,7 +404,8 @@ public class MetricManagerModule {
                 concurrentQueriesBackoff,
                 fetchParallelism.orElse(DEFAULT_FETCH_PARALLELISM),
                 failOnLimits.orElse(DEFAULT_FAIL_ON_LIMITS),
-                smallQueryThreshold.orElse(DEFAULT_SMALL_QUERY_THRESHOLD)
+                smallQueryThreshold.orElse(DEFAULT_SMALL_QUERY_THRESHOLD),
+                connectionSettings
             );
             // @formatter:on
         }

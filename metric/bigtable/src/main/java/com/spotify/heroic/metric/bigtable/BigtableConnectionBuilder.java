@@ -23,18 +23,15 @@ package com.spotify.heroic.metric.bigtable;
 
 import com.google.cloud.bigtable.config.BigtableOptions;
 import com.google.cloud.bigtable.config.BulkOptions;
-import com.google.cloud.bigtable.config.CredentialOptions;
+import com.google.cloud.bigtable.config.CallOptionsConfig;
 import com.google.cloud.bigtable.config.RetryOptions;
 import com.google.cloud.bigtable.grpc.BigtableSession;
-import com.spotify.heroic.metric.bigtable.api.BigtableDataClient;
+import com.spotify.heroic.metric.MetricsConnectionSettings;
 import com.spotify.heroic.metric.bigtable.api.BigtableDataClientImpl;
-import com.spotify.heroic.metric.bigtable.api.BigtableMutator;
 import com.spotify.heroic.metric.bigtable.api.BigtableMutatorImpl;
-import com.spotify.heroic.metric.bigtable.api.BigtableTableAdminClient;
 import com.spotify.heroic.metric.bigtable.api.BigtableTableTableAdminClientImpl;
 import eu.toolchain.async.AsyncFramework;
 import io.grpc.Status;
-import java.util.Optional;
 import java.util.concurrent.Callable;
 import javax.annotation.Nullable;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -57,8 +54,10 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
 
     private final boolean disableBulkMutations;
     private final int flushIntervalSeconds;
-    private final Optional<Integer> batchSize;
+
     private final String emulatorEndpoint;
+
+    private final MetricsConnectionSettings metricsConnectionSettings;
 
     public BigtableConnectionBuilder(
         final String project,
@@ -69,7 +68,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
         final AsyncFramework async,
         final boolean disableBulkMutations,
         final int flushIntervalSeconds,
-        final Optional<Integer> batchSize
+        final MetricsConnectionSettings metricsConnectionSettings
     ) {
         this.project = project;
         this.instance = instance;
@@ -79,31 +78,41 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
         this.async = async;
         this.disableBulkMutations = disableBulkMutations;
         this.flushIntervalSeconds = flushIntervalSeconds;
-        this.batchSize = batchSize;
+        this.metricsConnectionSettings = metricsConnectionSettings;
     }
 
     @Override
     public BigtableConnection call() throws Exception {
-        final CredentialOptions credentials = this.credentials.build();
+        final var credentials = this.credentials.build();
 
-        final RetryOptions retryOptions = RetryOptions.builder()
+        final var retryOptions = RetryOptions.builder()
             .addStatusToRetryOn(Status.Code.UNKNOWN)
             .addStatusToRetryOn(Status.Code.UNAVAILABLE)
             .setAllowRetriesWithoutTimestamp(true)
+            .setEnableRetries(true)
+            .setMaxScanTimeoutRetries(metricsConnectionSettings.maxScanTimeoutRetries)
+            .setMaxElapsedBackoffMillis(metricsConnectionSettings.maxElapsedBackoffMs)
             .build();
 
-        final BulkOptions bulkOptions = batchSize
-            .map(integer ->  BulkOptions.builder().setBulkMaxRowKeyCount(integer).build())
-            .orElseGet(() -> BulkOptions.builder().build());
+        final var bulkOptions =
+                BulkOptions.builder()
+                        .setBulkMaxRowKeyCount(metricsConnectionSettings.maxWriteBatchSize).build();
 
-        BigtableOptions.Builder builder = BigtableOptions.builder()
+        var callOptionsConfig = CallOptionsConfig.builder()
+                .setReadRowsRpcTimeoutMs(metricsConnectionSettings.readRowsRpcTimeoutMs)
+                .setMutateRpcTimeoutMs(metricsConnectionSettings.mutateRpcTimeoutMs)
+                .setShortRpcTimeoutMs(metricsConnectionSettings.shortRpcTimeoutMs)
+                .setUseTimeout(true).build();
+
+        var builder = BigtableOptions.builder()
             .setProjectId(project)
             .setInstanceId(instance)
             .setUserAgent(USER_AGENT)
             .setDataChannelCount(64)
             .setCredentialOptions(credentials)
             .setRetryOptions(retryOptions)
-            .setBulkOptions(bulkOptions);
+            .setBulkOptions(bulkOptions)
+            .setCallOptionsConfig(callOptionsConfig);
 
         if (profile != null) {
             builder.setAppProfileId(profile);
@@ -113,22 +122,23 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
             builder.enableEmulator(emulatorEndpoint);
         }
 
-        final BigtableOptions bigtableOptions = builder.build();
+        final var bigtableOptions = builder.build();
 
         log.info("Retry Options: {}", retryOptions.toString());
         log.info("Bulk Options: {}", bulkOptions.toString());
         log.info("Bigtable Options: {}", bigtableOptions.toString());
+        log.info("Call Options: {}", callOptionsConfig.toString());
         log.info("BigTable Connection Builder: \n{}", toString());
 
-        final BigtableSession session = new BigtableSession(bigtableOptions);
+        final var session = new BigtableSession(bigtableOptions);
 
-        final BigtableTableAdminClient adminClient =
+        final var adminClient =
             new BigtableTableTableAdminClientImpl(session.getTableAdminClient(), project, instance);
 
-        final BigtableMutator mutator =
+        final var mutator =
             new BigtableMutatorImpl(async, session, disableBulkMutations, flushIntervalSeconds);
 
-        final BigtableDataClient client =
+        final var client =
             new BigtableDataClientImpl(async, session, mutator, project, instance);
 
         return new BigtableConnection(async, project, instance, session, mutator, adminClient,
@@ -144,8 +154,8 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
             .append("credentials", credentials)
             .append("disableBulkMutations", disableBulkMutations)
             .append("flushIntervalSeconds", flushIntervalSeconds)
-            .append("batchSize", batchSize.orElse(-1))
             .append("emulatorEndpoint", emulatorEndpoint)
+            .append("settings", metricsConnectionSettings)
             .toString();
     }
 }

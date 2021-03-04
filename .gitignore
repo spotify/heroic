@@ -40,3 +40,4 @@ gradle-app.setting
 
 # direnv config file - https://direnv.net/
 /.envrc
+logs

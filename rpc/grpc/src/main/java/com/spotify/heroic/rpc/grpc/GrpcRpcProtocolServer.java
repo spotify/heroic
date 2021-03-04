@@ -48,6 +48,7 @@ import io.grpc.internal.ServerImpl;
 import io.grpc.netty.NettyServerBuilder;
 import io.netty.channel.Channel;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
@@ -175,6 +176,7 @@ public class GrpcRpcProtocolServer implements LifeCycles {
             .maxInboundMessageSize(maxFrameSize)
             .bossEventLoopGroup(bossGroup)
             .workerEventLoopGroup(workerGroup)
+            .channelType(NioServerSocketChannel.class)
             .build();
 
         return async.call(() -> {
@@ -182,33 +184,24 @@ public class GrpcRpcProtocolServer implements LifeCycles {
             this.server.set(server);
             return null;
         }).directTransform(v -> {
-            final InetSocketAddress localAddress = extractInetSocketAddress(server);
-            bindFuture.resolve(localAddress);
+            bindFuture.resolve(extractInetSocketAddress(server));
             return null;
         });
     }
 
-    /**
-     * Extract the local address from the current server.
-     * <p>
-     * Because no api is available to accomplish this, it currently uses a very ugly reflexive
-     * approach.
-     *
-     * @param server Server to extract local address from.
-     * @return an InetSocketAddress
-     * @throws Exception if something goes wrong (which it should).
-     */
-    private InetSocketAddress extractInetSocketAddress(final Server server) throws Exception {
-        final ServerImpl impl = (ServerImpl) server;
+    private static InetSocketAddress extractInetSocketAddress(Server server) throws Exception {
+        ServerImpl impl = (ServerImpl) server;
 
-        final Field transportServerField = ServerImpl.class.getDeclaredField("transportServer");
+        Field transportServerField = ServerImpl.class.getDeclaredField("transportServers");
         transportServerField.setAccessible(true);
-        final Object transportServer = transportServerField.get(impl);
 
-        final Field channelField = transportServer.getClass().getDeclaredField("channel");
+        var transportServerArr = (ArrayList<?>) transportServerField.get(impl);
+        Object transportServer = transportServerArr.get(0);
+
+        Field channelField = transportServer.getClass().getDeclaredField("channel");
         channelField.setAccessible(true);
-        final Channel channel = (Channel) channelField.get(transportServer);
 
+        Channel channel = (Channel) channelField.get(transportServer);
         return (InetSocketAddress) channel.localAddress();
     }
 

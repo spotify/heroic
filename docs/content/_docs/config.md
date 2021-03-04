@@ -132,6 +132,7 @@ Precedence for each flag is defined as the following:
 The following features are available:
 
 #### com.spotify.heroic.deterministic_aggregations
+
 {:.no_toc}
 
 Enable feature to only perform aggregations that can be performed with limited resources. Disabled by default.
@@ -139,6 +140,7 @@ Enable feature to only perform aggregations that can be performed with limited r
 Aggregations are commonly performed per-shard, and the result concatenated. This enabled experimental support for distributed aggregations which behave transparently across shards.
 
 #### com.spotify.heroic.distributed_aggregations
+
 {:.no_toc}
 
 Enable feature to perform distributed aggregations. Disabled by default.
@@ -146,6 +148,7 @@ Enable feature to perform distributed aggregations. Disabled by default.
 Aggregations are commonly performed per-shard, and the result concatenated. This enables experimental support for distributed aggregations which behave transparently across shards. Typically this will cause more data to be transported across shards for each request.
 
 #### com.spotify.heroic.shift_range
+
 {:.no_toc}
 
 Enable feature to cause range to be rounded on the current cadence. Enabled by default.
@@ -153,6 +156,7 @@ Enable feature to cause range to be rounded on the current cadence. Enabled by d
 This will assert that there are data outside of the range queried for and that the range is aligned to the queried cadence. Which is a useful feature when using a dashboarding system.
 
 #### com.spotify.heroic.sliced_data_fetch
+
 {:.no_toc}
 
 Enable feature to cause data to be fetched in slices. Enabled by default.
@@ -160,6 +164,7 @@ Enable feature to cause data to be fetched in slices. Enabled by default.
 This will cause data to be fetched and consumed by the aggregation framework in pieces avoiding having to load all data into memory before starting to consume it.
 
 #### com.spotify.heroic.end_bucket_stategy
+
 {:.no_toc}
 
 Enabled by default.
@@ -167,6 +172,7 @@ Enabled by default.
 Use the legacy bucket strategy by default where the resulting value is at the end of the timestamp of the bucket.
 
 #### com.spotify.heroic.cache_query
+
 {:.no_toc}
 
 Disabled by default.
@@ -492,6 +498,39 @@ batchSize: <int>
 # If set, the Bigtable client will be configured to use this address as a Bigtable emulator.
 # Default CBT emulator runs at: "localhost:8086"
 emulatorEndpoint: <string>
+
+# Reference: https://cloud.google.com/bigtable/docs/hbase-client/javadoc/com/google/cloud/bigtable/config/CallOptionsConfig.Builder
+# The amount of milliseconds to wait before issuing a client side timeout for mutation remote
+# procedure calls.
+# In other words, If timeouts are set, how many milliseconds should pass before a 
+# DEADLINE_EXCEEDED is thrown. The Google default is 600_000 ms (10 minutes).
+# Currently, this feature is experimental.
+mutateRpcTimeoutMs: int
+
+# ReadRowsRpcTimeoutMs
+# The amount of milliseconds to wait before issuing a client side timeout for readRows streaming remote procedure calls.
+# In other words, from https://github.com/hegemonic/cloud-bigtable-client/blob/master/bigtable-client-core-parent/bigtable-client-core/src/main/java/com/google/cloud/bigtable/config/CallOptionsConfig.java :
+# The default duration to wait before timing out read stream RPC (default value: 12 hours).
+
+readRowsRpcTimeoutMs: int
+
+# ShortRpcTimeoutMs - The amount of milliseconds to wait before issuing a client side timeout for short remote procedure calls.
+# In other words, the default duration to wait before timing out RPCs (default 
+# value: 60 seconds)
+# from https://cloud.google.com/bigtable/docs/hbase-client/javadoc/com/google/cloud/bigtable /config/CallOptionsConfig#SHORT_TIMEOUT_MS_DEFAULT
+shortRpcTimeoutMs: int
+
+# MaxScanTimeoutRetries
+# The maximum number of times to retry after a scan timeout.
+# https://cloud.google.com/bigtable/docs/hbase-client/javadoc/com/google/cloud/bigtable/config/RetryOptions.html#getmaxscantimeoutretries
+# Default is 3.
+maxScanTimeoutRetries: int
+
+# maxElapsedBackoffMs
+# Maximum amount of time we will retry an operation that is failing.
+# So if this is 5,000ms and we retry every 2,000ms, we would do 2 retries.
+# Default is 60 seconds
+maxElapsedBackoffMs: int
 ```
 
 ##### `<bigtable_credentials>`
@@ -542,17 +581,15 @@ Maximum number of distinct groups a single result group may contain.
 
 ##### seriesLimit
 
-Maximum amount of time series a single request is allowed to fetch, per cluster (if federated). 
+Maximum amount of time series a single request is allowed to fetch, per cluster (if federated).
 
 A note: when using resource identifiers this limit only applies to the number of series found in the metadata backend, *not* the total series returned.
 
 It is therefore possible to have a low limit *not* be exceeded with the number of series found in metadata, however, return far more series from the metrics backend when resource identifiers are taken into account (which may trigger additional limits).
 
-##### failOnLimits 
+##### failOnLimits
 
 When true, any limits applied will be reported as a failure.
-
-
 
 ### [`<metadata_backend>`](#metadata_backend)
 
@@ -716,7 +753,6 @@ sniff: <bool> default = false
 # How often to poll for new nodes when `sniff` is enabled.
 nodeSamplerInterval: <duration> default = 30s
 ```
-
 
 #### [Memory](#memory)
 
@@ -970,6 +1006,7 @@ level: <string> default = TRACE
 ```
 
 #### Query log output
+
 {:.no_toc}
 
 Each successful query will result in several output entries in the query log. Entries from different stages of the query. Example output:
@@ -996,6 +1033,7 @@ Each successful query will result in several output entries in the query log. En
 | `data` | Contains data relevant to this query stage. This might for example be the original query, a partial response or the final response.
 
 #### Contextual information
+
 {:.no_toc}
 
 It's possible to supply contextual information in the query. This information will then be included in the query log, to ease mapping of performed query to the query log output.
@@ -1032,7 +1070,6 @@ You'll get the following output in the query log:
 Enable distributed tracing output of Heroic's operations. Tracing is instrumented using [OpenCensus](https://opencensus.io/).
 
 A few tags are added to incoming requests such as the java version. If running on GCP, zone and region tags are added as well.
-
 
 ```yaml
 # Probability, between 0.0 and 1.0, of sampling each trace.

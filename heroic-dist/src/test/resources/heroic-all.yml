@@ -21,6 +21,11 @@ metrics:
     - type: bigtable
       project: project
       maxWriteBatchSize: 250
+      mutateRpcTimeoutMs: 135
+      readRowsRpcTimeoutMs: 136
+      shortRpcTimeoutMs: 137
+      maxScanTimeoutRetries: 7
+      maxElapsedBackoffMs: 138
     - type: datastax
     - type: memory
 

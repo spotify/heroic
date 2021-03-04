@@ -127,6 +127,7 @@ public class CoreQueryManager implements QueryManager {
 
     private final long smallQueryThreshold;
 
+    @SuppressWarnings({"LineLength"})
     @Inject
     public CoreQueryManager(
         @Named("features") final Features features,
@@ -485,8 +486,7 @@ public class CoreQueryManager implements QueryManager {
             return (fullQuery, queryTraces) -> {
                 /* We want to store the current QT + queryTraces list of QT's.
                  * Create new QT with queryTraces + current QT as a children */
-                final List<QueryTrace> traces = new ArrayList<>();
-                traces.addAll(queryTraces);
+                final List<QueryTrace> traces = new ArrayList<>(queryTraces);
                 traces.add(fullQuery.trace());
                 final QueryTrace newTrace = shardLocalWatch.end(traces);
                 return fullQuery.withTrace(newTrace);
@@ -549,7 +549,7 @@ public class CoreQueryManager implements QueryManager {
 
     public static final long INTERVAL_GOAL = 240;
 
-    private Duration cadenceFromRange(final DateRange range) {
+    private static Duration cadenceFromRange(final DateRange range) {
         final long diff = range.diff();
         final long nominal = diff / INTERVAL_GOAL;
 

@@ -28,6 +28,7 @@ import com.spotify.heroic.analytics.AnalyticsModule;
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
+import com.spotify.heroic.metric.MetricsConnectionSettings;
 import com.spotify.heroic.metric.bigtable.BigtableConnection;
 import com.spotify.heroic.metric.bigtable.BigtableConnectionBuilder;
 import com.spotify.heroic.metric.bigtable.CredentialsBuilder;
@@ -100,9 +101,16 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
             @Override
             public AsyncFuture<BigtableConnection> construct() {
                 return async.call(
-                    new BigtableConnectionBuilder(project, instance, profile, credentials,
-                        emulatorEndpoint, async, DEFAULT_DISABLE_BULK_MUTATIONS,
-                        DEFAULT_FLUSH_INTERVAL_SECONDS, Optional.empty()));
+                    new BigtableConnectionBuilder(
+                            project,
+                            instance,
+                            profile,
+                            credentials,
+                            emulatorEndpoint,
+                            async,
+                            DEFAULT_DISABLE_BULK_MUTATIONS,
+                            DEFAULT_FLUSH_INTERVAL_SECONDS,
+                            MetricsConnectionSettings.createDefault()));
             }
 
             @Override

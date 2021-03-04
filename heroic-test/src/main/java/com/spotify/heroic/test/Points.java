@@ -33,6 +33,16 @@ public class Points {
         return this;
     }
 
+    // We suppress this warning as modifying a primitive parameter is safe
+    @SuppressWarnings("AssignmentToMethodParameter")
+    public Points p(long startingTimestamp, double startingMetricValue, int numPoints) {
+        for (int i = 0; i < numPoints; i++) {
+            points.add(new Point(startingTimestamp++, startingMetricValue++));
+        }
+
+        return this;
+    }
+
     public MetricCollection build() {
         return MetricCollection.points(points.build());
     }
