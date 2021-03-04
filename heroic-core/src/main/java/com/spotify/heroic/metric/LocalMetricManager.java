@@ -38,6 +38,7 @@ import com.spotify.heroic.aggregation.BucketStrategy;
 import com.spotify.heroic.aggregation.RetainQuotaWatcher;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.FailureType;
 import com.spotify.heroic.common.Feature;
 import com.spotify.heroic.common.Features;
 import com.spotify.heroic.common.GoAwayException;
@@ -52,9 +53,12 @@ import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
+import com.spotify.heroic.metric.FetchData.Result;
+import com.spotify.heroic.metric.FullQuery.Request;
 import com.spotify.heroic.querylogging.QueryContext;
 import com.spotify.heroic.querylogging.QueryLogger;
 import com.spotify.heroic.querylogging.QueryLoggerFactory;
+import com.spotify.heroic.servlet.MandatoryClientIdFilter;
 import com.spotify.heroic.statistics.DataInMemoryReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 import com.spotify.heroic.tracing.EndSpanFutureReporter;
@@ -82,10 +86,19 @@ import java.util.function.Function;
 import javax.inject.Inject;
 import javax.inject.Named;
 import org.apache.commons.lang3.NotImplementedException;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
 @MetricScope
 public class LocalMetricManager implements MetricManager {
+    // This is a constant (as opposed to inline as one might expect) in order to draw attention
+    // to the fact that this string is matched upon in other parts of the code.
+    private static final String SOME_FETCHES_FAILED_MESSAGE = "Some fetches failed (";
+
+    public static boolean matchesTimeoutMessage(String errorMessage) {
+        return errorMessage.toLowerCase().contains(SOME_FETCHES_FAILED_MESSAGE.toLowerCase());
+    }
+
     private static final Tracer tracer = io.opencensus.trace.Tracing.getTracer();
     private static final QueryTrace.Identifier QUERY =
         QueryTrace.identifier(LocalMetricManager.class, "query");
@@ -155,7 +168,7 @@ public class LocalMetricManager implements MetricManager {
 
     @Override
     public MetricBackendGroup useOptionalGroup(final Optional<String> group) {
-        return new Group(groupSet.useOptionalGroup(group), metadata.useDefaultGroup());
+        return new Group(groupSet.useOptionalGroup(group), metadata.useDefaultGroup(), reporter);
     }
 
     public String toString() {
@@ -165,11 +178,14 @@ public class LocalMetricManager implements MetricManager {
     private class Group extends AbstractMetricBackend implements MetricBackendGroup {
         private final SelectedGroup<MetricBackend> backends;
         private final MetadataBackend metadata;
+        private final MetricBackendReporter reporter;
 
-        public Group(final SelectedGroup<MetricBackend> backends, final MetadataBackend metadata) {
+        public Group(final SelectedGroup<MetricBackend> backends, final MetadataBackend metadata,
+                     MetricBackendReporter reporter) {
             super(async);
             this.backends = backends;
             this.metadata = metadata;
+            this.reporter = reporter;
         }
 
         @Override
@@ -188,6 +204,7 @@ public class LocalMetricManager implements MetricManager {
                    + ")";
         }
 
+        @SuppressWarnings("checkstyle:LineLength")
         private class Transform implements LazyTransform<FindSeries, FullQuery> {
 
             private final AggregationInstance aggregation;
@@ -202,6 +219,9 @@ public class LocalMetricManager implements MetricManager {
             private final QueryOptions options;
             private final DataInMemoryReporter dataInMemoryReporter;
             private final Span parentSpan;
+            private final MetricBackendReporter reporter;
+            private final String clientId;
+            private final Request request;
 
             private Transform(
                 final FullQuery.Request request,
@@ -210,12 +230,23 @@ public class LocalMetricManager implements MetricManager {
                 final OptionalLimit groupLimit,
                 final QuotaWatcher quotaWatcher,
                 final DataInMemoryReporter dataInMemoryReporter,
-                final Span parentSpan
+                final Span parentSpan,
+                final MetricBackendReporter reporter
             ) {
+                this.request = request;
                 this.aggregation = request.aggregation();
                 this.range = request.range();
                 this.options = request.options();
                 this.source = request.source();
+
+                var httpContext = request.context().httpContext();
+
+                this.clientId = httpContext.isPresent()
+                        ? httpContext
+                            .get()
+                            .getClientId()
+                            .orElse(MandatoryClientIdFilter.MISSING_X_CLIENT_ID)
+                        : MandatoryClientIdFilter.MISSING_X_CLIENT_ID;
 
                 this.failOnLimits = failOnLimits;
                 this.seriesLimit = seriesLimit;
@@ -226,6 +257,8 @@ public class LocalMetricManager implements MetricManager {
 
                 this.dataInMemoryReporter = dataInMemoryReporter;
                 this.parentSpan = parentSpan;
+
+                this.reporter = reporter;
 
                 final Features features = request.features();
                 this.bucketStrategy = options
@@ -243,16 +276,10 @@ public class LocalMetricManager implements MetricManager {
 
                 if (result.getLimited()) {
                     if (failOnLimits) {
-                        final RequestError error = new QueryError(
-                            "The number of series requested is more than the allowed limit of " +
-                                seriesLimit);
-
-                        fetchSpan.addAnnotation(error.toString());
-                        fetchSpan.putAttribute("quotaViolation", booleanAttributeValue(true));
-                        fetchSpan.end();
-
-                        return async.resolved(FullQuery.limitsError(namedWatch.end(), error,
-                            ResultLimits.of(ResultLimit.SERIES)));
+                        return createQuotaViolationQueryFuture(fetchSpan,
+                                "The number of series requested is " +
+                                        "more than the allowed limit of " +
+                                        seriesLimit, ResultLimit.SERIES);
                     }
 
                     limits = ResultLimits.of(ResultLimit.SERIES);
@@ -269,17 +296,48 @@ public class LocalMetricManager implements MetricManager {
                 try {
                     session = aggregation.session(range, quotaWatcher, bucketStrategy);
                 } catch (QuotaViolationException e) {
-                    String error = format(
-                        "aggregation needs to retain more data then what is allowed: %d",
-                        aggregationLimit.asLong().get());
-                    fetchSpan.addAnnotation(error);
-                    fetchSpan.putAttribute("quotaViolation", booleanAttributeValue(true));
-                    fetchSpan.end();
-                    return async.resolved(FullQuery.limitsError(namedWatch.end(),
-                        new QueryError(error),
-                        ResultLimits.of(ResultLimit.AGGREGATION)));
+                    return createQuotaViolationQueryFuture(fetchSpan, format(
+                            "aggregation needs to retain more data then what is allowed: %d",
+                            aggregationLimit.asLong().get()), ResultLimit.AGGREGATION);
                 }
 
+                var collector = createResultCollector(session, limits);
+
+                final List<Callable<AsyncFuture<Result>>>
+                        fetches = buildMetricsBackendFetchFutures(result, fetchSpan, collector);
+
+                return async
+                    .eventuallyCollect(fetches, collector, fetchParallelism)
+                    .onDone(new EndSpanFutureReporter(fetchSpan))
+                    .onDone(new FutureDone<FullQuery>() {
+                        @Override
+                        public void failed(Throwable cause) throws Exception {
+                            if (matchesTimeoutMessage(cause.getMessage())) {
+                                reporter.reportClientIdFailure(clientId, FailureType.TIMEOUT);
+                            }
+                            queryLogger.logBigtableQueryTimeout(request.context(), request);
+                        }
+
+                        @Override
+                        public void resolved(FullQuery result) throws Exception {
+                            /* no-op */
+                        }
+
+                        @Override
+                        public void cancelled() throws Exception {
+                            /* no-op */
+                        }
+                    });
+            }
+
+
+            /**
+             * Helper method that enables decomposition of
+             * {@link com.spotify.heroic.metric.LocalMetricManager.Group.Transform#transform(com.spotify.heroic.metadata.FindSeries)}
+             * It takes tracing into consideration and returns an appropriate ResultCollector.
+             */
+            private ResultCollector createResultCollector(
+                    AggregationSession session, ResultLimits limits) {
                 /* setup collector */
                 final ResultCollector collector;
 
@@ -312,26 +370,59 @@ public class LocalMetricManager implements MetricManager {
                     };
                 }
 
-                final List<Callable<AsyncFuture<FetchData.Result>>> fetches = new ArrayList<>();
-                accept(metricBackend -> {
+                return collector;
+            }
+            /**
+             * Simple helper method that enables decomposition of
+             *
+             * {@link com.spotify.heroic.metric.LocalMetricManager.Group.Transform#transform(com.spotify.heroic.metadata.FindSeries)},
+             * that creates a resolved FullQuery.limitsError.
+             */
+            private AsyncFuture<FullQuery> createQuotaViolationQueryFuture(Span fetchSpan,
+                                                                           String errorText,
+                                                                           ResultLimit limit) {
+                var error = new QueryError(errorText);
+
+                fetchSpan.addAnnotation(error.toString());
+                fetchSpan.putAttribute("quotaViolation", booleanAttributeValue(true));
+                fetchSpan.end();
+
+                return async.resolved(FullQuery.limitsError(namedWatch.end(),
+                    error,
+                    ResultLimits.of(limit)));
+            }
+
+            /**
+             * Helper method that enables decomposition of
+             * {@link com.spotify.heroic.metric.LocalMetricManager.Group.Transform#transform(com.spotify.heroic.metadata.FindSeries)}
+             * Builds a List of fetch operation futures, one for each Series (of the Result), for
+             * each backend. A span is also created to track the fetch operations created.
+             */
+            @NotNull
+            private List<Callable<AsyncFuture<Result>>> buildMetricsBackendFetchFutures(
+                    FindSeries result, Span fetchSpan, ResultCollector collector) {
+
+                final List<Callable<AsyncFuture<Result>>> fetches = new ArrayList<>();
+
+                // Requires the squashing exporter otherwise too many spans are produced.
+                backends.stream().forEach(((Consumer<MetricBackend>) metricBackend -> {
                     for (final Series series : result.getSeries()) {
                         // Requires the squashing exporter otherwise too many spans are produced.
-                        final Span fetchSeries =
-                            tracer.spanBuilderWithExplicitParent(
-                                "localMetricsManager.fetchSeries", fetchSpan).startSpan();
+                        final Span fetchSeriesSpan =
+                                tracer.spanBuilderWithExplicitParent(
+                                        "localMetricsManager.fetchSeries", fetchSpan).startSpan();
 
-                        fetchSeries.addAnnotation(series.toString());
+                        fetchSeriesSpan.addAnnotation(series.toString());
                         fetches.add(() -> metricBackend.fetch(
                             new FetchData.Request(source, series, range, options),
-                            quotaWatcher,
-                            mcr -> collector.acceptMetricsCollection(series, mcr),
-                            fetchSeries
-                        ).onDone(new EndSpanFutureReporter(fetchSeries)));
+                                quotaWatcher,
+                                mcr -> collector.acceptMetricsCollection(series, mcr),
+                                fetchSeriesSpan
+                        ).onDone(new EndSpanFutureReporter(fetchSeriesSpan)));
                     }
-                });
-                return async
-                    .eventuallyCollect(fetches, collector, fetchParallelism)
-                    .onDone(new EndSpanFutureReporter(fetchSpan));
+                })::accept);
+
+                return fetches;
             }
         }
 
@@ -393,13 +484,14 @@ public class LocalMetricManager implements MetricManager {
 
                 // Transform that takes the result from ES metadata lookup to fetch from backend
                 final LazyTransform<FindSeries, FullQuery> transform =
-                    new Transform(request,
-                        failOnLimits,
-                        seriesLimit,
-                        groupLimit,
-                        quotaWatcher,
-                        dataInMemoryReporter,
-                        findSeriesSpan);
+                        new Transform(request,
+                                failOnLimits,
+                                seriesLimit,
+                                groupLimit,
+                                quotaWatcher,
+                                dataInMemoryReporter,
+                                findSeriesSpan,
+                                reporter);
 
                 // Add watcher to set to compute stats across all queries
                 quotaWatchers.put(quotaWatcher, quotaWatcher);
@@ -562,15 +654,18 @@ public class LocalMetricManager implements MetricManager {
             return AsyncObservable.chain(map(b -> b.streamRow(key)));
         }
 
-        private void accept(final Consumer<MetricBackend> op) {
-            backends.stream().forEach(op::accept);
-        }
-
         private <T> List<T> map(final Function<MetricBackend, T> op) {
             return ImmutableList.copyOf(backends.stream().map(op).iterator());
         }
     }
 
+    /**
+     * From https://docs.oracle.com/javase/tutorial/java/javaOO/nested.html:
+     * Note: A static nested class interacts with the instance members of its outer class (and other
+     * classes) just like any other top-level class. In effect, a static nested class is
+     * behaviorally a top-level class that has been nested in another top-level class for packaging
+     * convenience.
+     */
     private abstract static class ResultCollector
         implements StreamCollector<FetchData.Result, FullQuery> {
         private static final String ROWS_ACCESSED = "rowsAccessed";
@@ -627,8 +722,8 @@ public class LocalMetricManager implements MetricManager {
             });
         }
 
-        private Map<String, String> buildAggregationKey(
-            final Series series, final MetricReadResult readResult
+        private static Map<String, String> buildAggregationKey(
+                final Series series, final MetricReadResult readResult
         ) {
             if (readResult.getResource().isEmpty()) {
                 return series.getTags();
@@ -722,10 +817,10 @@ public class LocalMetricManager implements MetricManager {
                 new ResultLimits(limitsBuilder.build()), dataDensity);
         }
 
-        private Optional<String> checkIssues(final int failed, final int cancelled) {
+        private static Optional<String> checkIssues(final int failed, final int cancelled) {
             if (failed > 0 || cancelled > 0) {
-                return Optional.of(
-                    "Some fetches failed (" + failed + ") or were cancelled (" + cancelled + ")");
+                return Optional.of(SOME_FETCHES_FAILED_MESSAGE + failed + ") or were cancelled ("
+                        + cancelled + ")");
             }
 
             return Optional.empty();

@@ -19,25 +19,19 @@
  * under the License.
  */
 
-package com.spotify.heroic.statistics;
+package com.spotify.heroic.common;
 
-import com.spotify.heroic.common.FailureType;
-import com.spotify.heroic.metric.MetricBackend;
+public enum FailureType {
+    TIMEOUT("timeout"),
+    QUOTA_EXCEEDED("quota-exceeded");
 
-public interface MetricBackendReporter {
-    void reportClientIdFailure(String clientId, FailureType failureType);
+    public final String label;
 
-    MetricBackend decorate(MetricBackend backend);
-
-    DataInMemoryReporter newDataInMemoryReporter();
-
-    FutureReporter.Context reportFindSeries();
-
-    FutureReporter.Context reportQueryMetrics();
-
-    void reportWritesDroppedBySize();
-
-    void reportTotalReadDataPoints(long points);
-
-    void reportTotalRetainedDataPoints(long points);
+    private FailureType(String timeout) {
+        label = timeout;
+    }
+    @Override
+    public String toString() {
+        return this.label;
+    }
 }

@@ -43,6 +43,8 @@ import javax.ws.rs.core.Response.Status;
 public class MandatoryClientIdFilter extends SimpleFilter {
 
     public static final String X_CLIENT_ID_HEADER_NAME = "X-Client-Id";
+    public static final String MISSING_X_CLIENT_ID = "missing-client-id";
+
     public static final String ERROR_MESSAGE_TEXT =
             "This anonymous request has been rejected. Please add a 'x-client-id' " +
                     "HTTP header to your request.";
