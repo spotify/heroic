@@ -38,6 +38,10 @@ public interface QueryLogger {
 
     void logIncomingRequestAtNode(QueryContext context, FullQuery.Request request);
 
+    void logBigtableQueryTimeout(
+            QueryContext context, FullQuery.Request request
+    );
+
     void logOutgoingResponseAtNode(QueryContext context, FullQuery response);
 
     void logIncomingResponseFromShard(QueryContext context, FullQuery response);

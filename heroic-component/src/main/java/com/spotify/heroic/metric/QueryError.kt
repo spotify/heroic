@@ -21,6 +21,10 @@
 
 package com.spotify.heroic.metric
 
-data class QueryError(val error: String): RequestError {
+data class QueryError(private val error: String): RequestError {
     constructor(e: Throwable): this(e.message ?: "unknown")
+
+    override fun getError(): String {
+        return error;
+    }
 }

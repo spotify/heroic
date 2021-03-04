@@ -33,7 +33,7 @@ data class NodeError(
     val nodeId: UUID,
     @JsonProperty("nodeUri") val node: String,
     val tags: Map<String, String>,
-    val error: String,
+    private val error: String,
     val internal: Boolean
 ): RequestError {
     companion object {
@@ -48,5 +48,9 @@ data class NodeError(
         fun internalError(error: String): NodeError {
             return NodeError(UUID.randomUUID(), "", mapOf(), error, true)
         }
+    }
+
+    override fun getError(): String {
+        return error;
     }
 }

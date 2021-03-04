@@ -31,4 +31,5 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
     @JsonSubTypes.Type(value = QueryError.class, name = "query")
 })
 public interface RequestError {
+    String getError();
 }

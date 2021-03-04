@@ -23,6 +23,7 @@ package com.spotify.heroic.querylogging.noop;
 
 import com.spotify.heroic.Query;
 import com.spotify.heroic.metric.FullQuery;
+import com.spotify.heroic.metric.FullQuery.Request;
 import com.spotify.heroic.metric.QueryMetrics;
 import com.spotify.heroic.metric.QueryMetricsResponse;
 import com.spotify.heroic.querylogging.HttpContext;
@@ -67,6 +68,11 @@ public class NoopQueryLogger implements QueryLogger {
     public void logIncomingRequestAtNode(
         final QueryContext context, final FullQuery.Request request
     ) {
+    }
+
+    @Override
+    public void logBigtableQueryTimeout(QueryContext context, Request request) {
+
     }
 
     @Override

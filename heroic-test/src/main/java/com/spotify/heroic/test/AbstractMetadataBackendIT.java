@@ -378,7 +378,7 @@ public abstract class AbstractMetadataBackendIT {
     private void retrySome(final ThrowingRunnable action) throws Exception {
         AssertionError error = null;
 
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 50; i++) {
             try {
                 action.run();
             } catch (final AssertionError e) {
