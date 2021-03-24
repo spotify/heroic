@@ -1,6 +1,7 @@
 ---
 method: POST
 endpoint: /query/metrics
+x-client-id-header: "-H 'x-client-id: my-app'"
 help: Query for metrics
 description: Query and aggregate metrics.
 fields:
@@ -33,5 +34,4 @@ response_fields:
   type_name: 'Statistics'
   purpose: 'Statistics about the current query. This field should be inspected for errors which will have caused the result to be inconsistent.'
 ---
-<em>Note that the <code>x-client-id: my_app_name</code> 
-header must be supplied since anonymous requests are not permitted.</em>
+*Note that the `x-client-id: my_app_name` header must be supplied since anonymous requests are not permitted.*

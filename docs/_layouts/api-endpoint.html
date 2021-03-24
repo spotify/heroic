@@ -48,7 +48,7 @@ layout: sidebar
         {%
         endunless %}
           {%- endcapture %}
-          $ curl -X{{ page.method }} {{ headers -}}
+          $ curl {{ page.x-client-id-header }} -X{{ page.method }} {{ headers -}}
           http://localhost:8080{{ page.endpoint }}
           {%- unless page.empty %} \
           -d '{{ request | normalize_whitespace }}'
