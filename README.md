@@ -1,3 +1,7 @@
+# DEPRECATION NOTICE
+
+**This repo is no longer actively maintained. While it should continue to work and there are no major known bugs, we will not be improving Heroic or releasing new versions.**
+
 # [![Heroic](/logo.42.png?raw=true "The Heroic Time Series Database")](/assets/logo_on_light.svg) Heroic
 
 [![Build Status](https://circleci.com/gh/spotify/heroic.svg?style=svg)](https://circleci.com/gh/spotify/heroic)
