@@ -7,6 +7,7 @@
 [![Build Status](https://circleci.com/gh/spotify/heroic.svg?style=svg)](https://circleci.com/gh/spotify/heroic)
 [![Codecov](https://img.shields.io/codecov/c/github/spotify/heroic.svg)](https://codecov.io/gh/spotify/heroic)
 [![License](https://img.shields.io/github/license/spotify/heroic.svg)](LICENSE)
+[![Mentioned in Awesome Bigtable](https://awesome.re/mentioned-badge-flat.svg)](https://github.com/zrosenbauer/awesome-bigtable)
 
 A scalable time series database based on Bigtable, Cassandra, and Elasticsearch.
 Go to https://spotify.github.io/heroic/ for documentation.
